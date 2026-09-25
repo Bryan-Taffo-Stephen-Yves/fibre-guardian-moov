@@ -1,0 +1,22 @@
+{
+  "_avertissement": "CORPUS SYNTHÉTIQUE écrit pour amorcer l'outil. À remplacer par les formulations réelles collectées par l'équipe auprès d'abonnés et de locuteurs natifs (CDC 7.3, 12.1). Les scores obtenus sur ce fichier ne mesurent rien de réel.",
+  "items": [
+    { "lang": "fr", "text": "Est-ce que je dois appeler le 101 ?", "intent": "appel" },
+    { "lang": "fr", "text": "Il faut qu'un technicien vienne ?", "intent": "appel" },
+    { "lang": "fr", "text": "Je redémarre la box ?", "intent": "reboot" },
+    { "lang": "fr", "text": "Le wifi ne passe pas dans la chambre", "intent": "wifi" },
+    { "lang": "fr", "text": "Plus rien ne marche depuis ce matin", "intent": "coupure" },
+    { "lang": "fr", "text": "Internet est très lent ce soir", "intent": "lent" },
+    { "lang": "fr", "text": "Bonjour", "intent": "salut" },
+    { "lang": "nouchi", "text": "faut j'appelle gars de moov ?", "intent": "appel" },
+    { "lang": "nouchi", "text": "je peux débrancher la box et rallumer ?", "intent": "reboot" },
+    { "lang": "nouchi", "text": "mon wifi là il gère pas dèh", "intent": "wifi" },
+    { "lang": "nouchi", "text": "ya fohi sur ma connexion", "intent": "coupure" },
+    { "lang": "nouchi", "text": "connexion là traîne trop", "intent": "lent" },
+    { "lang": "nouchi", "text": "on dit quoi", "intent": "salut" },
+    { "lang": "dioula", "text": "n bɛ 101 wele wa ?", "intent": "appel" },
+    { "lang": "dioula", "text": "n ka connexion man nyi", "intent": "lent" },
+    { "lang": "dioula", "text": "a tɛ taa", "intent": "coupure" },
+    { "lang": "dioula", "text": "i ni sogoma", "intent": "salut" }
+  ]
+}

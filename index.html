@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#121110">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="vendor/fonts.css">
+<script>
+  // Tout est embarqué : aucune dépendance réseau pour les fonctions vitales (CDC 6.6, ENF-9).
+  window.__resources = {
+    'https://unpkg.com/react@18.3.1/umd/react.production.min.js': 'vendor/react.production.min.js',
+    'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js': 'vendor/react-dom.production.min.js'
+  };
+</script>
+<script src="config.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/fleet.js"></script>
+<script src="src/lang/manifest.js"></script>
+<script>FG.LANG_FILES.forEach(function (l) { document.write('<script src="src/lang/' + l + '.js"><\/script>'); });</script>
+<script src="src/agent.js"></script>
+<script src="src/vision.js"></script>
+<script src="./support.js"></script>
+<script>if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(function () {});</script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-da9dc39f-b72e-42e4-b95b-0d120008c7d5/styles.css">
+<script src="_ds/modernist-da9dc39f-b72e-42e4-b95b-0d120008c7d5/_ds_bundle.js"></script>
+<title>Fibre Guardian — Moov Africa Côte d'Ivoire</title>
+<style>
+html,body{margin:0;background:#121110;color:#f3f2f2;font-family:'Archivo',system-ui,sans-serif;-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+a{color:#ff563c;text-decoration:none}a:hover{color:#ff9783}
+::selection{background:#ec3013;color:#fff}
+input[type=range]{accent-color:#ec3013}
+@keyframes fgBlink{0%,49%{opacity:1}50%,100%{opacity:.12}}
+  .fg-noshrink>*{flex-shrink:0}
+@keyframes fgPulse{0%{opacity:.25}50%{opacity:1}100%{opacity:.25}}
+</style>
+</helmet>
+
+<div style="background:#121110;color:#f3f2f2;min-height:100vh;font-family:'Archivo',system-ui,sans-serif">
+
+<!-- NAV -->
+<nav style="position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:24px;padding:0 32px;height:64px;white-space:nowrap;overflow-x:auto;scrollbar-width:none;background:rgba(18,17,16,.82);backdrop-filter:blur(14px);border-bottom:2px solid rgba(243,242,242,.16)">
+  <a href="#top" style="display:flex;align-items:center;gap:12px;color:#f3f2f2;flex-shrink:0">
+    <span style="width:22px;height:22px;border:2px solid #ec3013;display:grid;place-items:center"><span style="width:8px;height:8px;background:#ec3013"></span></span>
+    <span style="font-weight:900;font-stretch:125%;letter-spacing:.04em;font-size:15px;text-transform:uppercase">Fibre Guardian</span>
+  </a>
+  <div style="display:flex;gap:22px;margin-left:auto;flex-shrink:0;font-stretch:80%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:600">
+    <a href="#labo" style="color:#bab6b6" style-hover="color:#fff">Laboratoire</a>
+    <a href="#banc" style="color:#bab6b6" style-hover="color:#fff">Banc de test</a>
+    <a href="#reseau" style="color:#bab6b6" style-hover="color:#fff">Réseau</a>
+    <a href="#wifi" style="color:#bab6b6" style-hover="color:#fff">Cartographie</a>
+    <a href="#parcours" style="color:#bab6b6" style-hover="color:#fff">Parcours</a>
+    <a href="#ia" style="color:#bab6b6" style-hover="color:#fff">Intelligence</a>
+    <a href="#economie" style="color:#bab6b6" style-hover="color:#fff">Économie</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#bab6b6;flex-shrink:0">
+    <span style="width:8px;height:8px;flex-shrink:0;background:{{ statusColor }};animation:fgPulse 1.6s infinite"></span>
+    <span>{{ navStatus }}</span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header id="top" style="position:relative;overflow:hidden;border-bottom:2px solid rgba(243,242,242,.16);background-image:linear-gradient(rgba(243,242,242,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(243,242,242,.045) 1px,transparent 1px);background-size:80px 80px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));min-height:min(88vh,860px)">
+    <div style="padding:72px 40px 56px;display:flex;flex-direction:column;gap:32px;justify-content:center;position:relative;z-index:2">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <span style="border:2px solid #ec3013;color:#ff9783;padding:6px 10px;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:700">Concours Moov Application 2026</span>
+        <span style="border:2px solid rgba(243,242,242,.2);color:#bab6b6;padding:6px 10px;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:600">Moov Africa Côte d'Ivoire × IUGB</span>
+      </div>
+      <h1 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(44px,6.4vw,104px);line-height:.9;letter-spacing:-.02em;text-transform:uppercase;text-wrap:balance">La fibre qui se diagnostique <span style="color:#ec3013">avant</span> qu'on appelle.</h1>
+      <p style="margin:0;max-width:560px;font-size:19px;line-height:1.5;color:#d7d3d3;font-stretch:95%;text-wrap:pretty">Résoudre sans contact humain la majorité des incidents fibre courants, et détecter les autres avant que le client n'appelle. En français, en nouchi et en dioula.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="#labo" class="btn btn-primary" style="display:flex;align-items:center;gap:40px;padding:16px 20px;background:#ec3013;color:#fff;font-weight:700;font-stretch:110%;text-transform:uppercase;letter-spacing:.06em;font-size:14px;border-radius:0" style-hover="background:#dd2b0f;color:#fff">Injecter une panne en direct <span>→</span></a>
+        <a href="#reseau" style="display:flex;align-items:center;gap:40px;padding:14px 20px;border:2px solid rgba(243,242,242,.3);color:#f3f2f2;font-weight:700;font-stretch:110%;text-transform:uppercase;letter-spacing:.06em;font-size:14px" style-hover="border-color:#ec3013;color:#fff">Console opérateur <span>↓</span></a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:2px solid rgba(243,242,242,.16);margin-top:8px">
+        <div style="padding:18px 16px 0 0;display:flex;flex-direction:column;gap:6px">
+          <span style="font-weight:900;font-stretch:125%;font-size:34px">9</span>
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#9b9797">Métriques lues à la seconde</span>
+        </div>
+        <div style="padding:18px 16px 0;display:flex;flex-direction:column;gap:6px;border-left:2px solid rgba(243,242,242,.16)">
+          <span style="font-weight:900;font-stretch:125%;font-size:34px">6</span>
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#9b9797">Classes de panne reconnues</span>
+        </div>
+        <div style="padding:18px 16px 0;display:flex;flex-direction:column;gap:6px;border-left:2px solid rgba(243,242,242,.16)">
+          <span style="font-weight:900;font-stretch:125%;font-size:34px">&lt;10 s</span>
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#9b9797">De l'anomalie au verdict</span>
+        </div>
+      </div>
+    </div>
+    <div style="position:relative;min-height:520px">
+      <div ref="{{ heroRef }}" style="position:absolute;inset:0;cursor:grab"></div>
+      <div style="position:absolute;top:32px;right:32px;display:flex;flex-direction:column;gap:2px;pointer-events:none;min-width:220px">
+        <div style="background:rgba(18,17,16,.7);border:2px solid rgba(236,48,19,.55);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#ff9783">ONT · Ligne démo · Yopougon</span>
+          <div style="display:flex;justify-content:space-between;gap:16px;font-stretch:80%;font-variant-numeric:tabular-nums;font-size:13px"><span style="color:#9b9797">Puissance optique</span><span>{{ m.optS }} dBm</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px;font-stretch:80%;font-variant-numeric:tabular-nums;font-size:13px"><span style="color:#9b9797">Rapport S/B</span><span>{{ m.snrS }} dB</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px;font-stretch:80%;font-variant-numeric:tabular-nums;font-size:13px"><span style="color:#9b9797">Débit WAN</span><span>{{ m.dlS }} / 100 Mbps</span></div>
+        </div>
+        <div style="background:rgba(18,17,16,.7);border:2px solid rgba(243,242,242,.14);border-top:none;padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <span style="width:10px;height:10px;background:{{ statusColor }}"></span>
+          <span style="font-weight:700;font-stretch:110%;text-transform:uppercase;font-size:12px;letter-spacing:.04em">{{ clsName }}</span>
+          <span style="margin-left:auto;font-stretch:75%;font-variant-numeric:tabular-nums;font-size:12px;color:#bab6b6">{{ confS }}</span>
+        </div>
+      </div>
+      <div style="position:absolute;left:32px;bottom:28px;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#7d7979;pointer-events:none">Hologramme temps réel · la box réagit aux pannes injectées dans le laboratoire</div>
+    </div>
+  </div>
+</header>
+
+<!-- 01 PROBLEME -->
+<section style="border-bottom:2px solid rgba(243,242,242,.16)">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">
+    <div style="padding:64px 40px;display:flex;flex-direction:column;gap:20px;border-right:2px solid rgba(243,242,242,.16)">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">01 — Le problème</span>
+      <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.4vw,48px);line-height:.98;text-transform:uppercase;text-wrap:balance">Deux ignorances qui coûtent le support fibre.</h2>
+      <p style="margin:0;color:#bab6b6;font-size:17px;line-height:1.55;max-width:460px;text-wrap:pretty">Un abonné fibre ne sait pas décrire une panne, et un opérateur ne sait pas qu'elle existe avant qu'on l'appelle.</p>
+    </div>
+    <div style="padding:64px 40px;display:flex;flex-direction:column;gap:18px;border-right:2px solid rgba(243,242,242,.16)">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Aujourd'hui</span>
+      <sc-for list="{{ oldFlow }}" as="s" hint-placeholder-count="7">
+        <div style="display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:baseline;padding-bottom:12px;border-bottom:1px solid rgba(243,242,242,.1)">
+          <span style="font-stretch:75%;font-variant-numeric:tabular-nums;color:#7d7979;font-size:13px">{{ s.n }}</span>
+          <span style="font-size:16px;color:{{ s.c }}">{{ s.t }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="padding:64px 40px;display:flex;flex-direction:column;gap:18px;background:rgba(236,48,19,.06)">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ff9783">Avec Fibre Guardian</span>
+      <sc-for list="{{ newFlow }}" as="s" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:baseline;padding-bottom:12px;border-bottom:1px solid rgba(236,48,19,.25)">
+          <span style="font-stretch:75%;font-variant-numeric:tabular-nums;color:#ff563c;font-size:13px">{{ s.n }}</span>
+          <span style="font-size:16px">{{ s.t }}</span>
+        </div>
+      </sc-for>
+      <p style="margin:8px 0 0;color:#bab6b6;font-size:14px;line-height:1.5">La télémétrie existe déjà dans la box. Elle n'est ni remontée, ni interprétée, ni rendue au client.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 02 LABORATOIRE -->
+<section id="labo" ref="{{ labRef }}" style="border-bottom:2px solid rgba(243,242,242,.16);scroll-margin-top:64px">
+  <div style="padding:64px 40px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:32px;align-items:end;border-bottom:2px solid rgba(243,242,242,.16)">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">02 — Laboratoire en direct</span>
+      <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(34px,4.4vw,64px);line-height:.94;text-transform:uppercase">Provoquez une panne. Regardez-la se nommer.</h2>
+    </div>
+    <p style="margin:0;color:#bab6b6;font-size:17px;line-height:1.55;max-width:560px;text-wrap:pretty">Le simulateur produit les neuf métriques avec des signatures physiques cohérentes. Le moteur de détection ne voit que les échantillons : il ignore quelle panne a été injectée.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))">
+    <!-- Injecteur -->
+    <div style="padding:32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Simulateur réseau · injection</span>
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:#ff9783;border:1px solid rgba(236,48,19,.5);padding:3px 6px">Invisible au moteur</span>
+      </div>
+      <div style="display:flex;flex-direction:column;border-top:2px solid rgba(243,242,242,.16)">
+        <sc-for list="{{ faults }}" as="f" hint-placeholder-count="7">
+          <button onClick="{{ f.onClick }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;padding:14px 12px;border-bottom:2px solid rgba(243,242,242,.1);background:{{ f.bg }};box-shadow:{{ f.bar }}" style-hover="background:rgba(236,48,19,.12)">
+            <span style="font-stretch:75%;font-variant-numeric:tabular-nums;font-size:12px;color:#7d7979">{{ f.n }}</span>
+            <span style="display:flex;flex-direction:column;gap:3px">
+              <span style="font-weight:700;font-stretch:110%;text-transform:uppercase;font-size:14px;letter-spacing:.02em">{{ f.label }}</span>
+              <span style="font-size:13px;color:#9b9797">{{ f.sub }}</span>
+            </span>
+            <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:#ff563c">{{ f.on }}</span>
+          </button>
+        </sc-for>
+        <button onClick="{{ toggleDataOut }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:center;padding:14px 12px;border-bottom:2px solid rgba(243,242,242,.1);background:{{ dataOutBg }}" style-hover="background:rgba(236,48,19,.12)">
+          <span style="font-stretch:75%;font-size:12px;color:#7d7979">08</span>
+          <span style="display:flex;flex-direction:column;gap:3px">
+            <span style="font-weight:700;font-stretch:110%;text-transform:uppercase;font-size:14px;letter-spacing:.02em">{{ dataOutLabel }}</span>
+            <span style="font-size:13px;color:#9b9797">Côté téléphone : sans fibre ni données, l'application passe en SMS</span>
+          </span>
+          <span></span>
+        </button>
+      </div>
+      <div style="border:2px solid {{ realBd }};padding:14px;display:flex;flex-direction:column;gap:10px;background:{{ realBg }}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#ff9783;font-weight:700">Mesure réelle · votre connexion</span>
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:{{ realPhaseC }};animation:{{ realAnim }}">{{ realPhase }}</span>
+        </div>
+        <span style="font-size:13px;color:#bab6b6;line-height:1.45">Teste la connexion de cet appareil et transmet les résultats au moteur. Coupez le Wi-Fi ou lancez un gros téléchargement : le diagnostic suit.</span>
+        <sc-if value="{{ realRows }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid rgba(243,242,242,.12)">
+            <sc-for list="{{ realRows }}" as="r" hint-placeholder-count="6">
+              <div style="padding:8px 8px 6px 0;display:flex;flex-direction:column;gap:2px">
+                <span style="font-stretch:70%;text-transform:uppercase;letter-spacing:.08em;font-size:9px;color:{{ r.tc }}">{{ r.label }} · {{ r.src }}</span>
+                <span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;font-stretch:85%">{{ r.val }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <button onClick="{{ toggleReal }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:{{ realBtnBg }};border:2px solid #ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.04em" style-hover="filter:brightness(1.15)"><span>{{ realBtn }}</span><span>{{ realIcon }}</span></button>
+        <span style="font-size:11px;color:#7d7979;line-height:1.4">{{ realNote }}</span>
+      </div>
+      <div style="border:2px solid rgba(243,242,242,.14);padding:14px;display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Latence de détection · cible ENF-2 &lt; 10 s</span>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-weight:900;font-stretch:125%;font-size:40px;font-variant-numeric:tabular-nums">{{ detectS }}</span>
+          <span style="color:#bab6b6;font-size:14px">{{ detectNote }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Téléphone -->
+    <div style="padding:32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;align-items:center;gap:16px;background-image:radial-gradient(circle at 50% 40%,rgba(236,48,19,.12),transparent 60%)">
+      <span style="align-self:flex-start;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Application client · M3 M4 M5 M6 M8</span>
+      <div style="width:340px;max-width:100%;height:720px;border:2px solid rgba(243,242,242,.3);background:#0c0b0b;padding:10px;box-shadow:0 0 0 8px #1a1918,0 40px 80px rgba(0,0,0,.6)">
+        <div style="height:100%;background:#161514;display:flex;flex-direction:column;overflow:hidden;position:relative">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px 6px;font-stretch:80%;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">
+            <span>{{ clock }}</span>
+            <span style="color:{{ netBadgeColor }}">{{ netBadge }}</span>
+          </div>
+          <sc-if value="{{ showFallback }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:0 12px;padding:8px 10px;background:rgba(236,48,19,.18);border:1px solid #ec3013;font-size:12px;line-height:1.35;color:#ffe0d9">{{ fallbackText }}</div>
+          </sc-if>
+          <div style="display:flex;align-items:center;gap:6px;padding:10px 16px">
+            <span style="font-weight:900;font-stretch:125%;text-transform:uppercase;font-size:12px;letter-spacing:.04em;margin-right:auto">Fibre Guardian</span>
+            <sc-for list="{{ langs }}" as="l" hint-placeholder-count="3">
+              <button onClick="{{ l.onClick }}" style="all:unset;cursor:pointer;padding:5px 7px;font-stretch:75%;text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:700;border:1px solid {{ l.bd }};background:{{ l.bg }};color:{{ l.fg }}">{{ l.label }}</button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ smsView }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:8px 14px">
+              <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Messages · Moov 101 · canal SMS</span>
+              <div ref="{{ smsBox }}" style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ smsList }}" as="s" hint-placeholder-count="3">
+                <div style="align-self:{{ s.al }};max-width:88%;background:{{ s.bg }};padding:9px 11px;font-size:13px;line-height:1.45;display:flex;flex-direction:column;gap:3px;white-space:pre-line">
+                  <span style="font-stretch:75%;font-size:10px;color:#d7d3d3;text-transform:uppercase;letter-spacing:.1em">{{ s.time }}</span>
+                  <span>{{ s.text }}</span>
+                </div>
+              </sc-for>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0">
+                <sc-for list="{{ smsQuick }}" as="q" hint-placeholder-count="3">
+                  <button onClick="{{ q.onClick }}" style="all:unset;cursor:pointer;padding:6px 9px;border:1px solid rgba(236,48,19,.5);color:#ff9783;font-size:12px">{{ q.t }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;border:2px solid rgba(243,242,242,.2);flex-shrink:0">
+                <input value="{{ smsInput }}" onChange="{{ onSmsInput }}" onKeyDown="{{ onSmsKey }}" placeholder="SMS au 101 ou code USSD" aria-label="Message SMS" style="all:unset;flex:1;min-width:0;padding:10px 12px;font-size:13px;color:#f3f2f2">
+                <button onClick="{{ sendSms }}" style="all:unset;cursor:pointer;background:#ec3013;color:#fff;padding:0 14px;font-weight:800">→</button>
+              </div>
+              <div style="font-size:11px;color:#7d7979;line-height:1.4">Commandes acceptées seulement depuis le numéro lié à la ligne, limitées à 2 redémarrages par 10 min (ENF-21).</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ homeView }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1;display:flex;flex-direction:column;overflow:auto">
+              <div style="padding:6px 16px 14px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid rgba(243,242,242,.1)">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="width:10px;height:10px;background:{{ statusColor }}"></span>
+                  <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:{{ statusColor }};font-weight:700">{{ statusLabel }} · couche {{ clsLayer }} · {{ confClient }}</span>
+                </div>
+                <div style="font-weight:800;font-stretch:112%;font-size:23px;line-height:1.08;text-wrap:balance">{{ verdict }}</div>
+                <sc-if value="{{ verdictTr }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#9b9797;font-style:italic">{{ verdictTr }}</div></sc-if>
+              </div>
+              <div style="padding:12px 16px 4px;display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Débit · 70 s</span>
+                <span style="font-variant-numeric:tabular-nums;font-stretch:85%;font-size:13px"><b style="font-size:20px;font-weight:800">{{ m.dlS }}</b> / 100 Mbps souscrits</span>
+              </div>
+              <canvas ref="{{ chartRef }}" style="width:100%;height:120px;display:block"></canvas>
+              <div style="display:flex;gap:14px;padding:4px 16px 10px;font-stretch:75%;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:#9b9797">
+                <span style="display:flex;gap:5px;align-items:center"><span style="width:12px;height:2px;background:#f3f2f2"></span>À la box</span>
+                <span style="display:flex;gap:5px;align-items:center"><span style="width:12px;height:2px;background:#ff563c"></span>Sur le téléphone</span>
+                <span style="display:flex;gap:5px;align-items:center"><span style="width:12px;border-top:1px dashed #9b9797"></span>Souscrit</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(243,242,242,.1)">
+                <sc-for list="{{ phoneKpis }}" as="k" hint-placeholder-count="4">
+                  <div style="padding:10px 16px;border-bottom:1px solid rgba(243,242,242,.1);border-right:1px solid rgba(243,242,242,.06);display:flex;flex-direction:column;gap:3px">
+                    <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:#9b9797">{{ k.label }}</span>
+                    <span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;font-stretch:90%;color:{{ k.c }}">{{ k.val }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;margin-top:auto">
+                <sc-if value="{{ pendingReboot }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:2px solid #ec3013;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.4">
+                    <span>Code envoyé par SMS au numéro lié à votre ligne : <b style="letter-spacing:.2em">4 8 2 7</b> (rempli automatiquement).</span>
+                    <div style="display:flex;gap:8px">
+                      <button onClick="{{ confirmReboot }}" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:10px;background:#ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:12px">Confirmer le redémarrage</button>
+                      <button onClick="{{ cancelReboot }}" style="all:unset;cursor:pointer;padding:10px 12px;border:1px solid rgba(243,242,242,.3);font-size:12px;text-transform:uppercase">Annuler</button>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ actionMsg }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:12px;line-height:1.4;padding:8px 10px;border:1px solid oklch(0.8 0.17 150);color:#d7f5df">{{ actionMsg }}</div>
+                </sc-if>
+                <sc-for list="{{ actions }}" as="a" hint-placeholder-count="2">
+                  <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;min-height:22px;font-weight:700;font-stretch:105%;font-size:13px;text-transform:uppercase;letter-spacing:.02em;background:{{ a.bg }};border:2px solid {{ a.bd }};color:#fff" style-hover="filter:brightness(1.15)">
+                    <span>{{ a.label }}</span><span>→</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ agentView }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+              <div ref="{{ chatRef }}" style="flex:1;overflow:auto;padding:8px 14px;display:flex;flex-direction:column;gap:10px">
+                <div style="font-size:11px;color:#9b9797;line-height:1.4;border:1px dashed rgba(243,242,242,.2);padding:8px">L'agent reçoit vos mesures en temps réel et le diagnostic courant. Il ne répond jamais dans le vide.</div>
+                <sc-for list="{{ chat }}" as="c" hint-placeholder-count="0">
+                  <div style="align-self:{{ c.align }};max-width:86%;background:{{ c.bg }};padding:10px 12px;font-size:13px;line-height:1.45;display:flex;flex-direction:column;gap:6px;border:1px solid {{ c.bd }}">
+                    <span>{{ c.text }}</span>
+                    <sc-if value="{{ c.tr }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;color:#bab6b6;font-style:italic;border-top:1px solid rgba(243,242,242,.12);padding-top:6px">FR — {{ c.tr }}</span></sc-if>
+                    <sc-if value="{{ c.src }}" hint-placeholder-val="{{ false }}"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9px;color:#7d7979">{{ c.src }}</span></sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ typing }}" hint-placeholder-val="{{ false }}"><div style="align-self:flex-start;font-size:12px;color:#ff9783;animation:fgPulse 1s infinite">Analyse des mesures…</div></sc-if>
+              </div>
+              <div style="display:flex;gap:6px;padding:8px 12px 0;flex-wrap:wrap">
+                <sc-for list="{{ quick }}" as="q" hint-placeholder-count="2">
+                  <button onClick="{{ q.onClick }}" style="all:unset;cursor:pointer;font-size:11.5px;padding:6px 8px;border:1px solid rgba(236,48,19,.6);color:#ffc4b8" style-hover="background:rgba(236,48,19,.2)">{{ q.t }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:0;padding:10px 12px 12px">
+                <input value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onKey }}" placeholder="{{ placeholder }}" style="flex:1;min-width:0;background:#0c0b0b;border:2px solid rgba(243,242,242,.2);border-right:none;color:#f3f2f2;padding:11px 10px;font:inherit;font-size:13px;outline:none;border-radius:0">
+                <button onClick="{{ send }}" style="all:unset;cursor:pointer;background:#ec3013;color:#fff;padding:0 14px;font-weight:800;font-size:16px" style-hover="background:#dd2b0f">→</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ photoView }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;display:flex;flex-direction:column;gap:12px;padding:8px 14px;overflow:auto" class="fg-noshrink">
+              <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Lecture des voyants · vision locale</span>
+              <div style="position:relative;background:#0c0b0b;border:2px solid rgba(243,242,242,.2);min-height:120px;flex-shrink:0;display:grid;place-items:center">
+                <sc-if value="{{ photoSrc }}" hint-placeholder-val="{{ false }}"><img src="{{ photoSrc }}" alt="Photo de la face avant de la box" style="display:block;width:100%;max-height:170px;object-fit:contain"></sc-if>
+                <sc-if value="{{ noPhoto }}" hint-placeholder-val="{{ true }}"><span style="padding:16px;text-align:center;font-size:13px;color:#9b9797;line-height:1.4">Photographiez la face avant de la box, voyants allumés. Deux photos à une seconde d'écart permettent de voir le clignotement.</span></sc-if>
+                <sc-if value="{{ scanning }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;border:2px solid #ec3013;background:rgba(236,48,19,.12);display:grid;place-items:center;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;animation:fgPulse .8s infinite">Lecture en cours</div></sc-if>
+              </div>
+              <sc-if value="{{ photoErr }}" hint-placeholder-val="{{ false }}"><div style="border:2px solid #f0aa32;padding:8px 10px;font-size:13px;line-height:1.4">{{ photoErr }}</div></sc-if>
+              <sc-if value="{{ photoResult }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.45">
+                  <sc-for list="{{ photoResult }}" as="p" hint-placeholder-count="4">
+                    <div style="display:grid;grid-template-columns:18px 1fr;gap:8px"><span style="color:#ff563c;font-stretch:75%;font-size:11px">{{ p.n }}</span><span>{{ p.t }}</span></div>
+                  </sc-for>
+                  <div style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:{{ concordColor }};border:1px solid {{ concordColor }};padding:6px 8px">{{ concordText }}</div>
+                </div>
+              </sc-if>
+              <label style="margin-top:auto;cursor:pointer;display:flex;justify-content:space-between;padding:14px;background:#ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:13px"><input type="file" accept="image/*" capture="environment" multiple onChange="{{ onPhotoFiles }}" style="display:none"><span>Photographier la box</span><span>◉</span></label>
+              <div style="display:flex;gap:8px">
+                <button onClick="{{ samplePhoto }}" style="all:unset;cursor:pointer;flex:1;padding:10px 12px;border:1px solid rgba(243,242,242,.3);font-size:12px;text-transform:uppercase;letter-spacing:.04em">Photo d'exemple (démo)</button>
+                <button onClick="{{ clearPhoto }}" style="all:unset;cursor:pointer;padding:10px 12px;border:1px solid rgba(243,242,242,.3);font-size:12px;text-transform:uppercase">Effacer</button>
+              </div>
+              <span style="font-size:11px;color:#7d7979">Photo analysée sur le téléphone puis effacée, jamais conservée (ENF-17).</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ dataView }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;display:flex;flex-direction:column;gap:10px;padding:8px 14px;overflow:auto;font-size:13px;line-height:1.45">
+              <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Mes données · ce que la box transmet</span>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-variant-numeric:tabular-nums">
+                <sc-for list="{{ dataRows }}" as="r" hint-placeholder-count="9"><span style="color:#bab6b6">{{ r.label }}</span><span>{{ r.val }}</span></sc-for>
+              </div>
+              <div style="border-left:2px solid #ec3013;padding-left:10px;color:#d7d3d3">Rien d'autre : ni adresse de site, ni requête DNS, ni contenu (ENF-15). Le plan du logement et les photos restent sur le téléphone.</div>
+              <div style="display:flex;flex-direction:column;gap:2px"><b>{{ colMode }}</b><span style="color:#9b9797">{{ colStats }}</span><span style="color:#9b9797">{{ colMonthly }}</span></div>
+              <button onClick="{{ toggleFine }}" style="all:unset;cursor:pointer;padding:10px 12px;border:2px solid #ec3013;background:{{ fineBg }};font-weight:700;text-transform:uppercase;font-size:12px">{{ fineLabel }}</button>
+              <button onClick="{{ clearMyData }}" style="all:unset;cursor:pointer;padding:10px 12px;border:1px solid rgba(243,242,242,.3);font-size:12px;text-transform:uppercase">Effacer mes données locales</button>
+            </div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid rgba(243,242,242,.14)">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+              <button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;text-align:center;padding:14px 0 16px;font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:10px;font-weight:700;color:{{ t.fg }};box-shadow:{{ t.bar }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Moteur -->
+    <div style="padding:32px;display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Moteur de détection · M2 · fenêtre 9 s</span>
+        <span style="font-stretch:75%;font-variant-numeric:tabular-nums;font-size:11px;color:#7d7979">t = {{ t }} s</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:#9b9797">
+        <span>Agent box : {{ colMode }}</span>
+        <span style="display:flex;gap:4px;align-items:center"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#7d7979">Rôle</span>
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;padding:4px 7px;font-stretch:75%;text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:700;border:1px solid rgba(243,242,242,.25);background:{{ r.bg }};color:{{ r.fg }}">{{ r.label }}</button></sc-for>
+        </span>
+      </div>
+      <div style="border:2px solid {{ statusColor }};padding:16px;display:flex;flex-direction:column;gap:10px;background:rgba(18,17,16,.6)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+          <span style="font-weight:900;font-stretch:125%;font-size:24px;text-transform:uppercase;line-height:1">{{ clsName }}</span>
+          <span style="font-weight:800;font-stretch:90%;font-variant-numeric:tabular-nums;font-size:24px;color:{{ statusColor }}">{{ confS }}</span>
+        </div>
+        <div style="height:6px;background:rgba(243,242,242,.1)"><div style="height:100%;width:{{ confPct }};background:{{ statusColor }};transition:width .6s"></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px">
+          <sc-for list="{{ evidence }}" as="e" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:14px 1fr;gap:8px;font-size:13px;font-stretch:88%;font-variant-numeric:tabular-nums;color:#d7d3d3"><span style="color:{{ e.c }}">{{ e.k }}</span><span>{{ e.t }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#7d7979;padding-bottom:6px">Ordre d'évaluation fixe · EF-M2-2</span>
+        <sc-for list="{{ trace }}" as="r" hint-placeholder-count="7">
+          <div style="display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid rgba(243,242,242,.08);opacity:{{ r.op }}">
+            <span style="width:8px;height:8px;background:{{ r.c }}"></span>
+            <span style="font-size:13px;font-weight:600;font-stretch:95%">{{ r.name }}</span>
+            <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;color:{{ r.c }}">{{ r.st }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ canTelemetry }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#7d7979">Puissance optique · seuils −26 / −36 dBm</span><span style="font-variant-numeric:tabular-nums;font-size:12px;font-stretch:85%">{{ m.optS }} dBm</span></div>
+        <canvas ref="{{ optRef }}" style="width:100%;height:84px;display:block;border:1px solid rgba(243,242,242,.1)"></canvas>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:2px solid rgba(243,242,242,.14);border-left:1px solid rgba(243,242,242,.08)">
+        <sc-for list="{{ metrics }}" as="k" hint-placeholder-count="9">
+          <div style="padding:9px 10px;border-right:1px solid rgba(243,242,242,.08);border-bottom:1px solid rgba(243,242,242,.08);display:flex;flex-direction:column;gap:2px;background:{{ k.bg }}">
+            <span style="font-stretch:70%;text-transform:uppercase;letter-spacing:.08em;font-size:9px;color:#9b9797;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.label }}</span>
+            <span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;font-stretch:85%;color:{{ k.c }}">{{ k.val }}<span style="font-weight:400;font-size:10px;color:#9b9797"> {{ k.u }}</span></span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;max-height:150px;overflow:auto;border-top:2px solid rgba(243,242,242,.14);padding-top:10px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#7d7979">Journal opérateur · EF-M9-2</span>
+        <sc-for list="{{ log }}" as="l" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:62px 1fr;gap:8px;font-size:12px;font-stretch:85%;font-variant-numeric:tabular-nums"><span style="color:#7d7979">{{ l.time }}</span><span style="color:{{ l.c }}">{{ l.t }}</span></div>
+        </sc-for>
+      </div>
+      </div></sc-if>
+      <sc-if value="{{ noTelemetry }}" hint-placeholder-val="{{ false }}"><div style="border:1px dashed rgba(243,242,242,.25);padding:12px;font-size:13px;color:#9b9797">Télémétrie brute et journal réservés aux rôles Technicien et Superviseur (ENF-22).</div></sc-if>
+    </div>
+  </div>
+</section>
+
+<!-- 02B BANC DE TEST -->
+<section id="banc" style="border-bottom:2px solid rgba(243,242,242,.16);scroll-margin-top:64px">
+  <div style="padding:64px 40px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:32px;align-items:end;border-bottom:2px solid rgba(243,242,242,.16)">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">02.B — Banc de test</span>
+      <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(34px,4.4vw,64px);line-height:.94;text-transform:uppercase">Mesurer la vraie ligne. Auditer le moteur.</h2>
+    </div>
+    <p style="margin:0;color:#bab6b6;font-size:17px;line-height:1.55;max-width:560px;text-wrap:pretty">Deux bancs. Le premier mesure la connexion réelle de cet appareil en multi-flux, avec la latence sous charge. Le second rejoue des centaines de pannes simulées contre le moteur de détection et publie sa matrice de confusion.</p>
+  </div>
+
+  <!-- A: test de ligne -->
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding:20px 40px;border-bottom:2px solid rgba(243,242,242,.16)">
+    <span style="font-weight:900;font-stretch:125%;text-transform:uppercase;font-size:18px">A · Test de ligne réel</span>
+    <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Serveur speed.cloudflare.com · {{ benchServer }}</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">
+    <div style="padding:28px 32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Offre souscrite · Mbps</span>
+        <div style="display:flex;flex-wrap:wrap">
+          <sc-for list="{{ segOffer }}" as="o" hint-placeholder-count="5">
+            <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:9px 12px;margin:0 -2px -2px 0;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-stretch:90%;font-size:13px;font-variant-numeric:tabular-nums" style-hover="border-color:#ec3013">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Flux parallèles</span>
+        <div style="display:flex;flex-wrap:wrap">
+          <sc-for list="{{ segStreams }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:9px 12px;margin:0 -2px -2px 0;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-stretch:90%;font-size:13px" style-hover="border-color:#ec3013">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Durée par sens</span>
+        <div style="display:flex;flex-wrap:wrap">
+          <sc-for list="{{ segDur }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:9px 12px;margin:0 -2px -2px 0;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-stretch:90%;font-size:13px" style-hover="border-color:#ec3013">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+        <button onClick="{{ benchRun }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 16px;background:{{ benchBtnBg }};border:2px solid #ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:14px;letter-spacing:.04em" style-hover="filter:brightness(1.15)"><span>{{ benchBtn }}</span><span>{{ benchIcon }}</span></button>
+        <button onClick="{{ benchSend }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border:2px solid rgba(243,242,242,.25);font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:.04em;opacity:{{ benchSendOp }}" style-hover="border-color:#ec3013"><span>Envoyer au moteur de détection</span><span>→</span></button>
+      </div>
+    </div>
+    <div style="padding:28px 32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:{{ benchPhaseC }};animation:{{ benchAnim }}">{{ benchPhase }}</span>
+        <span style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:900;font-stretch:125%;font-size:48px;line-height:1;font-variant-numeric:tabular-nums">{{ benchLive }}</span><span style="font-size:13px;color:#9b9797">Mbps</span></span>
+      </div>
+      <canvas ref="{{ benchRef }}" style="width:100%;height:240px;display:block;border:1px solid rgba(243,242,242,.1)"></canvas>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-stretch:75%;text-transform:uppercase;letter-spacing:.1em;font-size:9.5px;color:#9b9797">
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:14px;height:2px;background:#f3f2f2"></span>Descendant</span>
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:14px;height:2px;background:#ff563c"></span>Montant</span>
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:6px;height:6px;background:oklch(0.82 0.16 75)"></span>Latence en charge · échelle droite</span>
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:14px;border-top:1px dashed #9b9797"></span>Offre souscrite</span>
+      </div>
+      <div style="border:2px solid {{ benchVerdictC }};padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-weight:800;font-stretch:110%;text-transform:uppercase;font-size:15px">{{ benchVerdict }}</span>
+        <span style="font-size:13px;color:#bab6b6">{{ benchVerdictSub }}</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;border-left:1px solid rgba(243,242,242,.08)">
+      <sc-for list="{{ benchKpis }}" as="k" hint-placeholder-count="8">
+        <div style="padding:16px 18px;border-right:1px solid rgba(243,242,242,.08);border-bottom:1px solid rgba(243,242,242,.08);display:flex;flex-direction:column;gap:4px">
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;color:#9b9797">{{ k.label }}</span>
+          <span style="font-weight:900;font-stretch:110%;font-size:24px;font-variant-numeric:tabular-nums;color:{{ k.c }}">{{ k.val }}</span>
+          <span style="font-size:11.5px;color:#9b9797;font-variant-numeric:tabular-nums">{{ k.sub }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="padding:24px 40px 32px;border-top:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Historique des tests · conservé sur cet appareil · {{ histCount }}</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onClick="{{ exportCsv }}" style="all:unset;cursor:pointer;padding:8px 12px;border:2px solid rgba(243,242,242,.25);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.06em" style-hover="border-color:#ec3013">Export CSV</button>
+        <button onClick="{{ exportJson }}" style="all:unset;cursor:pointer;padding:8px 12px;border:2px solid rgba(243,242,242,.25);font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.06em" style-hover="border-color:#ec3013">Export JSON</button>
+        <button onClick="{{ clearHist }}" style="all:unset;cursor:pointer;padding:8px 12px;border:2px solid rgba(243,242,242,.12);color:#9b9797;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.06em" style-hover="border-color:#ec3013;color:#fff">Effacer</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <div style="min-width:820px;display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:1.4fr .7fr .8fr .8fr .8fr .9fr .9fr .7fr .7fr .6fr;gap:10px;padding:8px 0;border-bottom:2px solid rgba(243,242,242,.2);font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;color:#7d7979">
+          <span>Date</span><span>Offre</span><span>↓ Mbps</span><span>↑ Mbps</span><span>Repos</span><span>Charge ↓</span><span>Charge ↑</span><span>Gigue</span><span>Perte</span><span>Note</span>
+        </div>
+        <sc-for list="{{ histRows }}" as="h" hint-placeholder-count="0">
+          <div style="display:grid;grid-template-columns:1.4fr .7fr .8fr .8fr .8fr .9fr .9fr .7fr .7fr .6fr;gap:10px;padding:9px 0;border-bottom:1px solid rgba(243,242,242,.08);font-size:13px;font-variant-numeric:tabular-nums;font-stretch:90%">
+            <span style="color:#bab6b6">{{ h.date }}</span><span>{{ h.offer }}</span><span style="font-weight:700;color:{{ h.dlC }}">{{ h.dl }}</span><span style="font-weight:700">{{ h.ul }}</span><span>{{ h.idle }}</span><span>{{ h.ld }}</span><span>{{ h.lu }}</span><span>{{ h.jit }}</span><span>{{ h.loss }}</span><span style="font-weight:900;color:{{ h.gc }}">{{ h.grade }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ histEmpty }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:16px 0;font-size:13px;color:#7d7979">Aucun test enregistré. Lancez un test pour démarrer l'historique.</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: validation moteur -->
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding:20px 40px;border-top:2px solid rgba(243,242,242,.16);border-bottom:2px solid rgba(243,242,242,.16)">
+    <span style="font-weight:900;font-stretch:125%;text-transform:uppercase;font-size:18px">B · Validation du moteur de détection</span>
+    <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Monte-Carlo · 7 classes · aveugle au type injecté</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))">
+    <div style="padding:28px 32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Essais par classe</span>
+        <div style="display:flex;flex-wrap:wrap">
+          <sc-for list="{{ segTrials }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:9px 12px;margin:0 -2px -2px 0;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-stretch:90%;font-size:13px" style-hover="border-color:#ec3013">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Bruit de mesure</span>
+        <div style="display:flex;flex-wrap:wrap">
+          <sc-for list="{{ segNoise }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:9px 12px;margin:0 -2px -2px 0;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-stretch:90%;font-size:13px" style-hover="border-color:#ec3013">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Atténuation de la sévérité · pannes plus discrètes</span>
+        <div style="display:flex;flex-wrap:wrap">
+          <sc-for list="{{ segSev }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:9px 12px;margin:0 -2px -2px 0;border:2px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-weight:700;font-stretch:90%;font-size:13px" style-hover="border-color:#ec3013">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+        <div style="height:6px;background:rgba(243,242,242,.1)"><div style="height:100%;width:{{ suiteProg }};background:#ec3013"></div></div>
+        <button onClick="{{ suiteRun }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 16px;background:#ec3013;border:2px solid #ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:14px;letter-spacing:.04em" style-hover="background:#dd2b0f"><span>{{ suiteBtn }}</span><span>▶</span></button>
+        <button onClick="{{ suiteExport }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;padding:11px 16px;border:2px solid rgba(243,242,242,.25);font-weight:700;text-transform:uppercase;font-size:12px;opacity:{{ suiteExpOp }}" style-hover="border-color:#ec3013"><span>Exporter le rapport</span><span>↓</span></button>
+      </div>
+    </div>
+    <div style="padding:28px 32px;display:flex;flex-direction:column;gap:18px;min-width:0;grid-column:span 2">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));border-top:2px solid rgba(243,242,242,.16);border-left:1px solid rgba(243,242,242,.08)">
+        <sc-for list="{{ suiteKpis }}" as="k" hint-placeholder-count="5">
+          <div style="padding:14px 14px;border-right:1px solid rgba(243,242,242,.08);border-bottom:1px solid rgba(243,242,242,.08);display:flex;flex-direction:column;gap:4px">
+            <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;color:#9b9797">{{ k.label }}</span>
+            <span style="font-weight:900;font-stretch:115%;font-size:28px;font-variant-numeric:tabular-nums;color:{{ k.c }}">{{ k.val }}</span>
+            <span style="font-size:11px;color:#7d7979">{{ k.sub }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="overflow-x:auto">
+        <div style="min-width:640px;display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:130px repeat(7,minmax(0,1fr)) 70px 70px;gap:2px;padding-bottom:6px;font-stretch:70%;text-transform:uppercase;letter-spacing:.08em;font-size:9.5px;color:#7d7979">
+            <span>Injecté ↓ · Détecté →</span>
+            <sc-for list="{{ matrixHead }}" as="c" hint-placeholder-count="7"><span style="text-align:center">{{ c }}</span></sc-for>
+            <span style="text-align:right">Rappel</span><span style="text-align:right">Délai méd.</span>
+          </div>
+          <sc-for list="{{ matrix }}" as="row" hint-placeholder-count="7">
+            <div style="display:grid;grid-template-columns:130px repeat(7,minmax(0,1fr)) 70px 70px;gap:2px;margin-bottom:2px;align-items:stretch">
+              <span style="font-weight:700;font-size:12.5px;font-stretch:95%;display:flex;align-items:center">{{ row.name }}</span>
+              <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="7">
+                <span style="height:34px;display:grid;place-items:center;background:{{ cell.bg }};border:1px solid {{ cell.bd }};font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px;color:{{ cell.fg }}">{{ cell.v }}</span>
+              </sc-for>
+              <span style="text-align:right;display:flex;align-items:center;justify-content:flex-end;font-variant-numeric:tabular-nums;font-weight:800;font-size:13px;color:{{ row.rc }}">{{ row.recall }}</span>
+              <span style="text-align:right;display:flex;align-items:center;justify-content:flex-end;font-variant-numeric:tabular-nums;font-size:12.5px;color:#bab6b6">{{ row.lat }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <span style="font-size:12px;color:#7d7979;line-height:1.5">Chaque essai part d'une ligne nominale, injecte la panne avec une sévérité et un bruit tirés au hasard, puis lit le verdict au bout de 60 s. L'atténuation est une dérive lente : elle est exclue du critère ENF-2 (&lt; 10 s), qui porte sur les pannes franches.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 03 RESEAU -->
+<section id="reseau" style="border-bottom:2px solid rgba(243,242,242,.16);scroll-margin-top:64px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr))">
+    <div style="position:relative;min-height:640px;border-right:2px solid rgba(243,242,242,.16);background-image:radial-gradient(circle at 50% 60%,rgba(236,48,19,.1),transparent 65%)">
+      <div ref="{{ netRef }}" style="position:absolute;inset:0;cursor:grab;overflow:hidden"></div>
+      <div style="position:absolute;top:40px;left:40px;display:flex;flex-direction:column;gap:14px;pointer-events:none;max-width:440px;z-index:3;background:rgba(18,17,16,.78);padding:14px 16px;margin:-14px -16px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">03 — Supervision distribuée · M9 M10</span>
+        <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.4vw,52px);line-height:.94;text-transform:uppercase">Chaque abonné, une sonde du réseau.</h2>
+      </div>
+      <div style="position:absolute;left:40px;bottom:32px;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#7d7979;pointer-events:none">Hologramme · Abidjan · faire glisser pour pivoter</div>
+    </div>
+    <div style="display:flex;flex-direction:column">
+      <div style="padding:32px;border-bottom:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:16px;background:{{ zoneBg }}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Segment YOP-07 · Yopougon</span>
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:700;color:{{ zoneColor }}">{{ zoneState }}</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+          <span style="font-weight:900;font-stretch:125%;font-size:72px;line-height:.9;font-variant-numeric:tabular-nums;color:{{ zoneColor }}">{{ zoneCount }}</span>
+          <span style="color:#bab6b6;font-size:15px;max-width:280px;line-height:1.4">abonnés dégradés sur {{ zoneN }}, fenêtre de 3 min · {{ zoneNotified }} prévenus · {{ zoneCalls }} appels</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ zoneSteps }}" as="z" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:62px 1fr;gap:10px;font-size:13px;font-variant-numeric:tabular-nums;opacity:{{ z.op }}"><span style="color:#7d7979;font-stretch:80%">{{ z.time }}</span><span style="color:{{ z.c }}">{{ z.t }}</span></div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ canZone }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button onClick="{{ runZone }}" style="all:unset;cursor:pointer;display:flex;gap:28px;padding:13px 16px;background:#ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.04em" style-hover="background:#dd2b0f"><span>Couper le segment</span><span>⚡</span></button>
+          <button onClick="{{ resetZone }}" style="all:unset;cursor:pointer;padding:11px 16px;border:2px solid rgba(243,242,242,.25);font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.04em" style-hover="border-color:#ec3013">Rétablir</button>
+        </div></sc-if>
+      </div>
+      <sc-if value="{{ canChurn }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:28px 32px;display:flex;flex-direction:column;gap:12px;flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Score de résiliation · M12 · trié par risque</span>
+          <span style="font-size:11px;color:#7d7979">Calculé sur 48 abonnés simulés · lissé · proposé au conseiller, jamais exécuté seul</span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 70px minmax(0,1.4fr);gap:10px;padding:8px 0;border-bottom:2px solid rgba(243,242,242,.2);font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;color:#7d7979">
+          <span>Abonné</span><span>Commune</span><span>Risque</span><span>Rétention proposée</span>
+        </div>
+        <sc-for list="{{ churn }}" as="c" hint-placeholder-count="7">
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 70px minmax(0,1.4fr);gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(243,242,242,.08);font-size:13px">
+            <span style="font-weight:600">{{ c.name }}</span>
+            <span style="color:#bab6b6">{{ c.commune }}</span>
+            <span style="display:flex;flex-direction:column;gap:3px"><span style="font-variant-numeric:tabular-nums;font-weight:800;font-stretch:90%;color:{{ c.c }}">{{ c.score }} {{ c.trend }}</span><span style="height:3px;background:rgba(243,242,242,.1)"><span style="display:block;height:100%;width:{{ c.w }};background:{{ c.c }}"></span></span></span>
+            <span style="color:#d7d3d3;font-size:12px">{{ c.action }}</span>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+      <sc-if value="{{ noChurn }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 32px;font-size:13px;color:#9b9797">Scores de résiliation réservés aux rôles Conseiller et Superviseur (ENF-22).</div></sc-if>
+    </div>
+  </div>
+</section>
+
+<!-- 04 WIFI -->
+<section id="wifi" style="border-bottom:2px solid rgba(243,242,242,.16);scroll-margin-top:64px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))">
+    <div style="padding:64px 40px;display:flex;flex-direction:column;gap:22px;border-right:2px solid rgba(243,242,242,.16)">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">04 — Cartographie Wi-Fi · M7</span>
+      <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.4vw,52px);line-height:.94;text-transform:uppercase">La chambre d'Awa, relevée au doigt.</h2>
+      <p style="margin:0;color:#bab6b6;font-size:16px;line-height:1.55;text-wrap:pretty">Parcourez le plan avec le doigt ou la souris. L'application mesure le niveau reçu à chaque point. Au-delà de 25 % de surface sous −68 dBm, elle recommande un déplacement de box chiffré en mètres, avant tout matériel.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;border-top:2px solid rgba(243,242,242,.16)">
+        <div style="padding:16px 16px 16px 0;display:flex;flex-direction:column;gap:4px"><span style="font-weight:900;font-stretch:125%;font-size:40px;font-variant-numeric:tabular-nums">{{ covMeasured }}</span><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Surface relevée</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:4px;border-left:2px solid rgba(243,242,242,.16)"><span style="font-weight:900;font-stretch:125%;font-size:40px;font-variant-numeric:tabular-nums;color:{{ covColor }}">{{ covBad }}</span><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Sous −68 dBm</span></div>
+      </div>
+      <div style="border:2px solid {{ recoBorder }};padding:16px;display:flex;flex-direction:column;gap:8px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Recommandation</span>
+        <span style="font-size:16px;line-height:1.45;font-weight:600">{{ recoText }}</span>
+        <span style="font-size:12.5px;color:#9b9797;line-height:1.4">{{ recoSub }}</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button onClick="{{ autoSurvey }}" style="all:unset;cursor:pointer;display:flex;gap:28px;padding:13px 16px;background:#ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:13px" style-hover="background:#dd2b0f"><span>Relevé automatique</span><span>→</span></button>
+        <sc-for list="{{ wifiBtns }}" as="b" hint-placeholder-count="0"><button onClick="{{ b.onClick }}" style="all:unset;cursor:pointer;padding:11px 16px;border:2px solid #ec3013;font-weight:700;text-transform:uppercase;font-size:13px">{{ b.label }}</button></sc-for>
+        <button onClick="{{ resetSurvey }}" style="all:unset;cursor:pointer;padding:11px 16px;border:2px solid rgba(243,242,242,.25);font-weight:700;text-transform:uppercase;font-size:13px" style-hover="border-color:#ec3013">Effacer</button>
+      </div>
+      <span style="font-size:12px;color:#7d7979">Le plan du logement reste sur l'appareil (ENF-16).</span>
+    </div>
+    <div style="padding:40px;display:flex;flex-direction:column;gap:14px;justify-content:center;background-image:linear-gradient(rgba(243,242,242,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(243,242,242,.04) 1px,transparent 1px);background-size:40px 40px">
+      <canvas ref="{{ wifiRef }}" style="width:100%;aspect-ratio:10/7;display:block;touch-action:none;cursor:crosshair"></canvas>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:#bab6b6">
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:12px;height:12px;background:oklch(0.8 0.17 150)"></span>Bon · ≥ −60 dBm</span>
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:12px;height:12px;background:oklch(0.82 0.16 75)"></span>Moyen · −60 à −68</span>
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:12px;height:12px;background:#ff563c"></span>Zone morte · &lt; −68</span>
+        <span style="display:flex;gap:6px;align-items:center"><span style="width:12px;height:12px;border:2px dashed #f3f2f2"></span>Position recommandée</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 PARCOURS -->
+<section id="parcours" style="border-bottom:2px solid rgba(243,242,242,.16);scroll-margin-top:64px">
+  <div style="padding:64px 40px 32px;display:flex;flex-direction:column;gap:18px">
+    <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">05 — Parcours</span>
+    <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.8vw,56px);line-height:.94;text-transform:uppercase;max-width:1000px">Quatre personnes, quatre quartiers d'Abidjan.</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));border-top:2px solid rgba(243,242,242,.16)">
+    <sc-for list="{{ journeys }}" as="j" hint-placeholder-count="4">
+      <button onClick="{{ j.onClick }}" style="all:unset;cursor:pointer;padding:24px 28px;border-right:2px solid rgba(243,242,242,.16);border-bottom:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:6px;background:{{ j.bg }}" style-hover="background:rgba(236,48,19,.1)">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:{{ j.kc }}">{{ j.place }}</span>
+        <span style="font-weight:900;font-stretch:120%;text-transform:uppercase;font-size:22px">{{ j.who }}</span>
+        <span style="font-size:13px;color:#bab6b6">{{ j.title }}</span>
+      </button>
+    </sc-for>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+    <div style="padding:40px;display:flex;flex-direction:column;gap:0;border-right:2px solid rgba(243,242,242,.16)">
+      <sc-for list="{{ jSteps }}" as="s" hint-placeholder-count="6">
+        <div style="display:grid;grid-template-columns:48px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid rgba(243,242,242,.1)">
+          <span style="font-weight:900;font-stretch:125%;font-size:20px;color:#ec3013;font-variant-numeric:tabular-nums">{{ s.n }}</span>
+          <span style="font-size:16px;line-height:1.5;text-wrap:pretty">{{ s.t }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="padding:40px;display:flex;flex-direction:column;gap:20px;justify-content:space-between;background:rgba(236,48,19,.05)">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Ce que ce parcours démontre</span>
+        <p style="margin:0;font-weight:700;font-stretch:108%;font-size:clamp(22px,2.2vw,30px);line-height:1.2;text-wrap:pretty">{{ jProof }}</p>
+      </div>
+      <button onClick="{{ playJourney }}" style="all:unset;cursor:pointer;align-self:flex-start;display:flex;gap:40px;padding:15px 18px;background:#ec3013;color:#fff;font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.04em" style-hover="background:#dd2b0f"><span>{{ jPlay }}</span><span>↑</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- 06 IA -->
+<section id="ia" style="border-bottom:2px solid rgba(243,242,242,.16);scroll-margin-top:64px">
+  <div style="padding:64px 40px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:32px;align-items:end">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">06 — Intelligence</span>
+      <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.8vw,56px);line-height:.94;text-transform:uppercase">Quatre briques d'IA. Aucune boîte noire.</h2>
+    </div>
+    <div style="border:2px solid rgba(243,242,242,.18);padding:22px;display:flex;flex-direction:column;gap:10px">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Écart robuste à la ligne de base, par abonné et par tranche horaire</span>
+      <div style="display:flex;align-items:center;gap:14px;font-size:clamp(20px,2vw,28px);font-style:italic;font-stretch:95%;flex-wrap:wrap">
+        <span>z<sub style="font-size:.5em">i,t</sub> =</span>
+        <span style="display:inline-flex;flex-direction:column;align-items:center">
+          <span style="padding:0 6px 4px">x<sub style="font-size:.5em">i,t</sub> − med<sub style="font-size:.5em">i,h(t)</sub></span>
+          <span style="border-top:2px solid #f3f2f2;padding:4px 6px 0">1,4826 · MAD<sub style="font-size:.5em">i,h(t)</sub></span>
+        </span>
+      </div>
+      <span style="font-size:13px;color:#9b9797;line-height:1.45">L'écart absolu médian résiste à une panne présente dans l'historique ; l'écart-type non.</span>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));border-top:2px solid rgba(243,242,242,.16)">
+    <sc-for list="{{ aiBricks }}" as="b" hint-placeholder-count="4">
+      <div style="padding:32px 28px;border-right:2px solid rgba(243,242,242,.16);border-bottom:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:14px">
+        <span style="font-weight:900;font-stretch:125%;font-size:44px;color:#ec3013;line-height:1">{{ b.n }}</span>
+        <span style="font-weight:800;font-stretch:112%;text-transform:uppercase;font-size:17px;line-height:1.15">{{ b.title }}</span>
+        <span style="font-size:14px;color:#bab6b6;line-height:1.5">{{ b.problem }}</span>
+        <span style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(243,242,242,.12);font-size:13.5px;line-height:1.5">{{ b.approach }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="padding:40px;display:flex;flex-direction:column;gap:14px">
+    <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Matrice de coût · les erreurs ne se valent pas</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));border-top:2px solid rgba(243,242,242,.2)">
+      <sc-for list="{{ costs }}" as="c" hint-placeholder-count="4">
+        <div style="padding:18px 20px 18px 0;border-bottom:1px solid rgba(243,242,242,.1);display:flex;flex-direction:column;gap:6px">
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;font-weight:700;color:{{ c.c }}">Coût {{ c.level }}</span>
+          <span style="font-weight:700;font-size:16px">{{ c.err }}</span>
+          <span style="font-size:13px;color:#9b9797">{{ c.cons }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- 07 ARCHITECTURE + MODULES -->
+<section style="border-bottom:2px solid rgba(243,242,242,.16)">
+  <div style="padding:64px 40px 32px;display:flex;flex-direction:column;gap:18px">
+    <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">07 — Architecture</span>
+    <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.8vw,56px);line-height:.94;text-transform:uppercase;max-width:1100px">Un seul flux télémétrique. Quatre restitutions.</h2>
+  </div>
+  <div style="padding:0 40px 48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0">
+    <sc-for list="{{ pipeline }}" as="p" hint-placeholder-count="6">
+      <div style="border:2px solid {{ p.bd }};margin:0 -2px -2px 0;padding:18px 16px;display:flex;flex-direction:column;gap:8px;min-height:120px;background:{{ p.bg }}">
+        <span style="font-stretch:75%;font-variant-numeric:tabular-nums;font-size:11px;color:#ff563c">{{ p.n }}</span>
+        <span style="font-weight:800;font-stretch:108%;text-transform:uppercase;font-size:14px;line-height:1.15">{{ p.t }}</span>
+        <span style="font-size:12.5px;color:#9b9797;line-height:1.4;margin-top:auto">{{ p.s }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));border-top:2px solid rgba(243,242,242,.16)">
+    <sc-for list="{{ modules }}" as="md" hint-placeholder-count="12">
+      <div style="padding:22px 24px;border-right:2px solid rgba(243,242,242,.16);border-bottom:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="font-weight:900;font-stretch:125%;font-size:20px">{{ md.id }}</span>
+          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;font-weight:700;padding:3px 6px;border:1px solid {{ md.c }};color:{{ md.c }}">{{ md.circle }}</span>
+        </div>
+        <span style="font-weight:700;font-size:15px">{{ md.name }}</span>
+        <span style="font-size:13px;color:#9b9797;line-height:1.45">{{ md.desc }}</span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<!-- 08 ECONOMIE -->
+<section id="economie" style="border-bottom:2px solid rgba(243,242,242,.16);scroll-margin-top:64px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+    <div style="padding:64px 40px;display:flex;flex-direction:column;gap:22px;border-right:2px solid rgba(243,242,242,.16)">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">08 — Argumentaire économique</span>
+      <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.4vw,52px);line-height:.94;text-transform:uppercase">Trois coûts réduits. Aucune dépense nouvelle.</h2>
+      <div style="font-size:clamp(15px,1.4vw,19px);font-style:italic;font-stretch:92%;padding:16px;border:2px solid rgba(243,242,242,.16);line-height:1.6">E<sub>annuel</sub> = 12 · [ A · p<sub>a</sub> · c<sub>a</sub> + D · p<sub>d</sub> · c<sub>d</sub> ] + R · p<sub>r</sub> · ARPU · d</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Économie annuelle estimée</span>
+        <span style="font-weight:900;font-stretch:125%;font-size:clamp(48px,6vw,92px);line-height:.95;font-variant-numeric:tabular-nums;color:#ec3013">{{ econTotal }}</span>
+        <span style="font-size:14px;color:#bab6b6">FCFA par an · calcul sur hypothèses</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ econBars }}" as="b" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span>{{ b.label }}</span><span style="font-variant-numeric:tabular-nums;font-weight:700">{{ b.val }}</span></div>
+            <div style="height:8px;background:rgba(243,242,242,.08)"><div style="height:100%;width:{{ b.w }};background:{{ b.c }};transition:width .3s"></div></div>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin:0;font-size:13px;color:#9b9797;line-height:1.5;border-top:1px solid rgba(243,242,242,.12);padding-top:14px">Toute valeur non fournie par Moov est étiquetée « hypothèse ». Moov recalcule avec ses vraies valeurs en déplaçant les curseurs.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(243,242,242,.12);padding-top:14px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ff9783">Le coût du produit · 10.5</span>
+        <sc-for list="{{ costRows }}" as="c" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;font-size:13px;line-height:1.4"><span style="font-weight:700">{{ c.k }}</span><span style="color:#bab6b6">{{ c.v }}</span></div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="padding:48px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 28px;align-content:start">
+      <sc-for list="{{ econInputs }}" as="e" hint-placeholder-count="10">
+        <label style="display:flex;flex-direction:column;gap:6px;padding:14px 0;border-bottom:1px solid rgba(243,242,242,.1)">
+          <span style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+            <span style="font-size:13px;color:#d7d3d3"><b style="font-style:italic;font-weight:700;margin-right:6px">{{ e.sym }}</b>{{ e.label }}</span>
+          </span>
+          <span style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-weight:800;font-stretch:95%;font-variant-numeric:tabular-nums;font-size:18px">{{ e.display }}</span>
+            <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:9px;color:#ff9783;border:1px solid rgba(236,48,19,.5);padding:2px 5px">Hypothèse</span>
+          </span>
+          <input type="range" min="{{ e.min }}" max="{{ e.max }}" step="{{ e.step }}" value="{{ e.val }}" onChange="{{ e.onChange }}" style="width:100%">
+        </label>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- CLOSE -->
+<section style="background:#ec3013;color:#fff;padding:88px 40px 40px;display:flex;flex-direction:column;gap:56px">
+  <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(44px,7vw,120px);line-height:.88;text-transform:uppercase;max-width:1400px;text-wrap:balance">Une application de dépannage qui survit à la panne qu'elle diagnostique.</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));border-top:2px solid rgba(255,255,255,.6)">
+    <div style="padding:18px 18px 0 0;display:flex;flex-direction:column;gap:4px"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px">Thèmes traités</span><span style="font-weight:700;font-size:16px">3 — Self-care et diagnostic · 6 — Risque de départ</span></div>
+    <div style="padding:18px 18px 0;display:flex;flex-direction:column;gap:4px;border-left:2px solid rgba(255,255,255,.6)"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px">Langues</span><span style="font-weight:700;font-size:16px">Français · Nouchi · Dioula</span></div>
+    <div style="padding:18px 18px 0;display:flex;flex-direction:column;gap:4px;border-left:2px solid rgba(255,255,255,.6)"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px">Dépôt</span><span style="font-weight:700;font-size:16px">29 octobre 2026 (limite le 31) · moov-africa.ci</span></div>
+    <div style="padding:18px 18px 0;display:flex;flex-direction:column;gap:4px;border-left:2px solid rgba(255,255,255,.6)"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px">Concours</span><span style="font-weight:700;font-size:16px">Moov Africa Côte d'Ivoire × IUGB</span></div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const { SUB, BASE, PROFILES: T, NOISE, KEYS, CLS, CLSORD, EXPECT, ACT, f, med } = window.FG;
+const langPack = id => FG.LANGS[id] || FG.LANGS.fr;
+const VERD = new Proxy({}, { get: (_, id) => langPack(id).verdict });
+const CFG = window.FG_CONFIG || {};
+const SPEED = 'https://speed.cloudflare.com';
+const HKEY = 'fg-bench-v1';
+const loadHist = () => { try { return JSON.parse(localStorage.getItem(HKEY) || '[]'); } catch (e) { return []; } };
+const pctl = (a, p) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const gradeOf = b => b == null ? '—' : b < 5 ? 'A+' : b < 30 ? 'A' : b < 60 ? 'B' : b < 200 ? 'C' : b < 400 ? 'D' : 'F';
+const MODEORD = ['nominal', 'rupture', 'attenuation', 'wifi', 'amont', 'congestion', 'partage'];
+const SHORT = { sain: 'Sain', rupture: 'Rupture', attenuation: 'Atténuation', wifi: 'Wi-Fi', amont: 'Amont', congestion: 'Congestion', partage: 'Partage' };
+const dlFile = (name, text, type) => { const b = new Blob([text], { type }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); };
+const tfetch = (url, opt = {}, ms = 8000) => { const ac = new AbortController(); const id = setTimeout(() => ac.abort(), ms); return fetch(url, { cache: 'no-store', ...opt, signal: ac.signal }).finally(() => clearTimeout(id)); };
+const GREEN = 'oklch(0.8 0.17 150)', ORANGE = 'oklch(0.82 0.16 75)', RED = '#ff563c', MUTE = '#7d7979';
+const ST = { ok: { c: GREEN, l: 'Conforme' }, warn: { c: ORANGE, l: 'Dégradé' }, ko: { c: RED, l: 'Hors service' } };
+const CONFIRM = {
+  ticket: 'Signalement transmis avec diagnostic et mesures. Créneau proposé : demain 09:00–11:00.',
+  clean: '1. Débranchez le cordon fibre. 2. Soufflez sur le connecteur. 3. Rebranchez jusqu’au clic. Mesure relancée.',
+  tech: 'Demande transmise. Pièce identifiée : connecteur SC/APC. Le technicien part informé.',
+  track: 'Incident réseau pris en charge. Rétablissement estimé dans 1 h 40, suivi par SMS.',
+  schedule: 'Téléchargements programmés entre 01:00 et 06:00.',
+  offer: 'Offre adaptée envoyée par SMS, sans engagement.',
+  share: 'Offre partagée légale proposée. Aucune sanction : vous gardez la main.',
+};
+const FAULTS = [
+  ['nominal', 'Nominal', 'Ligne conforme'], ['rupture', 'Rupture optique', 'Coupure franche du lien'], ['attenuation', 'Atténuation', 'Connecteur encrassé, dérive lente'],
+  ['wifi', 'Wi-Fi faible', 'Box au salon, chambre éloignée'], ['amont', 'Incident amont', 'Trafic bloqué côté réseau'], ['congestion', 'Congestion', 'Heure de pointe'], ['partage', 'Partage illicite', 'Ligne revendue à un immeuble'],
+];
+const COMMUNES = [
+  ['Plateau', -4.017, 5.323, 1.6, true], ['Cocody', -3.985, 5.355, 1.1], ['Yopougon', -4.075, 5.345, 1.3], ['Abobo', -4.02, 5.425, 1.0], ['Adjamé', -4.027, 5.36, .8],
+  ['Attécoubé', -4.045, 5.335, .6], ['Treichville', -4.005, 5.3, .8], ['Marcory', -3.982, 5.302, .8], ['Koumassi', -3.95, 5.295, .9], ['Port-Bouët', -3.925, 5.255, .7], ['Bingerville', -3.89, 5.355, .5], ['Anyama', -4.052, 5.49, .5],
+];
+const JOURNEYS = [
+  { who: 'Awa', place: 'Yopougon', title: 'Le Wi-Fi accusé à tort', mode: 'wifi', steps: ["La vidéo saccade dans la chambre d'Awa, alors qu'elle passe bien au salon.", "Awa ouvre l'application. Avant qu'elle n'ait rien tapé, l'écran affiche : votre Wi-Fi faiblit, la fibre est bonne.", 'Le détail montre 97 Mbps mesurés à la box, 19 Mbps sur son téléphone, niveau Wi-Fi à −79 dBm.', "Awa appuie sur « Optimiser le canal Wi-Fi ». Le canal passe de 1 à 11, l'encombrement baisse.", 'Le débit remonte à 71 Mbps. Aucun appel, aucun technicien.', "L'application propose la cartographie du logement pour traiter la zone morte restante."], proof: "Un déplacement technicien évité, un appel évité, et surtout un client qui comprend son problème au lieu de le subir." },
+  { who: 'Kouassi', place: 'Cocody', title: 'La panne annoncée avant la coupure', mode: 'attenuation', steps: ['Depuis dix jours, la puissance optique de la ligne de Kouassi dérive de −18 à −27 dBm. Le débit tient encore.', 'Le moteur déclenche une alerte préventive : signal en baisse, agir maintenant évite la coupure.', "L'application explique la cause probable : connecteur encrassé ou fibre pincée derrière un meuble.", "Kouassi demande un technicien depuis l'application. La demande part avec le diagnostic et les mesures.", 'Le technicien arrive en sachant quoi chercher et avec la pièce nécessaire.', "La coupure n'a jamais eu lieu."], proof: 'De la maintenance prédictive, une intervention en une seule visite, et zéro indisponibilité subie.' },
+  { who: 'Mariam', place: 'Abobo', title: 'La panne pendant la panne', mode: 'rupture', steps: ['La fibre est coupée. Plus rien ne fonctionne.', "L'application bascule automatiquement sur les données mobiles. Le bandeau l'indique.", "Le diagnostic s'affiche : rupture du lien optique, ce n'est pas votre box.", "Mariam écrit en nouchi : « y'a quoi sur ma ligne dèh ? ». L'agent répond dans la même langue, en citant la mesure optique.", "Elle choisit le suivi par SMS. Le forfait data s'épuise ; l'application bascule sur SMS et continue de l'informer.", "Elle reçoit le créneau d'intervention sans jamais avoir appelé le 101."], proof: "Une application de dépannage qui survit à la panne qu'elle diagnostique, et qui parle la langue du client." },
+  { who: 'Superviseur', place: 'Réseau Moov', title: "L'incident détecté avant les appels", mode: 'zone', steps: ["Dix-sept abonnés d'un même segment voient leur débit chuter en moins de trois minutes.", "L'agrégation détecte le regroupement et déclare un incident de zone.", "Le superviseur reçoit l'alerte avant le premier appel client.", 'Les abonnés du segment sont prévenus automatiquement, avec une estimation de rétablissement.', "Le volume d'appels entrants sur cet incident s'effondre."], proof: 'Chaque abonné devient une sonde passive du réseau. Moov obtient une supervision distribuée sans installer un seul équipement.' },
+];
+const WALLS = [[0, 0, 10, 0], [10, 0, 10, 7], [10, 7, 0, 7], [0, 7, 0, 0], [4, 0, 4, 2.6], [4, 3.6, 4, 7], [4, 4, 7, 4], [8, 4, 10, 4], [7, 4, 7, 7]];
+const ECON = [
+  ['A', 'Appels mensuels qualité fibre', 1000, 40000, 500, v => v.toLocaleString('fr-FR')],
+  ['pa', "Part d'appels évitables", 5, 80, 1, v => v + ' %'],
+  ['ca', "Coût d'un appel traité", 300, 5000, 100, v => v.toLocaleString('fr-FR') + ' FCFA'],
+  ['D', 'Déplacements mensuels', 200, 10000, 100, v => v.toLocaleString('fr-FR')],
+  ['pd', 'Part sans défaut réseau', 5, 80, 1, v => v + ' %'],
+  ['cd', "Coût d'un déplacement", 3000, 60000, 1000, v => v.toLocaleString('fr-FR') + ' FCFA'],
+  ['R', 'Résiliations annuelles qualité', 500, 30000, 500, v => v.toLocaleString('fr-FR')],
+  ['pr', 'Part évitable par rétention', 1, 50, 1, v => v + ' %'],
+  ['arpu', 'ARPU fibre mensuel', 10000, 60000, 1000, v => v.toLocaleString('fr-FR') + ' FCFA'],
+  ['d', 'Durée de vie résiduelle', 3, 48, 1, v => v + ' mois'],
+];
+const SYM = { A: 'A', pa: 'pₐ', ca: 'cₐ', D: 'D', pd: 'p_d', cd: 'c_d', R: 'R', pr: 'p_r', arpu: 'ARPU', d: 'd' };
+const hhmm = (d = new Date()) => d.toTimeString().slice(0, 8);
+
+class Component extends DCLogic {
+  state = { t: 0, mode: 'nominal', lang: 'fr', tab: 'home', chat: [], typing: false, input: '', sms: false, done: null, zone: 0, zoneCount: 0, zoneLog: [], journey: 0,
+    econ: { A: 12000, pa: 35, ca: 1500, D: 2500, pd: 40, cd: 15000, R: 6000, pr: 15, arpu: 25000, d: 18 }, cov: { m: 0, b: 0, reco: null }, log: [], real: { phase: 'Inactive' }, bench: { offer: 100, streams: 4, dur: 10, running: false, phase: 'Prêt', live: null, res: null, meta: null, hist: loadHist() }, suite: { trials: 30, noise: 1, sev: 0, running: false, prog: 0, res: null }, scanning: false, photo: null, photoSrc: null, photoErr: null, injectT: 0, detectAt: null, role: 'superviseur', dataOut: false, smsLog: [], smsInput: '', pendingReboot: false, fine: true, covStage: 'survey', repeater: null };
+  heroRef = { current: null }; netRef = { current: null }; chartRef = { current: null }; optRef = { current: null }; wifiRef = { current: null }; labRef = { current: null }; chatRef = { current: null }; smsBox = { current: null };
+  cbRef = {}; benchRef = { current: null }; bs = { dl: [], ul: [], lat: [], dur: 10 };
+  refCb(name) { if (!this.cbRef[name]) this.cbRef[name] = el => { this[name].current = el; if (el && this.tryInit && this.ro) this.tryInit(); }; return this.cbRef[name]; }
+  m = { ...BASE, link: 1 }; hist = []; win = []; det = { cls: 'sain', conf: .97, ev: [], trace: [] }; measured = new Set(); box = { x: 1.1, y: 1.1 };
+  baseline = FG.Baseline.seed(Math.random, { pastFault: true }); collector = new FG.Collector(); fleet = new FG.Fleet(); zoneFast = 0; smsRate = [];
+
+  componentDidMount() { this.ensureBoot(); }
+  ensureBoot() {
+    window.__fgLive = this;
+    if (window.__fgOwner === this) return;
+    window.__fgOwner = this;
+    setTimeout(() => { if (window.__fgOwner === this) this.boot(); }, 0);
+  }
+  boot() {
+    const H = window.__fgH;
+    if (H) { clearInterval(H.timer); clearInterval(H.wait); cancelAnimationFrame(H.hr); cancelAnimationFrame(H.nr); H.ro && H.ro.disconnect(); H.io && H.io.disconnect(); }
+    window.__fgH = {};
+    if (!this.hist.length) for (let i = 0; i < 70; i++) this.step(true);
+    window.__fgH.timer = setInterval(() => { const L = window.__fgLive; if (L) L.step(); }, 1000);
+    if (!window.THREE && !document.querySelector('script[data-fg-three]')) { const sc = document.createElement('script'); sc.src = 'vendor/three.min.js'; sc.setAttribute('data-fg-three', '1'); document.head.appendChild(sc); }
+    this.vis = { hero: true, net: false };
+    this.ro = new ResizeObserver(() => { [[this.heroR, this.heroCam, this.heroRef.current], [this.netR, this.netCam, this.netRef.current]].forEach(([r, c, e]) => { if (r && e && e.clientWidth) { r.setSize(e.clientWidth, e.clientHeight); c.aspect = e.clientWidth / e.clientHeight; c.updateProjectionMatrix(); } }); if (this.wifiInit) this.drawWifi(); });
+    this.io = new IntersectionObserver(es => es.forEach(e => { this.vis[e.target === this.heroRef.current ? 'hero' : 'net'] = e.isIntersecting; }));
+    window.__fgH.ro = this.ro; window.__fgH.io = this.io;
+    this.heroInit = this.netInit = this.wifiInit = false;
+    this.tryInit();
+    window.__fgH.wait = setInterval(() => { const L = window.__fgLive; if (!L || L.tryInit()) clearInterval(window.__fgH.wait); }, 150);
+  }
+  tryInit() {
+    if (!this.ro) return false;
+    const T3 = !!window.THREE;
+    if (!this.heroInit && T3 && this.heroRef.current && this.heroRef.current.clientWidth) { this.heroInit = true; this.initHero(); }
+    if (!this.netInit && T3 && this.netRef.current && this.netRef.current.clientWidth) { this.netInit = true; this.initNet(); }
+    if (!this.wifiInit && this.wifiRef.current && this.wifiRef.current.clientWidth) { this.wifiInit = true; if (!this.wifiRef.current.__fgBound) { this.wifiRef.current.__fgBound = true; this.initWifi(); } else this.drawWifi(); this.ro.observe(this.wifiRef.current); }
+    return this.heroInit && this.netInit && this.wifiInit;
+  }
+  componentWillUnmount() { if (window.__fgOwner === this) { const H = window.__fgH || {}; clearInterval(H.timer); clearInterval(H.wait); cancelAnimationFrame(H.hr); cancelAnimationFrame(H.nr); H.ro && H.ro.disconnect(); H.io && H.io.disconnect(); window.__fgOwner = null; } clearInterval(this.zt); clearInterval(this.st); }
+  componentDidUpdate() { this.ensureBoot(); if (this.ro && !(this.heroInit && this.netInit && this.wifiInit)) this.tryInit(); this.drawCharts(); [this.chatRef.current, this.smsBox.current].forEach(c => { if (c) c.scrollTop = c.scrollHeight; }); }
+
+  step(silent) {
+    let mode = this.state.mode;
+    if (this.rebootLeft > 0) { this.rebootLeft--; if (this.rebootLeft === 0) { mode = 'nominal'; this.setState({ mode: 'nominal' }); this.addLog('Box redémarrée · ligne rétablie', GREEN); } }
+    const tg = T[this.rebootLeft > 0 ? 'reboot' : mode];
+    const slow = mode === 'attenuation';
+    KEYS.forEach(k => {
+      const rate = slow ? .07 : (mode === 'rupture' ? .6 : .35);
+      const n = NOISE[k] * (tg[k] === 0 ? 0 : 1);
+      let v = this.m[k] + (tg[k] - this.m[k]) * rate + (Math.random() - .5) * 2 * n;
+      if (k !== 'opt' && k !== 'wifi') v = Math.max(0, v);
+      if (k === 'dev') v = Math.round(v + (tg[k] - v) * .5);
+      this.m[k] = v;
+    });
+    this.m.link = mode === 'rupture' && this.m.opt < -34 ? 0 : 1;
+    this.hist.push({ ...this.m }); if (this.hist.length > 70) this.hist.shift();
+    this.win.push({ ...this.m }); if (this.win.length > 9) this.win.shift();
+    const w = {}; [...KEYS, 'link'].forEach(k => w[k] = med(this.win.map(s => s[k])));
+    const prev = this.det.cls; this.det = this.detect(w); this.w = w;
+    if (silent) return;
+    const t1 = this.state.t + 1;
+    const ups = { t: t1 };
+    // M1 : agent embarqué. Veille 1 min, diagnostic 1 s, tampon local si le WAN tombe (EF-M1-1/2).
+    const wanUp = this.m.link > 0 && !(this.rebootLeft > 0);
+    const col = this.collector.tick(t1, this.m, wanUp, this.det.cls !== 'sain');
+    if (col && col.startsWith('replay:')) this.addLog(`Liaison rétablie · ${col.slice(7)} échantillons du tampon rejoués`, '#ff9783');
+    if (this.det.cls !== prev) {
+      this.addLog(`Détection · ${CLS[this.det.cls].name} · confiance ${f(this.det.conf, 2)}`, ST[CLS[this.det.cls].st].c);
+      if (EXPECT[this.state.mode] === this.det.cls && this.state.detectAt === null) ups.detectAt = t1 - this.state.injectT;
+      // EF-M8-3 : chaque changement d'état part par SMS quand l'abonné est hors données.
+      if (this.state.sms || this.det.cls === 'rupture') this.pushSms(this.smsStatus());
+    }
+    if (this.state.mode === 'nominal' && this.det.cls === 'sain' && this.state.detectAt === null && this.state.t - this.state.injectT > 2) ups.detectAt = t1 - this.state.injectT;
+    // EF-M8-2 : fibre coupée ET forfait data épuisé → bascule automatique sur le canal SMS.
+    if (this.det.cls === 'rupture' && this.state.dataOut && !this.state.sms) { ups.sms = true; this.addLog('Données mobiles épuisées · bascule automatique sur SMS', ORANGE); }
+    this.cls = this.rebootLeft > 0 ? 'reboot' : this.det.cls;
+    // M10 / M12 : la flotte avance (accélérée ×5 pendant un incident, pour tenir dans la soutenance).
+    const n = this.zoneFast > 0 ? 5 : 1; if (this.zoneFast > 0) this.zoneFast--;
+    for (let i = 0; i < n; i++) { this.fleet.step(); if (this.fleet.t % 60 === 0) this.fleet.markTrend(); }
+    this.trackZone();
+    this.setState(ups);
+  }
+  detect(w) {
+    const d = FG.detect(w, { baseline: this.baseline, hour: new Date().getHours() });
+    const col = { 'déclenchée': ST[CLS[d.cls].st].c, 'négative': '#bab6b6', 'masquée': MUTE, 'retenue': d.cls === 'sain' ? GREEN : ORANGE };
+    d.trace = d.trace.map(r => ({ ...r, c: col[r.st], op: r.st === 'masquée' ? .45 : r.st === 'négative' ? .75 : 1 }));
+    return d;
+  }
+  // Journal de l'incident de zone, construit à partir de l'état réel de l'agrégateur.
+  trackZone() {
+    const st = this.fleet.segmentStats('YOP-07'), z = this.zlog || (this.zlog = {}), add = (t, c) => this.setState(s => ({ zoneLog: [...s.zoneLog, { time: hhmm(), t, c }] }));
+    if (!this.state.zone && !z.cut && !z.declared) return;
+    if (st.degraded && !z.first) { z.first = true; add(`Premières anomalies sur YOP-07 · ${st.degraded} abonné${st.degraded > 1 ? 's' : ''}`, ORANGE); }
+    if (st.incident && !z.declared) {
+      z.declared = true; const i = st.incident;
+      add(`Incident de zone déclaré · ${i.count}/${st.n} abonnés dégradés en moins de 3 min · alerte supervision`, RED);
+      add(`${st.notified} abonnés prévenus par SMS · rétablissement estimé ${i.eta}`, '#f3f2f2');
+      add(i.beforeFirstCall ? 'Alerte émise avant le premier appel client' : 'Alerte émise après un premier appel', i.beforeFirstCall ? GREEN : ORANGE);
+      this.addLog(`Supervision · incident de zone YOP-07 (${FG.CLS[i.dominant].name.toLowerCase()})`, RED);
+    }
+    if (z.declared && !st.incident && !z.closed) { z.closed = true; add('Incident clos · segment rétabli', GREEN); }
+    if (st.calls > (z.calls || 0)) { z.calls = st.calls; add(`${st.calls} appel${st.calls > 1 ? 's' : ''} entrant${st.calls > 1 ? 's' : ''} d'abonnés non prévenus`, ORANGE); }
+    this.setState({ zone: st.incident ? 2 : st.degraded ? 1 : 0, zoneCount: st.degraded });
+  }
+  addLog(t, c = '#d7d3d3') { this.setState(s => ({ log: [{ time: hhmm(), t, c }, ...s.log].slice(0, 30) })); }
+
+  toggleReal() {
+    if (this.realOn) { this.realOn = false; clearTimeout(this.realT); this.setState({ real: { ...this.state.real, phase: 'Arrêtée' } }); this.inject('nominal'); return; }
+    if (!window.__fgNetL) { window.__fgNetL = true; const h = () => { const L = window.__fgLive || this; if (L.realOn) { clearTimeout(L.realT); L.realCycle(); } }; window.addEventListener('offline', h); window.addEventListener('online', h); }
+    this.inject('reel'); this.realOn = true; this.addLog('Mesure réelle démarrée · appareil courant', '#ff9783'); this.realCycle();
+  }
+  async realCycle() {
+    if (!this.realOn) return;
+    const set = p => this.setState(s => ({ real: { ...s.real, ...p } }));
+    try {
+      if (!navigator.onLine) throw new Error('offline');
+      set({ phase: 'Latence…' });
+      const rtts = []; let lost = 0;
+      for (let i = 0; i < 13 && this.realOn; i++) { const t0 = performance.now(); try { await tfetch(SPEED + '/__down?bytes=0&r=' + Math.random(), {}, 2500); if (i) rtts.push(performance.now() - t0); } catch (e) { if (i) lost++; } }
+      if (!rtts.length) throw new Error('unreachable');
+      const lat = med(rtts); let jit = 0; for (let i = 1; i < rtts.length; i++) jit += Math.abs(rtts[i] - rtts[i - 1]); jit = rtts.length > 1 ? jit / (rtts.length - 1) : 0;
+      const loss = lost / 12 * 100;
+      Object.assign(T.reel, { lat, jit, loss }); set({ lat, jit, loss, phase: 'Débit descendant…' });
+      let dl = 0; { const t0 = performance.now(); let got = 0; try { const r = await tfetch(SPEED + '/__down?bytes=25000000&r=' + Math.random(), {}, 9000); const rd = r.body.getReader(); while (true) { const { done, value } = await rd.read(); if (done) break; got += value.length; if (performance.now() - t0 > 7000) { rd.cancel(); break; } } } catch (e) {} dl = got * 8 / ((performance.now() - t0) / 1000) / 1e6; }
+      Object.assign(T.reel, { dl, loc: dl }); set({ dl, phase: 'Débit montant…' });
+      let ul = 0; { const data = new Uint8Array(4e6); const t0 = performance.now(); try { await tfetch(SPEED + '/__up', { method: 'POST', body: data }, 9000); ul = data.length * 8 / ((performance.now() - t0) / 1000) / 1e6; } catch (e) { ul = 0; } }
+      Object.assign(T.reel, { ul });
+      const cn = navigator.connection; const type = cn ? (cn.type || cn.effectiveType || '') : '';
+      set({ ul, type, phase: 'Mesure à jour · ' + hhmm().slice(0, 5), n: (this.state.real.n || 0) + 1, err: null });
+      this.addLog(`Mesure réelle · ${f(dl, 0)}↓ ${f(ul, 0)}↑ Mbps · ${f(lat, 0)} ms · perte ${f(loss)} %`, '#ff9783');
+    } catch (e) {
+      const off = e.message === 'offline';
+      Object.assign(T.reel, { dl: 0, ul: 0, loc: 0, lat: 999, jit: 0, loss: 100 });
+      set({ phase: off ? 'Appareil hors ligne' : 'Serveur de test injoignable', err: off ? 'offline' : 'unreachable', dl: 0, ul: 0, lat: null, loss: 100 });
+      this.addLog(off ? 'Mesure réelle · appareil hors ligne' : 'Mesure réelle · serveur de test injoignable', RED);
+    }
+    if (this.realOn) this.realT = setTimeout(() => this.realCycle(), 6000);
+  }
+  inject(id) {
+    this.rebootLeft = 0;
+    if (id !== 'reel' && this.realOn) { this.realOn = false; clearTimeout(this.realT); this.setState(s => ({ real: { ...s.real, phase: 'Arrêtée' } })); }
+    this.setState({ mode: id, done: null, sms: false, injectT: this.state.t, detectAt: null, photo: null, photoSrc: null, photoErr: null, pendingReboot: false });
+  }
+  runAction(key) {
+    const cls = this.det.cls;
+    if (key === 'channel') { this.setState({ mode: 'wifiFixed', done: 'Canal Wi-Fi passé de 1 à 11. Encombrement en baisse, débit local en remontée.' }); this.addLog('Action client · canal Wi-Fi 1 → 11', GREEN); return; }
+    if (key === 'reboot' && !this.state.pendingReboot) { this.setState({ pendingReboot: true }); return; }
+    if (key === 'reboot') { this.rebootLeft = 8; this.state.pendingReboot = false; this.setState({ done: 'Code vérifié : il est lié à votre ligne. Redémarrage à distance en cours.', pendingReboot: false }); this.addLog('Action client · redémarrage box à distance', GREEN); return; }
+    if (key === 'secure') { this.setState({ mode: 'nominal', done: 'Wi-Fi sécurisé : nouvelle clé WPA3, appareils inconnus déconnectés.' }); this.addLog('Action client · Wi-Fi sécurisé', GREEN); return; }
+    if (key === 'sms') { this.setState({ sms: true, tab: 'home' }); this.addLog('Bascule canal SMS · abonné suivi hors ligne', ORANGE); return; }
+    if (key === 'map') { const el = document.getElementById('wifi'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior: 'smooth' }); return; }
+    this.setState({ done: CONFIRM[key] }); this.addLog(`Action client · ${key === 'ticket' || key === 'tech' ? 'signalement pré-diagnostiqué transmis' : CLS[cls].name.toLowerCase() + ' · ' + key}`, GREEN);
+  }
+
+  async ask(q) {
+    q = (q || '').trim(); if (!q || this.state.typing) return;
+    this.setState(s => ({ chat: [...s.chat, { who: 'me', text: q }], input: '', typing: true }));
+    const out = await FG.ask({ question: q, cls: this.det.cls, conf: this.det.conf, lang: this.state.lang, w: this.w, endpoint: CFG.agentEndpoint });
+    this.setState(s => ({ chat: [...s.chat, { who: 'ai', ...out }], typing: false }));
+  }
+
+  /* M6 : photo réelle (appareil photo ou fichier) ou photo d'exemple générée. */
+  async onPhotoFiles(ev) {
+    const files = [...(ev.target.files || [])].slice(0, 2); ev.target.value = '';
+    if (!files.length) return;
+    this.setState({ scanning: true, photo: null, photoErr: null });
+    try {
+      const imgs = await Promise.all(files.map(fl => FG.vision.fileToImage(fl)));
+      this.runVision(imgs.map(i => i.img), imgs[0].dataUrl, false);
+    } catch (e) { this.setState({ scanning: false, photoErr: 'Impossible de lire cette image. Reprenez la photo.' }); }
+  }
+  samplePhoto() {
+    const cls = this.det.cls, frames = [FG.vision.samplePhoto(cls, 0), FG.vision.samplePhoto(cls, 1)];
+    const c = document.createElement('canvas'); c.width = frames[0].width; c.height = frames[0].height;
+    c.getContext('2d').putImageData(new ImageData(frames[0].data, frames[0].width, frames[0].height), 0, 0);
+    this.setState({ scanning: true, photo: null, photoErr: null });
+    setTimeout(() => this.runVision(frames, c.toDataURL('image/png'), true), 500);
+  }
+  async runVision(frames, dataUrl, sample) {
+    const tel = { ...this.w };
+    const a = FG.vision.analyze(frames, tel);
+    if (!a.ok) { this.setState({ scanning: false, photoSrc: dataUrl, photoErr: a.reason }); this.addLog('Photo · illisible, reprise demandée', ORANGE); return; }
+    const cls = a.visual === 'rupture' ? 'rupture' : a.visual === 'wifi' ? 'wifi' : this.det.cls;
+    const action = a.concord ? (ACT[cls] || ACT.sain)[0][1] : 'Signalement avec les deux sources jointes';
+    const photo = { rows: [{ n: '01', t: a.reading }, { n: '02', t: `Mesure au même instant : puissance optique ${f(tel.opt)} dBm.` }, { n: '03', t: a.cause }, { n: '04', t: `Action : ${action}.` }], concord: a.concord, sample, leds: a.leds };
+    this.setState({ scanning: false, photoSrc: dataUrl, photo });
+    this.addLog(`Photo · ${a.leds.length} voyants lus · ${a.concord ? 'concordant' : 'divergence signalée'} avec la télémétrie`, a.concord ? GREEN : ORANGE);
+    if (CFG.visionEndpoint && navigator.onLine && !sample) {
+      const txt = await FG.vision.remoteVision(CFG.visionEndpoint, dataUrl, tel);
+      if (txt) this.setState(s => s.photo ? { photo: { ...s.photo, rows: [...s.photo.rows, { n: 'IA', t: txt }] } } : null);
+    }
+  }
+  clearPhoto() { this.setState({ photo: null, photoSrc: null, photoErr: null }); }
+
+  /* M8 : canal SMS / USSD. Commandes signées (numéro lié à la ligne) et limitées en débit (ENF-21). */
+  smsStatus() {
+    const d = this.det, w = this.w || BASE;
+    return { rupture: `FIBRE GUARDIAN : coupure détectée sur votre ligne (optique ${f(w.opt)} dBm). Ce n'est pas votre box. Technicien prévu demain 09:00–11:00.`,
+      sain: 'FIBRE GUARDIAN : votre ligne est rétablie. Débit ' + f(w.dl, 0) + ' / 100 Mbps.' }[d.cls] || `FIBRE GUARDIAN : ${CLS[d.cls].name}. ${langPack('fr').verdict[d.cls]}`;
+  }
+  pushSms(text, who = 'moov') { this.setState(s => ({ smsLog: [...s.smsLog, { time: hhmm().slice(0, 5), text, who }].slice(-12) })); }
+  handleSms(raw) {
+    const q = (raw || '').trim().toUpperCase(); if (!q) return;
+    this.pushSms(raw.trim(), 'me'); this.setState({ smsInput: '' });
+    const now = Date.now();
+    setTimeout(() => {
+      if (q === '*101*9#' || q === 'MENU') return this.pushSms('Fibre Guardian (USSD)\n1 Diagnostic de ma ligne\n2 Redémarrer ma box\n3 Suivi de mon incident');
+      if (q === 'STATUT' || q === '1' || q === '3') return this.pushSms(this.smsStatus() + ` Confiance ${f(this.det.conf, 2)}.`);
+      if (q === 'REBOOT' || q === '2') {
+        this.smsRate = this.smsRate.filter(t => now - t < 10 * 60e3);
+        if (this.smsRate.length >= 2) { this.addLog('SMS · REBOOT refusé (limite de débit)', ORANGE); return this.pushSms('Limite atteinte : 2 redémarrages par 10 minutes. Réessayez plus tard.'); }
+        this.smsRate.push(now);
+        if (this.det.cls === 'rupture') return this.pushSms('Commande reçue du numéro lié à la ligne. Redémarrer ne rétablira pas une fibre coupée : le technicien est déjà programmé.');
+        this.rebootLeft = 8; this.addLog('SMS · REBOOT signé (numéro lié à la ligne) · redémarrage', GREEN);
+        return this.pushSms('Commande signée reçue du numéro lié à la ligne. Redémarrage de la box en cours.');
+      }
+      this.pushSms('Commandes : STATUT, REBOOT, AIDE. Menu USSD : *101*9#');
+    }, 700);
+  }
+
+  runZone() {
+    if (this.state.role !== 'superviseur') return;
+    this.zlog = { cut: true }; this.fleet.cutSegment('YOP-07'); this.zoneFast = 60;
+    this.setState({ zone: 0, zoneCount: 0, zoneLog: [{ time: hhmm(), t: 'Coupure provoquée sur le simulateur de flotte · l’agrégateur ne le sait pas', c: '#bab6b6' }] });
+  }
+  resetZone() { this.fleet.restore('YOP-07'); this.zoneFast = 40; if (this.zlog) this.zlog.cut = false; }
+
+  initHero() {
+    const THREE = window.THREE, el = this.heroRef.current; if (!el) return; el.innerHTML = '';
+    const R = new THREE.WebGLRenderer({ antialias: true, alpha: true }); R.setPixelRatio(Math.min(2, devicePixelRatio)); R.setSize(el.clientWidth, el.clientHeight); el.appendChild(R.domElement);
+    const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(34, el.clientWidth / el.clientHeight, .1, 100);
+    cam.position.set(0, 2.4, 8); cam.lookAt(0, .5, 0);
+    const AD = THREE.AdditiveBlending, RC = 0xff563c;
+    const LM = (c, o) => new THREE.LineBasicMaterial({ color: c, transparent: true, opacity: o, blending: AD, depthWrite: false });
+    const FM = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: AD, depthWrite: false, side: THREE.DoubleSide });
+    const g = new THREE.Group(); sc.add(g);
+    const box = new THREE.Group(); g.add(box);
+    const bg = new THREE.BoxGeometry(2.6, .46, 1.7);
+    box.add(new THREE.Mesh(bg, FM(RC, .07))); box.add(new THREE.LineSegments(new THREE.EdgesGeometry(bg), LM(RC, .95)));
+    for (let i = 1; i < 4; i++) { const p = new THREE.PlaneGeometry(2.6, 1.7); p.rotateX(-Math.PI / 2); const l = new THREE.LineSegments(new THREE.EdgesGeometry(p), LM(RC, .22)); l.position.y = -.23 + i * .115; box.add(l); }
+    for (let i = 0; i < 12; i++) { const x = -.2 + i * .1; box.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, .232, -.6), new THREE.Vector3(x, .232, .3)]), LM(RC, .5))); }
+    [-1.05, 1.05].forEach(x => { const a = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.08, 1, .08)), LM(RC, .7)); a.position.set(x, .73, -.72); box.add(a); });
+    const leds = ['PWR', 'PON', 'LOS', 'LAN', 'WLAN'].map((n, i) => { const m = new THREE.Mesh(new THREE.SphereGeometry(.04, 12, 12), new THREE.MeshBasicMaterial({ color: 0x6cff9a, transparent: true })); m.position.set(-1 + i * .22, 0, .86); box.add(m); return m; });
+    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(-7, -.06, -4), new THREE.Vector3(-4, -.06, -2.4), new THREE.Vector3(-2.2, .1, -1.5), new THREE.Vector3(-1.4, .5, -.95), new THREE.Vector3(-1, .6, -.86)]);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 140, .02, 8, false), FM(RC, .55)); g.add(tube);
+    const pulses = []; for (let i = 0; i < 16; i++) { const p = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 10), FM(0xffc4b8, .9)); p.userData.o = i / 16; g.add(p); pulses.push(p); }
+    const ring = (rad, seg, gap, y, o) => { const grp = new THREE.Group(); for (let i = 0; i < seg; i++) { const a0 = i / seg * Math.PI * 2, a1 = a0 + (1 - gap) * Math.PI * 2 / seg, pts = []; for (let k = 0; k <= 8; k++) { const a = a0 + (a1 - a0) * k / 8; pts.push(new THREE.Vector3(Math.cos(a) * rad, 0, Math.sin(a) * rad)); } grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), LM(RC, o))); } grp.position.y = y; g.add(grp); return grp; };
+    const r1 = ring(2.1, 64, .35, -.02, .6), r2 = ring(2.55, 12, .55, -.02, .5), r3 = ring(1.7, 120, .6, -.02, .4), r4 = ring(1.45, 4, .15, 1.9, .35);
+    const fp = []; for (let x = -14; x <= 14; x++) for (let z = -14; z <= 14; z++) { if (x * x + z * z > 196) continue; fp.push(x * .3, -.05, z * .3); }
+    const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
+    g.add(new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xf3f2f2, size: .025, transparent: true, opacity: .3 })));
+    const N = 320, pp = new Float32Array(N * 3); for (let i = 0; i < N; i++) { const a = Math.random() * 6.28, rr = Math.sqrt(Math.random()) * 2.1; pp[i * 3] = Math.cos(a) * rr; pp[i * 3 + 1] = Math.random() * 3; pp[i * 3 + 2] = Math.sin(a) * rr; }
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
+    const pts = new THREE.Points(pg, new THREE.PointsMaterial({ color: RC, size: .03, transparent: true, opacity: .75, blending: AD, depthWrite: false })); g.add(pts);
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(1.9, .5, 1.3, 64, 1, true), FM(RC, .04)); cone.position.y = .6; g.add(cone);
+    const sp = new THREE.PlaneGeometry(3.2, 2.2); const scan = new THREE.LineSegments(new THREE.EdgesGeometry(sp), LM(RC, .7)); scan.rotation.x = -Math.PI / 2; g.add(scan);
+    const scanF = new THREE.Mesh(sp, FM(RC, .05)); scanF.rotation.x = -Math.PI / 2; g.add(scanF);
+    let mx = 0, my = 0; el.addEventListener('pointermove', e => { const b = el.getBoundingClientRect(); mx = (e.clientX - b.left) / b.width - .5; my = (e.clientY - b.top) / b.height - .5; });
+    this.heroR = R; this.heroCam = cam; this.ro.observe(el); this.io.observe(el);
+    const clock = new THREE.Clock();
+    const G = new THREE.Color(0x6cff9a), RD = new THREE.Color(0xff3b1f), OR = new THREE.Color(0xffb020), OFF = new THREE.Color(0x221f1e);
+    const loop = () => {
+      const L = window.__fgLive || this; window.__fgH.hr = requestAnimationFrame(loop); if (!L.vis || !L.vis.hero) return;
+      const t = clock.getElapsedTime(), cls = L.cls || 'sain', dead = cls === 'rupture', weak = cls === 'attenuation', boot = cls === 'reboot';
+      g.rotation.y += (t * .12 + mx * .7 - g.rotation.y) * .05; g.rotation.x += (my * .18 - g.rotation.x) * .05;
+      box.position.y = .62 + Math.sin(t * 1.3) * .06;
+      r1.rotation.y = t * .2; r2.rotation.y = -t * .12; r3.rotation.y = t * .4; r4.rotation.y = -t * .3; r4.position.y = 1.9 + Math.sin(t) * .08;
+      pulses.forEach(p => { const u = (p.userData.o + t * (weak ? .1 : .25)) % 1; p.position.copy(curve.getPointAt(u)); p.material.opacity = dead ? 0 : (weak ? .3 : .95) * Math.min(1, (1 - u) * 8); });
+      tube.material.opacity = dead ? .1 + .08 * Math.sin(t * 8) : weak ? .3 : .55;
+      const y = (Math.sin(t * .9) * .5 + .5) * 1.5; scan.position.y = scanF.position.y = y;
+      const pa = pg.attributes.position.array; for (let i = 0; i < N; i++) { pa[i * 3 + 1] += .006; if (pa[i * 3 + 1] > 3) pa[i * 3 + 1] = 0; } pg.attributes.position.needsUpdate = true;
+      const blink = Math.floor(t * 2.5) % 2 === 0;
+      leds[0].material.color.copy(G);
+      leds[1].material.color.copy(boot || dead ? OFF : (weak && !blink ? OFF : G));
+      leds[2].material.color.copy(dead && blink ? RD : OFF);
+      leds[3].material.color.copy(boot ? OFF : (Math.random() > .3 ? G : OFF));
+      leds[4].material.color.copy(boot ? OFF : cls === 'wifi' ? OR : G);
+      R.render(sc, cam);
+    };
+    loop();
+  }
+
+  initNet() {
+    const THREE = window.THREE, el = this.netRef.current; if (!el) return; el.innerHTML = '';
+    const R = new THREE.WebGLRenderer({ antialias: true, alpha: true }); R.setPixelRatio(Math.min(2, devicePixelRatio)); R.setSize(el.clientWidth, el.clientHeight); el.appendChild(R.domElement);
+    const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(38, el.clientWidth / el.clientHeight, .1, 100);
+    cam.position.set(0, 6.5, 9.5); cam.lookAt(0, 0, .6);
+    this.netR = R; this.netCam = cam; this.ro.observe(el); this.io.observe(el);
+    const AD = THREE.AdditiveBlending, RC = 0xff563c, INK = 0xf3f2f2;
+    const LM = (c, o) => new THREE.LineBasicMaterial({ color: c, transparent: true, opacity: o, blending: AD, depthWrite: false });
+    const FM = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: AD, depthWrite: false, side: THREE.DoubleSide });
+    const g = new THREE.Group(); sc.add(g);
+    const K = 42, P = (lon, lat) => new THREE.Vector3((lon + 4.0) * K, 0, -(lat - 5.35) * K);
+    for (let i = 1; i <= 6; i++) { const pts = []; for (let k = 0; k <= 128; k++) { const a = k / 128 * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * i * 1.1, -.01, Math.sin(a) * i * 1.1)); } g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), LM(INK, i % 2 ? .08 : .14))); }
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(Math.cos(a) * 1.1, -.01, Math.sin(a) * 1.1), new THREE.Vector3(Math.cos(a) * 6.6, -.01, Math.sin(a) * 6.6)]), LM(INK, .05))); }
+    const hub = P(-4.017, 5.323);
+    const probes = [], arcs = [], labels = [], nodes = [];
+    COMMUNES.forEach(([name, lon, lat, h, isHub], ci) => {
+      const p = P(lon, lat);
+      const bgeo = new THREE.BoxGeometry(.16, h, .16); bgeo.translate(0, h / 2, 0);
+      const mat = LM(isHub ? 0xffffff : RC, .9);
+      const pillar = new THREE.LineSegments(new THREE.EdgesGeometry(bgeo), mat); pillar.position.copy(p); g.add(pillar);
+      const fill = new THREE.Mesh(bgeo, FM(RC, .12)); fill.position.copy(p); g.add(fill);
+      const base = new THREE.Mesh(new THREE.RingGeometry(.22, .26, 40), FM(RC, .6)); base.rotation.x = -Math.PI / 2; base.position.copy(p); g.add(base);
+      nodes.push({ name, pillar, fill, base, p, h });
+      const div = document.createElement('div');
+      div.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;font-family:Archivo,sans-serif;font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#d7d3d3;white-space:nowrap;padding:2px 5px;border-left:2px solid #ec3013;background:rgba(18,17,16,.55)';
+      div.textContent = name; el.appendChild(div); labels.push({ div, v: p.clone().setY(h + .25) });
+      for (let i = 0; i < 26; i++) { const a = Math.random() * 6.28, rr = .25 + Math.random() * .55; const m = new THREE.Mesh(new THREE.SphereGeometry(.03, 6, 6), FM(INK, .7)); m.position.set(p.x + Math.cos(a) * rr, .02, p.z + Math.sin(a) * rr); m.userData = { commune: name, i, ph: Math.random() * 6 }; g.add(m); probes.push(m); }
+      if (!isHub) {
+        const mid = hub.clone().add(p).multiplyScalar(.5); mid.y = 1 + hub.distanceTo(p) * .25;
+        const c = new THREE.QuadraticBezierCurve3(hub.clone().setY(1.6), mid, p.clone().setY(h));
+        g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(c.getPoints(48)), LM(RC, .35)));
+        const pulse = new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 8), FM(0xffc4b8, .95)); g.add(pulse);
+        arcs.push({ c, pulse, o: Math.random(), name });
+      }
+    });
+    const yop = nodes.find(n => n.name === 'Yopougon');
+    const shock = new THREE.Mesh(new THREE.RingGeometry(.3, .36, 64), FM(0xff3b1f, 0)); shock.rotation.x = -Math.PI / 2; shock.position.copy(yop.p).setY(.02); g.add(shock);
+    let rotY = 0, drag = null, vel = .0015;
+    el.addEventListener('pointerdown', e => { drag = e.clientX; el.setPointerCapture(e.pointerId); });
+    el.addEventListener('pointermove', e => { if (drag !== null) { rotY += (e.clientX - drag) * .006; drag = e.clientX; } });
+    el.addEventListener('pointerup', () => { drag = null; });
+    const clock = new THREE.Clock(), v = new THREE.Vector3(), WHITE = new THREE.Color(INK), HOT = new THREE.Color(0xff3b1f);
+    let first = true;
+    const loop = () => {
+      const L = window.__fgLive || this; window.__fgH.nr = requestAnimationFrame(loop); if (!first && !(L.vis && L.vis.net)) return; first = false;
+      const t = clock.getElapsedTime(), zone = L.state.zone, zc = L.state.zoneCount;
+      if (drag === null) rotY += vel; g.rotation.y = rotY;
+      arcs.forEach(a => { const u = (a.o + t * .3) % 1; a.pulse.position.copy(a.c.getPointAt(u)); a.pulse.material.opacity = (a.name === 'Yopougon' && zone === 2) ? 0 : .95; });
+      probes.forEach(m => { const hot = m.userData.commune === 'Yopougon' && m.userData.i < zc; m.material.color.copy(hot ? HOT : WHITE); m.material.opacity = hot ? .6 + .4 * Math.sin(t * 8 + m.userData.ph) : .35 + .3 * Math.sin(t * 2 + m.userData.ph); m.scale.setScalar(hot ? 1.8 : 1); });
+      yop.fill.material.opacity = zone === 2 ? .35 + .2 * Math.sin(t * 6) : .12;
+      if (zone === 2) { const s = 1 + ((t * .8) % 1) * 5; shock.scale.set(s, s, s); shock.material.opacity = .8 * (1 - ((t * .8) % 1)); } else shock.material.opacity = 0;
+      R.render(sc, cam);
+      const w = el.clientWidth, h = el.clientHeight;
+      labels.forEach(l => { v.copy(l.v).applyMatrix4(g.matrixWorld).project(cam); l.div.style.transform = `translate(${(v.x * .5 + .5) * w}px,${(-v.y * .5 + .5) * h}px) translate(-50%,-100%)`; l.div.style.opacity = v.z < 1 ? 1 : 0; });
+    };
+    loop();
+  }
+
+  rssi(px, py, bx, by) {
+    const d = Math.hypot(px - bx, py - by);
+    let walls = 0;
+    const X = (a, b, c, d2) => { const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])); return o(a, b, c) !== o(a, b, d2) && o(c, d2, a) !== o(c, d2, b); };
+    for (let i = 4; i < WALLS.length; i++) { const W = WALLS[i]; if (X([px, py], [bx, by], [W[0], W[1]], [W[2], W[3]])) walls++; }
+    return -38 - 30 * Math.log10(d + 1) - 7 * walls;
+  }
+  rssiAt(px, py) { const r = this.rssi(px, py, this.box.x, this.box.y); const R = this.state.repeater; return R ? Math.max(r, this.rssi(px, py, R.x, R.y) - 3) : r; }
+  // EF-M7-3/4 : d'abord le déplacement gratuit, ensuite seulement le répéteur.
+  applyMove() { const r = this.state.cov.reco; if (!r) return; this.box = { x: r.bx, y: r.by }; this.setState({ covStage: 'moved' }, () => this.updateCov()); this.addLog(`Cartographie · box déplacée de ${f(r.dist)} m`, GREEN); }
+  needRepeater() {
+    const all = []; for (let i = 0; i < 20; i++) for (let j = 0; j < 14; j++) all.push([(i + .5) * .5, (j + .5) * .5]);
+    let best = null;
+    for (let i = 0; i < 20; i += 1) for (let j = 0; j < 14; j += 1) { const rx = (i + .5) * .5, ry = (j + .5) * .5; const fr = all.filter(([x, y]) => Math.max(this.rssi(x, y, this.box.x, this.box.y), this.rssi(x, y, rx, ry) - 3) < -68).length / all.length; if (!best || fr < best.fr) best = { x: rx, y: ry, fr }; }
+    this.setState({ repeater: best, covStage: 'repeater' }, () => this.updateCov());
+    this.addLog(`Cartographie · répéteur proposé après la recommandation gratuite · zone morte ${Math.round(best.fr * 100)} %`, ORANGE);
+  }
+  initWifi() {
+    const cv = this.wifiRef.current; if (!cv) return;
+    const mark = e => { const L = window.__fgLive || this; if (L !== this) return L.markAt(e); this.markAt(e); };
+    let down = false;
+    cv.addEventListener('pointerdown', e => { down = true; cv.setPointerCapture(e.pointerId); mark(e); });
+    cv.addEventListener('pointermove', e => { if (down) mark(e); });
+    cv.addEventListener('pointerup', () => { down = false; });
+    this.drawWifi();
+  }
+  markAt(e) {
+    const cv = this.wifiRef.current; if (!cv) return;
+    { const b = cv.getBoundingClientRect(); const x = (e.clientX - b.left) / b.width * 10, y = (e.clientY - b.top) / b.height * 7; for (let i = 0; i < 20; i++) for (let j = 0; j < 14; j++) { if (Math.hypot((i + .5) * .5 - x, (j + .5) * .5 - y) < .75) this.measured.add(i + ',' + j); } this.updateCov(); }
+  }
+  updateCov() {
+    let bad = 0; this.measured.forEach(k => { const [i, j] = k.split(',').map(Number); if (this.rssiAt((i + .5) * .5, (j + .5) * .5) < -68) bad++; });
+    const m = this.measured.size; let reco = null;
+    if (m >= 170) {
+      const all = []; for (let i = 0; i < 20; i++) for (let j = 0; j < 14; j++) all.push([(i + .5) * .5, (j + .5) * .5]);
+      const frac = (bx, by) => all.filter(([x, y]) => this.rssi(x, y, bx, by) < -68).length / all.length;
+      const cur = frac(this.box.x, this.box.y);
+      let best = null;
+      for (let i = 0; i < 20; i++) for (let j = 0; j < 14; j++) { const bx = (i + .5) * .5, by = (j + .5) * .5; const fr = frac(bx, by); const dist = Math.hypot(bx - this.box.x, by - this.box.y); const score = fr + dist * .004; if (!best || score < best.score) best = { bx, by, fr, dist, score }; }
+      reco = { cur, ...best };
+    }
+    this.setState({ cov: { m, b: m ? bad / m : 0, reco } }, () => this.drawWifi());
+  }
+  drawWifi() {
+    const cv = this.wifiRef.current; if (!cv) return;
+    const dpr = Math.min(2, devicePixelRatio), W = cv.clientWidth, H = cv.clientHeight; if (!W) return;
+    cv.width = W * dpr; cv.height = H * dpr; const c = cv.getContext('2d'); c.scale(dpr, dpr);
+    const sx = W / 10, sy = H / 7; c.clearRect(0, 0, W, H);
+    c.fillStyle = 'rgba(18,17,16,.85)'; c.fillRect(0, 0, W, H);
+    for (let i = 0; i < 20; i++) for (let j = 0; j < 14; j++) {
+      const x = i * .5 * sx, y = j * .5 * sy;
+      if (this.measured.has(i + ',' + j)) { const r = this.rssiAt((i + .5) * .5, (j + .5) * .5); c.fillStyle = r >= -60 ? 'rgba(80,210,130,.55)' : r >= -68 ? 'rgba(240,170,50,.6)' : 'rgba(255,86,60,.65)'; c.fillRect(x + 1, y + 1, .5 * sx - 2, .5 * sy - 2); }
+      else { c.fillStyle = 'rgba(243,242,242,.14)'; c.fillRect(x + .25 * sx - 1, y + .25 * sy - 1, 2, 2); }
+    }
+    c.strokeStyle = '#f3f2f2'; c.lineWidth = 3; c.lineCap = 'square';
+    WALLS.forEach(w => { c.beginPath(); c.moveTo(w[0] * sx, w[1] * sy); c.lineTo(w[2] * sx, w[3] * sy); c.stroke(); });
+    c.fillStyle = '#9b9797'; c.font = '600 11px Archivo'; c.textBaseline = 'top';
+    [['SALON', .3, 6.4], ['CHAMBRE', 4.3, .3], ["CHAMBRE D'AWA", 7.3, 6.4], ['CUISINE', 4.3, 6.4]].forEach(([t, x, y]) => c.fillText(t, x * sx, y * sy));
+    const bx = this.box.x * sx, by = this.box.y * sy;
+    c.fillStyle = '#ec3013'; c.fillRect(bx - 8, by - 8, 16, 16); c.fillStyle = '#f3f2f2'; c.fillText('BOX', bx + 12, by - 6);
+    const RP = this.state.repeater; if (RP) { c.fillStyle = '#5aa9ff'; c.fillRect(RP.x * sx - 7, RP.y * sy - 7, 14, 14); c.fillStyle = '#f3f2f2'; c.fillText('RÉPÉTEUR', RP.x * sx + 10, RP.y * sy - 6); }
+    const r = this.state.cov.reco;
+    if (r && r.cur > .25 && this.state.covStage === 'survey') { c.setLineDash([5, 4]); c.strokeStyle = '#f3f2f2'; c.lineWidth = 2; c.strokeRect(r.bx * sx - 9, r.by * sy - 9, 18, 18); c.beginPath(); c.moveTo(bx, by); c.lineTo(r.bx * sx, r.by * sy); c.stroke(); c.setLineDash([]); c.fillText(f(r.dist) + ' m', (bx + r.bx * sx) / 2 + 6, (by + r.by * sy) / 2); }
+  }
+  autoSurvey() {
+    clearInterval(this.st); let k = 0;
+    this.st = setInterval(() => { for (let n = 0; n < 8 && k < 280; n++, k++) { const j = Math.floor(k / 20), i = j % 2 ? 19 - (k % 20) : k % 20; this.measured.add(i + ',' + j); } this.updateCov(); if (k >= 280) clearInterval(this.st); }, 40);
+  }
+
+  setBench(p) { this.setState(s => ({ bench: { ...s.bench, ...p } })); }
+  async ping(ms = 2000) { const t0 = performance.now(); try { await tfetch(SPEED + '/__down?bytes=0&r=' + Math.random(), {}, ms); return performance.now() - t0; } catch (e) { return null; } }
+  async runBench() {
+    if (this.state.bench.running) { this.benchStop = true; return; }
+    const { dur: D, streams: N, offer } = this.state.bench, dur = D * 1000;
+    this.benchStop = false; this.bs = { dl: [], ul: [], lat: [], dur: D };
+    this.setBench({ running: true, phase: 'Connexion au serveur…', live: null, res: null });
+    let meta = null;
+    try { const t = await (await tfetch(SPEED + '/cdn-cgi/trace', {}, 3000)).text(); const o = {}; t.split('\n').forEach(l => { const i = l.indexOf('='); if (i > 0) o[l.slice(0, i)] = l.slice(i + 1); }); meta = { colo: o.colo, loc: o.loc, http: o.http, ip: (o.ip || '').replace(/(\d+)\.(\d+)$/, 'x.x').replace(/:[0-9a-f]*:[0-9a-f]*$/i, ':…') }; } catch (e) {}
+    this.setBench({ meta, phase: 'Latence au repos…' });
+    const idle = []; let lost = 0;
+    for (let i = 0; i < 21 && !this.benchStop; i++) { const r = await this.ping(); if (i === 0) continue; r == null ? lost++ : idle.push(r); }
+    if (!idle.length) { this.setBench({ running: false, phase: navigator.onLine ? 'Serveur de test injoignable' : 'Appareil hors ligne' }); this.addLog('Banc de test · serveur injoignable', RED); return; }
+    const loaded = async (arr, until, tag) => { while (!this.benchStop && performance.now() < until) { const r = await this.ping(1500); if (r != null) { arr.push(r); this.bs.lat.push({ tag, t: (performance.now() - this.phase0) / 1000, v: r }); } await sleep(200); } };
+    const measure = async (kind) => {
+      const t0 = performance.now(), until = t0 + dur; this.phase0 = t0 - (kind === 'ul' ? dur : 0);
+      let bytes = 0, last = 0, lastT = t0, warmB = null, warmT = null; const lat = [];
+      const sampler = setInterval(() => { const now = performance.now(); const v = (bytes - last) * 8 / ((now - lastT) / 1000) / 1e6; last = bytes; lastT = now; this.bs[kind].push({ t: (now - t0) / 1000, v }); if (warmB === null && now - t0 > dur * .3) { warmB = bytes; warmT = now; } this.setBench({ live: v }); }, 250);
+      const chunk = kind === 'ul' ? new Uint8Array(1.5e6) : null;
+      const worker = async () => {
+        while (!this.benchStop && performance.now() < until) {
+          try {
+            if (kind === 'dl') { const r = await tfetch(SPEED + '/__down?bytes=50000000&r=' + Math.random(), {}, dur + 4000); const rd = r.body.getReader(); while (true) { const { done, value } = await rd.read(); if (done) break; bytes += value.length; if (this.benchStop || performance.now() > until) { rd.cancel().catch(() => {}); break; } } }
+            else { await tfetch(SPEED + '/__up?r=' + Math.random(), { method: 'POST', body: chunk }, dur + 4000); if (performance.now() <= until + 500) bytes += chunk.length; }
+          } catch (e) { await sleep(150); }
+        }
+      };
+      await Promise.all([...Array(N)].map(worker).concat([loaded(lat, until, kind)]));
+      clearInterval(sampler);
+      const end = performance.now();
+      const mbps = warmB !== null && end - warmT > 300 ? (bytes - warmB) * 8 / ((end - warmT) / 1000) / 1e6 : bytes * 8 / ((end - t0) / 1000) / 1e6;
+      return { mbps, lat };
+    };
+    this.setBench({ phase: `Débit descendant · ${N} flux…` });
+    const d = await measure('dl');
+    if (this.benchStop) { this.setBench({ running: false, phase: 'Test interrompu' }); return; }
+    this.setBench({ phase: `Débit montant · ${N} flux…`, live: null });
+    const u = await measure('ul');
+    if (this.benchStop) { this.setBench({ running: false, phase: 'Test interrompu' }); return; }
+    const p50 = pctl(idle, .5), p90 = pctl(idle, .9);
+    let jit = 0; for (let i = 1; i < idle.length; i++) jit += Math.abs(idle[i] - idle[i - 1]); jit /= Math.max(1, idle.length - 1);
+    const ld = pctl(d.lat, .5), lu = pctl(u.lat, .5), bloat = Math.max(ld ?? p50, lu ?? p50) - p50;
+    const cn = navigator.connection;
+    const res = { date: new Date().toISOString(), offer, streams: N, dur: D, dl: d.mbps, ul: u.mbps, idleP50: p50, idleP90: p90, jit, loss: lost / 20 * 100, latDl: ld, latUl: lu, bloat, grade: gradeOf(bloat), conf: d.mbps / offer, colo: meta && meta.colo, loc: meta && meta.loc, net: cn ? (cn.type || cn.effectiveType || '') : '' };
+    const hist = [res, ...this.state.bench.hist].slice(0, 50);
+    try { localStorage.setItem(HKEY, JSON.stringify(hist)); } catch (e) {}
+    this.setBench({ running: false, phase: 'Test terminé · ' + hhmm().slice(0, 5), res, hist, live: d.mbps });
+    this.addLog(`Banc de test · ${f(res.dl, 0)}↓ ${f(res.ul, 0)}↑ Mbps · ${f(p50, 0)} ms · note ${res.grade}`, '#ff9783');
+  }
+  sendBench() {
+    const r = this.state.bench.res; if (!r) return;
+    Object.assign(T.reel, { dl: Math.min(110, r.dl / r.offer * 100), loc: Math.min(110, r.dl / r.offer * 100), ul: Math.min(55, r.ul / (r.offer / 2) * 50), lat: r.latDl ?? r.idleP50, jit: r.jit, loss: r.loss });
+    this.inject('reel'); this.addLog('Mesure du banc injectée dans le moteur', '#ff9783');
+    const el = document.getElementById('labo'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior: 'smooth' });
+  }
+  // Même simulateur et même moteur que la démo, aveugles au type injecté.
+  simulate(mode, noise, sev, maxT = 60) { return FG.simulate(mode, noise, sev, maxT); }
+  async runSuite() {
+    if (this.state.suite.running) return;
+    const { trials, noise, sev } = this.state.suite;
+    this.setState(s => ({ suite: { ...s.suite, running: true, prog: 0 } }));
+    const M = CLSORD.map(() => CLSORD.map(() => 0)), lats = CLSORD.map(() => []); let fa = 0;
+    for (let mi = 0; mi < MODEORD.length; mi++) {
+      await sleep(30);
+      for (let i = 0; i < trials; i++) { const r = this.simulate(MODEORD[mi], noise, sev); M[mi][CLSORD.indexOf(r.got)]++; if (r.got === r.exp && r.first != null) lats[mi].push(r.first); if (r.fa) fa++; }
+      this.setState(s => ({ suite: { ...s.suite, prog: (mi + 1) / MODEORD.length } }));
+    }
+    const tot = trials * 7, diag = M.reduce((a, r, i) => a + r[i], 0);
+    const abrupt = [1, 3, 4, 5, 6].flatMap(i => lats[i]), all = lats.slice(1).flat();
+    const res = { trials, noise, sev, M, lats, acc: diag / tot, faRate: fa / trials, med: pctl(all, .5), p95: pctl(abrupt, .95), under10: abrupt.length ? abrupt.filter(x => x < 10).length / abrupt.length : null, date: new Date().toISOString() };
+    this.setState(s => ({ suite: { ...s.suite, running: false, res } }));
+    this.addLog(`Validation moteur · ${tot} essais · exactitude ${Math.round(res.acc * 100)} %`, res.acc > .9 ? GREEN : ORANGE);
+  }
+  drawBench() {
+    const cv = this.benchRef.current; if (!cv || !cv.clientWidth) return;
+    const dpr = Math.min(2, devicePixelRatio), W = cv.clientWidth, H = cv.clientHeight;
+    if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+    const D = this.bs.dur, offer = this.state.bench.offer, pad = 28;
+    const mx = Math.max(offer * 1.15, ...this.bs.dl.map(s => s.v), ...this.bs.ul.map(s => s.v), 1);
+    const lmx = Math.max(150, ...this.bs.lat.map(s => s.v));
+    const X = t => pad + t / (2 * D) * (W - pad * 2), Y = v => H - 18 - v / mx * (H - 36), YL = v => H - 18 - v / lmx * (H - 36);
+    c.strokeStyle = 'rgba(243,242,242,.07)'; c.lineWidth = 1; for (let i = 0; i <= 4; i++) { const y = 18 + i * (H - 36) / 4; c.beginPath(); c.moveTo(pad, y); c.lineTo(W - pad, y); c.stroke(); }
+    c.strokeStyle = 'rgba(243,242,242,.25)'; c.beginPath(); c.moveTo(X(D), 10); c.lineTo(X(D), H - 18); c.stroke();
+    c.setLineDash([4, 4]); c.strokeStyle = '#9b9797'; c.beginPath(); c.moveTo(pad, Y(offer)); c.lineTo(W - pad, Y(offer)); c.stroke(); c.setLineDash([]);
+    c.font = '600 10px Archivo'; c.fillStyle = '#9b9797'; c.fillText(offer + ' Mbps', pad + 4, Y(offer) - 4); c.fillText('DESCENDANT', X(0) + 4, H - 5); c.fillText('MONTANT', X(D) + 4, H - 5);
+    c.textAlign = 'right'; c.fillText(Math.round(lmx) + ' ms', W - 4, 22); c.fillText(Math.round(mx) + ' Mbps', pad + 44, 12); c.textAlign = 'left';
+    const line = (arr, off, col) => { if (!arr.length) return; c.beginPath(); arr.forEach((s, i) => { const x = X(Math.min(D, s.t) + off), y = Y(s.v); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.strokeStyle = col; c.lineWidth = 2; c.stroke(); c.lineTo(X(Math.min(D, arr[arr.length - 1].t) + off), H - 18); c.lineTo(X(arr[0].t + off), H - 18); c.closePath(); c.fillStyle = col === '#f3f2f2' ? 'rgba(243,242,242,.06)' : 'rgba(255,86,60,.1)'; c.fill(); };
+    line(this.bs.dl, 0, '#f3f2f2'); line(this.bs.ul, D, '#ff563c');
+    c.fillStyle = 'rgba(240,170,50,.85)'; this.bs.lat.forEach(s => { c.fillRect(X(Math.min(2 * D, s.t)) - 2, YL(s.v) - 2, 4, 4); });
+  }
+  drawCharts() {
+    this.drawBench();
+    const draw = (cv, fn) => { if (!cv || !cv.clientWidth) return; const dpr = Math.min(2, devicePixelRatio), W = cv.clientWidth, H = cv.clientHeight; if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; } const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H); fn(c, W, H); };
+    const hs = this.hist, n = 70;
+    draw(this.chartRef.current, (c, W, H) => {
+      const y = v => H - 8 - (v / 110) * (H - 16), x = i => (i + (n - hs.length)) / (n - 1) * W;
+      c.strokeStyle = 'rgba(243,242,242,.08)'; c.lineWidth = 1; for (let i = 0; i <= 4; i++) { c.beginPath(); c.moveTo(0, y(i * 25)); c.lineTo(W, y(i * 25)); c.stroke(); }
+      c.setLineDash([4, 4]); c.strokeStyle = '#9b9797'; c.beginPath(); c.moveTo(0, y(100)); c.lineTo(W, y(100)); c.stroke(); c.setLineDash([]);
+      c.beginPath(); hs.forEach((s, i) => i ? c.lineTo(x(i), y(s.dl)) : c.moveTo(x(i), y(s.dl))); c.lineTo(x(hs.length - 1), H); c.lineTo(x(0), H); c.fillStyle = 'rgba(243,242,242,.06)'; c.fill();
+      c.beginPath(); hs.forEach((s, i) => i ? c.lineTo(x(i), y(s.dl)) : c.moveTo(x(i), y(s.dl))); c.strokeStyle = '#f3f2f2'; c.lineWidth = 2; c.stroke();
+      c.beginPath(); hs.forEach((s, i) => i ? c.lineTo(x(i), y(s.loc)) : c.moveTo(x(i), y(s.loc))); c.strokeStyle = '#ff563c'; c.lineWidth = 2; c.stroke();
+    });
+    draw(this.optRef.current, (c, W, H) => {
+      const y = v => (-(v) - 14) / 30 * H, x = i => (i + (n - hs.length)) / (n - 1) * W;
+      c.fillStyle = 'rgba(255,86,60,.08)'; c.fillRect(0, y(-36), W, H - y(-36));
+      [[-26, 'rgba(240,170,50,.8)', '−26'], [-36, 'rgba(255,86,60,.9)', '−36']].forEach(([v, col, l]) => { c.setLineDash([4, 4]); c.strokeStyle = col; c.lineWidth = 1; c.beginPath(); c.moveTo(0, y(v)); c.lineTo(W, y(v)); c.stroke(); c.setLineDash([]); c.fillStyle = col; c.font = '600 10px Archivo'; c.fillText(l, 4, y(v) - 3); });
+      c.beginPath(); hs.forEach((s, i) => { const v = Math.max(-43, s.opt); i ? c.lineTo(x(i), y(v)) : c.moveTo(x(i), y(v)); }); c.strokeStyle = '#f3f2f2'; c.lineWidth = 2; c.stroke();
+    });
+  }
+
+  renderVals() {
+    this.ensureBoot();
+    const s = this.state, d = this.det, w = this.w || BASE, m = this.m, lang = s.lang;
+    const booting = this.rebootLeft > 0;
+    const cls = d.cls, info = CLS[cls], st = ST[info.st];
+    const statusColor = booting ? ORANGE : st.c;
+    const mv = { dlS: f(m.dl, 0), optS: f(m.opt), snrS: f(m.snr) };
+    const tabs = [['home', 'Accueil'], ['agent', 'Agent'], ['photo', 'Voyants'], ['data', 'Données']].map(([id, label]) => ({ label, fg: s.tab === id ? '#fff' : '#7d7979', bar: s.tab === id ? 'inset 0 3px 0 #ec3013' : 'none', onClick: () => this.setState({ tab: id, sms: false }) }));
+    const smsView = s.sms;
+    const oos = { dl: m.dl < 93, ul: m.ul < 45, lat: m.lat > 15, jit: m.jit > 3.5, loss: m.loss > .2, opt: m.opt < -22, snr: m.snr < 28, wifi: m.wifi < -65, dev: m.dev > 6 };
+    const MET = [['dl', 'Débit desc.', 'Mbps', 0], ['ul', 'Débit mont.', 'Mbps', 0], ['lat', 'Latence', 'ms', 0], ['jit', 'Gigue', 'ms', 1], ['loss', 'Perte', '%', 1], ['opt', 'Puiss. optique', 'dBm', 1], ['snr', 'Rapport S/B', 'dB', 1], ['wifi', 'Niveau Wi-Fi', 'dBm', 0], ['dev', 'Appareils', '', 0]];
+    const metrics = MET.map(([k, label, u, dd]) => ({ label, u, val: f(m[k], dd), c: oos[k] ? RED : '#f3f2f2', bg: oos[k] ? 'rgba(236,48,19,.12)' : 'transparent' }));
+    const phoneKpis = [
+      { label: 'Débit montant', val: `${f(m.ul, 0)} / 50 Mbps`, c: oos.ul ? ORANGE : '#f3f2f2' },
+      { label: 'Latence · gigue', val: `${f(m.lat, 0)} ms · ${f(m.jit, 1)}`, c: oos.lat ? ORANGE : '#f3f2f2' },
+      { label: 'Puissance optique', val: `${f(m.opt)} dBm`, c: m.opt < -26 ? RED : '#f3f2f2' },
+      { label: 'Wi-Fi téléphone', val: `${f(m.wifi, 0)} dBm · ${f(m.loc, 0)} Mbps`, c: m.wifi < -72 ? ORANGE : '#f3f2f2' },
+    ];
+    const actions = booting ? [] : (ACT[cls] || []).filter(a => !(a[0] === 'sms' && s.sms)).map(([k, label], i) => ({ label, bg: i === 0 ? '#ec3013' : 'transparent', bd: i === 0 ? '#ec3013' : 'rgba(243,242,242,.3)', onClick: () => this.runAction(k) }));
+    const ledState = {
+      PWR: [GREEN, 'none'], PON: cls === 'rupture' || booting ? ['#2a2726', 'none'] : cls === 'attenuation' ? [GREEN, 'fgBlink 1s infinite'] : [GREEN, 'none'],
+      LOS: cls === 'rupture' ? [RED, 'fgBlink .8s infinite'] : ['#2a2726', 'none'], LAN: booting ? ['#2a2726', 'none'] : [GREEN, 'fgBlink .3s infinite'], WLAN: booting ? ['#2a2726', 'none'] : cls === 'wifi' ? [ORANGE, 'none'] : [GREEN, 'none'],
+    };
+    const leds = Object.keys(ledState).map(n => ({ n, c: ledState[n][0], anim: ledState[n][1] }));
+    let photoResult = null, concordText = '', concordColor = GREEN;
+    if (s.photo) {
+      photoResult = s.photo.rows;
+      concordText = (s.photo.concord ? 'Voyants et télémétrie concordants' : 'Divergence voyants / télémétrie signalée') + ' · EF-M6-3' + (s.photo.sample ? ' · photo d’exemple générée' : '');
+      concordColor = s.photo.concord ? GREEN : ORANGE;
+    }
+    const fallback = cls === 'rupture';
+    const pack = langPack(lang); const verdictTr = pack.translateTo && !booting ? langPack(pack.translateTo).verdict[cls] : null;
+    const langs = FG.langList().map(p => ({ label: p.label, bg: lang === p.id ? '#ec3013' : 'transparent', bd: lang === p.id ? '#ec3013' : 'rgba(243,242,242,.25)', fg: lang === p.id ? '#fff' : '#bab6b6', onClick: () => this.setState({ lang: p.id }) }));
+    const QUICK = new Proxy({}, { get: (_, id) => langPack(id).quick });
+    const faults = FAULTS.map(([id, label, sub], i) => { const on = s.mode === id || (id === 'wifi' && s.mode === 'wifiFixed'); return { n: String(i + 1).padStart(2, '0'), label, sub, on: on ? '● Injectée' : '', bg: on ? 'rgba(236,48,19,.14)' : 'transparent', bar: on ? 'inset 3px 0 0 #ec3013' : 'none', onClick: () => this.inject(id) }; });
+    const e = s.econ;
+    const calls = 12 * e.A * e.pa / 100 * e.ca, trips = 12 * e.D * e.pd / 100 * e.cd, churnV = e.R * e.pr / 100 * e.arpu * e.d, tot = calls + trips + churnV, mx = Math.max(calls, trips, churnV) || 1;
+    const M = v => (v / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' M FCFA';
+    const cov = s.cov, reco = cov.reco;
+    let recoText = 'Relevez au moins 60 % du logement pour obtenir une recommandation.', recoSub = `${Math.round(cov.m / 2.8)} % relevé.`, recoBorder = 'rgba(243,242,242,.16)';
+    const wifiBtns = [];
+    if (reco && s.covStage === 'survey') {
+      if (reco.cur > .25) { recoText = `Déplacer la box de ${f(reco.dist)} m vers le centre du logement : zone morte ${Math.round(reco.cur * 100)} % → ${Math.round(reco.fr * 100)} %.`; recoSub = 'Recommandation gratuite d’abord. Un répéteur ne sera proposé que si le déplacement ne suffit pas (EF-M7-4).'; recoBorder = '#ec3013'; wifiBtns.push({ label: 'J’ai déplacé la box', onClick: () => this.applyMove() }); }
+      else { recoText = 'Couverture suffisante. Aucun déplacement nécessaire.'; recoSub = ''; recoBorder = GREEN; }
+    } else if (s.covStage === 'moved') {
+      recoText = `Box déplacée. Zone morte restante sur la surface relevée : ${Math.round(cov.b * 100)} %.`;
+      recoSub = cov.b > .25 ? 'Toujours au-dessus de 25 % : un répéteur peut maintenant être proposé.' : 'Le déplacement gratuit suffit : aucun matériel à acheter.';
+      recoBorder = cov.b > .25 ? ORANGE : GREEN;
+      wifiBtns.push({ label: 'Le déplacement ne suffit pas', onClick: () => this.needRepeater() });
+    } else if (s.covStage === 'repeater' && s.repeater) {
+      recoText = `Répéteur conseillé à l’emplacement bleu : zone morte ${Math.round(s.repeater.fr * 100)} % sur tout le logement.`;
+      recoSub = 'Proposé seulement après le déplacement gratuit de la box (EF-M7-4).'; recoBorder = '#5aa9ff';
+    }
+    const J = JOURNEYS[s.journey];
+    const zst = this.fleet.segmentStats('YOP-07');
+    const zoneSteps = s.zoneLog.length ? s.zoneLog.slice(-6).map(z => ({ ...z, op: 1 })) : [{ time: '—', t: `Segment nominal · ${zst.n} abonnés, chacun sonde du réseau`, c: '#bab6b6', op: 1 }];
+    const churn = this.fleet.ranking(8).map(r => ({ ...r, sc: r.score, w: r.score + '%', c: r.score >= 60 ? RED : r.score >= 40 ? ORANGE : GREEN }));
+    return {
+      heroRef: this.refCb('heroRef'), netRef: this.refCb('netRef'), chartRef: this.refCb('chartRef'), optRef: this.refCb('optRef'), wifiRef: this.refCb('wifiRef'), labRef: this.refCb('labRef'), chatRef: this.refCb('chatRef'), smsBox: this.refCb('smsBox'),
+      t: s.t, m: mv, statusColor, statusLabel: booting ? 'Redémarrage' : st.l, confClient: booting ? '' : 'confiance ' + f(d.conf, 2), clsName: booting ? 'Redémarrage box' : info.name, clsLayer: info.layer,
+      navStatus: `Ligne démo · ${booting ? 'Redémarrage' : info.name}`, confS: f(d.conf, 2), confPct: Math.round(d.conf * 100) + '%',
+      verdict: booting ? pack.verdict.reboot : pack.verdict[cls], verdictTr,
+      evidence: d.ev.map(([ok, t]) => ({ k: ok ? '▲' : '·', t, c: ok ? statusColor : MUTE })), trace: d.trace, metrics, phoneKpis, actions,
+      actionMsg: s.done, log: s.log.length ? s.log : [{ time: hhmm(), t: 'Supervision active · 9 métriques à 1 Hz', c: '#9b9797' }],
+      ...(() => {
+        const r = s.real, on = !!this.realOn, got = r.n || r.err;
+        const R_ = (label, val) => ({ label, val, src: 'réel', tc: '#ff9783' }), S_ = (label, val) => ({ label, val, src: 'simulé', tc: '#7d7979' });
+        return {
+          realOn: on, realPhase: r.phase, realPhaseC: r.err ? RED : on ? '#ff9783' : '#9b9797', realAnim: on && !/jour/.test(r.phase || '') && !r.err ? 'fgPulse 1s infinite' : 'none',
+          realBd: on ? '#ec3013' : 'rgba(236,48,19,.45)', realBg: on ? 'rgba(236,48,19,.08)' : 'transparent',
+          realBtn: on ? 'Arrêter la mesure réelle' : 'Lancer la mesure réelle', realIcon: on ? '■' : '◉', realBtnBg: on ? 'transparent' : '#ec3013',
+          realRows: got ? [R_('Débit ↓', r.dl != null ? f(r.dl, 0) + ' Mbps' : '…'), R_('Débit ↑', r.ul != null ? f(r.ul, 0) + ' Mbps' : '…'), R_('Latence', r.lat != null ? f(r.lat, 0) + ' ms' : '—'), R_('Gigue', r.jit != null ? f(r.jit, 1) + ' ms' : '—'), R_('Perte', r.loss != null ? f(r.loss, 1) + ' %' : '—'), S_('Optique · Wi-Fi', 'box requise')] : null,
+          realNote: 'Débit, latence, gigue et perte sont mesurés sur cet appareil (serveur speed.cloudflare.com). Puissance optique, S/B, niveau Wi-Fi et appareils restent simulés : ils exigent l’accès à la box (TR-069/TR-369) ou une application mobile native.' + (r.type ? ' Réseau détecté : ' + r.type + '.' : ''),
+          toggleReal: () => this.toggleReal(),
+        };
+      })(),
+      ...(() => {
+        const b = s.bench, r = b.res, su = s.suite, sr = su.res;
+        const seg = (opts, cur, key, obj, dis) => opts.map(([v, label]) => ({ label, bg: cur === v ? '#ec3013' : 'transparent', bd: cur === v ? '#ec3013' : 'rgba(243,242,242,.2)', fg: cur === v ? '#fff' : '#d7d3d3', onClick: () => { if (!this.state[obj].running) this.setState(p => ({ [obj]: { ...p[obj], [key]: v } })); } }));
+        const ms = v => v == null ? '—' : f(v, 0) + ' ms';
+        const gc = g => g === 'A+' || g === 'A' ? GREEN : g === 'B' || g === 'C' ? ORANGE : g === '—' ? '#f3f2f2' : RED;
+        const conf = r ? r.conf : null;
+        const verdict = !r ? ['En attente de mesure', 'Lancez le test pour comparer la ligne à l’offre', 'rgba(243,242,242,.16)'] : conf >= .8 ? ['Débit conforme à l’offre', `${Math.round(conf * 100)} % des ${r.offer} Mbps souscrits`, GREEN] : conf >= .5 ? ['Débit en deçà de l’offre', `${Math.round(conf * 100)} % des ${r.offer} Mbps · à diagnostiquer`, ORANGE] : ['Débit très inférieur à l’offre', `${Math.round(conf * 100)} % des ${r.offer} Mbps · Wi-Fi, congestion ou panne`, RED];
+        const matrix = CLSORD.map((cl, i) => {
+          const row = sr ? sr.M[i] : null, n = sr ? sr.trials : 1;
+          const rec = row ? row[i] / n : null, lat = sr ? pctl(sr.lats[i], .5) : null;
+          return { name: SHORT[cl], cells: CLSORD.map((_, j) => { const v = row ? row[j] : null; const a = v ? v / n : 0; return { v: v == null ? '·' : v, bg: v == null ? 'transparent' : i === j ? `rgba(236,48,19,${.12 + a * .8})` : v ? `rgba(240,170,50,${.15 + a * .6})` : 'rgba(243,242,242,.03)', bd: i === j ? 'rgba(236,48,19,.5)' : 'rgba(243,242,242,.08)', fg: v == null ? '#5b5857' : v ? '#fff' : '#5b5857' }; }), recall: rec == null ? '—' : Math.round(rec * 100) + ' %', rc: rec == null ? '#7d7979' : rec >= .9 ? GREEN : rec >= .7 ? ORANGE : RED, lat: i === 0 ? '—' : lat == null ? '—' : lat + ' s' };
+        });
+        return {
+          benchRef: this.refCb('benchRef'),
+          benchServer: b.meta ? `${b.meta.colo || '?'} · ${b.meta.loc || '?'} · ${b.meta.http || ''} · IP ${b.meta.ip || '?'}` : 'non contacté',
+          segOffer: seg([[50, '50'], [100, '100'], [200, '200'], [500, '500'], [1000, '1000']], b.offer, 'offer', 'bench'),
+          segStreams: seg([[1, '1'], [2, '2'], [4, '4'], [8, '8']], b.streams, 'streams', 'bench'),
+          segDur: seg([[5, '5 s'], [10, '10 s'], [20, '20 s']], b.dur, 'dur', 'bench'),
+          benchBtn: b.running ? 'Arrêter le test' : 'Lancer le test complet', benchIcon: b.running ? '■' : '▶', benchBtnBg: b.running ? 'transparent' : '#ec3013', benchRun: () => this.runBench(),
+          benchSend: () => this.sendBench(), benchSendOp: r ? 1 : .4,
+          benchPhase: b.phase, benchPhaseC: /injoignable|hors ligne|interrompu/.test(b.phase) ? RED : b.running ? '#ff9783' : '#9b9797', benchAnim: b.running ? 'fgPulse 1s infinite' : 'none',
+          benchLive: b.live == null ? '—' : f(b.live, 0),
+          benchVerdict: verdict[0], benchVerdictSub: verdict[1], benchVerdictC: verdict[2],
+          benchKpis: [
+            { label: 'Débit descendant', val: r ? f(r.dl, 0) : '—', sub: r ? `Mbps · ${Math.round(r.conf * 100)} % de l’offre` : 'Mbps', c: r ? (r.conf >= .8 ? GREEN : r.conf >= .5 ? ORANGE : RED) : '#f3f2f2' },
+            { label: 'Débit montant', val: r ? f(r.ul, 0) : '—', sub: 'Mbps', c: '#f3f2f2' },
+            { label: 'Latence au repos', val: r ? ms(r.idleP50) : '—', sub: r ? `p90 ${ms(r.idleP90)}` : 'médiane · 20 sondes', c: '#f3f2f2' },
+            { label: 'Latence en charge', val: r ? ms(r.latDl) : '—', sub: r ? `↓ pendant réception · ↑ ${ms(r.latUl)}` : '↓ · ↑', c: '#f3f2f2' },
+            { label: 'Bufferbloat', val: r ? r.grade : '—', sub: r ? `+${f(Math.max(0, r.bloat), 0)} ms sous charge` : 'Note A+ à F', c: gc(r ? r.grade : '—') },
+            { label: 'Gigue', val: r ? f(r.jit, 1) : '—', sub: 'ms · au repos', c: r && r.jit > 10 ? ORANGE : '#f3f2f2' },
+            { label: 'Perte', val: r ? f(r.loss, 1) + ' %' : '—', sub: 'sondes sans réponse', c: r && r.loss > 2 ? RED : '#f3f2f2' },
+            { label: 'Réseau', val: r ? (r.net || 'n.c.') : '—', sub: r ? `${r.streams} flux · ${r.dur} s par sens` : 'type détecté', c: '#f3f2f2' },
+          ],
+          histCount: b.hist.length + ' test' + (b.hist.length > 1 ? 's' : ''), histEmpty: !b.hist.length,
+          histRows: b.hist.map(h => ({ date: new Date(h.date).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), offer: h.offer, dl: f(h.dl, 0), dlC: h.conf >= .8 ? GREEN : h.conf >= .5 ? ORANGE : RED, ul: f(h.ul, 0), idle: ms(h.idleP50), ld: ms(h.latDl), lu: ms(h.latUl), jit: f(h.jit, 1), loss: f(h.loss, 1) + ' %', grade: h.grade, gc: gc(h.grade) })),
+          exportCsv: () => { const cols = ['date', 'offer', 'streams', 'dur', 'dl', 'ul', 'idleP50', 'idleP90', 'jit', 'loss', 'latDl', 'latUl', 'bloat', 'grade', 'colo', 'loc', 'net']; dlFile('fibre-guardian-tests.csv', [cols.join(';'), ...b.hist.map(h => cols.map(k => typeof h[k] === 'number' ? h[k].toFixed(2) : (h[k] ?? '')).join(';'))].join('\n'), 'text/csv'); },
+          exportJson: () => dlFile('fibre-guardian-tests.json', JSON.stringify(b.hist, null, 2), 'application/json'),
+          clearHist: () => { try { localStorage.removeItem(HKEY); } catch (e) {} this.setBench({ hist: [] }); },
+          segTrials: seg([[10, '10'], [30, '30'], [100, '100']], su.trials, 'trials', 'suite'),
+          segNoise: seg([[1, '×1'], [2, '×2'], [3, '×3'], [5, '×5']], su.noise, 'noise', 'suite'),
+          segSev: seg([[0, '0 %'], [.3, '30 %'], [.5, '50 %'], [.7, '70 %']], su.sev, 'sev', 'suite'),
+          suiteProg: Math.round(su.prog * 100) + '%', suiteBtn: su.running ? `Simulation · ${Math.round(su.prog * 100)} %` : `Lancer ${su.trials * 7} essais`, suiteRun: () => this.runSuite(),
+          suiteExpOp: sr ? 1 : .4, suiteExport: () => { if (sr) dlFile('fibre-guardian-validation.json', JSON.stringify({ ...sr, classes: CLSORD, lignes: 'injecté', colonnes: 'détecté' }, null, 2), 'application/json'); },
+          suiteKpis: [
+            { label: 'Exactitude', val: sr ? Math.round(sr.acc * 100) + ' %' : '—', sub: sr ? `${sr.trials * 7} essais` : 'diagonale / total', c: sr ? (sr.acc >= .9 ? GREEN : sr.acc >= .7 ? ORANGE : RED) : '#f3f2f2' },
+            { label: 'Délai médian', val: sr && sr.med != null ? sr.med + ' s' : '—', sub: 'injection → verdict', c: '#f3f2f2' },
+            { label: 'Délai p95 franches', val: sr && sr.p95 != null ? sr.p95 + ' s' : '—', sub: 'hors atténuation', c: sr && sr.p95 != null ? (sr.p95 < 10 ? GREEN : ORANGE) : '#f3f2f2' },
+            { label: 'Sous 10 s · ENF-2', val: sr && sr.under10 != null ? Math.round(sr.under10 * 100) + ' %' : '—', sub: 'pannes franches', c: sr && sr.under10 != null ? (sr.under10 >= .95 ? GREEN : ORANGE) : '#f3f2f2' },
+            { label: 'Fausses alertes', val: sr ? Math.round(sr.faRate * 100) + ' %' : '—', sub: 'lignes nominales', c: sr ? (sr.faRate <= .05 ? GREEN : RED) : '#f3f2f2' },
+          ],
+          matrixHead: CLSORD.map(c => SHORT[c]), matrix,
+        };
+      })(),
+      faults, detectS: s.detectAt === null ? '…' : s.detectAt + ' s', detectNote: s.mode === 'reel' ? 'Verdict sur mesures réelles' : s.detectAt === null ? 'Analyse de la fenêtre glissante' : (EXPECT[s.mode] ? 'Verdict correct, sans accès au type injecté' : 'Verdict après action client'),
+      clock: new Date().toTimeString().slice(0, 5), netBadge: s.sms ? 'SMS · sans données' : fallback ? '4G · données mobiles' : 'Fibre · Wi-Fi', netBadgeColor: fallback || s.sms ? ORANGE : '#f3f2f2',
+      showFallback: fallback && !s.sms, fallbackText: 'Fibre coupée : bascule automatique sur les données mobiles.',
+      langs, tabs, homeView: !smsView && s.tab === 'home', agentView: !smsView && s.tab === 'agent', photoView: !smsView && s.tab === 'photo', smsView,
+      smsList: (s.smsLog.length ? s.smsLog : [{ time: hhmm().slice(0, 5), text: this.smsStatus(), who: 'moov' }, { time: hhmm().slice(0, 5), text: 'Vous recevrez un SMS à chaque changement d’état. Répondez STATUT, REBOOT ou AIDE. Menu USSD : *101*9#', who: 'moov' }]).map(x => ({ ...x, al: x.who === 'me' ? 'flex-end' : 'flex-start', bg: x.who === 'me' ? '#ec3013' : '#242221' })),
+      smsInput: s.smsInput, onSmsInput: ev => this.setState({ smsInput: ev.target.value }), onSmsKey: ev => { if (ev.key === 'Enter') this.handleSms(s.smsInput); }, sendSms: () => this.handleSms(s.smsInput),
+      smsQuick: ['STATUT', 'REBOOT', '*101*9#'].map(t => ({ t, onClick: () => this.handleSms(t) })),
+      dataOutLabel: s.dataOut ? 'Données mobiles épuisées · SMS seul' : 'Épuiser les données mobiles', toggleDataOut: () => this.setState({ dataOut: !s.dataOut }), dataOutBg: s.dataOut ? 'rgba(236,48,19,.14)' : 'transparent',
+      chat: s.chat.map(c => ({ ...c, align: c.who === 'me' ? 'flex-end' : 'flex-start', bg: c.who === 'me' ? '#ec3013' : '#242221', bd: c.who === 'me' ? '#ec3013' : 'rgba(243,242,242,.1)', tr: c.tr || null, src: c.src || null })),
+      typing: s.typing, input: s.input, placeholder: pack.placeholder,
+      onInput: ev => this.setState({ input: ev.target.value }), onKey: ev => { if (ev.key === 'Enter') this.ask(s.input); }, send: () => this.ask(s.input),
+      quick: QUICK[lang].map(t => ({ t, onClick: () => this.ask(t) })),
+      leds, scanning: s.scanning, photoResult, concordText, concordColor, photoSrc: s.photoSrc, photoErr: s.photoErr, noPhoto: !s.photoSrc && !s.scanning,
+      onPhotoFiles: ev => this.onPhotoFiles(ev), samplePhoto: () => this.samplePhoto(), clearPhoto: () => this.clearPhoto(),
+      // ENF-19 : données collectées, consultables, supervision fine désactivable.
+      dataView: !smsView && s.tab === 'data',
+      dataRows: MET.map(([k, label, u, dd]) => ({ label, val: f(m[k], dd) + ' ' + u })),
+      colMode: this.collector.mode === 'diagnostic' ? 'Diagnostic · 1 échantillon / s' : 'Veille · 1 échantillon / min',
+      colStats: `${this.collector.sent} envoyés · ${this.collector.buffer.length} en tampon · ${this.collector.replayed} rejoués · ${(this.collector.bytes / 1024).toFixed(1).replace('.', ',')} Ko`,
+      colMonthly: 'Veille : ' + FG.Collector.monthlyVeilleMB().toFixed(1).replace('.', ',') + ' Mo par mois (ENF-8 : < 5 Mo)',
+      fineLabel: s.fine ? 'Supervision fine activée' : 'Supervision fine désactivée', fineBg: s.fine ? '#ec3013' : 'transparent',
+      toggleFine: () => { const on = !s.fine; this.collector.setFine(on); if (!on) this.collector.mode = 'veille'; this.setState({ fine: on }); this.addLog(on ? 'Abonné · supervision fine réactivée' : 'Abonné · supervision fine désactivée (veille seule)', '#d7d3d3'); },
+      clearMyData: () => { this.setState({ chat: [], smsLog: [], photo: null, photoSrc: null }); try { localStorage.removeItem('fg-bench-v1'); } catch (e) {} this.addLog('Abonné · données locales effacées', '#d7d3d3'); },
+      // ENF-20 : redémarrage à distance soumis à un code lié à la ligne.
+      pendingReboot: s.pendingReboot && !booting, confirmReboot: () => this.runAction('reboot'), cancelReboot: () => this.setState({ pendingReboot: false }),
+      // ENF-22 : contrôle d'accès par rôle sur la console.
+      roles: [['technicien', 'Technicien'], ['conseiller', 'Conseiller'], ['superviseur', 'Superviseur']].map(([id, label]) => ({ label, bg: s.role === id ? '#ec3013' : 'transparent', fg: s.role === id ? '#fff' : '#bab6b6', onClick: () => this.setState({ role: id }) })),
+      canTelemetry: s.role !== 'conseiller', canChurn: s.role !== 'technicien', canZone: s.role === 'superviseur', noTelemetry: s.role === 'conseiller', noChurn: s.role === 'technicien',
+      zoneCalls: zst.calls, zoneNotified: zst.notified, zoneN: zst.n,
+      costRows: [
+        { k: 'Agent embarqué sur box', v: 'Développement, puis mise à jour du parc existant' },
+        { k: 'Ingestion et stockage', v: `Proportionnel à l’usage : ${FG.Collector.monthlyVeilleMB().toFixed(1).replace('.', ',')} Mo par box et par mois en veille, 1 s seulement en session de diagnostic` },
+        { k: 'Inférence des modèles', v: 'À l’usage, concentrée sur les sessions de diagnostic ; moteur de règles gratuit sur la box' },
+        { k: 'Canal SMS', v: 'Coût unitaire par message sortant, seulement pendant un incident' },
+        { k: 'Application mobile', v: 'Développement initial, puis maintenance' },
+      ],
+      oldFlow: ['Connexion lente', 'Le client redémarre la box au hasard', 'Appel au 101', 'Attente en file', 'Le conseiller fait décrire les voyants par téléphone', 'Technicien dépêché', 'Déplacement inutile dans la majorité des cas'].map((t, i) => ({ n: String(i + 1).padStart(2, '0'), t, c: i === 6 ? '#ff563c' : '#d7d3d3' })),
+      newFlow: ['Awa ouvre l’application : « votre Wi-Fi faiblit, la fibre est bonne »', '97 Mbps à la box, 19 Mbps sur le téléphone, −79 dBm', 'Optimiser le canal Wi-Fi : canal 1 → 11', 'Débit à 71 Mbps. Aucun appel, aucun technicien'].map((t, i) => ({ n: String(i + 1).padStart(2, '0'), t })),
+      zoneCount: s.zoneCount, zoneState: s.zone === 2 ? 'Incident de zone' : s.zone === 1 ? 'Regroupement en cours' : 'Nominal', zoneColor: s.zone === 2 ? RED : s.zone === 1 ? ORANGE : GREEN, zoneBg: s.zone === 2 ? 'rgba(236,48,19,.1)' : 'transparent', zoneSteps,
+      runZone: () => this.runZone(), resetZone: () => this.resetZone(), churn,
+      covMeasured: Math.round(cov.m / 2.8) + ' %', covBad: Math.round(cov.b * 100) + ' %', covColor: cov.b > .25 ? RED : cov.m ? GREEN : '#f3f2f2', recoText, recoSub, recoBorder,
+      wifiBtns, autoSurvey: () => this.autoSurvey(), resetSurvey: () => { clearInterval(this.st); this.measured.clear(); this.box = { x: 1.1, y: 1.1 }; this.setState({ covStage: 'survey', repeater: null }, () => this.updateCov()); },
+      journeys: JOURNEYS.map((j, i) => ({ who: j.who, place: j.place, title: j.title, bg: s.journey === i ? 'rgba(236,48,19,.14)' : 'transparent', kc: s.journey === i ? '#ff563c' : '#9b9797', onClick: () => this.setState({ journey: i }) })),
+      jSteps: J.steps.map((t, i) => ({ n: String(i + 1).padStart(2, '0'), t })), jProof: J.proof, jPlay: J.mode === 'zone' ? 'Rejouer sur la console' : 'Rejouer dans le laboratoire',
+      playJourney: () => {
+        const id = J.mode === 'zone' ? 'reseau' : 'labo'; const el = document.getElementById(id);
+        if (J.mode === 'zone') { this.setState({ role: 'superviseur' }); this.runZone(); } else { this.inject(J.mode); this.setState({ dataOut: false }); if (J.mode === 'rupture') { this.setState({ lang: 'nouchi' }); clearTimeout(this.jT); this.jT = setTimeout(() => this.setState({ dataOut: true }), 20000); } }
+        if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior: 'smooth' });
+      },
+      aiBricks: [
+        { n: '01', title: 'Anomalies sur séries temporelles', problem: 'Un débit à 60 Mbps est normal en heure de pointe et anormal à 3 h du matin.', approach: 'Ligne de base glissante par abonné et tranche horaire : médiane et écart interquartile sur 7 jours.' },
+        { n: '02', title: 'Classification du type de panne', problem: 'Détecter ne suffit pas : l’action dépend entièrement de la panne.', approach: 'Arbre de règles physiques ordonnées, puis gradient boosting sur les tickets Moov résolus. Les règles restent le garde-fou.' },
+        { n: '03', title: 'Agent en langues locales', problem: '« mon wifi là il gère pas dèh » : aucun moteur d’intentions en français standard ne traite cette phrase.', approach: 'Modèle de langage avec mesures injectées. Corpus de 60 à 80 formulations nouchi et dioula, cible supérieure à 85 %.' },
+        { n: '04', title: 'Vision · lecture des voyants', problem: 'Le client ne sait pas décrire les voyants. Le goulot est purement visuel.', approach: 'Modèle multimodal croisant la photo et la puissance optique mesurée au même instant.' },
+      ],
+      costs: [
+        { err: 'Fibre classée comme Wi-Fi', cons: 'Client abandonné avec une vraie panne', level: 'très élevé', c: RED },
+        { err: 'Wi-Fi classé comme fibre', cons: 'Déplacement technicien inutile', level: 'élevé', c: RED },
+        { err: 'Atténuation manquée', cons: 'Coupure non anticipée', level: 'élevé', c: RED },
+        { err: 'Congestion classée comme atténuation', cons: 'Technicien envoyé sans objet', level: 'moyen', c: ORANGE },
+      ],
+      pipeline: [
+        { n: '01', t: 'Box fibre ONT', s: 'Agent embarqué, 9 métriques', bd: 'rgba(243,242,242,.2)', bg: 'transparent' },
+        { n: '02', t: 'Passerelle d’ingestion', s: 'Tampon local si WAN coupé', bd: 'rgba(243,242,242,.2)', bg: 'transparent' },
+        { n: '03', t: 'Séries temporelles', s: '30 jours glissants', bd: 'rgba(243,242,242,.2)', bg: 'transparent' },
+        { n: '04', t: 'Moteur de détection', s: 'Règles + écart à la base, fenêtre 9 s', bd: '#ec3013', bg: 'rgba(236,48,19,.12)' },
+        { n: '05', t: 'API diagnostic', s: 'Un seul diagnostic', bd: 'rgba(243,242,242,.2)', bg: 'transparent' },
+        { n: '06', t: 'Quatre canaux', s: 'Application · console · agent · SMS/USSD', bd: 'rgba(243,242,242,.2)', bg: 'transparent' },
+      ],
+      modules: [
+        ['M1', 'Collecte', 'Remontée télémétrique, 9 métriques à la seconde', 0], ['M2', 'Détection', 'Type de panne avec score de confiance', 0], ['M3', 'Tableau de bord client', 'Débit réel contre débit souscrit, historique', 0],
+        ['M4', 'Actions correctives', 'Redémarrage, canal Wi-Fi, sécurisation, signalement', 0], ['M5', 'Agent conversationnel', 'Nouchi, dioula et français, ancré sur les mesures', 0], ['M6', 'Diagnostic par photo', 'Lecture des voyants par vision', 0],
+        ['M7', 'Cartographie Wi-Fi', 'Couverture du logement et placement', 0], ['M8', 'Mode dégradé', 'Données mobiles puis SMS', 0], ['M9', 'Console opérateur', 'Télémétrie brute, journal, score', 0],
+        ['M10', 'Détection collaborative', 'Regroupement géographique d’anomalies', 1], ['M11', 'Partage illicite', 'Ligne revendue convertie en offre partagée', 1], ['M12', 'Score de résiliation', 'Signaux techniques et comportementaux', 1],
+      ].map(([id, name, desc, k]) => ({ id, name, desc, circle: k ? 'Données simulées' : 'Démo en direct', c: k ? ORANGE : GREEN })),
+      econTotal: (tot / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' M',
+      econBars: [['Appels évités', calls], ['Déplacements évités', trips], ['Résiliations évitées', churnV]].map(([label, v]) => ({ label, val: M(v), w: (v / mx * 100) + '%', c: '#ec3013' })),
+      econInputs: ECON.map(([k, label, min, max, step, fmt]) => ({ sym: SYM[k], label, min, max, step, val: e[k], display: fmt(e[k]), onChange: ev => { const v = +ev.target.value; this.setState(p => ({ econ: { ...p.econ, [k]: v } })); } })),
+    };
+  }
+}
+</script>
+</body>
+</html>
