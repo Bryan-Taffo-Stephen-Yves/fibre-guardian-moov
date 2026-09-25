@@ -4,11 +4,17 @@ Prototype de diagnostic de ligne fibre pour Moov Africa Côte d'Ivoire : détect
 
 ## Lancer l'application
 
-Tout fonctionne sans Internet. React, three.js et la police Archivo sont dans `vendor/`.
+**Windows** : double-cliquez sur **`lancer.bat`**. Une fenêtre noire s'ouvre, puis le navigateur affiche l'application sur `http://localhost:8000`. Laissez la fenêtre noire ouverte pendant l'utilisation, et fermez-la pour arrêter. Rien n'est à installer : le lanceur utilise Node.js ou Python s'ils sont présents, et sinon PowerShell, qui est déjà dans Windows.
 
-- **Le plus simple** : ouvrir `index.html` dans Chrome ou Edge.
-- **Pour l'installer comme application (PWA)** : servir le dossier, par exemple avec `python3 -m http.server 8000`, ouvrir `http://localhost:8000`, puis choisir « Installer l'application ». Une fois chargée, elle marche en mode avion.
-- **Avec l'agent Claude** : voir « Serveur d'agent » plus bas.
+**Mac** : double-cliquez sur `lancer.command`. Au premier lancement, faites clic droit puis « Ouvrir ».
+
+**Linux** : `./lancer.sh`.
+
+Tout fonctionne sans Internet : React, three.js et la police Archivo sont dans `vendor/`. Une fois la page ouverte, Edge ou Chrome proposent « Installer l'application » dans la barre d'adresse. L'application installée marche ensuite en mode avion.
+
+Vous pouvez aussi ouvrir `index.html` directement, par double-clic. L'application marche, mais elle ne peut pas s'installer et l'agent Claude n'est pas disponible.
+
+> Si le navigateur affiche « localhost a refusé de se connecter », c'est que le serveur n'est pas lancé : la fenêtre noire de `lancer.bat` doit rester ouverte.
 
 ## Organisation
 
@@ -28,7 +34,7 @@ Tout fonctionne sans Internet. React, three.js et la police Archivo sont dans `v
 ```bash
 npm install
 export ANTHROPIC_API_KEY=...   # clé fournie par l'équipe, jamais écrite dans le code
-npm start                      # http://localhost:8080
+npm start                      # http://localhost:8080 (ou lancer.bat, sur le port 8000)
 ```
 
 - Le modèle utilisé est `claude-opus-5`, en effort bas pour que le premier texte arrive en moins de 5 s (ENF-4).
