@@ -18,6 +18,18 @@ node codex/serveur-local.cjs
 
 Ouvrir `http://127.0.0.1:8186/codex/`. Node 24.21+ est requis pour le pilote SQLite. Ce serveur écoute uniquement sur l’ordinateur local par défaut et expose maintenant une API authentifiée. **Mon espace réel** ajoute comptes, foyers, participants, tests actifs et historique durable : voir [le guide du pilote connecté](PILOTE-CONNECTE.md). Un serveur Python ou le mode fichier ne permettent que la démonstration sans API.
 
+## Démo pré-remplie (premier lancement)
+
+Au premier démarrage de `node codex/serveur-local.cjs` sur une base vide, la démo se remplit toute seule : un incident en cours à Cocody (COC-03, poteau percuté, plan à valider), un incident résolu cette nuit à Yopougon (YOP-07), deux dossiers clients ouverts et 24 h de notifications. Rien n'est ajouté si la base contient déjà des comptes. Pour repartir de zéro : arrêter le serveur, supprimer `codex/.local/`, relancer ; ou bouton **Réinitialiser la démo** dans « À propos de la démo » (administrateur seulement, vérifié par le serveur). Désactiver le remplissage : `GUARDIAN_SEED_DEMO=0`.
+
+| Rôle | E-mail | Mot de passe |
+|---|---|---|
+| Cliente Awa Koné (Yopougon, 100 Mbps à 25 000 FCFA) | `awa.kone@demo.fibre-guardian.ci` | `awa-demo-2026` (ou `GUARDIAN_DEMO_CLIENT_PASSWORD`) |
+| Direction technique (administrateur Moov) | `direction@demo.fibre-guardian.ci` | `GUARDIAN_DEMO_ADMIN_PASSWORD`, sinon généré au premier lancement et écrit dans `codex/.local/identifiants-demo.txt` (hors git) |
+| Technicien Ibrahim Traoré (Fibre Cocody) | `ibrahim.traore@demo.fibre-guardian.ci` | `ibrahim-demo-2026` (ou `GUARDIAN_DEMO_TECH_PASSWORD`) |
+
+Client : `http://127.0.0.1:8186/codex/`, puis « Compte existant ». Équipe Moov : `http://127.0.0.1:8186/codex/?portal=moov&section=operations`. Le mot de passe administrateur n'a pas de valeur par défaut : le compte qui peut tout réinitialiser n'est jamais protégé par un mot de passe connu de tous.
+
 ## Parcours disponibles
 
 - **Guardian — autorisations** (dans l'espace administrateur) : laboratoire serveur avec actions fictives R1–R4, risque imposé côté serveur, mode ombre, règles assisté/semi/autonome planifié, approbations distinctes pour R4, expiration, relance locale, arrêt d'urgence et annulation d'effet simulé. Aucun LLM ni microphone raccordé à ce stade. Voir la section T13 du [guide connecté](PILOTE-CONNECTE.md) pour les limites et les tests.

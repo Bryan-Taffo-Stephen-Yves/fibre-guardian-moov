@@ -21,6 +21,8 @@
 .fg-demo-choice{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:12px;padding:11px 12px;font:600 14px/1.2 Archivo,Arial,sans-serif;text-align:left;cursor:pointer;min-height:44px}
 .fg-demo-choice.is-active{background:var(--ink);color:#fff;border-color:var(--ink)}
 .fg-demo-choice:disabled{opacity:.55;cursor:wait}
+.fg-demo-error{color:var(--red)!important;font-weight:600}
+.fg-demo-danger:disabled{opacity:.55;cursor:wait}
 .fg-demo-danger{appearance:none;border:1px solid var(--red);background:#fff;color:var(--red);border-radius:12px;padding:11px 14px;font:600 14px/1.2 Archivo,Arial,sans-serif;cursor:pointer;min-height:44px}
 /* Cloche, carte de redémarrage et page Guardian côté client */
 .j-bell{position:relative;display:inline-grid;place-items:center;width:42px;height:42px;padding:0;border-radius:50%}
@@ -43,3 +45,10 @@
 .j-chat.j-chat-page{position:relative;inset:auto;right:auto;bottom:auto;width:100%;max-width:820px;margin:0 auto;height:calc(100dvh - 190px);min-height:480px;max-height:none;box-shadow:none;z-index:auto}
 @media (max-width:600px){.j-header .j-breadcrumb>span{display:none}.j-header .j-breadcrumb strong{font-size:15px}.j-header .j-user-avatar{display:none}.j-header .j-actions{gap:8px}.j-header .j-logout{padding-inline:12px}}
 .n-header-tools{display:flex;align-items:center;gap:10px}
+.j-zone-news{display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:start;margin-bottom:16px}
+.j-zone-news-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--app);color:var(--ink)}
+.j-zone-news small{font:700 11px/1.2 Archivo,Arial,sans-serif;letter-spacing:.08em;color:var(--muted)}
+.j-zone-news h2{margin:6px 0;font-size:19px;line-height:1.2}
+.j-zone-news p{margin:0;line-height:1.45;color:var(--muted)}
+.j-zone-news .j-button{grid-column:1 / -1;justify-self:start;min-height:44px}
+@media (min-width:900px){.j-zone-news{grid-template-columns:auto 1fr auto;align-items:center}.j-zone-news .j-button{grid-column:auto}}
