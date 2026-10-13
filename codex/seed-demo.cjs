@@ -113,7 +113,8 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
    fs.mkdirSync(path.dirname(credentialsFile),{recursive:true,mode:0o700});
    fs.writeFileSync(credentialsFile,'Identifiants de la démo Fibre Guardian (fichier local, hors git)\n\n'+summary.accounts.map(a=>a.name+' : '+a.email+' / '+a.password).join('\n')+'\n',{mode:0o600});
   }
-  for(const a of generated)log('Mot de passe généré pour '+a.email+' : '+passwords[a.email]+(credentialsFile?' (copié dans '+credentialsFile+')':''));
+  // Le mot de passe généré n'est jamais écrit dans les journaux du serveur : seulement dans le fichier local.
+  for(const a of generated)log('Mot de passe généré pour '+a.email+(credentialsFile?' : voir '+credentialsFile:' : '+passwords[a.email]));
   return summary;
  }finally{Date.now=realNow;store.demoSeeding=false;await new Promise(r=>server.close(r));}
 }

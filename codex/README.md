@@ -30,6 +30,10 @@ Au premier démarrage de `node codex/serveur-local.cjs` sur une base vide, la d�
 
 Client : `http://127.0.0.1:8186/codex/`, puis « Compte existant ». Équipe Moov : `http://127.0.0.1:8186/codex/?portal=moov&section=operations`. Le mot de passe administrateur n'a pas de valeur par défaut : le compte qui peut tout réinitialiser n'est jamais protégé par un mot de passe connu de tous.
 
+## Mettre en ligne et installer sur téléphone
+
+Fibre Guardian est une application web installable (manifeste, service worker, écran hors ligne). Pour la publier sur Internet (Railway conseillé, avec un volume pour la base), suivre [DEPLOIEMENT.md](DEPLOIEMENT.md). Port, dossier de données et adresse publique se règlent par variables d'environnement.
+
 ## Parcours disponibles
 
 - **Guardian — autorisations** (dans l'espace administrateur) : laboratoire serveur avec actions fictives R1–R4, risque imposé côté serveur, mode ombre, règles assisté/semi/autonome planifié, approbations distinctes pour R4, expiration, relance locale, arrêt d'urgence et annulation d'effet simulé. Aucun LLM ni microphone raccordé à ce stade. Voir la section T13 du [guide connecté](PILOTE-CONNECTE.md) pour les limites et les tests.

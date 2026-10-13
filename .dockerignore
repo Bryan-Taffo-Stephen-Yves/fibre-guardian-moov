@@ -1,0 +1,17 @@
+# Contexte de construction de codex/Dockerfile : rien de local ni de secret n'entre dans l'image.
+.git
+node_modules
+**/.local
+**/*.sqlite*
+**/*.db
+.env
+.env.*
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.log
+captures
+documents
+tests
+outils
+_ds

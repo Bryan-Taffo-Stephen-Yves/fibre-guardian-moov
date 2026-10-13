@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#151515">
+  <title>Fibre Guardian · Hors ligne</title>
+  <link rel="icon" href="pwa/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../vendor/fonts.css">
+  <style>
+    :root{--moov-offline-bg:#eef0ec;--moov-offline-card:#ffffff;--moov-offline-ink:#151515;--moov-offline-muted:#55594f;--moov-offline-line:#d9ddd3;--moov-offline-on-ink:#ffffff}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:16px;background:var(--moov-offline-bg);color:var(--moov-offline-ink);font:16px/1.5 Archivo,Arial,sans-serif}
+    main{width:min(460px,100%);background:var(--moov-offline-card);border:1px solid var(--moov-offline-line);border-radius:24px;padding:28px 24px;text-align:left}
+    .mark{width:56px;height:56px;border-radius:16px;display:block;margin-bottom:18px}
+    h1{margin:0 0 8px;font-size:26px;line-height:1.15}
+    p{margin:0 0 12px;color:var(--moov-offline-muted)}
+    ul{margin:4px 0 20px;padding-left:20px;color:var(--moov-offline-muted)}
+    li{margin:6px 0}
+    a.button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;border-radius:14px;background:var(--moov-offline-ink);color:var(--moov-offline-on-ink);font-weight:700;text-decoration:none}
+    a.button:focus-visible{outline:3px solid var(--moov-offline-ink);outline-offset:3px}
+  </style>
+</head>
+<body>
+  <main>
+    <img class="mark" src="pwa/icon-192.png" alt="">
+    <h1>Vous êtes hors ligne</h1>
+    <p>Fibre Guardian n’arrive pas à joindre Internet depuis cet appareil.</p>
+    <ul>
+      <li>Si votre box est en panne, passez sur les données mobiles pour signaler le problème.</li>
+      <li>Regardez le voyant « PON » de la box (celui de la fibre) : il doit être allumé sans clignoter.</li>
+      <li>Quand la connexion revient, appuyez sur « Réessayer ».</li>
+    </ul>
+    <a class="button" href="./">Réessayer</a>
+  </main>
+</body>
+</html>

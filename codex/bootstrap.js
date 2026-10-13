@@ -10,4 +10,15 @@
     document.head.appendChild(script);
   }
   next();
+  // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js', { scope: './' }).then(function () { return navigator.serviceWorker.ready; }).then(function (reg) {
+        setTimeout(function () {
+          const urls = performance.getEntriesByType('resource').map(function (e) { return e.name; }).filter(function (u) { return u.indexOf(location.origin + '/') === 0 && u.indexOf('/api/') < 0; });
+          if (reg.active) reg.active.postMessage({ type: 'guardian-cache', urls: urls.concat([location.href]) });
+        }, 4000);
+      }).catch(function () {});
+    });
+  }
 })();

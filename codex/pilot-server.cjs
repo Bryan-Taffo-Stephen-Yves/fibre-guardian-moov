@@ -17,37 +17,41 @@ function createGuardianServer(options={}){
  journey.migrate(store);
  noc.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
- const secure=!!options.tls,configured=options.origin?new URL(options.origin).origin:null,allowedHost=configured?new URL(configured).host:null;
+ // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
+ const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
+ const secure=!!options.tls||proxy,configured=options.origin?new URL(options.origin).origin:null,allowedHost=configured?new URL(configured).host:null;
  const pool=crypto.randomBytes(2*1024*1024),active=new Set();
  const json=(res,data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
+ function ip(req){if(!proxy)return req.socket.remoteAddress;const real=String(req.headers['x-real-ip']||'').trim(),chain=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return (real||chain.at(-1)||req.socket.remoteAddress).slice(0,64);}
  function cookie(res,value,expires){res.setHeader('Set-Cookie','guardian='+value+'; Path=/; HttpOnly; SameSite=Strict; Max-Age='+expires+(secure?'; Secure':''));}
  function auth(req){return store.authenticate((req.headers.cookie||'').match(/(?:^|;\s*)guardian=([^;]+)/)?.[1]);}
  function participant(req){const secret=(req.headers.authorization||'').replace(/^Bearer /,'');insist(secret&&secret.length<100,'Accès participant requis.',401);const p=store.get('SELECT p.*,l.home,l.closed,l.expires FROM participants p JOIN labs l ON l.id=p.lab WHERE p.secret=?',hash(secret));insist(p&&!p.revoked&&!p.closed&&p.expires>Date.now(),'Session de test expirée ou révoquée.',401);return p;}
  function snapshot(user,hid){const home=store.home(user.id,hid),samples=store.all('SELECT * FROM samples WHERE home=? ORDER BY at DESC LIMIT 250',hid).map(s=>({...s,metrics:JSON.parse(s.metrics),diagnosis:diagnose(JSON.parse(s.metrics),s.source)}));return {home,samples,labs:store.all('SELECT id,name,code,created,expires,closed FROM labs WHERE home=? ORDER BY created DESC LIMIT 20',hid).map(l=>home.role==='owner'?l:{...l,code:null}),participants:store.all('SELECT p.id,p.lab,p.name,p.joined,p.last_seen,p.revoked,p.fault,p.fault_until FROM participants p JOIN labs l ON l.id=p.lab WHERE l.home=? ORDER BY p.joined DESC LIMIT 100',hid),records:store.all('SELECT id,name,created FROM records WHERE home=? ORDER BY created DESC',hid),devices:store.all('SELECT * FROM devices WHERE home=? ORDER BY seen DESC',hid),notifications:store.all('SELECT * FROM notifications WHERE home=? ORDER BY at DESC',hid),tickets:store.all('SELECT * FROM tickets WHERE home=? ORDER BY created DESC',hid),audit:store.all('SELECT at,action,detail FROM audit WHERE home=? ORDER BY at DESC LIMIT 100',hid),collector:store.get('SELECT last_at,sequence,capabilities FROM collectors WHERE home=?',hid)||null,members:store.all('SELECT u.id,u.name,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.home=?',hid)};}
  const listener=async(req,res)=>{
-  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
+  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');if(secure)res.setHeader('Strict-Transport-Security','max-age=31536000');
   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
   try{
    const host=req.headers.host||'',local=/^(127\.0\.0\.1|localhost|\[::1\])(?::\d+)?$/.test(host);insist((allowedHost&&host===allowedHost)||(!allowedHost&&local),'Hôte refusé.',403);
+   if(proxy&&req.headers['x-forwarded-proto']!=='https'){res.writeHead(308,{Location:configured+req.url});res.end();return;}
    const origin=configured||'http://'+host,url=new URL(req.url,origin),route=url.pathname,method=req.method,mutate=!['GET','HEAD'].includes(method);
    if(route.startsWith('/api/')){
     if(mutate&&req.headers.origin)insist(req.headers.origin===origin,'Origine refusée.',403);
     if(mutate&&req.headers['sec-fetch-site'])insist(['same-origin','none'].includes(req.headers['sec-fetch-site']),'Site refusé.',403);
     if(route==='/api/health'&&method==='GET')return json(res,{ok:true,storage:'sqlite',adminSecure:secure||local,origin,version:1});
     if(route==='/api/session'&&method==='GET'){const u=auth(req);return json(res,{user:u?{...u,role:workspace.sessionRole(store,u.id)}:null});}
-    if(route==='/api/journey/otp/request'&&method==='POST')return json(res,await journey.requestOtp(store,await body(req,4096),req.socket.remoteAddress));
+    if(route==='/api/journey/otp/request'&&method==='POST')return json(res,await journey.requestOtp(store,await body(req,4096),ip(req)));
     if(route==='/api/journey/otp/verify'&&method==='POST'){
-     const u=await journey.verifyOtp(store,await body(req,4096),req.socket.remoteAddress),session=store.session(u);cookie(res,session.secret,8*3600);return json(res,{user:{...u,csrf:session.csrf,role:workspace.sessionRole(store,u.id)}});
+     const u=await journey.verifyOtp(store,await body(req,4096),ip(req)),session=store.session(u);cookie(res,session.secret,8*3600);return json(res,{user:{...u,csrf:session.csrf,role:workspace.sessionRole(store,u.id)}});
     }
     if(/^\/api\/auth\/(register|login|recover)$/.test(route)&&method==='POST'){
-     insist(secure||local,'Les comptes nécessitent HTTPS hors de cet ordinateur.',403);store.rate('auth:'+req.socket.remoteAddress,15);const d=await body(req,8192);let result;
+     insist(secure||local,'Les comptes nécessitent HTTPS hors de cet ordinateur.',403);store.rate('auth:'+ip(req),15);const d=await body(req,8192);let result;
      if(route.endsWith('/register')){insist(store.get('SELECT count(*) AS n FROM users').n<500,'Capacité du pilote atteinte.',409);result=await store.register(d);}
      else if(route.endsWith('/recover')){const u=store.get('SELECT * FROM users WHERE email=?',String(d.email||'').toLowerCase().trim());insist(typeof d.recovery==='string'&&u&&hash(d.recovery)===u.recovery,'Code ou compte incorrect.',401);const pw=await passwordHash(d.password),recovery=token();store.transaction(()=>{insist(store.get('SELECT recovery FROM users WHERE id=?',u.id)?.recovery===hash(d.recovery),'Code déjà utilisé.',401);store.run('UPDATE users SET password=?,recovery=? WHERE id=?',pw,hash(recovery),u.id);store.run('DELETE FROM sessions WHERE user_id=?',u.id);});result={user:{id:u.id,name:u.name,email:u.email},recovery};}
      else result={user:await store.login(d.email,d.password)};
      const s=store.session(result.user);cookie(res,s.secret,8*3600);return json(res,{...result,user:{...result.user,csrf:s.csrf,role:workspace.sessionRole(store,result.user.id)}});
     }
     if(route==='/api/participant/join'&&method==='POST'){
-     store.rate('join:'+req.socket.remoteAddress,20);const d=await body(req,4096);insist(d.consent===true,'Votre consentement est nécessaire.');const l=store.get('SELECT * FROM labs WHERE code=?',String(d.code||''));insist(l&&!l.closed&&l.expires>Date.now(),'Invitation expirée ou incorrecte.',404);insist(store.get('SELECT count(*) AS n FROM participants WHERE lab=? AND revoked=0',l.id).n<30,'Session limitée à 30 participants.',409);const pid=id(),secret=token(),name=word(d.name,'Nom de l’appareil',80);store.run('INSERT INTO participants(id,lab,name,secret,joined,last_seen) VALUES(?,?,?,?,?,?)',pid,l.id,name,hash(secret),Date.now(),Date.now());store.event(l.home,null,'participant.join',name);return json(res,{id:pid,secret,name,expires:l.expires});
+     store.rate('join:'+ip(req),20);const d=await body(req,4096);insist(d.consent===true,'Votre consentement est nécessaire.');const l=store.get('SELECT * FROM labs WHERE code=?',String(d.code||''));insist(l&&!l.closed&&l.expires>Date.now(),'Invitation expirée ou incorrecte.',404);insist(store.get('SELECT count(*) AS n FROM participants WHERE lab=? AND revoked=0',l.id).n<30,'Session limitée à 30 participants.',409);const pid=id(),secret=token(),name=word(d.name,'Nom de l’appareil',80);store.run('INSERT INTO participants(id,lab,name,secret,joined,last_seen) VALUES(?,?,?,?,?,?)',pid,l.id,name,hash(secret),Date.now(),Date.now());store.event(l.home,null,'participant.join',name);return json(res,{id:pid,secret,name,expires:l.expires});
     }
     if(route.startsWith('/api/participant/')){
      const p=participant(req);store.rate('participant:'+p.id,100);const fault=p.fault_until>Date.now()?p.fault:'none';
@@ -134,6 +138,6 @@ function createGuardianServer(options={}){
    let data;try{data=await fs.promises.readFile(target);}catch(_){throw new Problem(404,'Introuvable');}res.writeHead(200,{'Content-Type':TYPES[ext]});res.end(method==='HEAD'?undefined:data);
   }catch(e){if(res.headersSent){res.end();return;}json(res,{error:e instanceof Problem?e.message:'Erreur interne. Aucune action confirmée.'},e instanceof Problem?e.status:500);if(!(e instanceof Problem)&&options.onError)options.onError(e);}
  };
- const server=secure?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const cleanup=setInterval(()=>store.cleanup(),3600000);cleanup.unref();server.on('close',()=>{clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
+ const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const cleanup=setInterval(()=>store.cleanup(),3600000);cleanup.unref();server.on('close',()=>{clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
 }
 module.exports={createGuardianServer};
