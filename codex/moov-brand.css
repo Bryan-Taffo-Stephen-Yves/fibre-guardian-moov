@@ -1,0 +1,60 @@
+/* Charte Moov Africa : rôle des couleurs sur les éléments clés (chargé en dernier).
+   Bleu Moov pour l'action principale et la navigation, bleu nuit pour les menus,
+   orange Moov seulement en accent (jamais pour du texte sur fond clair). */
+
+/* Menus latéraux : bleu nuit Moov */
+.n-sidebar,.j-navigation,.sidebar{background:var(--moov-primary-900)}
+.n-copilot header,.dark-card,.sv-balance-card{background:var(--moov-primary-900)}
+.n-nav:hover:not(.active){background:var(--moov-primary-800)}
+.j-navigation .j-nav-button:hover:not(.active){background:var(--moov-primary-800)}
+
+/* Élément actif du menu : bleu Moov plein */
+.n-nav.active,
+.j-nav-button.active,.j-nav-button.active:hover,
+.j-navigation .j-nav-button.active,.j-navigation .j-nav-button.active:hover,
+.nav-item.active,.phone-nav button.active{background:var(--moov-primary);color:var(--moov-on-primary)}
+.n-nav.active svg,.j-nav-button.active svg{color:var(--moov-on-primary)}
+
+/* Logo : étoile Guardian en orange Moov sur le menu bleu nuit */
+.n-brand>span,.brand-mark{color:var(--moov-accent)}
+
+/* Action principale : bouton bleu Moov, texte blanc (contraste 6,9:1) */
+.j-button.primary,.n-button.primary,.btn.primary,.ic-button-primary,
+.pilot-workspace .btn.primary,.oc-command .oc-button.primary,.rf-form .rf-submit,
+.j-connect-bottom>.j-button{background:var(--moov-primary);border-color:var(--moov-primary);color:var(--moov-on-primary)}
+.j-button.primary:hover,.n-button.primary:hover,.btn.primary:hover,.ic-button-primary:hover,
+.oc-command .oc-button.primary:hover,.rf-form .rf-submit:hover{background:var(--moov-primary-hover);border-color:var(--moov-primary-hover)}
+
+/* Filtres et choix sélectionnés */
+.oc-command .oc-filters .oc-button[aria-pressed=true],.fg-demo-choice.is-active,
+.workspace-pills .active,.scenario-pills .active,.language-row button.active,
+.hh-button[aria-pressed=true],.sv-steps .sv-step-active{background:var(--moov-primary);border-color:var(--moov-primary);color:var(--moov-on-primary)}
+
+/* Messages de l'utilisateur dans la conversation Guardian */
+.j-bubble.user{background:var(--moov-primary);border-color:var(--moov-primary);color:var(--moov-on-primary)}
+
+/* Cloche active et pastille de notifications */
+.j-bell.active{background:var(--moov-primary);color:var(--moov-on-primary)}
+
+/* Focus clavier visible partout */
+:where(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline-color:var(--moov-focus)}
+
+/* Mascotte Guardian : écran bleu nuit, yeux et voyants orange Moov */
+.j-bot-face,.n-agent-visual .j-bot-face{background:radial-gradient(ellipse at 28% 0,var(--moov-primary-700),var(--moov-primary-900) 72%)}
+.j-bot-face i{border-top-color:var(--moov-accent);filter:drop-shadow(0 0 3px var(--moov-accent))}
+.j-bot-face b,.j-bot-body i{background:var(--moov-accent);box-shadow:0 0 8px color-mix(in srgb,var(--moov-accent) 55%,transparent)}
+.j-bot-antenna{border-top-color:var(--moov-accent)}
+.oc-command .oc-guardian-avatar:after,.oc-command .oc-guardian-avatar b{background:var(--moov-accent);box-shadow:0 0 8px color-mix(in srgb,var(--moov-accent) 45%,transparent)}
+.oc-command .oc-guardian-avatar i{border-top-color:var(--moov-accent)}
+
+/* Bandeau de recommandation Guardian côté Moov : bleu nuit Moov */
+.oc-command .oc-guardian,.oc-guardian{border-color:var(--moov-primary-800);background:radial-gradient(ellipse at 15% 100%,var(--moov-primary-700),transparent 55%),var(--moov-primary-900)}
+.oc-command .oc-guardian .oc-eyebrow{color:var(--moov-accent-200)}
+
+/* Note de l'intervention : la note choisie en bleu Moov */
+.n-rating .n-button[aria-pressed=true]{background:var(--moov-primary);border-color:var(--moov-primary);color:var(--moov-on-primary)}
+.noc .n-button.primary:hover{background:var(--moov-primary-hover);border-color:var(--moov-primary-hover)}
+
+/* Carte « Guardian · copilote » : bleu nuit Moov (couleur de fond déclarée pour la lisibilité) */
+.n-agent{background-color:var(--moov-primary-900);background-image:radial-gradient(ellipse at 75% 55%,var(--moov-primary-700),var(--moov-primary-900) 75%)}
+.n-agent .n-eyebrow{color:var(--moov-accent-200)}

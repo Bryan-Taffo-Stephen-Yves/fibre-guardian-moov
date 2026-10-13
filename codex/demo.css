@@ -3,9 +3,9 @@
 .fg-demo-badge:hover{color:var(--ink);border-color:var(--ink)}
 .fg-demo-badge:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .fg-demo-badge.is-static{cursor:default;pointer-events:none}
-.fg-demo-layer{position:fixed;inset:0;z-index:80;display:grid;place-items:end center;background:rgb(0 0 0 / .38);padding:12px}
+.fg-demo-layer{position:fixed;inset:0;z-index:80;display:grid;place-items:end center;background:color-mix(in srgb,var(--moov-black) 38.0%,transparent);padding:12px}
 @media (min-width:720px){.fg-demo-layer{place-items:center}}
-.fg-demo-sheet{width:min(560px,100%);max-height:calc(100dvh - 24px);overflow:auto;background:#fff;color:var(--ink);border-radius:22px;padding:22px 20px 24px;box-shadow:0 24px 60px rgb(0 0 0 / .25)}
+.fg-demo-sheet{width:min(560px,100%);max-height:calc(100dvh - 24px);overflow:auto;background:var(--moov-white);color:var(--ink);border-radius:22px;padding:22px 20px 24px;box-shadow:0 24px 60px color-mix(in srgb,var(--moov-black) 25.0%,transparent)}
 .fg-demo-sheet header{display:flex;align-items:center;gap:10px}
 .fg-demo-sheet h2{margin:0;font-size:20px;flex:1}
 .fg-demo-close{appearance:none;border:0;background:var(--card);color:var(--ink);width:36px;height:36px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer}
@@ -18,16 +18,16 @@
 .fg-demo-block h3{margin:0 0 4px;font-size:16px}
 .fg-demo-block p{margin:0 0 10px;color:var(--muted);font-size:14px}
 .fg-demo-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.fg-demo-choice{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:12px;padding:11px 12px;font:600 14px/1.2 Archivo,Arial,sans-serif;text-align:left;cursor:pointer;min-height:44px}
-.fg-demo-choice.is-active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fg-demo-choice{appearance:none;border:1px solid var(--line);background:var(--moov-white);color:var(--ink);border-radius:12px;padding:11px 12px;font:600 14px/1.2 Archivo,Arial,sans-serif;text-align:left;cursor:pointer;min-height:44px}
+.fg-demo-choice.is-active{background:var(--ink);color:var(--moov-white);border-color:var(--ink)}
 .fg-demo-choice:disabled{opacity:.55;cursor:wait}
 .fg-demo-error{color:var(--red)!important;font-weight:600}
 .fg-demo-danger:disabled{opacity:.55;cursor:wait}
-.fg-demo-danger{appearance:none;border:1px solid var(--red);background:#fff;color:var(--red);border-radius:12px;padding:11px 14px;font:600 14px/1.2 Archivo,Arial,sans-serif;cursor:pointer;min-height:44px}
+.fg-demo-danger{appearance:none;border:1px solid var(--red);background:var(--moov-white);color:var(--red);border-radius:12px;padding:11px 14px;font:600 14px/1.2 Archivo,Arial,sans-serif;cursor:pointer;min-height:44px}
 /* Cloche, carte de redémarrage et page Guardian côté client */
 .j-bell{position:relative;display:inline-grid;place-items:center;width:42px;height:42px;padding:0;border-radius:50%}
-.j-bell.active{background:var(--ink);color:#fff}
-.j-bell-count{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--red);color:#fff;font:700 11px/19px Archivo,Arial,sans-serif;text-align:center}
+.j-bell.active{background:var(--ink);color:var(--moov-white)}
+.j-bell-count{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--red);color:var(--moov-white);font:700 11px/19px Archivo,Arial,sans-serif;text-align:center}
 .j-reboot{display:grid;grid-template-columns:auto 1fr;gap:14px 16px;align-items:start;margin-bottom:16px;border:2px solid var(--ink)}
 .j-reboot-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:var(--lime);color:var(--ink)}
 .j-reboot h2{margin:8px 0 6px;font-size:22px;line-height:1.15}

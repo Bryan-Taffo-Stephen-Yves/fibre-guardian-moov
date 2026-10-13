@@ -42,7 +42,7 @@ main { min-width: 0; overflow-wrap: anywhere; }
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: #657354 transparent;
+    scrollbar-color: var(--moov-neutral-600) transparent;
   }
   .sidebar nav .nav-item { flex-shrink: 0; }
   .sidebar-bottom { flex-shrink: 0; padding-top: 8px; }

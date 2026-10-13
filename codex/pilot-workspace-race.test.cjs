@@ -116,11 +116,13 @@ test('Création maison / bureau, invitation et guide restent explicites',()=>{
 test('Les aides du signalement et du guide restent lisibles sur leurs fonds clairs',()=>{
   const report=fs.readFileSync(path.join(__dirname,'report-form.css'),'utf8');
   const home=fs.readFileSync(path.join(__dirname,'home-onboarding.css'),'utf8');
+  const theme=fs.readFileSync(path.join(__dirname,'moov-theme.css'),'utf8');
   function rule(css,selector){const from=css.indexOf(selector+'{');assert.notEqual(from,-1);return css.slice(from,css.indexOf('}',from));}
   function luminance(hex){const [r,g,b]=hex.match(/\w\w/g).map(x=>parseInt(x,16)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*r+.7152*g+.0722*b;}
   for(const selector of ['.rf-form .rf-hint','.rf-form .rf-submit-bar small','.rf-form .rf-coordinates>p','.rf-form .rf-demo-note']){
-    const style=rule(report,selector),color=style.match(/color:#([0-9a-f]{6})/)[1];
-    for(const background of ['ffffff','f5f7ef'])assert.ok((luminance(background)+.05)/(luminance(color)+.05)>=4.5,selector+' doit conserver un contraste de 4,5:1');
+    // Charte Moov (prompt 3) : la couleur est une variable de moov-theme.css ; on lit sa valeur réelle.
+    const style=rule(report,selector),token=style.match(/[;{]color:var\(--(moov-[\w-]+)\)/)[1],color=theme.match(new RegExp('--'+token+':#([0-9a-f]{6})'))[1];
+    for(const background of ['ffffff','f5f7ef','f0f4f8'])assert.ok((luminance(background)+.05)/(luminance(color)+.05)>=4.5,selector+' doit conserver un contraste de 4,5:1');
     assert.match(style,/font-size:12px/);
   }
   assert.match(home,/\.ws-steps strong\{font-size:12px;/);assert.match(home,/\.ws-steps small\{font-size:12px;/);
