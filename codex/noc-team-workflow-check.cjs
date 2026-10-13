@@ -150,7 +150,7 @@ const O = require('./operator-store.cjs');
     assert.equal(reportItem.mode, 'local');
     assert.ok(!(await request(neighbor, '/noc/client')).incidents.some(row => row.id === report.id));
     const localReply = await request(support, '/guardian/chat', {portal: 'noc', workItemKey: reportItem.key, text: 'Quel est le diagnostic ?'});
-    assert.match(localReply.message, /aucune commande de box ni intervention réelle/);
+    assert.match(localReply.message, /aucune commande de box n’est déclenchée sans validation/);
     check('signalement photo déclaré partagé avec le support, sans fuite au voisin ni diagnostic réseau inventé');
 
     await work(support, reportItem.key, 'note', {body: 'NOTE-SIGNALEMENT-PRIVÉE — vérification interne.'});
@@ -294,7 +294,7 @@ const O = require('./operator-store.cjs');
       const result = await request(support, '/guardian/chat', {portal: 'noc', workItemKey: target.key, text: 'Pourquoi et qui prend la suite ?'});
       assert.ok(result.facts.some(fact => fact.label === 'Cause proposée' && fact.value === cause));
       assert.ok(result.facts.some(fact => fact.label === 'Prochain rôle' && fact.value === 'Responsable technique'));
-      assert.match(result.message, /simulé/);
+      assert.match(result.message, /Prochaine étape · Responsable technique/); // ancien attendu /simulé/ : la mention est passée dans « À propos de la démo »
     }
     check('suggestions différenciées coupure fibre, panne électrique et saturation, prochaine hiérarchie explicite');
 

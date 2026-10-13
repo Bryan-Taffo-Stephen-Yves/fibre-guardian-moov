@@ -73,7 +73,7 @@ test('Le traitement client change de statut avec une réponse publique confirmé
 test('Le technicien ne peut pas ouvrir les vues réseau globales ni les comptes',async()=>{
  const data=fixture();data.scope='assigned';data.role='technician';data.capabilities={};data.queue=[{...data.queue[0],status:'on_site',technician:{id:'awa',name:'Awa',team:'Équipe A'},allowed:{note:true,advance:true,check:true},checklist:[{id:'C1',body:'Contrôler le raccord',done:false,author:'Directeur'}]}];
  const h=harness(data);await tick();assert.equal(h.button('Ouvrir le dossier réseau'),undefined);assert.equal(h.button('Ouvrir la carte'),undefined);assert.equal(h.button('Habilitations'),undefined);assert.doesNotMatch(text(h.tree),/Rattacher un compte/);
- assert.ok(h.button('Déclarer la réparation simulée'));h.button('Terrain · 1').props.onClick();h.render();await h.find(n=>n.type==='input'&&n.props.type==='checkbox').props.onChange({target:{checked:true}});
+ assert.ok(h.button('Déclarer la réparation'));h.button('Terrain · 1').props.onClick();h.render();await h.find(n=>n.type==='input'&&n.props.type==='checkbox').props.onChange({target:{checked:true}});
  assert.equal(h.posts()[0].body.type,'check');assert.equal(h.posts()[0].body.itemId,'C1');assert.equal(h.posts()[0].body.done,true);assert.match(text(h.tree),/ne confirme pas le rétablissement/);
 });
 
@@ -144,10 +144,10 @@ test('Le terrain voit les compteurs et filtres de ses missions, pas ceux du supp
  const h=harness(data),metrics=h.all(n=>n.type==='button'&&n.props.className?.startsWith('oc-metric'));
  assert.deepEqual(metrics.map(node=>text(nodes(node,n=>n.type==='strong')[0]).trim()),['3','1','1','1']);
  assert.match(text(metrics[0]),/Mes missions actives/);assert.equal(h.button('Clients'),undefined);assert.equal(h.button('Mes dossiers'),undefined);assert.doesNotMatch(text(h.tree),/Plans à valider|Dossiers clients/);
- assert.ok(h.button('Confirmer le départ simulé'));
- h.button('En route').props.onClick();h.render();assert.ok(h.button('Confirmer l’arrivée simulée'));assert.equal(h.all(n=>n.type==='button'&&n.props.className?.startsWith('oc-item')).length,1);
- h.button('Sur place').props.onClick();h.render();assert.ok(h.button('Déclarer la réparation simulée'));
- h.button('Terminées').props.onClick();h.render();assert.equal(h.all(n=>n.type==='button'&&n.props.className?.startsWith('oc-item')).length,1);assert.equal(h.button('Déclarer la réparation simulée'),undefined);
+ assert.ok(h.button('Confirmer le départ'));
+ h.button('En route').props.onClick();h.render();assert.ok(h.button('Confirmer l’arrivée'));assert.equal(h.all(n=>n.type==='button'&&n.props.className?.startsWith('oc-item')).length,1);
+ h.button('Sur place').props.onClick();h.render();assert.ok(h.button('Déclarer la réparation'));
+ h.button('Terminées').props.onClick();h.render();assert.equal(h.all(n=>n.type==='button'&&n.props.className?.startsWith('oc-item')).length,1);assert.equal(h.button('Déclarer la réparation'),undefined);
  h.button('Toutes').props.onClick();h.render();assert.equal(h.all(n=>n.type==='button'&&n.props.className?.startsWith('oc-item')).length,4);
 });
 

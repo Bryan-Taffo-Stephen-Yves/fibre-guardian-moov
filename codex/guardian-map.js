@@ -69,7 +69,7 @@
     );
   }
   function Van({position,id}) {
-    return h('g',{className:'g-map-van',transform:'translate('+position.x+' '+position.y+')','aria-label':'Véhicule simulé'},
+    return h('g',{className:'g-map-van',transform:'translate('+position.x+' '+position.y+')','aria-label':'Véhicule de l’équipe'},
       h('ellipse',{cx:0,cy:17,rx:27,ry:8,fill:'#19231c',opacity:.16}),
       h('path',{d:'M-25-9Q-25-15-19-15H9L23-6V12H-25Z',fill:'url(#'+id+'-van)',stroke:'#1c251b',strokeWidth:1.5}),
       h('path',{d:'M-19-20H5L9-15H-25Z',fill:'#fafcf0',stroke:'#d5ddbe',strokeWidth:1}),
@@ -107,9 +107,9 @@
       event.preventDefault();const base=point||{x:270,y:215},step=event.shiftKey?30:10;
       const coords=toCoordinates(base.x+(event.key==='ArrowRight'?step:event.key==='ArrowLeft'?-step:0),base.y+(event.key==='ArrowDown'?step:event.key==='ArrowUp'?-step:0));keepVisible(toPoint(coords));onPick(coords.lat,coords.lon);
     }
-    return h('section',{className:'g-map'+(onPick?' g-map--pick':''),'aria-label':onPick?'Localiser le signalement sur le plan de démonstration':'Carte du réseau et des interventions'},
+    return h('section',{className:'g-map'+(onPick?' g-map--pick':''),'aria-label':onPick?'Localiser le signalement sur le plan':'Carte du réseau et des interventions'},
       h('div',{className:'g-map-stage'},
-        h('svg',{ref:svg,className:'g-map-canvas',viewBox:[view.x,view.y,view.width,view.height].join(' '),preserveAspectRatio:'xMidYMid meet',role:'group',tabIndex:onPick?0:undefined,'aria-label':onPick?'Plan fictif : cliquez pour placer le repère, ou utilisez les flèches du clavier.':'Plan schématique des zones, du réseau et du véhicule simulé',onClick:pick,onKeyDown:keyMove},
+        h('svg',{ref:svg,className:'g-map-canvas',viewBox:[view.x,view.y,view.width,view.height].join(' '),preserveAspectRatio:'xMidYMid meet',role:'group',tabIndex:onPick?0:undefined,'aria-label':onPick?'Plan du quartier : cliquez pour placer le repère, ou utilisez les flèches du clavier.':'Plan des zones, du réseau et du véhicule de l’équipe',onClick:pick,onKeyDown:keyMove},
           h('defs',null,h('linearGradient',{id:id+'-shade',x1:0,y1:0,x2:1,y2:1},h('stop',{stopColor:'#fff',stopOpacity:.05}),h('stop',{offset:1,stopColor:'#c9d4bc',stopOpacity:.12})),h('linearGradient',{id:id+'-van',x1:0,y1:0,x2:0,y2:1},h('stop',{stopColor:'#fafcf4'}),h('stop',{offset:.55,stopColor:'#d7e97e'}),h('stop',{offset:1,stopColor:'#bccb6d'}))),
           h(City,{id}),
           network&&!onPick&&h('g',{'aria-hidden':true},h('path',{d:'M120 205L225 205L280 164L410 100M280 164L330 330',fill:'none',stroke:'#c0ce95',strokeWidth:8,strokeLinecap:'round',strokeLinejoin:'round',opacity:.65}),h('path',{d:'M120 205L225 205L280 164L410 100M280 164L330 330',fill:'none',stroke:'#748855',strokeWidth:2,strokeDasharray:'3 5',strokeLinecap:'round'}),h('circle',{cx:280,cy:164,r:5,fill:'#fff',stroke:'#879e61',strokeWidth:2})),
@@ -125,13 +125,13 @@
           onPick&&point&&h('g',{'data-map-marker':true,transform:'translate('+point.x+' '+point.y+')',className:'g-map-report-pin'},h('ellipse',{cy:9,rx:18,ry:5,fill:'#20281c',opacity:.14}),h('path',{d:'M0 6S-15-8-15-18a15 15 0 1 1 30 0C15-8 0 6 0 6Z',fill:'#20271e',stroke:'#fff',strokeWidth:3}),h('circle',{cy:-18,r:6,fill:'#e4f57e'})),
           p&&h(Van,{position:p,id})
         ),
-        h('div',{className:'g-map-top'},h('span',{className:'g-map-badge'},h('i'),'PLAN DE DÉMONSTRATION'),h('span',{className:'g-map-north','aria-label':'Orientation schématique nord'},'↑',h('small',null,'N'))),
+        h('div',{className:'g-map-top'},h('span',{className:'g-map-badge'},h('i'),'PLAN DU RÉSEAU'),h('span',{className:'g-map-north','aria-label':'Orientation schématique nord'},'↑',h('small',null,'N'))),
         h('div',{className:'g-map-tools',role:'group','aria-label':'Outils de la carte'},btn('Agrandir la carte','plus',()=>Z(v=>Math.min(2.5,v+.5)),{disabled:zoom>=2.5}),btn('Réduire la carte','minus',()=>Z(v=>Math.max(1,v-.5)),{disabled:zoom<=1}),btn('Recentrer la carte','center',()=>{C({x:focus.x,y:focus.y});Z(1.5);}),!onPick&&btn('Afficher le réseau','layers',()=>N(v=>!v),{'aria-pressed':network})),
         zoom>1&&h('button',{type:'button',className:'g-map-reset',onClick:()=>{Z(1);C({x:270,y:215});}},'Vue complète · '+zoom.toFixed(1)+'×'),
-        p&&h('div',{className:'g-map-trip'},h('span',{className:'g-map-driver'},h(Icon,{name:'arrow'})),h('div',null,h('strong',null,p.technician||'Équipe terrain'),h('small',null,LABELS[incident?.status]||'Trajet de démonstration')),h('div',{className:'g-map-arrival','data-numeric':arrival.numeric},h('strong',null,arrival.value),h('small',null,arrival.caption))),
+        p&&h('div',{className:'g-map-trip'},h('span',{className:'g-map-driver'},h(Icon,{name:'arrow'})),h('div',null,h('strong',null,p.technician||'Équipe terrain'),h('small',null,LABELS[incident?.status]||'Trajet de l’équipe')),h('div',{className:'g-map-arrival','data-numeric':arrival.numeric},h('strong',null,arrival.value),h('small',null,arrival.caption))),
         onPick&&h('div',{className:'g-map-location'},h('span',{className:'g-map-driver'},h(Icon,{name:'pin'})),h('div',null,h('strong',null,outside?'Coordonnées hors de ce plan':point?'Emplacement du signalement':'Placez votre repère'),h('small',null,outside?'Vos coordonnées sont conservées. Ce plan n’est pas géographique.':point?Number(selectedPoint.lat).toFixed(5)+' · '+Number(selectedPoint.lon).toFixed(5):'Cliquez sur le plan ou utilisez les flèches.')))
       ),
-      h('footer',{className:'g-map-footer'},h('span',null,h('i',{className:'g-map-legend-dot'}),onPick?'Position déclarée':'Réseau schématique'),h('small',null,'Plan fictif · ni GPS ni itinéraire réel'))
+      h('footer',{className:'g-map-footer'},h('span',null,h('i',{className:'g-map-legend-dot'}),onPick?'Position déclarée':'Réseau schématique'),h('small',null,'Plan schématique'))
     );
   }
   window.FGMap={View,toCoordinates,toPoint,viewportAt,centerToReveal,arrivalDetails};
