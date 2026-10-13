@@ -1,0 +1,44 @@
+/* Optional end-to-end QA. All scenarios run offline against the supplied engine. */
+const { chromium, expect } = require('playwright');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const {pathToFileURL} = require('node:url');
+(async()=>{
+  const browser=await chromium.launch({channel:'msedge',headless:true});
+  const context=await browser.newContext({viewport:{width:1440,height:1050},reducedMotion:'reduce'});
+  const page=await context.newPage(),errors=[],remote=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))remote.push(r.url());});
+  await context.route(/^https?:/,r=>r.abort());
+  await page.goto(pathToFileURL(path.join(__dirname,'index.html')).href);
+  await page.getByRole('button',{name:'Ne pas faire la visite'}).click();
+  const nav=name=>page.locator('.sidebar').getByRole('button',{name,exact:true}).click();
+  await nav('Diagnostic');
+  await page.getByRole('button',{name:'Wi-Fi faible',exact:true}).click();
+  await page.getByRole('button',{name:'Optimiser le Wi-Fi',exact:true}).waitFor({timeout:15000});
+  console.log('PASS: panne Wi-Fi détectée, action correcte.');
+  await page.getByRole('button',{name:'Assistant',exact:true}).last().click();
+  const input=page.getByRole('textbox',{name:'Votre question'});await input.click();await input.pressSequentially('mon wifi là il gère pas dèh',{delay:65});
+  assert.equal(await input.inputValue(),'mon wifi là il gère pas dèh');assert(await input.evaluate(el=>el===document.activeElement));
+  await page.getByRole('button',{name:'Envoyer la question',exact:true}).click();
+  await page.locator('.bubble.assistant').filter({hasText:'Wi-Fi'}).last().waitFor();
+  console.log('PASS: saisie et réponse, focus conservé pendant les rafraîchissements.');
+  await page.getByRole('button',{name:'Voyants',exact:true}).click();await page.getByRole('button',{name:'Utiliser une image d’exemple'}).click();await page.getByText('Exemple généré — analyse locale',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Sans Internet',exact:true}).click();
+  await page.getByLabel('Expéditeur de test').selectOption('other');await page.getByRole('button',{name:'Envoyer la commande de test'}).click();await page.getByText('Commande refusée : numéro non lié à cette ligne de démonstration.',{exact:true}).waitFor();
+  await page.getByLabel('Expéditeur de test').selectOption('linked');
+  for(let i=0;i<2;i++){await page.getByRole('textbox',{name:'Commande SMS'}).fill('REBOOT');await page.getByRole('button',{name:'Envoyer la commande de test'}).click();await page.getByRole('dialog',{name:'Redémarrer la box virtuelle ?'}).waitFor();await page.getByRole('button',{name:'Confirmer le redémarrage'}).click();}
+  await page.getByRole('textbox',{name:'Commande SMS'}).fill('REBOOT');await page.getByRole('button',{name:'Envoyer la commande de test'}).click();await page.getByText('Limite atteinte : 2 redémarrages en 10 minutes. Réessayez plus tard.',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('dialog').count(),0);console.log('PASS: photo exemple, numéro SMS refusé, confirmation + limite de redémarrage.');
+  await nav('Wi-Fi maison');await page.getByRole('button',{name:'Explorer les 4 pièces'}).click();await page.getByRole('button',{name:'Essayer la box au centre',exact:true}).waitFor();assert((await page.locator('.sv-big-number').innerText()).includes('25'));await page.getByRole('button',{name:'Essayer la box au centre',exact:true}).click();assert((await page.locator('.sv-big-number').innerText()).includes('75'));await page.getByRole('checkbox',{name:'Activer le répéteur simulé'}).check();assert((await page.locator('.sv-big-number').innerText()).includes('100'));console.log('PASS: couverture 25 → 75 → 100 % selon le modèle.');
+  await nav('Supervision');await page.getByRole('button',{name:'Simuler une coupure à Yopougon'}).click();await page.getByText('Incident regroupé',{exact:true}).waitFor({timeout:25000});assert((await page.locator('.supervision-stats').innerText()).includes('Prévenus'));console.log('PASS: incident collectif généré par le moteur.');
+  await page.getByRole('button',{name:'Réglages',exact:true}).click();await page.getByRole('dialog').getByRole('combobox').nth(1).selectOption('technicien');await page.getByRole('button',{name:'C’est réglé'}).click();assert.equal(await page.locator('.sidebar').getByRole('button',{name:'Supervision',exact:true}).count(),0);assert.equal(await page.locator('.sidebar').getByRole('button',{name:'Relation client',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Visite guidée',exact:true}).click();for(let i=0;i<4;i++)await page.locator('.tour-coach').getByRole('button',{name:'Continuer',exact:true}).click();await page.locator('.tour-coach').getByRole('button',{name:'Terminer',exact:true}).click();assert.equal(await page.locator('.tour-coach').count(),0);
+  await page.getByRole('button',{name:'Présentation',exact:true}).click();for(let i=0;i<4;i++)await page.keyboard.press('ArrowRight');await page.getByRole('button',{name:'Terminer',exact:true}).click();assert.equal(await page.evaluate(()=>!!document.fullscreenElement),false);
+  await page.getByRole('button',{name:'Vos données & les limites'}).click();await page.getByRole('button',{name:'Effacer mes données de session'}).click();await page.getByRole('button',{name:'Effacer la session',exact:true}).click();await page.getByText('En pause',{exact:false}).first().waitFor();console.log('PASS: rôle, visite complète, présentation complète, effacement.');
+  assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);console.log('PASS: aucune erreur runtime, aucune requête réseau externe.');
+  await context.close();
+  const three=await browser.newContext({viewport:{width:1440,height:1050},reducedMotion:'no-preference'}),p=await three.newPage();p.on('pageerror',e=>errors.push(e.message));
+  await p.goto(pathToFileURL(path.join(__dirname,'index.html')).href);await p.getByRole('button',{name:'Ne pas faire la visite'}).click();await p.locator('.fg-scene__stage canvas').waitFor({timeout:10000});assert.equal(await p.locator('.fg-scene__stage canvas').count(),1);
+  await p.screenshot({path:path.resolve(__dirname,'../../verification/home-3d.png'),fullPage:true});
+  await p.getByRole('button',{name:'Réglages',exact:true}).click();await p.getByLabel('Illustrations 3D').uncheck();await p.getByRole('button',{name:'C’est réglé'}).click();assert.equal(await p.locator('.fg-scene__stage canvas').count(),0);assert.equal(await p.locator('.fg-scene__fallback').count(),1);console.log('PASS: 3D réelle et repli 2D activables.');
+  assert.deepEqual(errors,[]);await browser.close();
+})().catch(e=>{console.error(e);process.exit(1);});

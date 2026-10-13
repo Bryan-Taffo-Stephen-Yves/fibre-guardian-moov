@@ -1,0 +1,65 @@
+FIBRE GUARDIAN — GUIDE DE REPRISE — 11 OCTOBRE 2026
+
+VERSION À CONTINUER
+La version active est dans codex/. Conserver aussi src/, vendor/, _ds/ et les autres
+dossiers. Les fichiers racine et server/ sont l'ancien prototype, inclus pour
+préserver le travail. Le design actif est jaune/noir/blanc.
+
+DÉMARRAGE DE LA VERSION ACTUELLE
+1. Extraire tout le ZIP.
+2. Utiliser Node.js 24.21 (version utilisée pour les tests, avec node:sqlite).
+3. Windows : double-cliquer sur codex/DEMARRER-GUARDIAN.cmd.
+   Sinon, depuis la racine extraite : node codex/serveur-local.cjs
+4. Laisser le serveur ouvert.
+   Client : http://127.0.0.1:8186/codex/
+   Équipe Moov : http://127.0.0.1:8186/codex/?portal=moov
+
+Pas besoin de npm install ni de clé externe pour le pilote local.
+Attention : npm start et lancer.bat lancent l'ancien prototype, pas le pilote codex/.
+Ouvrir index.html directement ne lance pas les API.
+
+COMPTES
+Le ZIP ne contient PAS la base privée : comptes, mots de passe, sessions, photos
+de signalements et mesures personnelles restent sur l'ordinateur d'origine.
+Une base neuve codex/.local/pilot.sqlite sera créée au premier lancement.
+Pour un compte local : utiliser « Ouvrir les outils existants / créer un compte local »
+depuis l'écran de connexion. Créer son propre compte, sans mot de passe prédéfini.
+Pour habiliter ce compte comme opérateur de cette nouvelle installation :
+  node codex/operator-access.cjs votre-adresse@example.test admin
+Se reconnecter ensuite par « Équipe Moov ». Ne pas accorder ce rôle à un tiers non autorisé.
+Le parcours téléphone utilise un OTP fictif affiché : aucun SMS réel envoyé.
+
+DERNIERS PARCOURS
+Lire codex/PARCOURS-VERIFIES.txt, codex/NOC-LIVRAISON.txt et
+codex/NAVIGATION-VERIFICATION.txt pour les parcours client / Moov partagés.
+- Supervision, incidents, validation humaine, affectation, trajet, réparation et vérification.
+- Assistant client informé des incidents partagés ; copilote NOC sur ses cinq pages.
+- Avis après rétablissement ; upgrade fictif 25 000 vers 30 000 FCFA (complément 5 000).
+- Gestion des appareils, partage temporaire, scénarios réseau et foyer.
+- Laboratoire historique, mesures participants et placement Wi-Fi conservés.
+
+TESTS SANS INSTALLATION DE DÉPENDANCES
+  node codex/noc-check.cjs
+  node codex/journey-scenario-check.cjs
+  node codex/guardian-workflow-check.cjs
+Ces tests utilisent des bases en mémoire et des comptes fictifs.
+Les autres tests navigateur nécessitent les outils et navigateurs mentionnés dans
+leurs fichiers. Les chemins particuliers de l'ancien PC ne se transfèrent pas.
+
+LIMITES
+Prototype Node/SQLite/React, pas une migration Expo/Next/Supabase.
+Dans le parcours actif : diagnostic et copilote à règles, sans LLM/vision raccordé.
+La photo est enregistrée dans un dossier, pas interprétée par un modèle.
+Cartographie, véhicules, ETA, forfaits et paiements de démonstration sont fictifs.
+Pas de véritable SMS/push, GPS technicien, paiement, API Moov ou ACS raccordé.
+Pas de commande sur une vraie box ni garantie d'activation opérateur sous cinq minutes.
+La surveillance tourne tant que le serveur local est ouvert, pas en cloud 24 h/24.
+Les guides et audits anciens documentent leur version ; PARCOURS-VERIFIES.txt
+précise les fonctions et limites du dernier lot. Cette archive n'est pas une certification
+de sécurité ni un produit de production.
+
+CONTENU
+Sources, bibliothèques embarquées, styles, tests et documentation disponibles dans
+le projet. Les pièces jointes de la conversation ne sont pas incluses.
+Exclusions : codex/.local, bases SQLite, secrets, certificats privés, journaux,
+node_modules, caches et historique Git.

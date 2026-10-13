@@ -1,0 +1,124 @@
+FIBRE GUARDIAN — Refonte UI/UX du 11 octobre 2026
+
+Périmètre livré
+- Identité jaune citron, noir et blanc conservée. Typographie, cartes, boutons,
+  formulaires, navigation et panneau Guardian harmonisés, avec verre discret.
+- Vue Appareils : débit instantané, volumes de téléchargement observés sur
+  1 h / 24 h / 7 jours, barres interactives, recherche, détail par appareil,
+  couverture des relevés et historique des appareils qui ne sont plus présents.
+- Contextes maison, télétravail et développeurs. Changer le contexte demande
+  confirmation et ne change ni le trafic, ni les limites, ni le forfait.
+- Espace maison/bureau : création et invitation séparées, trois étapes,
+  état vide et accès au premier test. Suppression de la double déconnexion.
+- Signalement : photo/aperçu/retrait, lieu, description, consentement.
+- Plan schématique : zoom, recentrage, réseau activable, marqueur réglable,
+  véhicule simulé et estimation. Pas de service cartographique externe.
+- Correction : une navigation client revient au début de la page.
+- Correction : le panneau Guardian reste dans le viewport mobile et ses
+  commandes de message/microphone restent alignées.
+
+Vérification manuelle dans le navigateur
+Base isolée en mémoire via node codex/journey-ui-fixture.cjs. Aucun compte
+réel modifié, aucun SMS, paiement ni intervention réelle déclenché.
+- Connexion au compte client de test et au compte NOC de test.
+- Création d'un bureau, mode invitation et accès au premier test.
+- Trois périodes de consommation, recherche TV, sélection du graphique.
+- Contexte développeurs après confirmation.
+- Blocage de la TV confirmé : débit devenu nul, volume passé conservé.
+  Rétablissement confirmé puis débit revenu.
+- Guardian : ouverture/fermeture, points vérifiés repliables, message saisi,
+  proposition TV à 5 Mbps pendant 30 minutes, confirmation puis annulation.
+- Signalement avec image : aperçu, repère clavier, consentement, envoi.
+- Le même dossier est reçu côté NOC : analyse, approbation du responsable,
+  affectation d'Awa, départ, carte et ETA, arrivée, réparation, collecte
+  fraîche, vérification et résolution. Avis 4/5 enregistré côté client.
+- Navigation NOC : Vue d'ensemble, Incidents, Équipes & trajets, Validations,
+  Habilitations. Aucun mandat de sécurité modifié.
+- Carte : zoom, dézoom, vue complète, recentrage et bascule couche réseau.
+- Petit écran : 390x844 et 320x740, pas de dépassement horizontal sur les
+  écrans inspectés (appareils, Guardian, espace de test, suivi).
+- Bureau : 1440x960 ; application existante vérifiée à son format 815x524.
+- Aucun message console de niveau erreur dans les deux onglets inspectés.
+
+Tests automatisés
+node --test codex/device-usage-view.test.cjs : 7/7
+node --test codex/pilot.test.cjs : 14/14
+node --test codex/pilot-security.test.cjs codex/operator.test.cjs codex/approval.test.cjs : 28/28
+node codex/journey-usage-check.cjs : 11 groupes réussis
+node codex/journey-scenario-check.cjs : 11 groupes réussis
+node codex/noc-check.cjs : 11 groupes réussis
+node codex/guardian-workflow-check.cjs : 7 groupes réussis
+Vérification syntaxique des scripts frontend modifiés : réussie.
+
+Limites explicites
+Les volumes décrivent le téléchargement descendant du simulateur ; ils ne
+sont pas lus sur une box réelle. Aucune donnée historique n'est inventée.
+Les intervalles de collecte absents (>30 secondes) restent inconnus. Les
+barres sont découpées en intervalles UTC, la période courante étant partielle.
+Le moteur Guardian reste un moteur local à règles, sans LLM connecté.
+Le plan et le trajet restent fictifs, sans GPS opérateur ou itinéraire réel.
+Les comptes, rôles, données locales et anciennes fonctions sont conservés.
+Ce compte rendu liste les contrôles réalisés ; il ne prétend pas couvrir
+chaque action des anciens outils avancés ni un raccordement en production.
+
+Exécution
+Serveur : node codex/serveur-local.cjs
+Portail : http://127.0.0.1:8186/codex/
+Tour de contrôle : http://127.0.0.1:8186/codex/?portal=moov
+
+RELECTURE CRITIQUE DU PARCOURS — 11 OCTOBRE 2026, deuxième passe
+
+Défauts reproduits puis corrigés
+- Navigation client sans URL : liens profonds, rechargement, Retour/Avancer
+  et changement de portail conservent maintenant le bon écran.
+- Retour navigateur : restauration automatique du scroll neutralisée pour
+  éviter de revenir au milieu d'un écran différent.
+- Notifications d'intervention absentes : boîte partagée ciblée par compte,
+  dédoublonnage, lecture persistée et lien vers le suivi. Les alertes propres
+  au laboratoire restent séparées, explicitement identifiées.
+- Clôture support incohérente : closed = clôture administrative, distincte de
+  resolved = rétablissement vérifié. Pas de carte, d'avis ou d'étapes de
+  réparation annoncées à tort. Réouverture soumise à une nouvelle analyse.
+- Réponse de test de l'espace A affichable dans B : requêtes liées à leur
+  espace, sélecteur verrouillé, réponses tardives écartées.
+- Latitude invalide dans panneau replié : message explicite, ouverture du
+  panneau et focus sur la coordonnée incorrecte.
+- Carte : le technicien affecté ne s'affiche plus « Sur site » avant départ ;
+  repère et segments restent visibles au clavier après zoom.
+- Lisibilité : textes essentiels agrandis, contrastes renforcés, boutons
+  tactiles, carte prioritaire pendant le trajet, prochaine étape explicite.
+- Suivi vide / réseau indisponible : chargement, réessai et prochaine action
+  visibles. Les anciennes données sont signalées comme périmées.
+
+Parcours navigateur effectivement rejoué sur base éphémère
+1. Connexion via compte existant sur lien direct Appareils.
+2. Appareils -> Tests réels -> rechargement -> Retour vers Appareils.
+3. Participation au quartier fictif YOP-07 ; boîte vide puis réception.
+4. Ajout d'image de test ; latitude 91 et panneau replié : validation rejetée,
+   panneau rouvert, champ ciblé. Correction 5.35 puis envoi du signalement.
+5. Réception côté client et NOC, préparation du plan, approbation humaine,
+   sécurité confirmée, affectation d'Awa, départ simulé.
+6. Retour client : équipe en route, carte, estimation et nouvelles étapes
+   présentes dans la boîte de notifications. Lecture conservée au reload.
+7. Guardian répond à la lenteur en citant l'incident partagé ; ne propose
+   pas un forfait ni une réduction des autres appareils pour cette panne.
+8. Lien du chatbot vers le suivi ; contrôles à 1365x900, 390x844, 320x740.
+   Aucun dépassement horizontal observé sur suivi, notifications et chat.
+9. Console de l'onglet de test : aucune erreur. Photo test uniquement sur
+   l'instance éphémère. Pas de permission GPS/microphone demandée.
+
+Tests supplémentaires
+node --test codex/journey-navigation.test.cjs : 5/5
+node --test codex/pilot-workspace-race.test.cjs : 9/9
+node codex/noc-inbox-flow-check.cjs : PASS, API/isolation/cohérence
+node codex/guardian-map-check.cjs : 7 groupes PASS
+node codex/noc-view-check.cjs : 7 groupes PASS
+Les 49 tests Node antérieurs (42 sécurité/pilote + 7 appareils) et les
+suites usage, scénario, NOC et workflow ont été relancés : tous PASS.
+
+Preuve visuelle : ../verification/ui-2026-10-11/parcours-suivi-final.jpg
+Serveur existant 8186 trouvé arrêté, relancé en arrière-plan avec la base
+locale conservée. Page et session répondent HTTP 200. Aucune donnée réelle
+créée pour les essais, aucun SMS/paiement/intervention réelle exécuté.
+Ces preuves couvrent les parcours listés, pas chaque fonction ancienne du
+laboratoire avancé ni une intégration opérateur en production.

@@ -1,0 +1,23 @@
+Navigation — vérification du 10 octobre 2026
+
+Défauts corrigés :
+- Le choix de connexion n'avait ni sélection visuelle ni aria-pressed.
+- Les onglets Moov réutilisaient la même vue avec de petits changements de filtre.
+- Le titre du dashboard restait identique pour tous les onglets.
+- Le rechargement perdait l'onglet sélectionné.
+- Le passage depuis le choix opérateur vers le choix client conservait parfois la destination opérateur.
+
+Tests par clic dans le navigateur, base isolée en mémoire :
+- Les trois choix de connexion affichent le formulaire attendu, avec un seul bouton sélectionné.
+- Choix Moov et Compte existant conservés au rechargement ; activation au clavier vérifiée.
+- Connexion opérateur : ouverture du NOC. Compte existant : ouverture des tests réels côté client.
+- Passage Moov vers client, puis OTP fictif : ouverture du parcours client, pas du NOC.
+- Les cinq onglets Moov : titre, sélection, URL et panneaux attendus vérifiés.
+- Incidents : recherche sans résultat puis recherche YOP-07 avec résultat.
+- Plan proposé visible dans Validations ; approbation et retrait de la file après confirmation.
+- Affectation d'Awa dans Incidents ; mission visible dans Équipes & trajets ; départ et progression affichés.
+- Onglet conservé au rechargement et restauré par le bouton Retour du navigateur.
+- Cinq onglets testés à 390 px, sans débordement horizontal ; viewport réinitialisé après tests.
+- Aucune erreur console relevée sur les parcours testés.
+
+Ces tests portent sur la navigation et ce parcours local, pas sur toutes les fonctions historiques ni sur des intégrations Moov réelles.

@@ -1,0 +1,61 @@
+FIBRE GUARDIAN — ARCHIVE COMPLÈTE DES SOURCES — 13 OCTOBRE 2026
+
+LA BONNE VERSION À OUVRIR
+Le parcours actuel (client, équipe Moov et technicien) se trouve dans codex/.
+Les autres dossiers sont conservés : ils contiennent les bibliothèques locales,
+les ressources partagées, les tests et l'ancien prototype.
+
+DÉMARRER SUR UN AUTRE ORDINATEUR
+1. Extraire entièrement le ZIP en conservant le dossier fibre-guardian/.
+2. Installer Node.js compatible avec node:sqlite (version de vérification : 24.21.0).
+3. Depuis fibre-guardian/, exécuter :
+   node codex/serveur-local.cjs
+   Sur Windows, on peut aussi ouvrir codex/DEMARRER-GUARDIAN.cmd.
+4. Garder le serveur ouvert, puis visiter :
+   Client : http://127.0.0.1:8186/codex/
+   Moov   : http://127.0.0.1:8186/codex/?portal=moov&section=operations
+
+Le pilote local ne nécessite pas npm install. React, les styles, les polices
+et Three.js sont inclus. npm start et lancer.bat correspondent à l'ancien
+prototype, pas au parcours codex/.
+
+COMPTES ET DONNÉES
+Cette archive est complète pour reprendre le développement, mais ne transporte
+pas les données privées de l'installation d'origine : comptes, mots de passe,
+sessions, photos envoyées par les utilisateurs, mesures et dossiers personnels.
+Une base SQLite neuve sera créée au premier lancement dans codex/.local/.
+Les clés secrètes, certificats privés, caches et journaux sont exclus.
+
+Créer son compte depuis « Ouvrir les outils existants / créer un compte local ».
+Pour son propre compte administrateur sur cette nouvelle installation :
+   node codex/operator-access.cjs votre-adresse@example.test admin
+Puis se reconnecter par « Équipe Moov ».
+Ne pas exposer le serveur local sur Internet sans déploiement sécurisé adapté.
+
+CENTRE D'OPÉRATIONS
+File commune des incidents et dossiers explicitement partagés, filtres,
+responsable du dossier, notes internes, recommandations Guardian, validations,
+notifications, affectation, checklist terrain et vérification du retour réseau.
+Les permissions sont vérifiées côté serveur. Le technicien ne voit que ses
+missions. Une clôture administrative n'atteste pas une réparation de la fibre.
+
+TESTS REJOUABLES
+Depuis fibre-guardian/ :
+   node --test codex/noc-command-view.test.cjs codex/noc-workspace-check.cjs
+   node codex/noc-team-workflow-check.cjs
+   node codex/noc-view-check.cjs
+Ces tests utilisent des comptes fictifs et des bases temporaires/en mémoire.
+Les anciens scripts navigateur peuvent demander leurs outils dédiés.
+
+LIMITES À CONSERVER VISIBLES
+Prototype local Node/SQLite/React. La supervision et le copilote actifs utilisent
+des règles locales, pas un LLM raccordé. Réseau, véhicules et ETA de démonstration
+sont simulés. SMS, GPS terrain, paiements et ACS/API Moov ne sont pas raccordés.
+La surveillance s'arrête quand le serveur local est fermé.
+
+DOCUMENTATION
+Consulter LIRE-POUR-REPRENDRE.txt et les guides du dossier codex/.
+Le cahier des charges original disponible est joint dans documents/ comme
+référence de destination ; il ne signifie pas que toute sa stack ou tous ses
+modules sont déjà implémentés. Les pièces jointes visuelles du chat ne sont
+pas des dépendances du projet et ne sont pas incluses.

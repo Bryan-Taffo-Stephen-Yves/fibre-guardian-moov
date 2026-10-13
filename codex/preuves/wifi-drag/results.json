@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Glisser la box en 3D recalcule les quatre pièces sans recréer le canvas",
+    "status": "PASS"
+  },
+  {
+    "name": "Le répéteur se déplace indépendamment et influence le signal",
+    "status": "PASS"
+  },
+  {
+    "name": "Échap annule le déplacement",
+    "status": "PASS"
+  },
+  {
+    "name": "Clavier et bornes du logement",
+    "status": "PASS"
+  },
+  {
+    "name": "Équipements superposés : les deux prises restent accessibles",
+    "status": "PASS"
+  },
+  {
+    "name": "Annulation du répéteur sans changement de position",
+    "status": "PASS"
+  },
+  {
+    "name": "Bascule 2D/3D sans perdre les emplacements",
+    "status": "PASS"
+  },
+  {
+    "name": "Réinitialisation et anciens boutons synchronisés avec la carte",
+    "status": "PASS"
+  },
+  {
+    "name": "Perte WebGL : plan 2D manipulable, positions conservées",
+    "status": "PASS"
+  },
+  {
+    "name": "Navigation : contexte 3D libéré et réutilisable",
+    "status": "PASS"
+  },
+  {
+    "name": "Glissement tactile réel (événements navigateur) et responsive 320/390/768",
+    "status": "PASS"
+  },
+  {
+    "name": "Aucune exception navigateur",
+    "status": "PASS"
+  }
+]

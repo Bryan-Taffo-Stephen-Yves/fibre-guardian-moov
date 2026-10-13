@@ -8,14 +8,19 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Anthropic from '@anthropic-ai/sdk';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT || 8080);
 const MODEL = process.env.FG_MODEL || 'claude-opus-5';
 const MAX_BODY = 4 * 1024 * 1024;
 
-const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+// Le SDK n'est chargé que si une clé est fournie : sans `npm install`, le serveur sert quand même l'application.
+async function makeClient() {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try { const { default: Anthropic } = await import('@anthropic-ai/sdk'); return new Anthropic(); }
+  catch { console.warn('SDK absent : lancez `npm install` pour activer l\'agent Claude.'); return null; }
+}
+const client = await makeClient();
 
 // Repli côté serveur : si le modèle principal est surchargé, l'API bascule seule sur un modèle de secours.
 async function complete({ system, content, maxTokens = 600 }) {

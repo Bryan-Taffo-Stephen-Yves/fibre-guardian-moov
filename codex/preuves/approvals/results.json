@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Plan visible avant exécution ; mode ombre bloque une action approuvée",
+    "status": "PASS"
+  },
+  {
+    "name": "Validation, effet mock vérifié et retour arrière",
+    "status": "PASS"
+  },
+  {
+    "name": "R4 exige deux comptes habilités distincts",
+    "status": "PASS"
+  },
+  {
+    "name": "Refus ferme la demande sans effet",
+    "status": "PASS"
+  },
+  {
+    "name": "Arrêt d’urgence et reprise sans réactiver les anciennes demandes",
+    "status": "PASS"
+  },
+  {
+    "name": "Expiration reflétée dans le portail",
+    "status": "PASS"
+  },
+  {
+    "name": "Plage nocturne et réglages conservés au rechargement",
+    "status": "PASS"
+  },
+  {
+    "name": "Affichage de 320 à 1440 pixels",
+    "status": "PASS"
+  },
+  {
+    "name": "Aucune exception navigateur ou serveur",
+    "status": "PASS"
+  }
+]
