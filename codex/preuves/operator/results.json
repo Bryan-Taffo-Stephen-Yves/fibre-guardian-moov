@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Espace client : compte, foyer, dossier privé",
+    "status": "PASS"
+  },
+  {
+    "name": "Refus du portail administrateur pour un client",
+    "status": "PASS"
+  },
+  {
+    "name": "Connexion administrateur, aucun dossier privé exposé",
+    "status": "PASS"
+  },
+  {
+    "name": "Partage consenti, prise en charge et réponse reçue côté client",
+    "status": "PASS"
+  },
+  {
+    "name": "Réponse, clôture déclarative et filtre de statut",
+    "status": "PASS"
+  },
+  {
+    "name": "Réponse client et réouverture reçues par le support",
+    "status": "PASS"
+  },
+  {
+    "name": "Interfaces vérifiées de 320 à 1440 pixels",
+    "status": "PASS"
+  },
+  {
+    "name": "Retrait du partage : dossier et preuves retirés du portail",
+    "status": "PASS"
+  },
+  {
+    "name": "Session administrateur conservée après rechargement",
+    "status": "PASS"
+  },
+  {
+    "name": "Révocation du rôle : données retirées de l’écran",
+    "status": "PASS"
+  },
+  {
+    "name": "Déconnexion possible après expiration ou révocation",
+    "status": "PASS"
+  },
+  {
+    "name": "Aucune exception navigateur ou serveur",
+    "status": "PASS"
+  }
+]

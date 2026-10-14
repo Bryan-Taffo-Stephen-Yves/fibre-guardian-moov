@@ -38,6 +38,9 @@ a{color:#ff563c;text-decoration:none}a:hover{color:#ff9783}
 input[type=range]{accent-color:#ec3013}
 @keyframes fgBlink{0%,49%{opacity:1}50%,100%{opacity:.12}}
   .fg-noshrink>*{flex-shrink:0}
+  @media (min-width:1100px){#fg-tour{left:auto!important;right:24px;transform:none!important;width:420px!important}}
+  [data-fg-hl]{outline:3px solid #ec3013;outline-offset:-3px}
+  button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #ff9783;outline-offset:2px}
 @keyframes fgPulse{0%{opacity:.25}50%{opacity:1}100%{opacity:.25}}
 </style>
 </helmet>
@@ -51,19 +54,36 @@ input[type=range]{accent-color:#ec3013}
     <span style="font-weight:900;font-stretch:125%;letter-spacing:.04em;font-size:15px;text-transform:uppercase">Fibre Guardian</span>
   </a>
   <div style="display:flex;gap:22px;margin-left:auto;flex-shrink:0;font-stretch:80%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:600">
-    <a href="#labo" style="color:#bab6b6" style-hover="color:#fff">Laboratoire</a>
-    <a href="#banc" style="color:#bab6b6" style-hover="color:#fff">Banc de test</a>
-    <a href="#reseau" style="color:#bab6b6" style-hover="color:#fff">Réseau</a>
-    <a href="#wifi" style="color:#bab6b6" style-hover="color:#fff">Cartographie</a>
-    <a href="#parcours" style="color:#bab6b6" style-hover="color:#fff">Parcours</a>
-    <a href="#ia" style="color:#bab6b6" style-hover="color:#fff">Intelligence</a>
-    <a href="#economie" style="color:#bab6b6" style-hover="color:#fff">Économie</a>
+    <a href="#labo" style="color:#bab6b6" style-hover="color:#fff">Essayer une panne</a>
+    <a href="#banc" style="color:#bab6b6" style-hover="color:#fff">Tester ma connexion</a>
+    <a href="#reseau" style="color:#bab6b6" style-hover="color:#fff">Pannes de quartier</a>
+    <a href="#wifi" style="color:#bab6b6" style-hover="color:#fff">Wi-Fi à la maison</a>
+    <a href="#parcours" style="color:#bab6b6" style-hover="color:#fff">Histoires</a>
+    <a href="#ia" style="color:#bab6b6" style-hover="color:#fff">Comment ça marche</a>
+    <a href="#economie" style="color:#bab6b6" style-hover="color:#fff">Économies</a>
   </div>
+  <button onClick="{{ startTour }}" style="all:unset;cursor:pointer;flex-shrink:0;padding:8px 12px;background:#ec3013;color:#fff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em" style-hover="background:#dd2b0f">? Visite guidée</button>
   <div style="display:flex;align-items:center;gap:8px;font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#bab6b6;flex-shrink:0">
     <span style="width:8px;height:8px;flex-shrink:0;background:{{ statusColor }};animation:fgPulse 1.6s infinite"></span>
     <span>{{ navStatus }}</span>
   </div>
 </nav>
+
+<!-- VISITE GUIDÉE -->
+<sc-if value="{{ tourOn }}" hint-placeholder-val="{{ false }}">
+  <div id="fg-tour" role="dialog" aria-label="Visite guidée" style="position:fixed;z-index:60;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom, 0px));width:min(560px,calc(100% - 32px));background:#1c1a19;border:2px solid #ec3013;box-shadow:0 12px 40px rgba(0,0,0,.6);padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+      <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#ff9783;font-weight:700">Visite guidée · {{ tourPos }}</span>
+      <button onClick="{{ tourEnd }}" aria-label="Fermer la visite" style="all:unset;cursor:pointer;color:#bab6b6;font-size:13px" style-hover="color:#fff">Fermer ✕</button>
+    </div>
+    <b style="font-size:19px;line-height:1.2">{{ tourTitle }}</b>
+    <span style="font-size:15px;line-height:1.5;color:#d7d3d3">{{ tourText }}</span>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <sc-if value="{{ tourHasPrev }}" hint-placeholder-val="{{ false }}"><button onClick="{{ tourPrev }}" style="all:unset;cursor:pointer;padding:10px 14px;border:2px solid rgba(243,242,242,.3);font-weight:700;font-size:13px;text-transform:uppercase" style-hover="border-color:#ec3013">Précédent</button></sc-if>
+      <button onClick="{{ tourNext }}" style="all:unset;cursor:pointer;padding:10px 18px;background:#ec3013;color:#fff;font-weight:700;font-size:13px;text-transform:uppercase" style-hover="background:#dd2b0f">{{ tourNextLabel }} →</button>
+    </div>
+  </div>
+</sc-if>
 
 <!-- HERO -->
 <header id="top" style="position:relative;overflow:hidden;border-bottom:2px solid rgba(243,242,242,.16);background-image:linear-gradient(rgba(243,242,242,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(243,242,242,.045) 1px,transparent 1px);background-size:80px 80px">
@@ -73,25 +93,32 @@ input[type=range]{accent-color:#ec3013}
         <span style="border:2px solid #ec3013;color:#ff9783;padding:6px 10px;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:700">Concours Moov Application 2026</span>
         <span style="border:2px solid rgba(243,242,242,.2);color:#bab6b6;padding:6px 10px;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:600">Moov Africa Côte d'Ivoire × IUGB</span>
       </div>
-      <h1 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(44px,6.4vw,104px);line-height:.9;letter-spacing:-.02em;text-transform:uppercase;text-wrap:balance">La fibre qui se diagnostique <span style="color:#ec3013">avant</span> qu'on appelle.</h1>
-      <p style="margin:0;max-width:560px;font-size:19px;line-height:1.5;color:#d7d3d3;font-stretch:95%;text-wrap:pretty">Résoudre sans contact humain la majorité des incidents fibre courants, et détecter les autres avant que le client n'appelle. En français, en nouchi et en dioula.</p>
+      <h1 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(32px,6.4vw,104px);overflow-wrap:anywhere;line-height:.9;letter-spacing:-.02em;text-transform:uppercase;text-wrap:balance">La fibre qui se diagnostique <span style="color:#ec3013">avant</span> qu'on appelle.</h1>
+      <p style="margin:0;max-width:560px;font-size:19px;line-height:1.5;color:#d7d3d3;font-stretch:95%;text-wrap:pretty">Quand Internet ne marche plus à la maison, l'application trouve toute seule d'où vient le problème et l'explique à l'abonné avec des mots simples, en français, en nouchi ou en dioula. Moov est prévenu avant même que le client appelle.</p>
+      <p style="margin:0;max-width:560px;font-size:15px;line-height:1.5;color:#9b9797">Cette page est une démonstration : aucune vraie box n'est branchée, les pannes sont simulées. Vous pouvez tout essayer sans rien casser.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <a href="#labo" class="btn btn-primary" style="display:flex;align-items:center;gap:40px;padding:16px 20px;background:#ec3013;color:#fff;font-weight:700;font-stretch:110%;text-transform:uppercase;letter-spacing:.06em;font-size:14px;border-radius:0" style-hover="background:#dd2b0f;color:#fff">Injecter une panne en direct <span>→</span></a>
-        <a href="#reseau" style="display:flex;align-items:center;gap:40px;padding:14px 20px;border:2px solid rgba(243,242,242,.3);color:#f3f2f2;font-weight:700;font-stretch:110%;text-transform:uppercase;letter-spacing:.06em;font-size:14px" style-hover="border-color:#ec3013;color:#fff">Console opérateur <span>↓</span></a>
+        <a href="#labo" class="btn btn-primary" onClick="{{ startTourClick }}" style="display:flex;align-items:center;gap:40px;padding:16px 20px;background:#ec3013;color:#fff;font-weight:700;font-stretch:110%;text-transform:uppercase;letter-spacing:.06em;font-size:14px;border-radius:0" style-hover="background:#dd2b0f;color:#fff">Commencer la visite guidée <span>→</span></a>
+        <a href="#labo" style="display:flex;align-items:center;gap:40px;padding:14px 20px;border:2px solid rgba(243,242,242,.3);color:#f3f2f2;font-weight:700;font-stretch:110%;text-transform:uppercase;letter-spacing:.06em;font-size:14px" style-hover="border-color:#ec3013;color:#fff">Essayer directement <span>↓</span></a>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:2px solid rgba(243,242,242,.16);margin-top:8px">
-        <div style="padding:18px 16px 0 0;display:flex;flex-direction:column;gap:6px">
-          <span style="font-weight:900;font-stretch:125%;font-size:34px">9</span>
-          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#9b9797">Métriques lues à la seconde</span>
+      <div style="display:flex;flex-direction:column;gap:10px;border-top:2px solid rgba(243,242,242,.16);padding-top:18px">
+        <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#9b9797">Comment se servir de cette démo</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px">
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-weight:900;font-stretch:125%;font-size:26px;color:#ec3013">1</span><b style="font-size:15px">Choisissez une panne</b><span style="font-size:13px;color:#bab6b6;line-height:1.4">Par exemple « Fibre coupée » ou « Wi-Fi faible ».</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-weight:900;font-stretch:125%;font-size:26px;color:#ec3013">2</span><b style="font-size:15px">Regardez le téléphone</b><span style="font-size:13px;color:#bab6b6;line-height:1.4">C'est ce que l'abonné voit et comprend.</span></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-weight:900;font-stretch:125%;font-size:26px;color:#ec3013">3</span><b style="font-size:15px">Regardez ce que voit Moov</b><span style="font-size:13px;color:#bab6b6;line-height:1.4">Le verdict et la raison, en moins de 10 secondes.</span></div>
         </div>
-        <div style="padding:18px 16px 0;display:flex;flex-direction:column;gap:6px;border-left:2px solid rgba(243,242,242,.16)">
-          <span style="font-weight:900;font-stretch:125%;font-size:34px">6</span>
-          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#9b9797">Classes de panne reconnues</span>
-        </div>
-        <div style="padding:18px 16px 0;display:flex;flex-direction:column;gap:6px;border-left:2px solid rgba(243,242,242,.16)">
-          <span style="font-weight:900;font-stretch:125%;font-size:34px">&lt;10 s</span>
-          <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:#9b9797">De l'anomalie au verdict</span>
-        </div>
+        <details style="font-size:14px;color:#d7d3d3;line-height:1.5">
+          <summary style="cursor:pointer;color:#ff9783;font-weight:700">Les mots techniques expliqués</summary>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;padding-top:10px">
+            <b>Box</b><span>L'appareil Moov chez l'abonné, qui reçoit la fibre et diffuse le Wi-Fi.</span>
+            <b>Fibre</b><span>Le câble de verre qui amène Internet jusqu'à la box, par la lumière.</span>
+            <b>dBm</b><span>La force d'un signal. Plus le chiffre est proche de zéro, plus le signal est fort : −18 est bon, −36 veut dire coupé.</span>
+            <b>Mbps</b><span>La vitesse d'Internet. L'abonné a payé pour 100.</span>
+            <b>Latence (ms)</b><span>Le temps de réponse. En dessous de 20, c'est rapide.</span>
+            <b>Moteur</b><span>Le programme qui lit les mesures de la box et décide quelle est la panne.</span>
+            <b>101</b><span>Le service client de Moov, que l'on veut appeler moins souvent.</span>
+          </div>
+        </details>
       </div>
     </div>
     <div style="position:relative;min-height:520px">
@@ -151,12 +178,13 @@ input[type=range]{accent-color:#ec3013}
       <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">02 — Laboratoire en direct</span>
       <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(34px,4.4vw,64px);line-height:.94;text-transform:uppercase">Provoquez une panne. Regardez-la se nommer.</h2>
     </div>
-    <p style="margin:0;color:#bab6b6;font-size:17px;line-height:1.55;max-width:560px;text-wrap:pretty">Le simulateur produit les neuf métriques avec des signatures physiques cohérentes. Le moteur de détection ne voit que les échantillons : il ignore quelle panne a été injectée.</p>
+    <div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;gap:10px;align-items:flex-start;border:2px solid rgba(236,48,19,.45);background:rgba(236,48,19,.08);padding:12px 14px;font-size:15px;line-height:1.5;color:#f3f2f2;max-width:620px;text-transform:none;letter-spacing:0;font-stretch:100%;font-weight:400;pointer-events:auto"><b style="color:#ff9783;flex-shrink:0">En clair</b><span>Cliquez sur une panne dans la liste de gauche. Le téléphone au centre montre ce que l'abonné voit. La colonne de droite montre ce que Moov voit. Le programme de Moov ne sait pas quelle panne vous avez choisie : il la devine à partir des mesures.</span></div></div>
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))">
     <!-- Injecteur -->
-    <div style="padding:32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:16px">
+    <div id="labo-panne" style="padding:32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;gap:10px;align-self:stretch;padding:10px 12px;background:#ec3013;color:#fff"><span style="font-weight:900;font-stretch:125%;font-size:22px;line-height:1">1</span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:15px">Choisissez une panne</b><span style="font-size:13px;opacity:.9">Cliquez sur une ligne de la liste</span></span></div>
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
         <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Simulateur réseau · injection</span>
         <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.12em;font-size:10px;color:#ff9783;border:1px solid rgba(236,48,19,.5);padding:3px 6px">Invisible au moteur</span>
@@ -210,7 +238,8 @@ input[type=range]{accent-color:#ec3013}
     </div>
 
     <!-- Téléphone -->
-    <div style="padding:32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;align-items:center;gap:16px;background-image:radial-gradient(circle at 50% 40%,rgba(236,48,19,.12),transparent 60%)">
+    <div id="labo-tel" style="padding:32px;border-right:2px solid rgba(243,242,242,.16);display:flex;flex-direction:column;align-items:center;gap:16px;background-image:radial-gradient(circle at 50% 40%,rgba(236,48,19,.12),transparent 60%)">
+      <div style="display:flex;align-items:center;gap:10px;align-self:stretch;padding:10px 12px;background:#ec3013;color:#fff"><span style="font-weight:900;font-stretch:125%;font-size:22px;line-height:1">2</span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:15px">Le téléphone de l'abonné</b><span style="font-size:13px;opacity:.9">Les onglets en bas : Accueil, Assistant, Voyants, Données</span></span></div>
       <span style="align-self:flex-start;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Application client · M3 M4 M5 M6 M8</span>
       <div style="width:340px;max-width:100%;height:720px;border:2px solid rgba(243,242,242,.3);background:#0c0b0b;padding:10px;box-shadow:0 0 0 8px #1a1918,0 40px 80px rgba(0,0,0,.6)">
         <div style="height:100%;background:#161514;display:flex;flex-direction:column;overflow:hidden;position:relative">
@@ -375,7 +404,8 @@ input[type=range]{accent-color:#ec3013}
     </div>
 
     <!-- Moteur -->
-    <div style="padding:32px;display:flex;flex-direction:column;gap:18px;min-width:0">
+    <div id="labo-moteur" style="padding:32px;display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div style="display:flex;align-items:center;gap:10px;align-self:stretch;padding:10px 12px;background:#ec3013;color:#fff"><span style="font-weight:900;font-stretch:125%;font-size:22px;line-height:1">3</span><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:15px">Ce que voit Moov</b><span style="font-size:13px;opacity:.9">Le verdict, sa certitude (0 à 1) et les raisons</span></span></div>
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
         <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#9b9797">Moteur de détection · M2 · fenêtre 9 s</span>
         <span style="font-stretch:75%;font-variant-numeric:tabular-nums;font-size:11px;color:#7d7979">t = {{ t }} s</span>
@@ -439,6 +469,7 @@ input[type=range]{accent-color:#ec3013}
     <div style="display:flex;flex-direction:column;gap:18px">
       <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">02.B — Banc de test</span>
       <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(34px,4.4vw,64px);line-height:.94;text-transform:uppercase">Mesurer la vraie ligne. Auditer le moteur.</h2>
+      <div style="display:flex;gap:10px;align-items:flex-start;border:2px solid rgba(236,48,19,.45);background:rgba(236,48,19,.08);padding:12px 14px;font-size:15px;line-height:1.5;color:#f3f2f2;max-width:620px;text-transform:none;letter-spacing:0;font-stretch:100%;font-weight:400;pointer-events:auto"><b style="color:#ff9783;flex-shrink:0">En clair</b><span>Le bouton de mesure teste la vraie connexion de cet ordinateur ou de ce téléphone : vitesse, temps de réponse, coupures. La partie de droite rejoue des centaines de pannes pour vérifier que le programme ne se trompe pas.</span></div>
     </div>
     <p style="margin:0;color:#bab6b6;font-size:17px;line-height:1.55;max-width:560px;text-wrap:pretty">Deux bancs. Le premier mesure la connexion réelle de cet appareil en multi-flux, avec la latence sous charge. Le second rejoue des centaines de pannes simulées contre le moteur de détection et publie sa matrice de confusion.</p>
   </div>
@@ -608,9 +639,10 @@ input[type=range]{accent-color:#ec3013}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr))">
     <div style="position:relative;min-height:640px;border-right:2px solid rgba(243,242,242,.16);background-image:radial-gradient(circle at 50% 60%,rgba(236,48,19,.1),transparent 65%)">
       <div ref="{{ netRef }}" style="position:absolute;inset:0;cursor:grab;overflow:hidden"></div>
-      <div style="position:absolute;top:40px;left:40px;display:flex;flex-direction:column;gap:14px;pointer-events:none;max-width:440px;z-index:3;background:rgba(18,17,16,.78);padding:14px 16px;margin:-14px -16px">
+      <div style="position:absolute;top:40px;left:40px;right:40px;display:flex;flex-direction:column;gap:14px;pointer-events:none;max-width:440px;z-index:3;background:rgba(18,17,16,.78);padding:14px 16px;margin:-14px -16px">
         <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">03 — Supervision distribuée · M9 M10</span>
         <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.4vw,52px);line-height:.94;text-transform:uppercase">Chaque abonné, une sonde du réseau.</h2>
+      <div style="display:flex;gap:10px;align-items:flex-start;border:2px solid rgba(236,48,19,.45);background:rgba(236,48,19,.08);padding:12px 14px;font-size:15px;line-height:1.5;color:#f3f2f2;max-width:620px;text-transform:none;letter-spacing:0;font-stretch:100%;font-weight:400;pointer-events:auto"><b style="color:#ff9783;flex-shrink:0">En clair</b><span>Si beaucoup d'abonnés d'un même quartier ont une panne au même moment, le problème vient du réseau Moov et pas de chez eux. Cliquez sur « Couper le segment » : Moov est alerté et prévient les clients par SMS avant qu'ils appellent.</span></div>
       </div>
       <div style="position:absolute;left:40px;bottom:32px;font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#7d7979;pointer-events:none">Hologramme · Abidjan · faire glisser pour pivoter</div>
     </div>
@@ -664,6 +696,7 @@ input[type=range]{accent-color:#ec3013}
     <div style="padding:64px 40px;display:flex;flex-direction:column;gap:22px;border-right:2px solid rgba(243,242,242,.16)">
       <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">04 — Cartographie Wi-Fi · M7</span>
       <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.4vw,52px);line-height:.94;text-transform:uppercase">La chambre d'Awa, relevée au doigt.</h2>
+      <div style="display:flex;gap:10px;align-items:flex-start;border:2px solid rgba(236,48,19,.45);background:rgba(236,48,19,.08);padding:12px 14px;font-size:15px;line-height:1.5;color:#f3f2f2;max-width:620px;text-transform:none;letter-spacing:0;font-stretch:100%;font-weight:400;pointer-events:auto"><b style="color:#ff9783;flex-shrink:0">En clair</b><span>Passez le doigt ou la souris sur le plan de la maison. Les zones rouges captent mal le Wi-Fi. L'application dit où déplacer la box, ou s'il faut un répéteur.</span></div>
       <p style="margin:0;color:#bab6b6;font-size:16px;line-height:1.55;text-wrap:pretty">Parcourez le plan avec le doigt ou la souris. L'application mesure le niveau reçu à chaque point. Au-delà de 25 % de surface sous −68 dBm, elle recommande un déplacement de box chiffré en mètres, avant tout matériel.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;border-top:2px solid rgba(243,242,242,.16)">
         <div style="padding:16px 16px 16px 0;display:flex;flex-direction:column;gap:4px"><span style="font-weight:900;font-stretch:125%;font-size:40px;font-variant-numeric:tabular-nums">{{ covMeasured }}</span><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:#9b9797">Surface relevée</span></div>
@@ -698,6 +731,7 @@ input[type=range]{accent-color:#ec3013}
   <div style="padding:64px 40px 32px;display:flex;flex-direction:column;gap:18px">
     <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">05 — Parcours</span>
     <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.8vw,56px);line-height:.94;text-transform:uppercase;max-width:1000px">Quatre personnes, quatre quartiers d'Abidjan.</h2>
+      <div style="display:flex;gap:10px;align-items:flex-start;border:2px solid rgba(236,48,19,.45);background:rgba(236,48,19,.08);padding:12px 14px;font-size:15px;line-height:1.5;color:#f3f2f2;max-width:620px;text-transform:none;letter-spacing:0;font-stretch:100%;font-weight:400;pointer-events:auto"><b style="color:#ff9783;flex-shrink:0">En clair</b><span>Choisissez une personne, lisez son histoire, puis cliquez sur le bouton rouge : la panne est rejouée dans la démo, en haut de la page.</span></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));border-top:2px solid rgba(243,242,242,.16)">
     <sc-for list="{{ journeys }}" as="j" hint-placeholder-count="4">
@@ -733,6 +767,7 @@ input[type=range]{accent-color:#ec3013}
     <div style="display:flex;flex-direction:column;gap:18px">
       <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">06 — Intelligence</span>
       <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.8vw,56px);line-height:.94;text-transform:uppercase">Quatre briques d'IA. Aucune boîte noire.</h2>
+      <div style="display:flex;gap:10px;align-items:flex-start;border:2px solid rgba(236,48,19,.45);background:rgba(236,48,19,.08);padding:12px 14px;font-size:15px;line-height:1.5;color:#f3f2f2;max-width:620px;text-transform:none;letter-spacing:0;font-stretch:100%;font-weight:400;pointer-events:auto"><b style="color:#ff9783;flex-shrink:0">En clair</b><span>Cette partie explique, pour les curieux, comment l'application décide. Vous pouvez la passer.</span></div>
     </div>
     <div style="border:2px solid rgba(243,242,242,.18);padding:22px;display:flex;flex-direction:column;gap:10px">
       <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Écart robuste à la ligne de base, par abonné et par tranche horaire</span>
@@ -805,6 +840,7 @@ input[type=range]{accent-color:#ec3013}
     <div style="padding:64px 40px;display:flex;flex-direction:column;gap:22px;border-right:2px solid rgba(243,242,242,.16)">
       <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:#ec3013;font-weight:700">08 — Argumentaire économique</span>
       <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(30px,3.4vw,52px);line-height:.94;text-transform:uppercase">Trois coûts réduits. Aucune dépense nouvelle.</h2>
+      <div style="display:flex;gap:10px;align-items:flex-start;border:2px solid rgba(236,48,19,.45);background:rgba(236,48,19,.08);padding:12px 14px;font-size:15px;line-height:1.5;color:#f3f2f2;max-width:620px;text-transform:none;letter-spacing:0;font-stretch:100%;font-weight:400;pointer-events:auto"><b style="color:#ff9783;flex-shrink:0">En clair</b><span>L'estimation de l'argent que Moov économise chaque année : moins d'appels au 101, moins de techniciens envoyés pour rien, moins de clients qui partent. Bougez les curseurs pour essayer d'autres chiffres.</span></div>
       <div style="font-size:clamp(15px,1.4vw,19px);font-style:italic;font-stretch:92%;padding:16px;border:2px solid rgba(243,242,242,.16);line-height:1.6">E<sub>annuel</sub> = 12 · [ A · p<sub>a</sub> · c<sub>a</sub> + D · p<sub>d</sub> · c<sub>d</sub> ] + R · p<sub>r</sub> · ARPU · d</div>
       <div style="display:flex;flex-direction:column;gap:2px">
         <span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.16em;font-size:10px;color:#9b9797">Économie annuelle estimée</span>
@@ -846,7 +882,7 @@ input[type=range]{accent-color:#ec3013}
 
 <!-- CLOSE -->
 <section style="background:#ec3013;color:#fff;padding:88px 40px 40px;display:flex;flex-direction:column;gap:56px">
-  <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(44px,7vw,120px);line-height:.88;text-transform:uppercase;max-width:1400px;text-wrap:balance">Une application de dépannage qui survit à la panne qu'elle diagnostique.</h2>
+  <h2 style="margin:0;font-weight:900;font-stretch:125%;font-size:clamp(32px,7vw,120px);overflow-wrap:anywhere;line-height:.88;text-transform:uppercase;max-width:1400px;text-wrap:balance">Une application de dépannage qui survit à la panne qu'elle diagnostique.</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));border-top:2px solid rgba(255,255,255,.6)">
     <div style="padding:18px 18px 0 0;display:flex;flex-direction:column;gap:4px"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px">Thèmes traités</span><span style="font-weight:700;font-size:16px">3 — Self-care et diagnostic · 6 — Risque de départ</span></div>
     <div style="padding:18px 18px 0;display:flex;flex-direction:column;gap:4px;border-left:2px solid rgba(255,255,255,.6)"><span style="font-stretch:75%;text-transform:uppercase;letter-spacing:.14em;font-size:11px">Langues</span><span style="font-weight:700;font-size:16px">Français · Nouchi · Dioula</span></div>
@@ -884,8 +920,20 @@ const CONFIRM = {
   share: 'Offre partagée légale proposée. Aucune sanction : vous gardez la main.',
 };
 const FAULTS = [
-  ['nominal', 'Nominal', 'Ligne conforme'], ['rupture', 'Rupture optique', 'Coupure franche du lien'], ['attenuation', 'Atténuation', 'Connecteur encrassé, dérive lente'],
-  ['wifi', 'Wi-Fi faible', 'Box au salon, chambre éloignée'], ['amont', 'Incident amont', 'Trafic bloqué côté réseau'], ['congestion', 'Congestion', 'Heure de pointe'], ['partage', 'Partage illicite', 'Ligne revendue à un immeuble'],
+  ['nominal', 'Tout va bien', 'Aucune panne : la connexion marche normalement'], ['rupture', 'Fibre coupée', "Le câble est coupé : plus d'Internet du tout"], ['attenuation', 'Signal qui faiblit', 'Prise sale ou câble plié : ça marche encore, mais ça va lâcher'],
+  ['wifi', 'Wi-Fi faible', 'La box est au salon : ça rame dans la chambre'], ['amont', 'Panne chez Moov', 'Le problème vient du réseau Moov, pas de chez l’abonné'], ['congestion', 'Réseau saturé', "Heure de pointe : tout le monde est connecté en même temps"], ['partage', 'Connexion revendue', 'La ligne est partagée avec tout un immeuble'],
+];
+// Visite guidée pour un visiteur qui ne connaît pas le métier.
+const TOUR = [
+  { sel: 'top', title: 'Bienvenue', text: "Fibre Guardian est une application Moov qui trouve toute seule pourquoi Internet ne marche pas chez un abonné, et le lui explique simplement. Ici tout est simulé : vous pouvez tout essayer sans rien casser. La visite dure deux minutes." },
+  { sel: 'labo-panne', title: 'Choisissez une panne', text: "Cette liste simule un problème chez un abonné. Nous avons choisi « Wi-Fi faible » pour vous. Vous pouvez cliquer sur une autre panne à tout moment.", act: c => c.inject('wifi') },
+  { sel: 'labo-tel', title: "Le téléphone de l'abonné", text: "Voici ce que le client voit dans l'application : ce qui ne va pas, en mots simples, et le bouton qui règle le problème. En bas, « Assistant » répond à ses questions, « Voyants » lit une photo de la box." },
+  { sel: 'labo-moteur', title: 'Ce que voit Moov', text: "Le programme de Moov lit les mesures de la box chaque seconde et donne son verdict, avec les raisons. Il ne sait pas quelle panne vous avez choisie : il la devine. Laissez-lui quelques secondes pour afficher « Problème Wi-Fi »." },
+  { sel: 'reseau', title: 'Les pannes de quartier', text: "Nous venons de couper le réseau d'un quartier de Yopougon. Le compteur montre les abonnés touchés. Moov est alerté et prévient les clients par SMS avant qu'ils appellent le 101.", act: c => { c.setState({ role: 'superviseur' }); c.runZone(); } },
+  { sel: 'wifi', title: 'Le Wi-Fi à la maison', text: "L'abonné passe son téléphone dans chaque pièce. Les zones rouges captent mal. L'application lui dit où mettre la box, ou s'il faut un répéteur. Essayez avec la souris sur le plan." },
+  { sel: 'parcours', title: 'Des histoires prêtes à jouer', text: "Choisissez une personne, puis cliquez sur le bouton rouge : son histoire est rejouée dans la démo." },
+  { sel: 'economie', title: 'Ce que Moov économise', text: "Moins d'appels, moins de techniciens envoyés pour rien, moins de clients qui partent. Bougez les curseurs pour essayer d'autres chiffres." },
+  { sel: 'labo', title: 'À vous de jouer', text: "C'est fini. Essayez les autres pannes et posez une question dans « Assistant ». Le bouton « Visite guidée » en haut relance cette visite." },
 ];
 const COMMUNES = [
   ['Plateau', -4.017, 5.323, 1.6, true], ['Cocody', -3.985, 5.355, 1.1], ['Yopougon', -4.075, 5.345, 1.3], ['Abobo', -4.02, 5.425, 1.0], ['Adjamé', -4.027, 5.36, .8],
@@ -914,7 +962,7 @@ const SYM = { A: 'A', pa: 'pₐ', ca: 'cₐ', D: 'D', pd: 'p_d', cd: 'c_d', R: '
 const hhmm = (d = new Date()) => d.toTimeString().slice(0, 8);
 
 class Component extends DCLogic {
-  state = { t: 0, mode: 'nominal', lang: 'fr', tab: 'home', chat: [], typing: false, input: '', sms: false, done: null, zone: 0, zoneCount: 0, zoneLog: [], journey: 0,
+  state = { tour: -1, t: 0, mode: 'nominal', lang: 'fr', tab: 'home', chat: [], typing: false, input: '', sms: false, done: null, zone: 0, zoneCount: 0, zoneLog: [], journey: 0,
     econ: { A: 12000, pa: 35, ca: 1500, D: 2500, pd: 40, cd: 15000, R: 6000, pr: 15, arpu: 25000, d: 18 }, cov: { m: 0, b: 0, reco: null }, log: [], real: { phase: 'Inactive' }, bench: { offer: 100, streams: 4, dur: 10, running: false, phase: 'Prêt', live: null, res: null, meta: null, hist: loadHist() }, suite: { trials: 30, noise: 1, sev: 0, running: false, prog: 0, res: null }, scanning: false, photo: null, photoSrc: null, photoErr: null, injectT: 0, detectAt: null, role: 'superviseur', dataOut: false, smsLog: [], smsInput: '', pendingReboot: false, fine: true, covStage: 'survey', repeater: null };
   heroRef = { current: null }; netRef = { current: null }; chartRef = { current: null }; optRef = { current: null }; wifiRef = { current: null }; labRef = { current: null }; chatRef = { current: null }; smsBox = { current: null };
   cbRef = {}; benchRef = { current: null }; bs = { dl: [], ul: [], lat: [], dur: 10 };
@@ -922,7 +970,19 @@ class Component extends DCLogic {
   m = { ...BASE, link: 1 }; hist = []; win = []; det = { cls: 'sain', conf: .97, ev: [], trace: [] }; measured = new Set(); box = { x: 1.1, y: 1.1 };
   baseline = FG.Baseline.seed(Math.random, { pastFault: true }); collector = new FG.Collector(); fleet = new FG.Fleet(); zoneFast = 0; smsRate = [];
 
-  componentDidMount() { this.ensureBoot(); }
+  componentDidMount() {
+    this.ensureBoot();
+    let seen = false; try { seen = localStorage.getItem('fg-tour-vu') === '1'; } catch (e) {}
+    if (!seen) setTimeout(() => this.tourGo(0), 600);
+  }
+  tourGo(i) {
+    document.querySelectorAll('[data-fg-hl]').forEach(el => el.removeAttribute('data-fg-hl'));
+    if (i < 0 || i >= TOUR.length) { this.setState({ tour: -1 }); try { localStorage.setItem('fg-tour-vu', '1'); } catch (e) {} return; }
+    const st = TOUR[i]; if (st.act) st.act(this);
+    this.setState({ tour: i });
+    const el = document.getElementById(st.sel);
+    if (el) { if (i > 0) el.setAttribute('data-fg-hl', ''); el.scrollIntoView({ behavior: 'smooth', block: st.sel.includes('-') ? 'center' : 'start' }); }
+  }
   ensureBoot() {
     window.__fgLive = this;
     if (window.__fgOwner === this) return;
@@ -1441,7 +1501,7 @@ class Component extends DCLogic {
     const cls = d.cls, info = CLS[cls], st = ST[info.st];
     const statusColor = booting ? ORANGE : st.c;
     const mv = { dlS: f(m.dl, 0), optS: f(m.opt), snrS: f(m.snr) };
-    const tabs = [['home', 'Accueil'], ['agent', 'Agent'], ['photo', 'Voyants'], ['data', 'Données']].map(([id, label]) => ({ label, fg: s.tab === id ? '#fff' : '#7d7979', bar: s.tab === id ? 'inset 0 3px 0 #ec3013' : 'none', onClick: () => this.setState({ tab: id, sms: false }) }));
+    const tabs = [['home', 'Accueil'], ['agent', 'Assistant'], ['photo', 'Voyants'], ['data', 'Données']].map(([id, label]) => ({ label, fg: s.tab === id ? '#fff' : '#7d7979', bar: s.tab === id ? 'inset 0 3px 0 #ec3013' : 'none', onClick: () => this.setState({ tab: id, sms: false }) }));
     const smsView = s.sms;
     const oos = { dl: m.dl < 93, ul: m.ul < 45, lat: m.lat > 15, jit: m.jit > 3.5, loss: m.loss > .2, opt: m.opt < -22, snr: m.snr < 28, wifi: m.wifi < -65, dev: m.dev > 6 };
     const MET = [['dl', 'Débit desc.', 'Mbps', 0], ['ul', 'Débit mont.', 'Mbps', 0], ['lat', 'Latence', 'ms', 0], ['jit', 'Gigue', 'ms', 1], ['loss', 'Perte', '%', 1], ['opt', 'Puiss. optique', 'dBm', 1], ['snr', 'Rapport S/B', 'dB', 1], ['wifi', 'Niveau Wi-Fi', 'dBm', 0], ['dev', 'Appareils', '', 0]];
@@ -1491,7 +1551,12 @@ class Component extends DCLogic {
     const zst = this.fleet.segmentStats('YOP-07');
     const zoneSteps = s.zoneLog.length ? s.zoneLog.slice(-6).map(z => ({ ...z, op: 1 })) : [{ time: '—', t: `Segment nominal · ${zst.n} abonnés, chacun sonde du réseau`, c: '#bab6b6', op: 1 }];
     const churn = this.fleet.ranking(8).map(r => ({ ...r, sc: r.score, w: r.score + '%', c: r.score >= 60 ? RED : r.score >= 40 ? ORANGE : GREEN }));
+    const tourStep = TOUR[s.tour] || TOUR[0];
     return {
+      tourOn: s.tour >= 0, tourTitle: tourStep.title, tourText: tourStep.text, tourPos: `Étape ${s.tour + 1} sur ${TOUR.length}`,
+      tourHasPrev: s.tour > 0, tourNextLabel: s.tour === TOUR.length - 1 ? 'Terminer' : s.tour === 0 ? 'Commencer' : 'Suivant',
+      tourPrev: () => this.tourGo(s.tour - 1), tourNext: () => this.tourGo(s.tour + 1), tourEnd: () => this.tourGo(-1),
+      startTour: () => this.tourGo(0), startTourClick: ev => { ev.preventDefault(); this.tourGo(1); },
       heroRef: this.refCb('heroRef'), netRef: this.refCb('netRef'), chartRef: this.refCb('chartRef'), optRef: this.refCb('optRef'), wifiRef: this.refCb('wifiRef'), labRef: this.refCb('labRef'), chatRef: this.refCb('chatRef'), smsBox: this.refCb('smsBox'),
       t: s.t, m: mv, statusColor, statusLabel: booting ? 'Redémarrage' : st.l, confClient: booting ? '' : 'confiance ' + f(d.conf, 2), clsName: booting ? 'Redémarrage box' : info.name, clsLayer: info.layer,
       navStatus: `Ligne démo · ${booting ? 'Redémarrage' : info.name}`, confS: f(d.conf, 2), confPct: Math.round(d.conf * 100) + '%',

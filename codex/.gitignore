@@ -1,0 +1,7 @@
+.local/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.pem
+*.key
+*.pfx

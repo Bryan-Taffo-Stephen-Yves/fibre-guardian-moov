@@ -1,0 +1,54 @@
+/* Badge « Démo » discret et feuille « À propos de la démo ». */
+.fg-demo-badge{appearance:none;border:1px solid var(--line);background:transparent;color:var(--muted);font:600 11px/1 Archivo,Arial,sans-serif;letter-spacing:.02em;padding:6px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.fg-demo-badge:hover{color:var(--ink);border-color:var(--ink)}
+.fg-demo-badge:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.fg-demo-badge.is-static{cursor:default;pointer-events:none}
+.fg-demo-layer{position:fixed;inset:0;z-index:80;display:grid;place-items:end center;background:color-mix(in srgb,var(--moov-black) 38.0%,transparent);padding:12px}
+@media (min-width:720px){.fg-demo-layer{place-items:center}}
+.fg-demo-sheet{width:min(560px,100%);max-height:calc(100dvh - 24px);overflow:auto;background:var(--moov-white);color:var(--ink);border-radius:22px;padding:22px 20px 24px;box-shadow:0 24px 60px color-mix(in srgb,var(--moov-black) 25.0%,transparent)}
+.fg-demo-sheet header{display:flex;align-items:center;gap:10px}
+.fg-demo-sheet h2{margin:0;font-size:20px;flex:1}
+.fg-demo-close{appearance:none;border:0;background:var(--card);color:var(--ink);width:36px;height:36px;border-radius:50%;font-size:22px;line-height:1;cursor:pointer}
+.fg-demo-lead{margin:14px 0 12px;color:var(--muted);font-size:15px;line-height:1.5}
+.fg-demo-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fg-demo-list li{display:grid;gap:3px;padding:12px 14px;border-radius:14px;background:var(--app)}
+.fg-demo-list strong{font-size:14px}
+.fg-demo-list span{font-size:14px;line-height:1.45;color:var(--muted)}
+.fg-demo-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.fg-demo-block h3{margin:0 0 4px;font-size:16px}
+.fg-demo-block p{margin:0 0 10px;color:var(--muted);font-size:14px}
+.fg-demo-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.fg-demo-choice{appearance:none;border:1px solid var(--line);background:var(--moov-white);color:var(--ink);border-radius:12px;padding:11px 12px;font:600 14px/1.2 Archivo,Arial,sans-serif;text-align:left;cursor:pointer;min-height:44px}
+.fg-demo-choice.is-active{background:var(--ink);color:var(--moov-white);border-color:var(--ink)}
+.fg-demo-choice:disabled{opacity:.55;cursor:wait}
+.fg-demo-error{color:var(--red)!important;font-weight:600}
+.fg-demo-danger:disabled{opacity:.55;cursor:wait}
+.fg-demo-danger{appearance:none;border:1px solid var(--red);background:var(--moov-white);color:var(--red);border-radius:12px;padding:11px 14px;font:600 14px/1.2 Archivo,Arial,sans-serif;cursor:pointer;min-height:44px}
+/* Cloche, carte de redémarrage et page Guardian côté client */
+.j-bell{position:relative;display:inline-grid;place-items:center;width:42px;height:42px;padding:0;border-radius:50%}
+.j-bell.active{background:var(--ink);color:var(--moov-white)}
+.j-bell-count{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--red);color:var(--moov-white);font:700 11px/19px Archivo,Arial,sans-serif;text-align:center}
+.j-reboot{display:grid;grid-template-columns:auto 1fr;gap:14px 16px;align-items:start;margin-bottom:16px;border:2px solid var(--ink)}
+.j-reboot-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:var(--lime);color:var(--ink)}
+.j-reboot h2{margin:8px 0 6px;font-size:22px;line-height:1.15}
+.j-reboot p{margin:0;line-height:1.45}
+.j-reboot-actions{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:10px}
+.j-reboot-actions .j-button{min-height:48px}
+.j-reboot.is-running{border-color:var(--line)}
+.j-reboot.is-running .j-reboot-icon svg{animation:fg-spin 1.4s linear infinite}
+@keyframes fg-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.j-reboot.is-running .j-reboot-icon svg{animation:none}}
+@media (min-width:900px){.j-reboot{grid-template-columns:auto 1fr auto;align-items:center}.j-reboot-actions{grid-column:auto}}
+.j-demo-code{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:var(--app);border:1px dashed var(--line);margin:4px 0 8px}
+.j-demo-code span{font-size:13px;color:var(--muted)}
+.j-demo-code strong{font-size:22px;letter-spacing:.18em;font-variant-numeric:tabular-nums}
+.j-chat.j-chat-page{position:relative;inset:auto;right:auto;bottom:auto;width:100%;max-width:820px;margin:0 auto;height:calc(100dvh - 190px);min-height:480px;max-height:none;box-shadow:none;z-index:auto}
+@media (max-width:600px){.j-header .j-breadcrumb>span{display:none}.j-header .j-breadcrumb strong{font-size:15px}.j-header .j-user-avatar{display:none}.j-header .j-actions{gap:8px}.j-header .j-logout{padding-inline:12px}}
+.n-header-tools{display:flex;align-items:center;gap:10px}
+.j-zone-news{display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:start;margin-bottom:16px}
+.j-zone-news-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--app);color:var(--ink)}
+.j-zone-news small{font:700 11px/1.2 Archivo,Arial,sans-serif;letter-spacing:.08em;color:var(--muted)}
+.j-zone-news h2{margin:6px 0;font-size:19px;line-height:1.2}
+.j-zone-news p{margin:0;line-height:1.45;color:var(--muted)}
+.j-zone-news .j-button{grid-column:1 / -1;justify-self:start;min-height:44px}
+@media (min-width:900px){.j-zone-news{grid-template-columns:auto 1fr auto;align-items:center}.j-zone-news .j-button{grid-column:auto}}

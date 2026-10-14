@@ -1,0 +1,45 @@
+FIBRE GUARDIAN — TOUR DE CONTROLE PARTAGEE — 10 OCTOBRE 2026
+
+ENTREES
+Client : http://127.0.0.1:8186/codex/
+Equipe Moov : http://127.0.0.1:8186/codex/?portal=moov
+Compte existant requis. L'URL ne donne aucun privilege : les roles sont verifies au serveur.
+
+PARCOURS
+1. Client : Suivi technicien > Participer a la demonstration de quartier > YOP-07.
+2. Operateur : Laboratoire reseau > Couper la fibre.
+3. Le moteur local detecte les mesures anormales et prepare un dossier partage.
+4. Responsable habilite : lire les preuves et le runbook, saisir un motif, approuver.
+5. Choisir une equipe libre et confirmer la securisation du lieu.
+6. Simuler le depart : vehicule et ETA visibles dans le suivi du client de cette zone.
+7. Confirmer arrivee, declarer reparation. La verification refuse une cloture sans mesures normales.
+8. Retablir les mesures, puis Verifier le retablissement. La resolution apparait chez le client.
+Les signalements envoyes par les clients apparaissent aussi dans la tour de controle.
+
+SECURITE
+Approbation reservee aux roles admin/supervisor ou a un agent explicitement mandate pour 8 heures.
+Mandat revocable, controle CSRF, version du dossier, equipe deja occupee protegee.
+Une nouvelle analyse invalide l'approbation precedente. Des mesures modifiees ou un plan expire interdisent l'affectation.
+Les clients ne voient pas les analyses internes ni les signalements reels des autres comptes.
+Les positions ne sont diffusees aux clients que pendant le trajet.
+Arret de supervision accessible a l'administrateur, verifie cote serveur.
+
+VERIFICATION
+node codex/noc-check.cjs
+node codex/journey-scenario-check.cjs
+Tests HTTP sur bases ephemeres, plusieurs comptes et controles d'acces.
+Parcours navigateur valide : connexion operateur, injection, approbation, affectation, depart,
+arrivee, reparation, refus de cloture prematuree, retablissement, resolution cote client.
+Responsive : 390 px sans debordement horizontal.
+
+LIMITES EXPLICITES
+Architecture conservee : prototype local Node/SQLite/React existant. Pas de migration Expo/Next/Supabase dans ce lot.
+Le moteur est deterministe (regles et procedures), pas un LLM raccorde. Trois segments et trois equipes fictifs.
+Carte schematique, trajet et ETA simules. Aucun GPS, SMS, ACS, reseau Moov ou paiement reel connecte.
+Supervision uniquement tant que le serveur local fonctionne. Pas de service cloud 24 h/24.
+Un signalement reel reste un dossier local : pas d'envoi a Moov, pas d'affectation fictive presentee comme reelle.
+Le deploiement operateur exige les API, la cartographie, les habilitations et les politiques de donnees validees par Moov.
+
+DEMARRAGE
+Depuis la racine du projet : node codex/serveur-local.cjs
+Conserver codex/.local et ne pas reinitialiser la base : elle contient les comptes existants.

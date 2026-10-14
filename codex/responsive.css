@@ -1,0 +1,90 @@
+/* Ajustements transversaux : conserver le contenu, jamais masquer les débordements de page. */
+main { min-width: 0; overflow-wrap: anywhere; }
+.participant-page *, .participant-page *::before, .participant-page *::after { box-sizing: border-box; }
+.participant-page h1 { font-size: clamp(28px, 7vw, 38px); line-height: 1.15; margin: 0; }
+.participant-page .pilot > p { margin: 0; }
+.page-heading > div, .panel-title > *, .assistant-hello > div,
+.pilot-toolbar > *, .pilot-tabs > *, .pilot-actions > *, .pilot-row > *,
+.pilot-device, .pilot-metrics > div, .fg-shared-metrics > div,
+.hh-device-head > div, .ha-kpis > div, .sv-card-heading > div { min-width: 0; }
+.btn, .hh-button, .sv-button, .ic-button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.pilot input:not([type=checkbox]):not([type=radio]), .pilot select, .pilot textarea { width: 100%; }
+.pilot [type=checkbox], .pilot [type=radio] { justify-self: start; width: 20px; height: 20px; padding: 0; }
+.pilot-toolbar > label { flex: 1 1 240px; max-width: 100%; }
+.pilot-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pilot-room { grid-template-columns: minmax(0, 2fr) repeat(5, minmax(0, 1fr)); }
+.pilot legend { max-width: 100%; }
+.sidebar .nav-item span { max-width: 100%; overflow-wrap: anywhere; }
+.pilot .notice { display: grid; gap: 8px; }
+.pilot .notice p { margin: 0; }
+.pilot-scroll, .sv-table-wrap, .ic-table-wrap { max-width: 100%; min-width: 0; }
+/* Les statistiques se réorganisent selon la place dans leur carte, pas seulement la fenêtre. */
+.fg-shared-metrics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); }
+.fg-shared-metrics strong { line-height: 1.3; }
+.tour-offer, .tour-coach { max-width: calc(100vw - 30px); max-height: calc(100dvh - 30px); overflow-y: auto; }
+.modal { max-height: calc(100dvh - 32px); overflow-wrap: anywhere; }
+.modal-head > h2 { min-width: 0; }
+.page-heading h1 { padding-inline-end: 8px; }
+.hh-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; overflow-wrap: anywhere; }
+
+@media (min-width: 601px) {
+  .sidebar {
+    top: 16px;
+    height: calc(100vh - 48px);
+    height: calc(100dvh - 48px);
+    min-height: 0;
+    max-height: 1050px;
+  }
+  .sidebar .brand-mark { flex-shrink: 0; margin-bottom: 12px; }
+  .sidebar nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--moov-neutral-600) transparent;
+  }
+  .sidebar nav .nav-item { flex-shrink: 0; }
+  .sidebar-bottom { flex-shrink: 0; padding-top: 8px; }
+}
+@media (min-width: 601px) and (max-height: 650px) {
+  .sidebar { padding-top: 8px; padding-bottom: 8px; }
+  .sidebar .brand-mark { height: 36px; margin-bottom: 8px; }
+  .sidebar-bottom .profile-button { display: none; }
+  .sidebar-bottom .nav-item { min-height: 44px; padding: 5px 3px; gap: 4px; }
+  .phone { position: static; }
+}
+@media (max-width: 1100px) {
+  .operator-layout { grid-template-columns: minmax(0, 1fr); }
+  .pilot-room { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .pilot-metrics { grid-template-columns: minmax(0, 1fr); }
+  .pilot-room { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pilot-room > label:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  /* Deux zones côte à côte : Aide/Réglages ne recouvrent plus le menu défilant. */
+  .sidebar { display: flex; flex-direction: row; align-items: stretch; gap: 6px; }
+  .sidebar nav { flex: 1 1 0; min-width: 0; width: auto; padding-right: 4px; scrollbar-width: thin; }
+  .sidebar-bottom { position: static; flex: 0 0 88px; width: 88px; margin: 0; padding: 0; box-shadow: none; background: transparent; }
+  .page-heading h1 { font-size: clamp(34px, 10.8vw, 43px); }
+  .pilot-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pilot-tabs .btn { padding: 11px 10px; font-size: 12px; }
+  .pilot-actions > .btn { flex: 1 1 180px; }
+  .pilot-form > .btn { width: 100%; }
+  .pilot fieldset { padding: 12px; }
+  .pilot-device { padding: 14px; }
+  .hh-device-controls, .hh-device-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hh-intro > label { min-width: 0; }
+  .app-shell main input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  .app-shell main select, .app-shell main textarea, .modal input, .modal select, .modal textarea { font-size: 16px; }
+  .mobile-route { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 8px; }
+  .mobile-route select { width: 100%; }
+  .modal-head { margin-bottom: 16px; }
+  .modal .field { margin: 14px 0; }
+  .modal .toggle-row { padding: 12px 0; margin: 12px 0; }
+}
+@media (max-width: 420px) {
+  .hh-device-controls { grid-template-columns: minmax(0, 1fr); }
+}

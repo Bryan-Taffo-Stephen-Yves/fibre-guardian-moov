@@ -1,0 +1,67 @@
+FIBRE GUARDIAN — LIVRAISON DU 10 OCTOBRE 2026
+
+Ce lot complète le prototype local existant, sans remplacer sa stack ni ses comptes.
+Design jaune/noir/blanc conservé.
+
+NOUVEAUTÉS
+- L'assistant client consulte les incidents visibles pour ce compte, avant tout conseil de débit.
+- Réponses liées à l'étape : validation attendue, affectation, trajet, sur place, vérification.
+- Incident de zone signalé sur l'accueil ; blocage côté serveur des offres et du QoS tant qu'il est ouvert.
+- Copilote NOC accessible sur les cinq pages, avec faits, procédure et liens vers les dossiers.
+- Le robot NOC ouvre aussi le copilote ; aucune approbation ou commande cachée dans le chat.
+- Aide contextuelle disponible dans Tests réels, Support local et avant création d'un laboratoire.
+- Suivi client en cinq étapes, équipe identifiée, carte uniquement pendant le trajet.
+- Avis 1 à 5 et commentaire après résolution vérifiée, enregistrés par compte.
+- Forfaits fictifs : 100 Mbps / 25 000 FCFA vers 200 Mbps / 30 000 FCFA.
+  Complément calculé au serveur : 5 000 FCFA. Paiement explicite et entièrement simulé.
+  Confirmation, expiration 5 min, refus mémorisé 24 h, garde-fou panne de zone, idempotence.
+
+DÉMONSTRATION REPRODUCTIBLE
+1. Compte client : Suivi technicien > Participer à la démonstration de quartier > YOP-07.
+   Pour voir simultanément les deux comptes, employer deux profils de navigateur séparés.
+2. Compte opérateur habilité : Couper la fibre sur YOP-07.
+3. Côté client, demander à Guardian pourquoi la connexion est lente : priorité à l'incident.
+4. Responsable : examiner le runbook et les preuves, motif, approuver.
+5. Affecter une équipe disponible avec validation de sécurité du lieu.
+6. Simuler le départ ; le client voit le véhicule, l'ETA et les étapes.
+7. Confirmer l'arrivée ; Guardian annonce le technicien sur place, sans partager sa position.
+8. Déclarer la réparation ; essayer Vérifier le rétablissement avant restauration : refus attendu.
+9. Rétablir les mesures, vérifier : clôture visible chez le client. Envoyer sa note.
+10. Sans incident ouvert : demander « Besoin de 200 Mbps », confirmer le paiement fictif.
+    Le tableau de bord passe à 200 Mbps / 30 000 FCFA. Aucun argent débité.
+
+TESTS AUTOMATISÉS (bases en mémoire, comptes fictifs)
+node codex/noc-check.cjs
+node codex/journey-scenario-check.cjs
+node codex/guardian-workflow-check.cjs
+29 groupes de contrôles réussis : rôles/CSRF, mandat, isolement entre quartiers, état concurrent,
+approbation, dispatch sécurisé, hypothèses fibre/électricité/saturation, arrêt de sécurité,
+rétablissement, débit, priorité, conservation des données, réponses de l'assistant, avis et upgrade.
+
+VÉRIFICATION NAVIGATEUR
+Connexion existante client et opérateur ; boutons et liens des nouveaux parcours cliqués.
+Offre, confirmation et changement de capacité vérifiés à l'écran.
+Incident : injection, approbation, affectation, départ, arrivée, réparation,
+refus sans mesures, restauration et résolution.
+Bot NOC sur plusieurs pages, bot client informé de la présence du technicien.
+Suivi mobile 390 px sans défilement horizontal, note 4/5 enregistrée.
+Aucune erreur JavaScript observée sur ces parcours. Avertissement ancien Three.js hors de ce lot.
+
+LIMITES À NE PAS CONFONDRE AVEC UNE MISE EN PRODUCTION
+Ce n'est pas la validation de toutes les fonctions du cahier des charges.
+Le copilote est un moteur de règles, pas encore une IA conversationnelle/vision raccordée.
+Une photo est transmise au dossier ; elle n'est pas interprétée automatiquement par un modèle.
+Carte, véhicules, ETA, offres et paiements sont fictifs.
+Pas de vrai SMS, GPS terrain, paiement, API Moov, ACS ou activation d'offre opérateur.
+Une activation réelle sous cinq minutes est un objectif d'intégration, pas une garantie actuelle.
+Les notifications partagées sont consultables dans l'app, pas envoyées en push/SMS.
+L'app dédiée au technicien, la cartographie réelle, la détection à l'échelle du réseau et les
+évaluations LLM restent à compléter avant le pilote terrain.
+Ne pas diffuser de photo d'étiquette comportant mots de passe/identifiants dans une démonstration.
+
+DÉMARRAGE LOCAL
+node codex/serveur-local.cjs
+Client : http://127.0.0.1:8186/codex/
+Équipe Moov : http://127.0.0.1:8186/codex/?portal=moov
+Conserver codex/.local/pilot.sqlite : cette base contient les comptes existants.
+
