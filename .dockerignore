@@ -15,3 +15,5 @@ documents
 tests
 outils
 _ds
+**/.env
+**/.env.*

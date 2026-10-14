@@ -46,6 +46,7 @@ Dans l'onglet **Variables** de l'application, ajoutez une ligne par réglage (bo
 | `GUARDIAN_DEMO_ADMIN_PASSWORD` | le mot de passe du compte « Direction technique », au moins 12 caractères, que vous gardez pour vous | oui |
 | `GUARDIAN_DEMO_CLIENT_PASSWORD` | le mot de passe d'Awa Koné, si vous ne voulez pas celui du README | non |
 | `GUARDIAN_DEMO_TECH_PASSWORD` | le mot de passe d'Ibrahim Traoré, si vous ne voulez pas celui du README | non |
+| `ANTHROPIC_API_KEY` | votre clé API Anthropic (elle commence par `sk-ant-`) : Guardian rédige alors ses réponses avec Claude | non, mais conseillé |
 
 Les autres réglages sont déjà dans l'image : `GUARDIAN_PROXY=1` (Railway s'occupe du HTTPS), le port, et le dossier `/data`.
 
@@ -59,6 +60,18 @@ Cliquez ensuite sur **Deploy** (ou **Redeploy**) pour relancer avec ces réglage
 4. Côté Moov, ouvrez `https://votre-adresse/codex/?portal=moov&section=operations` et connectez-vous avec `direction@demo.fibre-guardian.ci` et le mot de passe de l'étape 5. L'incident COC-03 attend votre validation.
 
 Au premier démarrage, la démo se remplit toute seule. Elle n'est pas recréée aux démarrages suivants, puisque le volume garde la base.
+
+## Guardian avec Claude (clé API Anthropic)
+
+Sans clé, Guardian répond avec ses règles écrites à l'avance. Avec une clé, Claude reformule chaque réponse pour qu'elle colle à la question de l'abonné. Ce que Guardian vérifie et propose ne change pas : Claude ne peut ni ajouter d'action ni citer un chiffre absent des mesures. Si Claude ne répond pas à temps, la réponse habituelle s'affiche, sans message d'erreur.
+
+**Créer la clé** : sur console.anthropic.com, menu **API Keys**, puis **Create Key**, dans l'espace de travail **Default** (pas une clé « Admin »). Copiez-la aussitôt : elle ne s'affiche qu'une fois. Dans **Limits**, fixez une limite de dépense mensuelle.
+
+**Sur Railway** : onglet **Variables**, **New Variable**, nom `ANTHROPIC_API_KEY`, valeur la clé, puis **Redeploy**.
+
+**Sur votre ordinateur (Windows)** : dans le dossier `codex`, créez avec le Bloc-notes un fichier nommé `.env` (type « Tous les fichiers ») qui contient une seule ligne : `ANTHROPIC_API_KEY=sk-ant-…`. Relancez le serveur : la console affiche « Guardian : réponses rédigées avec Claude ». Ce fichier est ignoré par git, il ne part jamais sur GitHub.
+
+Garde-fous de dépense : 20 réponses rédigées par abonné toutes les 10 minutes et 400 par jour pour toute l'application ; au-delà, Guardian revient à ses règles.
 
 ## Installer l'application sur un téléphone
 
@@ -87,6 +100,7 @@ Chaque fusion sur la branche `main` de GitHub relance automatiquement la publica
 | La page affiche « Hôte refusé » | L'adresse dans `GUARDIAN_ORIGIN` ne correspond pas à celle que vous ouvrez. Recopiez-la exactement. |
 | Les comptes disparaissent après une mise à jour | Le volume manque ou n'est pas monté sur `/data` (étape 3). |
 | Impossible de se connecter en « Direction technique » | Vérifiez `GUARDIAN_DEMO_ADMIN_PASSWORD`. Si la base existait déjà avant que vous ajoutiez cette variable, le mot de passe est celui du fichier `identifiants-demo.txt` du volume : remettez la démo à zéro en supprimant le volume. |
+| La console affiche « Guardian : réponses du moteur à règles » alors que la clé est saisie | En local, vérifiez que le fichier s'appelle bien `.env` dans le dossier `codex` et que la ligne commence par `ANTHROPIC_API_KEY=`. Sur Railway, vérifiez le nom de la variable puis relancez. |
 | Trop de tentatives de connexion | C'est la protection contre les abus : 15 essais par minute, et 3 codes SMS par numéro toutes les 10 minutes. Attendez quelques minutes. |
 
 ## Autres hébergeurs possibles
@@ -109,6 +123,10 @@ L'image `codex/Dockerfile` fonctionne chez tout hébergeur qui accepte Docker et
 | `GUARDIAN_SEED_DEMO` | `0` pour ne pas remplir la démo au premier démarrage | rempli |
 | `GUARDIAN_LIVE_TELEMETRY` | `0` pour couper le rafraîchissement automatique des mesures simulées | actif |
 | `GUARDIAN_DEMO_*_PASSWORD` | Mots de passe des comptes de démo | voir `codex/README.md` |
+| `ANTHROPIC_API_KEY` | Clé API Anthropic : Guardian reformule ses réponses avec Claude (appel HTTP direct, sans dépendance npm) | aucune (règles seules) |
+| `ANTHROPIC_MODEL` | Modèle utilisé | `claude-opus-5-5` |
+| `GUARDIAN_AI` | `0` pour couper Claude même si la clé est présente | actif si clé |
+| `GUARDIAN_AI_TIMEOUT_MS` | Délai maximal d'attente de Claude avant la réponse habituelle | `8000` |
 | `GUARDIAN_TLS_KEY`, `GUARDIAN_TLS_CERT` | HTTPS géré par l'application elle-même (sans proxy) | aucun |
 
 Essai local avec les réglages de l'image, sans Docker (macOS ou Linux) : `PORT=3000 GUARDIAN_DATA_DIR=/tmp/guardian node codex/serveur-local.cjs`, puis ouvrez http://127.0.0.1:3000/.

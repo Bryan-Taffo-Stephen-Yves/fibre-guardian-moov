@@ -34,6 +34,10 @@ Client : `http://127.0.0.1:8186/codex/`, puis « Compte existant ». Équipe Moo
 
 Fibre Guardian est une application web installable (manifeste, service worker, écran hors ligne). Pour la publier sur Internet (Railway conseillé, avec un volume pour la base), suivre [DEPLOIEMENT.md](DEPLOIEMENT.md). Port, dossier de données et adresse publique se règlent par variables d'environnement.
 
+## Guardian avec Claude
+
+Si la variable `ANTHROPIC_API_KEY` est définie (ou écrite dans `codex/.env`, ignoré par git), Guardian fait reformuler ses réponses par Claude côté serveur (`guardian-ai.cjs`). Le moteur à règles décide toujours des faits, de l'action et de l'offre ; un garde-fou rejette toute réponse qui cite un chiffre absent des mesures, tutoie ou dépasse 5 phrases. Sans clé, en cas de délai ou d'erreur, la réponse habituelle s'affiche. Mode d'emploi : `DEPLOIEMENT.md`, section « Guardian avec Claude ».
+
 ## Charte Moov Africa
 
 Toutes les couleurs sont dans `moov-theme.css` : bleu Moov `--moov-primary` (#005CA8), orange Moov `--moov-accent` (#F28E39, accents seulement), nuances, gris et couleurs d'état. `moov-brand.css` (chargé en dernier) donne leur rôle aux éléments clés : boutons principaux, menus, mascotte Guardian. Les composants n'écrivent jamais une couleur en dur ; le test `moov-theme.test.cjs` le vérifie, avec les contrastes AA.
