@@ -14,7 +14,7 @@ if (require.main === module) {
   // Données : GUARDIAN_DB (fichier), sinon GUARDIAN_DATA_DIR ou le volume Railway, sinon codex/.local/.
   const dataDir = path.resolve(env.GUARDIAN_DATA_DIR || env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '.local'));
   const dbFile = path.resolve(env.GUARDIAN_DB || path.join(dataDir, 'pilot.sqlite'));
-  const pilot = require('./pilot-server.cjs').createGuardianServer({ tls, proxy, origin: env.GUARDIAN_ORIGIN, db: dbFile, liveTelemetry: env.GUARDIAN_LIVE_TELEMETRY !== '0', onError: e => console.error('Erreur serveur :', e.message) });
+  const pilot = require('./pilot-server.cjs').createGuardianServer({ tls, proxy, origin: env.GUARDIAN_ORIGIN, db: dbFile, liveTelemetry: env.GUARDIAN_LIVE_TELEMETRY !== '0', android: env.GUARDIAN_ANDROID_PACKAGE ? { package: env.GUARDIAN_ANDROID_PACKAGE, fingerprints: String(env.GUARDIAN_ANDROID_SHA256 || '').split(',') } : null, onError: e => console.error('Erreur serveur :', e.message) });
   // Première ouverture : base vide, on installe la démo pré-remplie (une seule fois).
   const demo = require('./seed-demo.cjs');
   const ready = env.GUARDIAN_SEED_DEMO !== '0' && demo.isEmpty(pilot.guardianStore)

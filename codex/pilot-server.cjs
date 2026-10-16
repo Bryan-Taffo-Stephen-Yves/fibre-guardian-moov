@@ -21,6 +21,9 @@ function createGuardianServer(options={}){
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
  const secure=!!options.tls||proxy,configured=options.origin?new URL(options.origin).origin:null,allowedHost=configured?new URL(configured).host:null;
+ // Application Android : nom du paquet et empreintes de la clé de signature (GUARDIAN_ANDROID_PACKAGE, GUARDIAN_ANDROID_SHA256).
+ const android=options.android?.package?{package:String(options.android.package),fingerprints:[].concat(options.android.fingerprints||[]).map(v=>String(v).trim().toUpperCase()).filter(Boolean)}:null;
+ if(android){insist(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i.test(android.package),'GUARDIAN_ANDROID_PACKAGE invalide (exemple : ci.fibreguardian.app).');insist(android.fingerprints.length&&android.fingerprints.every(v=>/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(v)),'GUARDIAN_ANDROID_SHA256 invalide : empreinte SHA-256 au format AA:BB:… (32 octets).');}
  const pool=crypto.randomBytes(2*1024*1024),active=new Set();
  const json=(res,data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
  function ip(req){if(!proxy)return req.socket.remoteAddress;const real=String(req.headers['x-real-ip']||'').trim(),chain=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return (real||chain.at(-1)||req.socket.remoteAddress).slice(0,64);}
@@ -136,6 +139,8 @@ function createGuardianServer(options={}){
     if(action==='ticket/status'&&method==='POST'){insist(['À transmettre','Transmis manuellement','Résolu'].includes(d.status),'Statut invalide.');const t=store.get('SELECT id FROM tickets WHERE home=? AND id=?',hid,String(d.id));insist(t,'Dossier introuvable.',404);store.run('UPDATE tickets SET status=? WHERE id=?',d.status,t.id);store.event(hid,user.id,'ticket.status',d.status);return json(res,{ok:true});}
     throw new Problem(404,'Action introuvable.');
    }
+   // Application Android (PWABuilder / Trusted Web Activity) : déclaration du lien entre l'application et ce site.
+   if(route==='/.well-known/assetlinks.json'&&['GET','HEAD'].includes(method)){insist(android,'Introuvable',404);return json(res,[{relation:['delegate_permission/common.handle_all_urls'],target:{namespace:'android_app',package_name:android.package,sha256_cert_fingerprints:android.fingerprints}}]);}
    if(!['GET','HEAD'].includes(method)){res.writeHead(405);res.end();return;}
    let pathname=decodeURIComponent(url.pathname);if(pathname==='/'){res.writeHead(302,{Location:'/codex/'});res.end();return;}if(pathname.endsWith('/'))pathname+='index.html';
    const target=path.resolve(ROOT,'.'+pathname),ext=path.extname(target);insist(target.startsWith(ROOT+path.sep)&&TYPES[ext]&&/^\/(codex\/|src\/|vendor\/|config\.js$|icon\.svg$|index\.html$)/.test(pathname)&&!pathname.split('/').some(p=>p.startsWith('.')),'Introuvable',404);
