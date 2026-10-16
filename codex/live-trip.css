@@ -1,0 +1,62 @@
+/* Suivi du technicien en direct (live-trip.js). Couleurs : variables de marque uniquement. */
+.lt{display:grid;gap:16px;min-width:0}
+.lt-map{position:relative;min-width:0;border-radius:18px;overflow:hidden}
+.lt-map .g-map{max-width:none}
+.lt-map .g-map-stage{min-height:300px}
+/* Le détail du trajet est à côté de la carte : on retire l'encart d'arrivée de la carte pour ne pas répéter l'estimation. */
+.lt-map .g-map-trip{display:none}
+.lt-badge{justify-self:start;margin-bottom:6px;display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:12px;font-weight:600;box-shadow:0 6px 18px color-mix(in srgb,var(--moov-primary) 30%,transparent);pointer-events:none}
+.lt-badge i{width:8px;height:8px;border-radius:50%;background:var(--moov-accent);animation:lt-pulse 1.4s infinite ease-in-out}
+.lt-badge.is-still i{animation:none}
+@keyframes lt-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-accent) 60%,transparent)}50%{box-shadow:0 0 0 6px transparent}}
+.lt-side{display:grid;gap:14px;align-content:start;min-width:0}
+.lt-head{display:grid;gap:3px}
+.lt-title{font-size:20px;letter-spacing:-.4px;font-weight:600;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.lt-sub{font-size:13px;color:var(--moov-text-muted)}
+.lt-lab{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--moov-text-muted);margin-bottom:6px}
+.lt-dist{display:flex;gap:14px;align-items:stretch;padding:14px 16px;border:1px solid var(--moov-line);border-radius:16px;background:var(--moov-surface)}
+.lt-dist-main{flex:1;min-width:0}
+.lt-km{display:block;font-variant-numeric:tabular-nums}
+.lt-km b{font-size:22px;font-weight:600;color:var(--moov-ink)}
+.lt-km span{font-size:13px;color:var(--moov-text-muted)}
+.lt-bar{height:8px;border-radius:999px;background:var(--moov-primary-50);margin:10px 0 7px;overflow:hidden}
+.lt-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--moov-primary),var(--moov-primary-400));transition:width 1s linear}
+.lt-pct{font-size:12px;color:var(--moov-text-muted);font-variant-numeric:tabular-nums}
+.lt-pct b{color:var(--moov-ink)}
+.lt-speed{flex:0 0 112px;border-left:1px solid var(--moov-line);padding-left:14px}
+.lt-gauge{position:relative;width:96px}
+.lt-gauge svg{display:block;width:100%;overflow:visible}
+.lt-g-track,.lt-g-fill{fill:none;stroke-width:10;stroke-linecap:round}
+.lt-g-track{stroke:var(--moov-primary-50)}
+.lt-g-fill{stroke:var(--moov-accent);transition:stroke-dasharray 1s linear}
+.lt-g-v{position:absolute;left:0;right:0;bottom:0;text-align:center;line-height:1}
+.lt-g-v b{display:block;font-size:20px;font-weight:600;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.lt-g-v i{font-style:normal;font-size:10px;color:var(--moov-text-muted)}
+.lt-steps{list-style:none;margin:0;padding:4px 0;display:grid;gap:0}
+.lt-step{display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:start;position:relative;padding-bottom:14px}
+.lt-step:not(:last-child)::before{content:'';position:absolute;left:11px;top:24px;bottom:0;width:2px;background:var(--moov-line)}
+.lt-step.done:not(:last-child)::before{background:var(--moov-primary)}
+.lt-dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;border:2px solid var(--moov-line);background:var(--moov-surface);color:var(--moov-on-primary)}
+.lt-step.done .lt-dot{background:var(--moov-primary);border-color:var(--moov-primary)}
+.lt-step.now .lt-dot{border-color:var(--moov-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-accent) 22%,transparent)}
+.lt-step-t{display:grid;gap:2px;min-width:0}
+.lt-step-t b{font-size:14px;font-weight:600;color:var(--moov-ink)}
+.lt-step.next .lt-step-t b{color:var(--moov-text-muted);font-weight:500}
+.lt-step-t small{font-size:12px;color:var(--moov-text-muted)}
+.lt-step-h{font-size:12px;color:var(--moov-text-muted);font-variant-numeric:tabular-nums;padding-top:3px}
+.lt-who{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--moov-primary-50)}
+.lt-avatar{flex:0 0 44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:17px;background:var(--moov-primary);color:var(--moov-on-primary);position:relative}
+.lt-avatar::after{content:'';position:absolute;right:1px;bottom:1px;width:11px;height:11px;border-radius:50%;background:var(--moov-success-500,var(--moov-accent));border:2px solid var(--moov-primary-50)}
+.lt-who>div{flex:1;min-width:0;display:grid}
+.lt-who b{font-size:14px;color:var(--moov-ink)}
+.lt-who>div span{font-size:12px;color:var(--moov-text-muted)}
+.lt-tag{font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;background:var(--moov-surface);color:var(--moov-primary)}
+/* Dans le dossier client, la carte de suivi occupe toute la largeur. */
+.n-client-incident.n-client-incident--live{grid-template-columns:minmax(0,1fr)}
+.n-client-incident--live>*{grid-column:1/-1!important;grid-row:auto!important}
+@media(min-width:1000px){
+ .lt:not(.lt--compact):has(.lt-map){grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:24px;align-items:start}
+ .lt:not(.lt--compact) .lt-map .g-map-stage{min-height:420px}
+}
+@media(max-width:420px){.lt-speed{flex-basis:96px;padding-left:10px}.lt-gauge{width:84px}.lt-title{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.lt-badge i{animation:none}.lt-bar i,.lt-g-fill{transition:none}}
