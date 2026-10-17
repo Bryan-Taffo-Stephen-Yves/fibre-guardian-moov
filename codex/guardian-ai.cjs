@@ -38,14 +38,14 @@ function guard(text,sources){
  return {ok:true,text:reply};
 }
 
-function context({name,question,draft,facts,action,snapshot,history}){
+function context({name,question,draft,facts,action,snapshot,history,meaning}){
  const m=snapshot?.metrics||{},plan=snapshot?.plan||{};
  const devices=(snapshot?.devices||[]).filter(d=>!d.blocked).map(d=>d.name+' : '+d.mbps+' Mbps'+(d.limit?' (limité à '+d.limit+' Mbps)':''));
  const measures=['État de la connexion : '+(m.state||'inconnu'),'Débit disponible : '+(m.capacity??'inconnu')+' Mbps','Débit utilisé : '+(m.used??'inconnu')+' Mbps',m.latency!=null?'Latence : '+m.latency+' ms':'Latence : non mesurable','Appareils connectés : '+(m.connected??'inconnu')+' (habituellement '+(snapshot?.usual??'?')+')',plan.mbps?'Forfait : '+plan.name+', '+plan.mbps+' Mbps, '+plan.price+' FCFA par mois':'',devices.length?'Appareils : '+devices.join(' ; '):''].filter(Boolean);
  const lines=(facts||[]).map(f=>f.label+' : '+f.value);
  const past=(history||[]).slice(-6).map(x=>(x.role==='user'?'Abonné':'Guardian')+' : '+x.text);
  return {measures,lines,past,
-  user:'Prénom de l’abonné : '+(name||'inconnu')+'\n\nMesures de sa box, à l’instant :\n'+measures.join('\n')+'\n\nPoints vérifiés :\n'+(lines.join('\n')||'aucun')+(past.length?'\n\nDébut de la conversation :\n'+past.join('\n'):'')+'\n\nAction proposée par Fibre Guardian : '+(ACTIONS[action]||'aucune, seulement expliquer')+'\n\nRéponse validée à reformuler :\n« '+draft+' »\n\nMessage de l’abonné :\n« '+question+' »'};
+  user:'Prénom de l’abonné : '+(name||'inconnu')+'\n\nMesures de sa box, à l’instant :\n'+measures.join('\n')+'\n\nPoints vérifiés :\n'+(lines.join('\n')||'aucun')+(past.length?'\n\nDébut de la conversation :\n'+past.join('\n'):'')+'\n\nAction proposée par Fibre Guardian : '+(ACTIONS[action]||'aucune, seulement expliquer')+'\n\nRéponse validée à reformuler :\n« '+draft+' »\n\nMessage de l’abonné :\n« '+question+' »'+(meaning&&meaning.lang!=='fr'?'\n(écrit en '+meaning.lang+' ; sens : « '+meaning.french+' ». Réponds en français simple, sans te moquer de sa façon de parler.)':'')};
 }
 
 const SYSTEM='Tu es Guardian, l’assistant de Moov Africa Côte d’Ivoire pour les abonnés à la fibre. Tu parles à un abonné qui n’est pas technicien.\n'+
@@ -64,13 +64,60 @@ function budget(store,uid){
  try{store.rate('guardian-ai:'+uid,PER_USER,PER_USER_MS);store.rate('guardian-ai:jour',PER_DAY,DAY_MS);return true;}catch{return false;}
 }
 
+// Appel commun à l'API Messages. Renvoie le message reçu, ou null (erreur, délai, refus) : l'appelant garde alors sa réponse sans Claude.
+async function send(body,{timeoutMs=TIMEOUT_MS,log,what}){
+ try{
+  const res=await transport(API,{method:'POST',signal:AbortSignal.timeout(timeoutMs),headers:{'content-type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-beta':'server-side-fallback-2026-07-01'},body:JSON.stringify({model:MODEL(),fallbacks:'default',...body})});
+  if(!res.ok){log('Guardian : '+what+' refusée ('+res.status+'), réponse sans Claude gardée.');return null;}
+  const msg=await res.json();
+  if(msg.stop_reason==='refusal'||msg.stop_reason==='max_tokens')return null;
+  return msg;
+ }catch(e){log('Guardian : Claude indisponible pour '+what+' ('+(e.name==='TimeoutError'?'délai dépassé':e.message)+'), réponse sans Claude gardée.');return null;}
+}
+const text=msg=>(msg?.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+function json(msg){try{return JSON.parse(text(msg));}catch{return null;}}
+
+// Comprendre le nouchi, le dioula ou un français très familier : le sens en français simple sert au moteur à règles.
+const UNDERSTAND='Tu aides Guardian, l’assistant fibre de Moov Africa Côte d’Ivoire, à comprendre les messages des abonnés. Ils écrivent en français, en nouchi (argot ivoirien) ou en dioula, parfois mélangés.\n'+
+ 'Donne la langue principale du message et son sens en français standard simple, en une ou deux phrases courtes, à la première personne comme si l’abonné parlait. Garde les chiffres tels quels, n’ajoute rien qui ne soit pas dans le message. Si le message est déjà en français standard, recopie-le.';
+const UNDERSTAND_SCHEMA={type:'object',properties:{lang:{type:'string',enum:['fr','nouchi','dioula','autre']},french:{type:'string'}},required:['lang','french'],additionalProperties:false};
+async function understand(message,{store,uid,log=()=>{},timeoutMs=3500}={}){
+ if(!available()||!message)return null;
+ if(!budget(store,uid))return null;
+ const msg=await send({max_tokens:600,output_config:{effort:'low',format:{type:'json_schema',schema:UNDERSTAND_SCHEMA}},system:UNDERSTAND,messages:[{role:'user',content:'Message de l’abonné : « '+String(message).slice(0,1200)+' »'}]},{timeoutMs,log,what:'la compréhension du message'});
+ const r=json(msg);
+ if(!r||!['fr','nouchi','dioula','autre'].includes(r.lang)||typeof r.french!=='string')return null;
+ const french=r.french.trim();
+ if(french.length<2||french.length>300||/[*#`|]/.test(french)||FORBIDDEN.test(french))return null;
+ return {lang:r.lang,french};
+}
+
+// Lire les voyants d'une box fibre sur une photo. Claude décrit seulement ce qu'il voit ; l'interprétation,
+// croisée avec les mesures de la box et l'état du quartier, reste faite par des règles (box-reading.cjs).
+const LEDS='Tu lis la photo de la face avant d’une box fibre (ONT ou routeur GPON, par exemple Huawei, ZTE, Nokia, Sagemcom) envoyée par un abonné de Moov Africa Côte d’Ivoire.\n'+
+ 'Décris uniquement les voyants que tu vois réellement, avec leur nom imprimé quand il est lisible : Power ou PWR (alimentation), PON ou GPON (signal fibre), LOS (perte du signal fibre), Internet ou WAN, Wi-Fi ou WLAN, LAN ou ETH, TEL ou Phone, WPS. Pour chacun : allumé, éteint ou clignotant (flou de mouvement ou halo partiel), et sa couleur.\n'+
+ 'Si la photo est floue, trop sombre, ne montre pas une box ou ne montre qu’une partie des voyants, dis-le avec le champ quality et is_box. N’invente jamais un voyant que tu ne vois pas. model : marque et modèle s’ils sont lisibles, sinon chaîne vide.';
+const LED_SCHEMA={type:'object',properties:{
+ is_box:{type:'boolean'},quality:{type:'string',enum:['bonne','floue','sombre','partielle']},model:{type:'string'},
+ leds:{type:'array',items:{type:'object',properties:{name:{type:'string',enum:['power','pon','los','internet','wifi','lan','phone','wps','autre']},state:{type:'string',enum:['allume','eteint','clignote','inconnu']},color:{type:'string',enum:['vert','rouge','orange','bleu','blanc','aucune','inconnue']}},required:['name','state','color'],additionalProperties:false}}
+},required:['is_box','quality','model','leds'],additionalProperties:false};
+async function readLeds(image,{store,uid,log=()=>{},timeoutMs=9000}={}){
+ if(!available())return null;
+ const m=/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(image||''));if(!m)return null;
+ if(!budget(store,uid))return null;
+ const msg=await send({max_tokens:1500,output_config:{effort:'low',format:{type:'json_schema',schema:LED_SCHEMA}},system:LEDS,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:m[1],data:m[2]}},{type:'text',text:'Voici la photo de ma box. Quels voyants vois-tu ?'}]}]},{timeoutMs,log,what:'la lecture de la photo'});
+ const r=json(msg);
+ if(!r||typeof r.is_box!=='boolean'||!Array.isArray(r.leds))return null;
+ return {isBox:r.is_box,quality:r.quality,model:String(r.model||'').slice(0,60),leds:r.leds.slice(0,12).filter(l=>l&&typeof l.name==='string').map(l=>({name:l.name,state:l.state,color:l.color}))};
+}
+
 // Renvoie le texte rédigé, ou null pour garder la réponse du moteur à règles.
-async function rephrase(input,{store,uid,log=()=>{}}={}){
+async function rephrase(input,{store,uid,log=()=>{},timeoutMs=TIMEOUT_MS}={}){
  if(!available()||!input?.draft||!input?.question)return null;
  if(!budget(store,uid))return null;
  const c=context(input);
  try{
-  const res=await transport(API,{method:'POST',signal:AbortSignal.timeout(TIMEOUT_MS),headers:{'content-type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-beta':'server-side-fallback-2026-07-01'},
+  const res=await transport(API,{method:'POST',signal:AbortSignal.timeout(timeoutMs),headers:{'content-type':'application/json','x-api-key':process.env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-beta':'server-side-fallback-2026-07-01'},
    body:JSON.stringify({model:MODEL(),max_tokens:2000,output_config:{effort:'low'},system:SYSTEM,messages:[{role:'user',content:c.user}],fallbacks:'default'})});
   if(!res.ok){log('Guardian : réponse Claude refusée ('+res.status+'), réponse du moteur gardée.');return null;}
   const msg=await res.json();
@@ -82,4 +129,4 @@ async function rephrase(input,{store,uid,log=()=>{}}={}){
  }catch(e){log('Guardian : Claude indisponible ('+(e.name==='TimeoutError'?'délai dépassé':e.message)+'), réponse du moteur gardée.');return null;}
 }
 
-module.exports={available,rephrase,guard,setTransport,SYSTEM};
+module.exports={available,rephrase,understand,readLeds,guard,setTransport,SYSTEM};
