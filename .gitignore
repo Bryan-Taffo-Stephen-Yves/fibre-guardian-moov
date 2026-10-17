@@ -24,3 +24,10 @@ Thumbs.db
 
 # Captures de vérification
 captures/
+
+# Application Android : clé de signature et paquets générés (jamais dans git)
+*.keystore
+*.jks
+*.apk
+*.aab
+signing-key-info.txt

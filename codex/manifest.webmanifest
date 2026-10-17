@@ -11,14 +11,85 @@
   "orientation": "any",
   "background_color": "#f0f4f8",
   "theme_color": "#005ca8",
-  "categories": ["utilities", "productivity"],
+  "categories": [
+    "utilities",
+    "productivity"
+  ],
   "icons": [
-    { "src": "pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Signaler un problème", "url": "/codex/?portal=client&section=report", "icons": [{ "src": "pwa/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Suivi technicien", "url": "/codex/?portal=client&section=tracking", "icons": [{ "src": "pwa/icon-192.png", "sizes": "192x192" }] }
+    {
+      "name": "Signaler un problème",
+      "url": "/codex/?portal=client&section=report",
+      "icons": [
+        {
+          "src": "pwa/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Suivi technicien",
+      "url": "/codex/?portal=client&section=tracking",
+      "icons": [
+        {
+          "src": "pwa/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "pwa/screenshots/accueil.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Votre connexion en un regard"
+    },
+    {
+      "src": "pwa/screenshots/suivi.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Suivez votre technicien en direct"
+    },
+    {
+      "src": "pwa/screenshots/guardian.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Guardian vous explique votre connexion"
+    },
+    {
+      "src": "pwa/screenshots/moov-trajets.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "L'équipe Moov suit les interventions"
+    }
   ]
 }

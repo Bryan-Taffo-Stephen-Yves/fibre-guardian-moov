@@ -73,6 +73,28 @@ Sans clé, Guardian répond avec ses règles écrites à l'avance. Avec une clé
 
 Garde-fous de dépense : 20 réponses rédigées par abonné toutes les 10 minutes et 400 par jour pour toute l'application ; au-delà, Guardian revient à ses règles.
 
+## Étape 7 : l'application Android (fichier APK)
+
+Le concours demande une application qui fonctionne sur Android. Fibre Guardian en devient une grâce à PWABuilder, un service gratuit de Microsoft qui emballe le site en vraie application Android. Il faut que le site soit déjà en ligne (étapes 1 à 6).
+
+1. Allez sur **pwabuilder.com**, collez l'adresse publique suivie de `/codex/` (par exemple `https://fibre-guardian-production.up.railway.app/codex/`), puis cliquez sur **Start**.
+2. PWABuilder affiche une note : l'icône, les captures d'écran et le mode hors ligne sont déjà prêts.
+3. Cliquez sur **Package for stores**, puis sur **Android** et **Generate Package**. Dans les options :
+   - **Package ID** : `ci.fibreguardian.app`
+   - **App name** : `Fibre Guardian`
+   - **Signing key** : laissez **Create new** (PWABuilder crée la clé de signature).
+4. Téléchargez le fichier zip. Il contient l'application (`.apk`), la version pour le Play Store (`.aab`), la clé de signature (`signing.keystore` et `signing-key-info.txt`) et un fichier `assetlinks.json`.
+5. **Rangez la clé de signature en lieu sûr** (clé USB, coffre de mots de passe). Elle ne va jamais sur GitHub. Sans elle, vous ne pourrez plus mettre l'application à jour.
+6. Ouvrez `assetlinks.json` avec le Bloc-notes. Copiez la longue empreinte entre guillemets après `sha256_cert_fingerprints` (elle ressemble à `AB:12:CD:…`).
+7. Dans Railway, onglet **Variables**, ajoutez :
+   - `GUARDIAN_ANDROID_PACKAGE` = `ci.fibreguardian.app`
+   - `GUARDIAN_ANDROID_SHA256` = l'empreinte copiée
+
+   Puis cliquez sur **Redeploy**. Vérifiez que `https://votre-adresse/.well-known/assetlinks.json` affiche le nom du paquet. C'est ce qui permet à l'application de s'ouvrir en plein écran, sans barre d'adresse.
+8. Envoyez le fichier `.apk` sur un téléphone Android (câble, WhatsApp, Drive), ouvrez-le et acceptez « Installer des applications inconnues ». L'icône Fibre Guardian apparaît avec les autres applications.
+
+Pour le dépôt du concours, joignez le fichier `.apk`. Le fichier `.aab` ne sert que pour une publication sur le Play Store.
+
 ## Installer l'application sur un téléphone
 
 Fibre Guardian est une application web installable :
@@ -101,6 +123,7 @@ Chaque fusion sur la branche `main` de GitHub relance automatiquement la publica
 | Les comptes disparaissent après une mise à jour | Le volume manque ou n'est pas monté sur `/data` (étape 3). |
 | Impossible de se connecter en « Direction technique » | Vérifiez `GUARDIAN_DEMO_ADMIN_PASSWORD`. Si la base existait déjà avant que vous ajoutiez cette variable, le mot de passe est celui du fichier `identifiants-demo.txt` du volume : remettez la démo à zéro en supprimant le volume. |
 | La console affiche « Guardian : réponses du moteur à règles » alors que la clé est saisie | En local, vérifiez que le fichier s'appelle bien `.env` dans le dossier `codex` et que la ligne commence par `ANTHROPIC_API_KEY=`. Sur Railway, vérifiez le nom de la variable puis relancez. |
+| L'application Android affiche une barre d'adresse en haut | `GUARDIAN_ANDROID_SHA256` ne correspond pas à la clé qui a signé l'APK, ou Railway n'a pas été relancé. Recopiez l'empreinte de `assetlinks.json` (étape 7). |
 | Trop de tentatives de connexion | C'est la protection contre les abus : 15 essais par minute, et 3 codes SMS par numéro toutes les 10 minutes. Attendez quelques minutes. |
 
 ## Autres hébergeurs possibles
@@ -127,6 +150,8 @@ L'image `codex/Dockerfile` fonctionne chez tout hébergeur qui accepte Docker et
 | `ANTHROPIC_MODEL` | Modèle utilisé | `claude-opus-5-5` |
 | `GUARDIAN_AI` | `0` pour couper Claude même si la clé est présente | actif si clé |
 | `GUARDIAN_AI_TIMEOUT_MS` | Délai maximal d'attente de Claude avant la réponse habituelle | `8000` |
+| `GUARDIAN_ANDROID_PACKAGE` | Nom du paquet de l'application Android, publié dans `/.well-known/assetlinks.json` | aucun |
+| `GUARDIAN_ANDROID_SHA256` | Empreinte(s) SHA-256 de la clé de signature Android, séparées par des virgules | aucune |
 | `GUARDIAN_TLS_KEY`, `GUARDIAN_TLS_CERT` | HTTPS géré par l'application elle-même (sans proxy) | aucun |
 
 Essai local avec les réglages de l'image, sans Docker (macOS ou Linux) : `PORT=3000 GUARDIAN_DATA_DIR=/tmp/guardian node codex/serveur-local.cjs`, puis ouvrez http://127.0.0.1:3000/.
