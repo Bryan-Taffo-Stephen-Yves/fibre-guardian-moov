@@ -4,6 +4,7 @@ const {Store,passwordHash,passwordMatches}=require('./pilot-store.cjs');
 const operator=require('./operator-store.cjs');
 const approvals=require('./approval-store.cjs');
 const journey=require('./journey-store.cjs');
+const guardianAi=require('./guardian-ai.cjs');
 const noc=require('./noc-store.cjs');
 const workspace=require('./noc-workspace.cjs');
 const {id,token,hash,Problem,insist,word,paragraph,number,metrics,diagnose,recording,floorplan,placement}=require('./pilot-model.cjs');
@@ -37,7 +38,7 @@ function createGuardianServer(options={}){
    if(route.startsWith('/api/')){
     if(mutate&&req.headers.origin)insist(req.headers.origin===origin,'Origine refusée.',403);
     if(mutate&&req.headers['sec-fetch-site'])insist(['same-origin','none'].includes(req.headers['sec-fetch-site']),'Site refusé.',403);
-    if(route==='/api/health'&&method==='GET')return json(res,{ok:true,storage:'sqlite',adminSecure:secure||local,origin,version:1});
+    if(route==='/api/health'&&method==='GET')return json(res,{ok:true,storage:'sqlite',adminSecure:secure||local,origin,version:1,assistant:guardianAi.available()?'claude':'regles'});
     if(route==='/api/session'&&method==='GET'){const u=auth(req);return json(res,{user:u?{...u,role:workspace.sessionRole(store,u.id)}:null});}
     if(route==='/api/journey/otp/request'&&method==='POST')return json(res,await journey.requestOtp(store,await body(req,4096),ip(req)));
     if(route==='/api/journey/otp/verify'&&method==='POST'){
@@ -89,7 +90,10 @@ function createGuardianServer(options={}){
     if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}
     if(route==='/api/journey/start'&&method==='POST'){if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return json(res,{state:journey.snapshotFor(store,user.id,journey.get(store,user.id))});}
-    if(route==='/api/journey/action'&&method==='POST')return json(res,{state:journey.act(store,user.id,await body(req,600000))});
+    if(route==='/api/journey/action'&&method==='POST'){const d=await body(req,600000),state=journey.act(store,user.id,d);
+     // Guardian : le moteur à règles a répondu ; Claude reformule si la clé est configurée, sinon rien ne change.
+     if(d.type==='chat'&&guardianAi.available()){const [question,answer]=state.messages.slice(-2);const text=await guardianAi.rephrase({name:user.name,question:question?.text,draft:answer?.text,facts:answer?.facts,action:answer?.action,snapshot:state,history:state.messages.slice(0,-2)},{store,uid:user.id,log:message=>options.onError?options.onError(new Error(message)):console.warn(message)});if(text)return json(res,{state:journey.refine(store,user.id,answer.id,text)});}
+     return json(res,{state});}
     if(route==='/api/journey/reports'&&method==='GET')return json(res,journey.realReports(store,user));
     if(route==='/api/journey/reports'&&method==='POST')return json(res,journey.reportReal(store,user.id,await body(req,600000)),201);
     if(route==='/api/journey/reports/respond'&&method==='POST'){operator.requireOperator(store,user.id);insist(!store.get('SELECT paused FROM noc_settings WHERE id=1').paused,'Supervision suspendue : le traitement des signalements est arrêté.',409);return json(res,journey.respondReal(store,user,await body(req,4096)));}

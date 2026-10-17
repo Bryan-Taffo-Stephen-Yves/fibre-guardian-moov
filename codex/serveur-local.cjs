@@ -2,6 +2,9 @@
 if (require.main === module) {
   const fs = require('node:fs'), path = require('node:path');
   const env = process.env;
+  // Réglages locaux facultatifs (par exemple ANTHROPIC_API_KEY) dans codex/.env, jamais dans git.
+  const local = require('./env-file.cjs').load(__dirname, env);
+  if (local.file) console.log('Réglages lus dans ' + path.basename(local.file) + ' : ' + (local.applied.join(', ') || 'aucun nouveau'));
   // Hébergé derrière un proxy HTTPS (Railway, Render…) : GUARDIAN_PROXY=1 et GUARDIAN_ORIGIN=https://…
   const proxy = env.GUARDIAN_PROXY === '1';
   const host = env.GUARDIAN_HOST || (proxy ? '0.0.0.0' : '127.0.0.1');
@@ -17,6 +20,7 @@ if (require.main === module) {
   const ready = env.GUARDIAN_SEED_DEMO !== '0' && demo.isEmpty(pilot.guardianStore)
     ? demo.seedDemo(pilot.guardianStore, { log: console.log, credentialsFile: path.join(path.dirname(dbFile), 'identifiants-demo.txt') }).then(r => { if (r.seeded) console.log('Démo pré-remplie installée (3 comptes, voir README).'); })
     : Promise.resolve();
+  console.log(require('./guardian-ai.cjs').available() ? 'Guardian : réponses rédigées avec Claude (clé ANTHROPIC_API_KEY trouvée).' : 'Guardian : réponses du moteur à règles (pas de clé ANTHROPIC_API_KEY).');
   pilot.on('error', e => { console.error(e.message); process.exitCode = 1; });
   ready.catch(e => { console.error('Démo pré-remplie impossible :', e.message); })
     .then(() => pilot.listen(port, host, () => console.log('Fibre Guardian : ' + (env.GUARDIAN_ORIGIN || 'http://127.0.0.1:' + port) + '/codex/ (données : ' + path.dirname(dbFile) + ') ; Ctrl+C pour arrêter.')));

@@ -11,6 +11,8 @@
   ['Systèmes Moov','L’application n’est pas reliée au système d’information de Moov (ACS, facturation, supervision réelle).'],
   ['Guardian','L’assistant suit des règles écrites à l’avance. Il ne fait rien sans l’accord d’une personne.']
  ];
+ // Quand la clé Anthropic est configurée sur le serveur, Guardian rédige ses réponses avec Claude.
+ const GUARDIAN_CLAUDE='Les réponses sont rédigées par Claude, l’IA d’Anthropic, à partir des seules mesures de la box. Ce que Guardian vérifie et propose reste décidé par des règles écrites à l’avance, et il ne fait rien sans l’accord d’une personne.';
  function Badge({onClick}){return h('button',{type:'button',className:'fg-demo-badge',onClick,'aria-haspopup':'dialog',title:'À propos de la démo'},'Démo');}
  // Remise à zéro de la démo : le bouton n'apparaît que pour l'administrateur, et le serveur revérifie le rôle.
  function Reset({user}){
@@ -23,13 +25,15 @@
    h('div',{className:'fg-demo-choices'},h('button',{type:'button',className:'fg-demo-danger',disabled:step==='busy',onClick:run},step==='busy'?'Réinitialisation…':'Oui, tout remettre à zéro'),h('button',{type:'button',className:'fg-demo-choice',disabled:step==='busy',onClick:()=>setStep('idle')},'Annuler')));
  }
  function About({onClose,user,scenarios,scenario,onScenario,busy,children}){
-  const box=R(null);
+  const box=R(null),[assistant,setAssistant]=S('regles');
+  E(()=>{let live=true;fetch('/api/health',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{if(live&&d.assistant)setAssistant(d.assistant);}).catch(()=>{});return()=>{live=false;};},[]);
+  const items=SIMULATED.map(([title,text])=>[title,title==='Guardian'&&assistant==='claude'?GUARDIAN_CLAUDE:text]);
   E(()=>{const previous=document.activeElement;box.current?.querySelector('button')?.focus();const key=e=>{if(e.key==='Escape')onClose();};document.addEventListener('keydown',key);return()=>{document.removeEventListener('keydown',key);previous?.focus?.();};},[]);
   return h('div',{className:'fg-demo-layer',onClick:e=>{if(e.target===e.currentTarget)onClose();}},
    h('section',{ref:box,className:'fg-demo-sheet',role:'dialog','aria-modal':'true','aria-labelledby':'fg-demo-title'},
     h('header',null,h('span',{className:'fg-demo-badge is-static'},'Démo'),h('h2',{id:'fg-demo-title'},'À propos de la démo'),h('button',{type:'button',className:'fg-demo-close',onClick:onClose,'aria-label':'Fermer'},'×')),
     h('p',{className:'fg-demo-lead'},'Fibre Guardian est présenté ici en version de démonstration. Les parcours et les règles de sécurité sont réels ; voici ce qui est simulé.'),
-    h('ul',{className:'fg-demo-list'},SIMULATED.map(([title,text])=>h('li',{key:title},h('strong',null,title),h('span',null,text)))),
+    h('ul',{className:'fg-demo-list'},items.map(([title,text])=>h('li',{key:title},h('strong',null,title),h('span',null,text)))),
     scenarios&&h('div',{className:'fg-demo-block'},h('h3',null,'Choisir une situation à montrer'),h('p',null,'Changez la situation de la box pour présenter un cas.'),
      h('div',{className:'fg-demo-choices'},Object.entries(scenarios).map(([value,label])=>h('button',{type:'button',key:value,className:'fg-demo-choice'+(scenario===value?' is-active':''),'aria-pressed':scenario===value,disabled:busy,onClick:()=>onScenario(value)},label)))),
     children,
