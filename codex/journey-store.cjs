@@ -4,6 +4,7 @@ const crypto=require('node:crypto');
 const {id,token,hash,insist,word,paragraph,number}=require('./pilot-model.cjs');
 const operator=require('./operator-store.cjs');
 const usage=require('./journey-usage.cjs');
+const langues=require('./langues.cjs'),boxReading=require('./box-reading.cjs');
 const {rebootGate}=require('./ui-model.js');
 const REBOOT_MS=20000; // Durée affichée d’un redémarrage de box à distance.
 const STEPS=['reported','confirmed','assigned','en_route','on_site','repairing','verifying','resolved'];
@@ -88,7 +89,11 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   }
   audit(st,'scenario',d.value);
  }else if(d.type==='chat'){
-  const text=paragraph(d.text,'Message',1200),reply=diagnostic(st,text,sharedFault(s,uid));st.messages.push({id:id(),role:'user',text},{id:id(),role:'assistant',text:reply.message,facts:reply.facts,action:reply.action});st.messages=st.messages.slice(-30);
+  // d.meaning est ajouté par le serveur (langues.cjs ou Claude), jamais accepté tel quel du navigateur (voir pilot-server).
+  const text=paragraph(d.text,'Message',1200),meaning=d.meaning&&['nouchi','dioula','autre'].includes(d.meaning.lang)?{lang:d.meaning.lang,french:String(d.meaning.french||'').slice(0,300)}:null,fault=sharedFault(s,uid);
+  const reply=diagnostic(st,meaning?.french?text+' '+meaning.french:text,fault);
+  const voice=meaning?.lang==='dioula'?langues.voice(langues.voiceKey({fault,action:reply.action,state:snapshot(st).metrics.state,greeting:/^\s*(bonjour|salut|i ni|a ni)/i.test(text)&&text.length<40})):null;
+  st.messages.push({id:id(),role:'user',text,...(meaning?{lang:meaning.lang,meaning:meaning.french||null}:{})},{id:id(),role:'assistant',text:reply.message,facts:reply.facts,action:reply.action,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  }else if(d.type==='apply'){
   const p=st.proposal;insist(d.confirm===true&&p&&d.id===p.id&&p.expires>now,'Confirmation valide requise.',409);insist(!active(st)&&!sharedFault(s,uid),'Une panne de zone est en cours : action annulée.',409);
   for(const l of p.limits){const dev=st.devices.find(v=>v.id===l.id);insist(dev&&!dev.protected&&!dev.blocked,'Appareil indisponible ou protégé.',409);insist(l.mbps>=2,'Plancher de sécurité requis.');dev.limit=l.mbps;dev.until=now+p.minutes*60000;}
@@ -146,5 +151,12 @@ function reportReal(s,uid,d){insist(d.consent===true,'Consentement au partage de
 function realReports(s,user){const staff=['admin','supervisor','agent'].includes(operator.role(s,user.id));return {reports:staff?s.all('SELECT * FROM citizen_reports ORDER BY created DESC LIMIT 100'):s.all('SELECT * FROM citizen_reports WHERE user_id=? ORDER BY created DESC LIMIT 30',user.id),staff};}
 function respondReal(s,user,d,{withinTransaction=false}={}){operator.requireOperator(s,user.id);insist(['received','reviewing','resolved'].includes(d.status),'Statut invalide.');const response=paragraph(d.response,'Réponse',1000);const execute=()=>{const row=s.get('SELECT * FROM citizen_reports WHERE id=?',String(d.id||''));insist(row,'Signalement introuvable.',404);if(row.status===d.status&&row.response===response)return {ok:true};const noc=require('./noc-store.cjs');noc.importReport(s,row.user_id,row);s.run('UPDATE citizen_reports SET status=?,response=? WHERE id=?',d.status,response,row.id);noc.syncLocalReport(s,{...row,status:d.status,response},user.id);s.event(null,user.id,'citizen.response',row.id);return {ok:true};};return withinTransaction?execute():s.transaction(execute);}
 // Remplace le texte d'une réponse de Guardian par sa version rédigée (mêmes faits, même action).
+// « La photo qui parle » : la lecture des voyants (Claude ou téléphone) est croisée avec les mesures, puis ajoutée à la conversation.
+// La photo elle-même n'est jamais conservée.
+function boxPhoto(s,uid,d,reading){return s.transaction(()=>{const st=get(s,uid);insist(st,'Démarrez votre démonstration.',409);insist(d.version===st.version,'Le parcours a été actualisé. Réessayez.',409);
+ const snap={...snapshot(st),sharedIncident:sharedFault(s,uid)},r=boxReading.interpret(reading,snap);
+ const dioula=st.messages.filter(m=>m.role==='user').at(-1)?.lang==='dioula',voice=dioula&&r.verdict?langues.voice(langues.voiceKey({verdict:r.verdict})):null;
+ st.messages.push({id:id(),role:'user',text:'Voici une photo de ma box.',photo:true},{id:id(),role:'assistant',text:r.message,facts:r.facts,action:r.action,verdict:r.verdict,concord:r.concord,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
+ audit(st,'photo.read',(reading.source==='claude'?'Lecture Guardian':'Lecture sur le téléphone')+' · '+(r.verdict||'à reprendre')+' · photo non conservée');st.version++;put(s,uid,st);return snapshotFor(s,uid,st);});}
 function refine(s,uid,messageId,text){const st=get(s,uid);if(!st)return null;const m=st.messages.find(x=>x.id===messageId&&x.role==='assistant');if(!m)return snapshotFor(s,uid,st);m.text=text;put(s,uid,st);return snapshotFor(s,uid,st);}
-module.exports={migrate,seed,get,put,snapshot,snapshotFor,refine,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
+module.exports={migrate,seed,get,put,snapshot,snapshotFor,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};

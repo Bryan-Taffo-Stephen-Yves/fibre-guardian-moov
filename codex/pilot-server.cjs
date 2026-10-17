@@ -5,11 +5,12 @@ const operator=require('./operator-store.cjs');
 const approvals=require('./approval-store.cjs');
 const journey=require('./journey-store.cjs');
 const guardianAi=require('./guardian-ai.cjs');
+const langues=require('./langues.cjs'),boxReading=require('./box-reading.cjs');
 const noc=require('./noc-store.cjs');
 const jury=require('./jury-store.cjs');
 const workspace=require('./noc-workspace.cjs');
 const {id,token,hash,Problem,insist,word,paragraph,number,metrics,diagnose,recording,floorplan,placement}=require('./pilot-model.cjs');
-const ROOT=path.resolve(__dirname,'..'),TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.webmanifest':'application/manifest+json'};
+const ROOT=path.resolve(__dirname,'..'),TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.webmanifest':'application/manifest+json','.mp3':'audio/mpeg','.m4a':'audio/mp4','.ogg':'audio/ogg','.opus':'audio/ogg'};
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function body(req,max=1048576){insist((req.headers['content-type']||'').split(';')[0]==='application/json','JSON requis.',415);let size=0,parts=[];for await(const chunk of req){size+=chunk.length;insist(size<=max,'Requête trop volumineuse.',413);parts.push(chunk);}try{const v=JSON.parse(Buffer.concat(parts).toString());insist(v&&typeof v==='object'&&!Array.isArray(v),'Objet JSON requis.');return v;}catch(e){if(e instanceof Problem)throw e;throw new Problem(400,'JSON invalide.');}}
 function createGuardianServer(options={}){
@@ -105,10 +106,19 @@ function createGuardianServer(options={}){
     if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}
     if(route==='/api/journey/start'&&method==='POST'){if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return json(res,{state:journey.snapshotFor(store,user.id,journey.get(store,user.id))});}
-    if(route==='/api/journey/action'&&method==='POST'){const d=await body(req,600000),state=journey.act(store,user.id,d);
+    if(route==='/api/journey/action'&&method==='POST'){const d=await body(req,600000),started=Date.now(),log=message=>options.onError?options.onError(new Error(message)):console.warn(message);delete d.meaning;
+     // Nouchi, dioula : sens en français reconnu sur le serveur (packs de langue, puis Claude s'il est configuré).
+     if(d.type==='chat'&&typeof d.text==='string'){const local=langues.detect(d.text);if(local.lang!=='fr'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});d.meaning=ai&&ai.lang!=='fr'?ai:local;}}
+     const state=journey.act(store,user.id,d);
      // Guardian : le moteur à règles a répondu ; Claude reformule si la clé est configurée, sinon rien ne change.
-     if(d.type==='chat'&&guardianAi.available()){const [question,answer]=state.messages.slice(-2);const text=await guardianAi.rephrase({name:user.name,question:question?.text,draft:answer?.text,facts:answer?.facts,action:answer?.action,snapshot:state,history:state.messages.slice(0,-2)},{store,uid:user.id,log:message=>options.onError?options.onError(new Error(message)):console.warn(message)});if(text)return json(res,{state:journey.refine(store,user.id,answer.id,text)});}
+     if(d.type==='chat'&&guardianAi.available()){const [question,answer]=state.messages.slice(-2);const text=await guardianAi.rephrase({name:user.name,question:question?.text,draft:answer?.text,facts:answer?.facts,action:answer?.action,snapshot:state,history:state.messages.slice(0,-2),meaning:question?.lang?{lang:question.lang,french:question.meaning}:null},{store,uid:user.id,log,timeoutMs:Math.max(3000,Math.min(8000,10500-(Date.now()-started)))});if(text)return json(res,{state:journey.refine(store,user.id,answer.id,text)});}
      return json(res,{state});}
+    // « La photo qui parle » : lecture des voyants par Claude, sinon lecture faite sur le téléphone. La photo n'est pas conservée.
+    if(route==='/api/journey/photo'&&method==='POST'){const d=await body(req,900000);store.rate('photo:'+user.id,12,600000);insist(Number.isInteger(d.version),'Version du parcours requise.');
+     const image=typeof d.image==='string'&&d.image.length<=850000?d.image:null,log=message=>options.onError?options.onError(new Error(message)):console.warn(message);
+     const leds=image?await guardianAi.readLeds(image,{store,uid:user.id,log}):null,reading=leds?{source:'claude',...leds}:boxReading.localReading(d.local);
+     insist(reading,'Je n’ai pas pu lire cette photo. Reprenez-la de face, voyants visibles, à environ 30 cm de la box.',422);
+     return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
     if(route==='/api/journey/reports'&&method==='GET')return json(res,journey.realReports(store,user));
     if(route==='/api/journey/reports'&&method==='POST')return json(res,journey.reportReal(store,user.id,await body(req,600000)),201);
     if(route==='/api/journey/reports/respond'&&method==='POST'){operator.requireOperator(store,user.id);insist(!store.get('SELECT paused FROM noc_settings WHERE id=1').paused,'Supervision suspendue : le traitement des signalements est arrêté.',409);return json(res,journey.respondReal(store,user,await body(req,4096)));}

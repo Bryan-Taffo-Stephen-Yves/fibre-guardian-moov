@@ -1,0 +1,83 @@
+{
+ "note": "Phrases dites par Guardian en dioula. « file » : nom du fichier audio dans voix/dioula/ (mp3, m4a, ogg ou opus), à remplir quand l’enregistrement d’une personne qui parle dioula est fourni. Textes dioula à faire valider.",
+ "phrases": [
+  {
+   "id": "01",
+   "fr": "Bonjour, je suis Guardian. Comment va votre connexion ?",
+   "dioula": null,
+   "file": null
+  },
+  {
+   "id": "02",
+   "fr": "Votre ligne va bien. Tout fonctionne.",
+   "dioula": "I ka ligne ka nyi kosɛbɛ.",
+   "file": null
+  },
+  {
+   "id": "03",
+   "fr": "La fibre est coupée. Ce n’est pas votre box.",
+   "dioula": "Fibre tigɛra. I ka box tɛ.",
+   "file": null
+  },
+  {
+   "id": "04",
+   "fr": "Le signal de votre fibre faiblit. Il faut agir avant que ça coupe.",
+   "dioula": "Fibre fanga bɛ dɔgɔya. A labɛn sisan.",
+   "file": null
+  },
+  {
+   "id": "05",
+   "fr": "C’est votre Wi-Fi qui est faible. La fibre va bien.",
+   "dioula": "I ka Wi-Fi fanga dɔgɔyara, fibre ka nyi.",
+   "file": null
+  },
+  {
+   "id": "06",
+   "fr": "Le problème vient du réseau Moov. Votre matériel va bien.",
+   "dioula": "Gɛlɛya bɛ Moov ka rezo la. I ka minɛnw ka nyi.",
+   "file": null
+  },
+  {
+   "id": "07",
+   "fr": "Le réseau est très chargé en ce moment. Votre ligne va bien.",
+   "dioula": "Rezo fara ye sisan. I ka ligne ka nyi.",
+   "file": null
+  },
+  {
+   "id": "08",
+   "fr": "Trop d’appareils utilisent votre connexion en même temps.",
+   "dioula": "Minɛn caman bɛ i ka ligne kan.",
+   "file": null
+  },
+  {
+   "id": "09",
+   "fr": "Votre ligne ne se comporte pas normalement. Nous regardons.",
+   "dioula": "I ka ligne tɛ i ko a ka kan. An bɛ a lajɛ.",
+   "file": null
+  },
+  {
+   "id": "10",
+   "fr": "Votre box redémarre. Patientez deux minutes.",
+   "dioula": "I ka box bɛ ka wuli kokura…",
+   "file": null
+  },
+  {
+   "id": "11",
+   "fr": "Coupure dans votre quartier. Moov est prévenu, un technicien arrive.",
+   "dioula": null,
+   "file": null
+  },
+  {
+   "id": "12",
+   "fr": "Le technicien est en route vers chez vous.",
+   "dioula": null,
+   "file": null
+  },
+  {
+   "id": "13",
+   "fr": "Votre connexion est rétablie. Merci pour votre patience.",
+   "dioula": null,
+   "file": null
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+/* Lot 3 : Guardian parle (voix, dioula) et lit la photo de la box. Couleurs : variables Moov uniquement. */
+.gv-toggle{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--moov-primary-200);background:var(--moov-white);color:var(--moov-neutral-700);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.gv-toggle.on{background:var(--moov-primary);border-color:var(--moov-primary);color:var(--moov-white)}
+.gv-toggle:focus-visible,.gv-play:focus-visible,.gv-photo:focus-visible{outline:3px solid var(--moov-primary-200);outline-offset:2px}
+.gv-listen{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:10px}
+.gv-dioula{margin:0;padding:10px 12px;border-left:3px solid var(--moov-accent);background:var(--moov-white);border-radius:4px 10px 10px 4px;font-style:italic;color:var(--moov-neutral-800)}
+.gv-dioula span{display:block;font-style:normal;font-size:11px;font-weight:650;letter-spacing:.3px;text-transform:uppercase;color:var(--moov-neutral-600);margin-bottom:2px}
+.j-bubble .gv-play{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--moov-neutral-150);background:var(--moov-white);color:var(--moov-primary-700);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.j-bubble .gv-play.playing{background:var(--moov-primary-100);border-color:var(--moov-primary-200);color:var(--moov-neutral-900)}
+.gv-meaning{display:block;margin-top:8px;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--moov-white) 22%,transparent);font-size:12px;line-height:1.5;color:color-mix(in srgb,var(--moov-white) 82%,transparent)}
+.journey .j-bubble.user .gv-meaning{color:var(--moov-on-primary);border-top-color:color-mix(in srgb,var(--moov-on-primary) 30%,transparent);opacity:.92}
+.j-bubble.gv-photo-message p{display:flex;align-items:center;gap:8px}
+.j-quick .j-button.gv-photo{display:inline-flex;align-items:center;gap:6px;background:var(--moov-primary-100);border-color:var(--moov-primary-200);color:var(--moov-neutral-900);font-weight:600}
+.j-quick .j-button.gv-photo:hover{background:var(--moov-primary-200)}
+@media(max-width:760px){.gv-toggle{padding:0 10px;min-height:40px}.gv-toggle span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.j-chat header{gap:8px}.j-chat .j-quick{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}.j-chat .j-quick::-webkit-scrollbar{display:none}.j-chat .j-quick .j-button{flex:none}}
