@@ -6,6 +6,7 @@ const approvals=require('./approval-store.cjs');
 const journey=require('./journey-store.cjs');
 const guardianAi=require('./guardian-ai.cjs');
 const noc=require('./noc-store.cjs');
+const jury=require('./jury-store.cjs');
 const workspace=require('./noc-workspace.cjs');
 const {id,token,hash,Problem,insist,word,paragraph,number,metrics,diagnose,recording,floorplan,placement}=require('./pilot-model.cjs');
 const ROOT=path.resolve(__dirname,'..'),TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.webmanifest':'application/manifest+json'};
@@ -17,6 +18,7 @@ function createGuardianServer(options={}){
  approvals.migrate(store);
  journey.migrate(store);
  noc.migrate(store);
+ jury.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -24,6 +26,7 @@ function createGuardianServer(options={}){
  // Application Android : nom du paquet et empreintes de la clé de signature (GUARDIAN_ANDROID_PACKAGE, GUARDIAN_ANDROID_SHA256).
  const android=options.android?.package?{package:String(options.android.package),fingerprints:[].concat(options.android.fingerprints||[]).map(v=>String(v).trim().toUpperCase()).filter(Boolean)}:null;
  if(android){insist(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/i.test(android.package),'GUARDIAN_ANDROID_PACKAGE invalide (exemple : ci.fibreguardian.app).');insist(android.fingerprints.length&&android.fingerprints.every(v=>/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(v)),'GUARDIAN_ANDROID_SHA256 invalide : empreinte SHA-256 au format AA:BB:… (32 octets).');}
+ const demoCredentials=()=>options.db===':memory:'?null:path.join(path.dirname(options.db||path.join(__dirname,'.local','pilot.sqlite')),'identifiants-demo.txt');
  const pool=crypto.randomBytes(2*1024*1024),active=new Set();
  const json=(res,data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
  function ip(req){if(!proxy)return req.socket.remoteAddress;const real=String(req.headers['x-real-ip']||'').trim(),chain=String(req.headers['x-forwarded-for']||'').split(',').map(v=>v.trim()).filter(Boolean);return (real||chain.at(-1)||req.socket.remoteAddress).slice(0,64);}
@@ -57,6 +60,8 @@ function createGuardianServer(options={}){
     if(route==='/api/participant/join'&&method==='POST'){
      store.rate('join:'+ip(req),20);const d=await body(req,4096);insist(d.consent===true,'Votre consentement est nécessaire.');const l=store.get('SELECT * FROM labs WHERE code=?',String(d.code||''));insist(l&&!l.closed&&l.expires>Date.now(),'Invitation expirée ou incorrecte.',404);insist(store.get('SELECT count(*) AS n FROM participants WHERE lab=? AND revoked=0',l.id).n<30,'Session limitée à 30 participants.',409);const pid=id(),secret=token(),name=word(d.name,'Nom de l’appareil',80);store.run('INSERT INTO participants(id,lab,name,secret,joined,last_seen) VALUES(?,?,?,?,?,?)',pid,l.id,name,hash(secret),Date.now(),Date.now());store.event(l.home,null,'participant.join',name);return json(res,{id:pid,secret,name,expires:l.expires});
     }
+    // Salle du jury : le QR code crée un abonné anonyme de Yopougon (aucun nom, aucun numéro, aucun rôle opérateur).
+    if(route==='/api/jury/join'&&method==='POST'){insist(secure||local,'Les comptes nécessitent HTTPS hors de cet ordinateur.',403);const u=await jury.join(store,await body(req,2048),ip(req)),session=store.session(u);cookie(res,session.secret,8*3600);return json(res,{user:{...u,csrf:session.csrf,role:workspace.sessionRole(store,u.id)}},201);}
     if(route.startsWith('/api/participant/')){
      const p=participant(req);store.rate('participant:'+p.id,100);const fault=p.fault_until>Date.now()?p.fault:'none';
      if(route==='/api/participant/status'&&method==='GET')return json(res,{name:p.name,fault,faultUntil:p.fault_until,expires:p.expires});
@@ -79,7 +84,14 @@ function createGuardianServer(options={}){
     }
     const user=auth(req);insist(user,'Connectez-vous à votre espace.',401);insist(secure||local,'HTTPS requis pour votre espace.',403);
     if(mutate){insist(req.headers['x-csrf-token']===user.csrf,'Session de formulaire expirée. Rechargez la page.',403);store.rate('write:'+user.id,80);}
-    if(route==='/api/demo/reset'&&method==='POST'){insist(operator.role(store,user.id)==='admin','Réinitialisation réservée à l’administrateur.',403);const d=await body(req,1024);insist(d.confirm===true,'Confirmez la réinitialisation de la démo.');store.rate('demo-reset',3,600000);const r=await require('./seed-demo.cjs').resetDemo(store,{log:m=>console.log(m),credentialsFile:options.db===':memory:'?null:path.join(path.dirname(options.db||path.join(__dirname,'.local','pilot.sqlite')),'identifiants-demo.txt')});cookie(res,'',0);return json(res,{ok:true,seeded:r.seeded});}
+    if(route==='/api/demo/reset'&&method==='POST'){insist(operator.role(store,user.id)==='admin','Réinitialisation réservée à l’administrateur.',403);const d=await body(req,1024);insist(d.confirm===true,'Confirmez la réinitialisation de la démo.');store.rate('demo-reset',3,600000);const r=await require('./seed-demo.cjs').resetDemo(store,{log:m=>console.log(m),credentialsFile:demoCredentials()});cookie(res,'',0);return json(res,{ok:true,seeded:r.seeded});}
+    if(route==='/api/jury/me'&&method==='GET')return json(res,jury.me(store,user.id));
+    // Régie : réservée à l'administrateur (vérifié dans jury-store), elle enchaîne les actions NOC habituelles.
+    if(route==='/api/regie'&&method==='GET')return json(res,jury.status(store,user.id,origin));
+    if(route==='/api/regie'&&method==='POST'){const d=await body(req,1024);
+     if(d.type!=='reset')return json(res,jury.step(store,user.id,d,origin));
+     insist(d.confirm===true,'Confirmez la remise à zéro.');const r=await jury.reset(store,user.id,{log:m=>console.log(m),credentialsFile:demoCredentials()}),s=store.session(r.user);cookie(res,s.secret,8*3600);
+     return json(res,{...jury.status(store,r.user.id,origin),user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});}
     if(route==='/api/guardian/chat'&&method==='POST')return json(res,require('./guardian-copilot.cjs').reply(store,user,await body(req,4096)));
     if(route==='/api/noc/feedback'&&method==='POST')return json(res,noc.feedback(store,user.id,await body(req,4096)));
     if(route==='/api/noc/overview'&&method==='GET')return json(res,noc.overview(store,user.id));

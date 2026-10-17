@@ -150,3 +150,12 @@ Voir **[PILOTE-REEL.md](PILOTE-REEL.md)** : matériel à identifier, architectur
 Obtenir les accès documentés aux box et à la passerelle SMS Moov ; développer les adaptateurs et l’authentification ; sécuriser les rôles et commandes côté serveur ; recueillir les consentements ; valider les langues et photos sur un corpus réel ; calibrer les seuils ; mesurer l’efficacité et les coûts sur un pilote. Ne pas exposer le serveur de modèle d’origine avec une clé payante sans durcissement.
 
 Cette livraison est une copie locale, sans dépôt Git distant identifié, sans pull request et sans publication publique. L’application Fibre Welcome n’a pas été modifiée.
+
+## Démo du jury : « Le jury vit la panne »
+
+- **Régie** (téléphone de l'administrateur) : `/codex/?section=regie`, connexion avec le compte de la direction. Le serveur vérifie le rôle administrateur à chaque action.
+  1. « Ouvrir la salle du jury » : un code QR et un code à 6 caractères apparaissent (« Projeter le code QR » pour le grand écran).
+  2. « Couper la fibre à Niangon », « Envoyer le technicien », « Le technicien est arrivé », « Réparer et vérifier » : chaque bouton enchaîne les actions habituelles du NOC (plan validé, Koffi affecté, mesures vérifiées).
+  3. « Tout remettre à zéro » : la démo repart de zéro en moins de 2 secondes ; le jury et la régie restent connectés.
+- **Membres du jury** : ils scannent le QR (`/codex/?jury=CODE`), acceptent les alertes et deviennent des abonnés anonymes de Yopougon (ni nom, ni numéro, aucun rôle opérateur). À la coupure, le téléphone vibre et sonne avec le message de Guardian, puis suit le technicien, reçoit un certificat de réparation et note l'intervention. La note moyenne s'affiche dans la régie.
+- Les téléphones doivent joindre le serveur : en pratique, l'adresse publique (Railway). Sur iPhone, Safari ne vibre pas : le son et l'alerte plein écran restent.
