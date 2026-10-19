@@ -12,6 +12,7 @@ function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS noc_events(id TEXT PRIMARY KEY,incident_id TEXT REFERENCES noc_incidents(id),actor TEXT REFERENCES users(id),kind TEXT NOT NULL,public_text TEXT NOT NULL,detail TEXT NOT NULL,at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS noc_notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_id TEXT NOT NULL REFERENCES noc_events(id) ON DELETE CASCADE,read_at INTEGER,UNIQUE(user_id,event_id));
  CREATE INDEX IF NOT EXISTS noc_notification_user ON noc_notifications(user_id,read_at);
+ CREATE TABLE IF NOT EXISTS noc_track_links(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,incident_id TEXT NOT NULL REFERENCES noc_incidents(id) ON DELETE CASCADE,created INTEGER NOT NULL,expires INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS noc_feedback(user_id TEXT NOT NULL REFERENCES users(id),incident_id TEXT NOT NULL REFERENCES noc_incidents(id),rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),comment TEXT NOT NULL,created INTEGER NOT NULL,PRIMARY KEY(user_id,incident_id));
  CREATE TABLE IF NOT EXISTS noc_members(user_id TEXT PRIMARY KEY REFERENCES users(id),segment_id TEXT REFERENCES noc_segments(id));
  CREATE TABLE IF NOT EXISTS noc_delegations(user_id TEXT PRIMARY KEY REFERENCES users(id),granted_by TEXT REFERENCES users(id),expires INTEGER NOT NULL);
@@ -113,4 +114,12 @@ function readNotifications(s,uid,d){
 }
 function join(s,uid,d){insist(d.consent===true,'Confirmez que vous voulez suivre ce quartier.');insist(s.get('SELECT id FROM noc_segments WHERE id=?',d.segment),'Segment inconnu.');s.run('INSERT INTO noc_members VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET segment_id=excluded.segment_id',uid,d.segment);return {ok:true};}
 function feedback(s,uid,d){const visible=client(s,uid).incidents.find(i=>i.id===d.id);insist(visible,'Intervention inaccessible.',404);insist(visible.status==='resolved','Attendez la vérification du rétablissement.',409);insist(Number.isInteger(d.rating)&&d.rating>=1&&d.rating<=5,'Note de 1 à 5 requise.');const comment=String(d.comment||'').trim();insist(comment.length<=500,'Commentaire limité à 500 caractères.');s.run('INSERT INTO noc_feedback VALUES(?,?,?,?,?) ON CONFLICT(user_id,incident_id) DO UPDATE SET rating=excluded.rating,comment=excluded.comment,created=excluded.created',uid,d.id,d.rating,comment,Date.now());return {ok:true};}
-module.exports={forecasts,migrate,scan,refreshTelemetry,importReport,operate,overview,client,join,feedback,isOpen,syncLocalReport,notifications,readNotifications,event,position,TECHS};
+
+// Lien de suivi à partager (message WhatsApp ou SMS) : lecture seule, sans compte, valable 6 heures.
+// Seul un client qui voit l'incident dans son suivi peut créer un lien ; le jeton n'est gardé que haché.
+const TRACK_MS=6*3600000,crypto=require('node:crypto'),sha=v=>crypto.createHash('sha256').update(v).digest('hex');
+function trackLink(s,uid,d){const item=client(s,uid).incidents.find(i=>i.id===d?.id);insist(item&&!item.terminal,'Aucune intervention en cours à partager.',404);const now=Date.now(),token=crypto.randomBytes(18).toString('base64url');s.run('DELETE FROM noc_track_links WHERE expires<?',now);s.run('INSERT INTO noc_track_links VALUES(?,?,?,?,?)',sha(token),uid,item.id,now,now+TRACK_MS);return {url:'/codex/?suivi='+token,expires:now+TRACK_MS};}
+function tracked(s,token){insist(typeof token==='string'&&/^[A-Za-z0-9_-]{20,40}$/.test(token),'Lien de suivi invalide.',404);const link=s.get('SELECT * FROM noc_track_links WHERE token_hash=? AND expires>?',sha(token),Date.now());insist(link,'Ce lien de suivi a expiré. Demandez-en un nouveau dans Fibre Guardian.',404);const i=client(s,link.user_id).incidents.find(v=>v.id===link.incident_id);insist(i,'Intervention introuvable.',404);
+ // Uniquement ce qu'il faut pour suivre le véhicule : ni nom du client, ni dossier, ni avis.
+ return {incident:{id:i.id,status:i.status,segment:i.segment,position:i.position,technician:i.technician,events:i.events.map(e=>({id:e.id,kind:e.kind,at:e.at}))},expires:link.expires};}
+module.exports={trackLink,tracked,forecasts,migrate,scan,refreshTelemetry,importReport,operate,overview,client,join,feedback,isOpen,syncLocalReport,notifications,readNotifications,event,position,TECHS};
