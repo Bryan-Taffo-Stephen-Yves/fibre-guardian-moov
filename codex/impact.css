@@ -1,0 +1,67 @@
+/* Écran Impact : « Ce que Guardian rapporte à Moov ». */
+.im{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-areas:"hero inputs" "measured inputs";grid-template-rows:auto 1fr;gap:20px;align-items:start}
+.im h2{margin:0;font-size:18px;letter-spacing:-.015em}
+.im-hero{grid-area:hero;position:relative;overflow:hidden;padding:28px;border-radius:24px;color:var(--moov-on-primary);background:radial-gradient(120% 90% at 100% 0%,var(--moov-primary-600),transparent 60%),linear-gradient(160deg,var(--moov-primary-700),var(--moov-primary-900));box-shadow:0 18px 40px -22px var(--moov-primary-900)}
+.im-hero h2{color:var(--moov-on-primary);font-weight:600;opacity:.92}
+.im-hero-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.im-period{font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px;background:color-mix(in srgb,var(--moov-white) 16%,transparent)}
+.im-total{margin:18px 0 6px;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.im-total strong{font-size:clamp(48px,7vw,84px);line-height:.95;font-weight:700;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.im-total span{font-size:20px;font-weight:600;opacity:.9}
+.im-sub{margin:0 0 22px;font-size:15px;opacity:.85;max-width:46ch}
+.im-bar{display:flex;gap:4px;height:14px;margin-bottom:18px}
+.im-bar span{flex-basis:0;min-width:6px;border-radius:999px;transition:flex-grow .45s cubic-bezier(.2,.8,.2,1)}
+.im-bar-calls,.im-part-calls i{background:var(--moov-sky-300)}
+.im-bar-visits,.im-part-visits i{background:var(--moov-accent)}
+.im-bar-revenue,.im-part-revenue i{background:var(--moov-success-300)}
+.im-parts{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.im-parts li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--moov-white) 9%,transparent)}
+.im-parts i{flex:none;width:10px;height:10px;border-radius:50%}
+.im-parts span{flex:1;min-width:0;display:grid}
+.im-parts b{font-size:15px;font-weight:600}
+.im-parts span small{font-size:13px;opacity:.78}
+.im-parts strong{font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.im-parts strong small{font-size:13px;font-weight:600;opacity:.8}
+.im-card{padding:24px;border-radius:24px;background:var(--moov-white);border:1px solid var(--moov-line);box-shadow:0 10px 30px -24px var(--moov-primary-900)}
+.im-inputs{grid-area:inputs}
+.im-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.im-card-head p{margin:4px 0 0;color:var(--moov-text-muted);font-size:14px}
+.im-fields{display:grid;gap:18px}
+.im-field label{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:14px;font-weight:600;color:var(--moov-ink)}
+.im-field label small{font-weight:500;color:var(--moov-text-muted)}
+.im-field output{flex:none;font-size:17px;font-weight:700;color:var(--moov-primary-800);font-variant-numeric:tabular-nums}
+.im-field input[type=range]{width:100%;height:28px;margin:6px 0 0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}
+.im-field input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,var(--moov-primary) var(--im-fill),var(--moov-primary-100) var(--im-fill))}
+.im-field input[type=range]::-moz-range-track{height:8px;border-radius:999px;background:linear-gradient(90deg,var(--moov-primary) var(--im-fill),var(--moov-primary-100) var(--im-fill))}
+.im-field input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-8px;border-radius:50%;background:var(--moov-white);border:3px solid var(--moov-primary);box-shadow:0 2px 6px color-mix(in srgb,var(--moov-primary-900) 30%,transparent)}
+.im-field input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--moov-white);border:3px solid var(--moov-primary)}
+.im-field input[type=range]:focus-visible{outline:3px solid var(--moov-focus);outline-offset:4px;border-radius:8px}
+.im-why{margin:4px 0 0;font-size:13px;color:var(--moov-text-muted)}
+.im-more{margin-top:20px;width:100%;min-height:46px;border-radius:14px;border:1px dashed var(--moov-primary-300);background:var(--moov-primary-25);color:var(--moov-primary-800);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.im-more:hover{background:var(--moov-primary-50)}
+.im-more:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+.im-rates{margin-top:18px;padding-top:18px;border-top:1px solid var(--moov-line)}
+.im-measured{grid-area:measured}
+.im-measured ul{list-style:none;margin:14px 0 12px;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.im-measured li{display:grid;gap:2px;padding:14px;border-radius:16px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100)}
+.im-measured li strong{font-size:28px;font-weight:700;letter-spacing:-.03em;color:var(--moov-primary-800)}
+.im-measured li span{font-size:13px;color:var(--moov-text-muted)}
+.im-measured>p{margin:0;font-size:13px;color:var(--moov-text-muted)}
+@media (max-width:980px){
+  .im{grid-template-columns:1fr;grid-template-areas:"hero" "inputs" "measured"}
+}
+@media (max-width:640px){
+  .im{gap:14px}
+  .im-hero{padding:22px 18px;border-radius:20px}
+  .im-card{padding:18px;border-radius:20px}
+  .im-parts strong{font-size:19px}
+  .im-measured ul{grid-template-columns:1fr}
+  .im-measured li{grid-template-columns:auto 1fr;align-items:center;gap:12px}
+  .im-measured li strong{font-size:24px;min-width:32px}
+}
+@media (prefers-reduced-motion:reduce){.im-bar span{transition:none}}
+/* Le portail Moov stylise déjà titres, petits textes et champs : on rétablit le rendu de cet écran. */
+.noc .im-hero h2,.noc .im-hero p,.noc .im-hero strong,.noc .im-hero b{color:var(--moov-on-primary)}
+.noc .im-hero h2{opacity:.92}
+.noc .im-parts small{color:var(--moov-on-primary);opacity:.78}
+.noc .im-field input[type=range]{border:0;padding:0;min-height:0;box-shadow:none;background:transparent}
