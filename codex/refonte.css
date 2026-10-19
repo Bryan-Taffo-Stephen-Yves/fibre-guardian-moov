@@ -388,3 +388,124 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
 .journey .du-sheet-actions .du-danger{border:0;background:var(--moov-danger-50);color:var(--moov-danger-700);box-shadow:none}
 @media(min-width:700px){.du-sheet-backdrop{align-items:center;padding:16px}.du-sheet{border-radius:26px;padding-top:20px}.du-sheet-grabber{display:none}}
 @media(prefers-reduced-motion:reduce){.du-sheet,.du-sheet-backdrop{animation:none}}
+
+/* Tableau de bord vivant : raccourcis, équipe terrain, quartiers, activité */
+@keyframes oc-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes oc-pop{0%{transform:scale(.86);opacity:.2}60%{transform:scale(1.04)}100%{transform:none;opacity:1}}
+@keyframes oc-ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 45%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+@keyframes oc-glide{0%{background-position:0 0}100%{background-position:28px 0}}
+@keyframes oc-bob{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-50%,-62%)}}
+.oc-command .oc-rise{animation:oc-rise .5s var(--fg-ease) both;animation-delay:calc(var(--i,0)*60ms)}
+.oc-command .oc-sub{margin:4px 0 0;color:var(--moov-text-muted);font-size:14px}
+.oc-command .oc-section-title h2{margin:0}
+.oc-command .oc-live i{color:var(--moov-success);background:var(--moov-success);box-shadow:none;animation:oc-ping 1.6s ease-out infinite}
+
+.oc-command .oc-metric{transition:transform .2s var(--fg-ease),box-shadow .2s var(--fg-ease)}
+.oc-command .oc-metric:hover{transform:translateY(-3px);box-shadow:var(--fg-shadow-md)}
+.oc-command .oc-metric>strong{animation:oc-pop .55s var(--fg-ease) both}
+.oc-command .oc-metric.oc-metric--accent{background:linear-gradient(140deg,var(--moov-primary-800),var(--moov-primary-500));border-color:transparent;color:var(--moov-white);box-shadow:0 14px 30px color-mix(in srgb,var(--moov-primary-700) 30%,transparent)}
+.oc-command .oc-metric--accent>div,.oc-command .oc-metric--accent>small{color:var(--moov-white)}
+.oc-command .oc-metric--accent .oc-metric-icon{background:color-mix(in srgb,var(--moov-white) 18%,transparent);color:var(--moov-white)}
+
+.oc-command .oc-stack{display:inline-flex;align-items:center;gap:10px;padding:5px 14px 5px 6px;border-radius:999px;background:var(--moov-surface);border:1px solid var(--fg-line);box-shadow:var(--fg-shadow-xs)}
+.oc-command .oc-stack-faces{display:flex}
+.oc-command .oc-stack-faces .oc-face{margin-left:-10px;border:2px solid var(--moov-surface)}
+.oc-command .oc-stack-faces .oc-face:first-child{margin-left:0}
+.oc-command .oc-stack>span:last-child{display:grid;line-height:1.2}
+.oc-command .oc-stack strong{font-size:13px}.oc-command .oc-stack small{font-size:12px;color:var(--moov-success-700)}
+.oc-command .oc-face{position:relative;display:inline-grid;place-items:center;flex-shrink:0;width:var(--s);height:var(--s);border-radius:50%;background:var(--moov-primary-50);overflow:visible}
+.oc-command .oc-face>svg{width:100%;height:100%;border-radius:50%}
+.oc-command .oc-face>b{font-size:13px;color:var(--moov-primary-700)}
+.oc-command .oc-face>i{position:absolute;right:0;bottom:1px;width:12px;height:12px;border-radius:50%;border:2px solid var(--moov-surface);background:var(--moov-success)}
+.oc-command .oc-face--road>i{background:var(--moov-primary);color:var(--moov-primary);animation:oc-ping 1.4s ease-out infinite}
+.oc-command .oc-face--busy>i{background:var(--moov-warning)}
+
+.oc-command .oc-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.oc-command .oc-shortcut{position:relative;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:12px;row-gap:2px;align-items:center;text-align:left;padding:13px 14px;border-radius:var(--fg-radius);border:1px solid var(--fg-line);background:var(--moov-surface);color:var(--moov-ink);cursor:pointer;box-shadow:var(--fg-shadow-xs);transition:transform .2s var(--fg-ease),box-shadow .2s var(--fg-ease),border-color .2s}
+.oc-command .oc-shortcut:hover{transform:translateY(-3px);box-shadow:var(--fg-shadow-md);border-color:var(--moov-primary-200)}
+.oc-command .oc-shortcut:active{transform:scale(.98)}
+.oc-command .oc-shortcut-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--moov-primary-50);color:var(--moov-primary);grid-row:1/3;transition:transform .3s var(--fg-ease)}
+.oc-command .oc-shortcut:hover .oc-shortcut-icon{transform:rotate(-8deg) scale(1.08)}
+.oc-command .oc-shortcut strong{font-size:15px;align-self:end}
+.oc-command .oc-shortcut small{align-self:start}
+.oc-command .oc-shortcut small{font-size:12.5px;line-height:1.35;color:var(--moov-text-muted)}
+.oc-command .oc-shortcut em{position:absolute;top:12px;right:12px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--moov-danger);color:var(--moov-white);font:700 12px/22px var(--fg-font);text-align:center}
+.oc-command .oc-shortcut--hot{background:linear-gradient(150deg,var(--moov-accent-50),var(--moov-surface) 70%);border-color:var(--moov-accent-200)}
+.oc-command .oc-shortcut--hot .oc-shortcut-icon{background:var(--moov-accent);color:var(--moov-on-accent)}
+
+.oc-command .oc-crew-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.oc-command .oc-tech{display:grid;gap:12px;align-content:start;padding:16px;border-radius:var(--fg-radius);border:1px solid var(--fg-line);background:var(--moov-canvas);transition:transform .2s var(--fg-ease),box-shadow .2s var(--fg-ease)}
+.oc-command .oc-tech:hover{transform:translateY(-2px);box-shadow:var(--fg-shadow-sm);background:var(--moov-surface)}
+.oc-command .oc-tech--road{background:linear-gradient(160deg,var(--moov-primary-50),var(--moov-surface) 75%);border-color:var(--moov-primary-200)}
+.oc-command .oc-tech-head{display:flex;align-items:flex-start;gap:11px}
+.oc-command .oc-tech-head>div{justify-items:start}
+.oc-command .oc-tech-head .oc-chip{margin-top:5px}
+.oc-command .oc-section-title .oc-button{white-space:nowrap;flex-shrink:0}
+.oc-command .oc-tech-head>div{flex:1;min-width:0;display:grid;line-height:1.3}
+.oc-command .oc-tech-head strong{font-size:15px;line-height:1.25}
+.oc-command .oc-tech-head small{font-size:12.5px;color:var(--moov-text-muted)}
+.oc-command .oc-chip{display:inline-flex;align-items:center;white-space:nowrap;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:650;background:var(--moov-success-50);color:var(--moov-success-700)}
+.oc-command .oc-chip--road{background:var(--moov-primary-100);color:var(--moov-primary-800)}
+.oc-command .oc-chip--busy,.oc-command .oc-chip--watch{background:var(--moov-warning-100);color:var(--moov-warning-700)}
+.oc-command .oc-chip--down{background:var(--moov-danger-50);color:var(--moov-danger-700)}
+.oc-command .oc-tech-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:12.5px;color:var(--moov-neutral-700)}
+.oc-command .oc-tech-meta>span{display:inline-flex;align-items:center;gap:4px}
+.oc-command .oc-tech-meta svg{color:var(--moov-accent);fill:var(--moov-accent)}
+.oc-command .oc-plate{padding:2px 7px;border-radius:6px;border:1px solid var(--moov-neutral-300);background:var(--moov-surface);font:600 11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+.oc-command .oc-tech-trip{display:grid;gap:8px}
+.oc-command .oc-tech-trip .oc-button{justify-self:start}
+.oc-command .oc-tech-bar{grid-column:1/-1;position:relative;height:8px;border-radius:999px;background:var(--moov-neutral-150);margin:6px 0 2px}
+.oc-command .oc-tech-bar>i{display:block;height:100%;border-radius:inherit;background:repeating-linear-gradient(90deg,var(--moov-primary) 0 14px,var(--moov-primary-400) 14px 28px);animation:oc-glide 1s linear infinite;transition:width 1s linear}
+.oc-command .oc-tech-bar>b{position:absolute;top:50%;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--moov-primary);color:var(--moov-white);box-shadow:var(--fg-shadow-sm);transition:left 1s linear;animation:oc-bob 1.2s ease-in-out infinite}
+.oc-command .oc-tech-trip p,.oc-command .oc-tech-idle{margin:0;font-size:13px;color:var(--moov-neutral-700)}
+.oc-command .oc-tech-trip p strong{color:var(--moov-primary-800);font-variant-numeric:tabular-nums}
+.oc-command .oc-tech-trip .oc-button{padding:7px 14px;min-height:0}
+
+.oc-command .oc-pulse-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;align-items:start}
+.oc-command .oc-zone-list{display:grid;gap:10px}
+.oc-command .oc-zone{display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;border-radius:var(--fg-radius);border:1px solid var(--fg-line);background:var(--moov-surface);color:var(--moov-ink);text-align:left;cursor:pointer;transition:transform .2s var(--fg-ease),box-shadow .2s var(--fg-ease)}
+.oc-command .oc-zone:hover{transform:translateX(3px);box-shadow:var(--fg-shadow-sm)}
+.oc-command .oc-zone--down{border-color:var(--moov-danger-300);background:linear-gradient(90deg,var(--moov-danger-50),var(--moov-surface) 60%)}
+.oc-command .oc-zone-body{flex:1;min-width:0;display:grid;gap:2px}
+.oc-command .oc-zone-body strong{font-size:15px}
+.oc-command .oc-zone-body small{font-size:12px;color:var(--moov-text-muted)}
+.oc-command .oc-zone-stats{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--moov-text-muted)}
+.oc-command .oc-zone-stats b{color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.oc-command .oc-ring{flex-shrink:0}
+.oc-command .oc-ring circle{fill:none;stroke-width:7}
+.oc-command .oc-ring-track{stroke:var(--moov-neutral-150)}
+.oc-command .oc-ring-value{stroke:var(--moov-success);stroke-linecap:round;transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 1.2s var(--fg-ease),stroke .3s}
+.oc-command .oc-ring--watch .oc-ring-value{stroke:var(--moov-warning)}
+.oc-command .oc-ring--down .oc-ring-value{stroke:var(--moov-danger)}
+.oc-command .oc-ring text{font:700 13px var(--fg-font);fill:var(--moov-ink)}
+
+.oc-command .oc-activity ol{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.oc-command .oc-activity li{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:start;padding:9px 6px;border-radius:12px}
+.oc-command .oc-activity li:hover{background:var(--moov-canvas)}
+.oc-command .oc-activity li:not(:last-child)::after{content:'';position:absolute;left:21px;top:42px;bottom:-6px;width:2px;background:var(--moov-neutral-150)}
+.oc-command .oc-act-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--moov-primary-50);color:var(--moov-primary)}
+.oc-command .oc-act--wait .oc-act-icon{background:var(--moov-warning-100);color:var(--moov-warning-700)}
+.oc-command .oc-act--done .oc-act-icon{background:var(--moov-success-50);color:var(--moov-success-700)}
+.oc-command .oc-act--note .oc-act-icon{background:var(--moov-neutral-100);color:var(--moov-neutral-700)}
+.oc-command .oc-activity li:first-child .oc-act-icon{animation:oc-ping 1.8s ease-out 3}
+.oc-command .oc-activity strong{font-size:14px}
+.oc-command .oc-activity p{margin:2px 0 0;font-size:13px;color:var(--moov-text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.oc-command .oc-activity time{font-size:12px;color:var(--moov-text-muted);white-space:nowrap}
+
+@media(max-width:1180px){.oc-command .oc-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1080px){.oc-command .oc-pulse-grid{grid-template-columns:1fr}}
+@media(max-width:650px){
+ .oc-command .oc-shortcuts{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}
+ .oc-command .oc-shortcuts::-webkit-scrollbar{display:none}
+ .oc-command .oc-shortcut{flex:0 0 200px;scroll-snap-align:start}
+ .oc-command .oc-crew-row{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}
+ .oc-command .oc-crew-row::-webkit-scrollbar{display:none}
+ .oc-command .oc-tech{flex:0 0 82%;scroll-snap-align:start}
+ .oc-command .oc-zone{display:grid;grid-template-columns:64px minmax(0,1fr);padding:10px 12px;gap:6px 12px}
+ .oc-command .oc-zone .oc-ring{grid-row:1/3}
+ .oc-command .oc-zone .oc-chip{grid-column:2;justify-self:start}
+ .oc-command .oc-crew .oc-section-title,.oc-command .oc-zones .oc-section-title{align-items:flex-start}
+ .oc-command .oc-welcome-actions{width:100%}
+ .oc-command .oc-welcome-actions .oc-stack{order:-1;width:100%}
+}
+@media(prefers-reduced-motion:reduce){.oc-command .oc-rise,.oc-command .oc-metric>strong,.oc-command .oc-tech-bar>i,.oc-command .oc-tech-bar>b{animation:none}}
