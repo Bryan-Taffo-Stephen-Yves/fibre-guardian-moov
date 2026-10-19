@@ -352,3 +352,39 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
 @media(prefers-reduced-transparency:reduce){
   .journey .j-header,.noc .n-header,.journey .j-navigation,.noc .n-sidebar{background:var(--moov-surface);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* ---------- Appareils : fiche « Gérer » (limiter, bloquer, retirer) ---------- */
+.journey .du-device small.du-state-blocked{color:var(--moov-danger-700);font-weight:600}
+.journey .du-device small.du-state-limited{color:var(--moov-accent-700);font-weight:600}
+.du-sheet-backdrop{position:fixed;inset:0;z-index:90;display:grid;align-items:end;justify-items:center;background:color-mix(in srgb,var(--moov-primary-900) 40%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);font-family:var(--fg-font);animation:lt-fade .2s ease-out}
+.du-sheet{width:min(480px,100%);max-height:calc(100dvh - 24px);overflow-y:auto;padding:8px 20px calc(20px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:var(--moov-surface);box-shadow:0 -20px 60px -20px color-mix(in srgb,var(--moov-primary-900) 50%,transparent);animation:mm-up .4s cubic-bezier(.22,1,.36,1)}
+.du-sheet-grabber{display:block;width:40px;height:5px;margin:2px auto 12px;border-radius:99px;background:var(--moov-neutral-200)}
+.du-sheet-head{display:flex;align-items:center;gap:12px}
+.du-sheet-head>div{flex:1;min-width:0}
+.journey .du-sheet h2{margin:0;font-family:var(--fg-font-display);font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--moov-ink)}
+.du-sheet-head small{display:block;margin-top:2px;color:var(--moov-text-muted);font-size:14px}
+.du-sheet-head .du-device-icon{display:grid;place-items:center;width:46px;height:46px;flex:0 0 46px;border-radius:14px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.journey .du-sheet .du-sheet-close{display:grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--moov-neutral-100);color:var(--moov-neutral-700);box-shadow:none}
+.du-sheet-now{display:flex;align-items:baseline;gap:8px;margin:16px 0 4px;padding:14px 16px;border-radius:18px;background:var(--moov-primary-25)}
+.du-sheet-now strong{font-family:var(--fg-font-display);font-size:34px;font-weight:700;letter-spacing:-.03em;color:var(--moov-primary);font-variant-numeric:tabular-nums}
+.du-sheet-now span{color:var(--moov-text-muted);font-size:15px}
+.du-sheet-group{margin-top:18px}
+.journey .du-sheet h3{display:flex;align-items:center;gap:8px;margin:0;font-size:17px;font-weight:650;color:var(--moov-ink)}
+.du-sheet-group>p{margin:4px 0 12px;color:var(--moov-text-muted);font-size:14px;line-height:1.4}
+.du-limit-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.journey .du-sheet .du-limit{position:relative;display:grid;justify-items:start;gap:1px;min-height:0;padding:12px 14px;border:1.5px solid var(--moov-line);border-radius:16px;background:var(--moov-surface);color:var(--moov-ink);text-align:left;box-shadow:none;transition:border-color .2s,background .2s,transform .15s}
+.journey .du-sheet .du-limit:active:not(:disabled){transform:scale(.97)}
+.journey .du-sheet .du-limit strong{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.journey .du-sheet .du-limit span{font-size:14px;font-weight:600;color:var(--moov-primary)}
+.journey .du-sheet .du-limit small{font-size:12.5px;color:var(--moov-text-muted);line-height:1.3}
+.journey .du-sheet .du-limit.active{border-color:var(--moov-primary);background:var(--moov-primary-25)}
+.journey .du-sheet .du-limit:disabled{opacity:.5}
+.journey .du-sheet .du-limit.active:disabled{opacity:1}
+.du-limit-check{position:absolute;top:10px;right:10px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--moov-primary);color:var(--moov-on-primary)}
+.du-limit-check svg{width:14px;height:14px}
+.du-sheet-actions{display:grid;gap:10px;margin-top:20px}
+.journey .du-sheet-actions .j-button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;border-radius:999px;font-size:16px;font-weight:600}
+.journey .du-sheet-actions .du-warn{border:0;background:var(--moov-accent-50);color:var(--moov-accent-800);box-shadow:none}
+.journey .du-sheet-actions .du-danger{border:0;background:var(--moov-danger-50);color:var(--moov-danger-700);box-shadow:none}
+@media(min-width:700px){.du-sheet-backdrop{align-items:center;padding:16px}.du-sheet{border-radius:26px;padding-top:20px}.du-sheet-grabber{display:none}}
+@media(prefers-reduced-motion:reduce){.du-sheet,.du-sheet-backdrop{animation:none}}
