@@ -17,7 +17,7 @@ function harness(data=fixture(),respond){
  const React={Fragment:'fragment',createElement:(type,props,...children)=>({type,props:props||{},children}),useState:initial=>{const i=si++;if(!(i in state))state[i]=initial;return [state[i],value=>{state[i]=typeof value==='function'?value(state[i]):value;}];},useRef:initial=>{const i=ri++;return refs[i]||(refs[i]={current:initial});},useEffect:(fn,deps)=>{const i=ei++,old=effects[i];if(!old||deps.some((v,n)=>v!==old.deps[n])||deps.length!==old.deps.length)pending.push(()=>{old?.cleanup?.();effects[i]={deps,cleanup:fn(),runs:(old?.runs||0)+1};});}};
  const api=async(route,method,body)=>{calls.push({route,method,body});return respond?respond(route,method,body):state[0];};
  const document={activeElement:{focus(){},isConnected:true},addEventListener(){},removeEventListener(){}};
- const context={React,window:{FGMap:{View:'map'}},document,FormData:class {constructor(form){this.entries=Object.entries(form.values||{});}*[Symbol.iterator](){yield* this.entries;}},requestAnimationFrame:fn=>fn(),setInterval:fn=>{intervals.push(fn);return intervals.length;},clearInterval(){},Date};
+ const context={React,window:{FGMap:{View:'map'},FGAbidjan:{Map:'map',Legend:'legend'}},document,FormData:class {constructor(form){this.entries=Object.entries(form.values||{});}*[Symbol.iterator](){yield* this.entries;}},requestAnimationFrame:fn=>fn(),setInterval:fn=>{intervals.push(fn);return intervals.length;},clearInterval(){},Date};
  vm.runInNewContext(source,context);
  props={api,user:{id:'U1',name:'Awa Koné'},onNavigate:page=>navigation.push(page),onIncident:(id,page)=>navigation.push([id,page]),onAskGuardian:key=>navigation.push(['guardian',key]),onSelectionChange:key=>selectedCalls.push(key)};
  function render(extra={}){props={...props,...extra};si=0;ri=0;ei=0;tree=context.window.FGCommand.View(props);while(pending.length)pending.shift()();return tree;}
@@ -107,7 +107,7 @@ test('Une erreur de permission retire les données et les commandes',async()=>{
 
 test('La carte et le copilote partagent la sélection autorisée du workspace',()=>{
  const h=harness();h.button('Demander à Guardian').props.onClick();assert.deepEqual(h.navigation,[['guardian','incident:I1']]);
- const map=h.find(n=>n.type==='map');assert.equal(map.props.incident.id,'I1');assert.equal(map.props.segments[0].id,'YOP-07');map.props.onSelect('YOP-07');h.render();assert.equal(h.state[5],'incident:I1');
+ const map=h.find(n=>n.type==='map');assert.equal(map.props.selected,'YOP-07');assert.equal(map.props.segments[0].id,'YOP-07');map.props.onSelect('YOP-07');h.render();assert.equal(h.state[5],'incident:I1');
 });
 
 test('Clôturer un signalement local exige un message public et une confirmation administrative',async()=>{

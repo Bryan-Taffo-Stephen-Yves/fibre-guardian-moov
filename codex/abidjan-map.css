@@ -1,0 +1,144 @@
+/* « Abidjan en direct » : carte de la ville (abidjan-map.js). Couleurs : variables --moov-* uniquement. */
+
+/* ---------- Dessin de la ville ---------- */
+.ab-map{display:block;width:100%;height:100%;font-family:var(--fg-font,inherit);user-select:none}
+.ab-stop-lagoon-top{stop-color:var(--moov-primary-100)}
+.ab-stop-lagoon-bottom{stop-color:var(--moov-primary-200)}
+.ab-sea{fill:var(--moov-primary-200)}
+.ab-water-inner{fill:var(--moov-primary-100)}
+.ab-land{fill:var(--moov-neutral-50)}
+.ab-commune{fill:var(--moov-white);stroke:var(--moov-neutral-150);stroke-width:1.4;stroke-linejoin:round;transition:fill .6s var(--fg-ease,ease)}
+.ab-commune.is-down{fill:var(--moov-danger-50);stroke:var(--moov-danger-300)}
+.ab-forest{fill:var(--moov-success-100);stroke:var(--moov-success-300);stroke-width:.8;stroke-linejoin:round}
+.ab-road{fill:none;stroke:var(--moov-neutral-100);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ab-runway{fill:none;stroke:var(--moov-neutral-300);stroke-width:4;stroke-linecap:round}
+.ab-bridge{fill:none;stroke:var(--moov-neutral-400);stroke-width:3.2;stroke-linecap:round}
+.ab-water-labels text{fill:var(--moov-primary-600);font-size:15px;font-style:italic;font-weight:500;letter-spacing:.04em;text-anchor:middle;opacity:.8}
+.ab-water-labels .ab-forest-label{fill:var(--moov-success-700);font-size:13px}
+.ab-labels text{fill:var(--moov-neutral-600);font-size:16px;font-weight:600;letter-spacing:-.01em;text-anchor:middle;paint-order:stroke;stroke:var(--moov-white);stroke-width:3px;stroke-linejoin:round}
+.ab-labels text.is-down{fill:var(--moov-danger-700)}
+
+/* Quartiers suivis : box des clients et repère */
+.ab-home{fill:var(--moov-primary-300);opacity:.75;transition:fill .5s var(--fg-ease,ease),opacity .5s}
+.ab-home.is-off{fill:var(--moov-danger-500);opacity:1}
+.ab-stop-alert{stop-color:var(--moov-danger-500);stop-opacity:.34}
+.ab-stop-alert-fade{stop-color:var(--moov-danger-500);stop-opacity:0}
+.ab-pulse{transform-box:fill-box;transform-origin:center;animation:ab-pulse 2.4s cubic-bezier(.22,1,.36,1) infinite}
+.ab-pulse--late{animation-delay:1.2s}
+@keyframes ab-pulse{0%{transform:scale(.25);opacity:1}100%{transform:scale(1.25);opacity:0}}
+.ab-pin{cursor:default;outline:none}
+.ab-pin[role=button]{cursor:pointer}
+.ab-pin-dot{fill:var(--moov-primary);stroke:var(--moov-white);stroke-width:3;filter:drop-shadow(0 2px 3px color-mix(in srgb,var(--moov-primary-900) 30%,transparent));transition:r .2s var(--fg-ease,ease)}
+.ab-segment.is-down .ab-pin-dot{fill:var(--moov-danger-500)}
+.ab-pin-mark{fill:none;stroke:var(--moov-white);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ab-pin-label{fill:var(--moov-ink);font-size:15px;font-weight:700;text-anchor:middle;letter-spacing:-.01em;paint-order:stroke;stroke:var(--moov-white);stroke-width:3.5px;stroke-linejoin:round}
+.ab-segment.is-down .ab-pin-label{fill:var(--moov-danger-700)}
+.ab-pin[role=button]:hover .ab-pin-dot,.ab-segment.is-selected .ab-pin-dot{r:11}
+.ab-pin:focus-visible .ab-pin-dot{stroke:var(--moov-focus,var(--moov-primary-400));stroke-width:4}
+
+/* Équipes Moov : trajet et camionnette */
+.ab-route-bed{fill:none;stroke:var(--moov-white);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.ab-route{fill:none;stroke:var(--moov-primary);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;transition:stroke-dashoffset 1s linear}
+.ab-van{transition:transform 1s linear}
+.ab-van-halo{fill:color-mix(in srgb,var(--moov-primary) 16%,transparent);stroke:var(--moov-white);stroke-width:1.5}
+.ab-van-body{fill:var(--moov-primary)}
+.ab-van-cab{fill:var(--moov-primary-700)}
+.ab-van-glass{fill:var(--moov-primary-100)}
+.ab-van-wheel{fill:var(--moov-neutral-900);stroke:var(--moov-white);stroke-width:1}
+.ab-base circle{fill:var(--moov-white);stroke:var(--moov-primary);stroke-width:2.4;filter:drop-shadow(0 1px 2px color-mix(in srgb,var(--moov-primary-900) 25%,transparent))}
+.ab-base text{fill:var(--moov-primary);font-size:10.5px;font-weight:700;text-anchor:middle}
+
+/* ---------- Panneau équipe Moov ---------- */
+.ab-panel{background:var(--moov-surface);border:1px solid var(--fg-line,var(--moov-neutral-100));border-radius:var(--fg-radius-lg,18px);box-shadow:var(--fg-shadow-sm);padding:22px;display:grid;gap:16px;margin-bottom:22px}
+.ab-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.ab-head h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.025em}
+.ab-head p{margin:4px 0 0;color:var(--moov-text-muted);font-size:14px}
+.ab-live{flex:none;display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--moov-danger-50);color:var(--moov-danger-700);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.ab-live i{width:8px;height:8px;border-radius:50%;background:var(--moov-danger-500);box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-danger-500) 50%,transparent);animation:ab-live 1.8s ease-out infinite}
+@keyframes ab-live{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-danger-500) 50%,transparent)}100%{box-shadow:0 0 0 9px color-mix(in srgb,var(--moov-danger-500) 0%,transparent)}}
+.ab-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.ab-panel.is-compact .ab-body{grid-template-columns:1fr}
+.ab-stage{position:relative;border-radius:var(--fg-radius,14px);overflow:hidden;background:var(--moov-primary-100);aspect-ratio:1000/790;width:100%}
+.ab-panel.is-compact .ab-stage{aspect-ratio:16/10}
+.ab-legend{position:absolute;left:12px;bottom:12px;display:flex;flex-wrap:wrap;gap:6px 14px;margin:0;padding:8px 12px;list-style:none;background:color-mix(in srgb,var(--moov-white) 92%,transparent);border-radius:12px;box-shadow:var(--fg-shadow-xs);font-size:12px;color:var(--moov-neutral-700);max-width:calc(100% - 24px)}
+.ab-legend li{display:flex;align-items:center;gap:6px}
+.ab-key{width:9px;height:9px;border-radius:50%;display:inline-block}
+.ab-key.is-off{background:var(--moov-danger-500)}
+.ab-key.is-on{background:var(--moov-primary-300)}
+.ab-key.is-van{background:var(--moov-primary);border-radius:3px;width:12px}
+.ab-key.is-base{background:var(--moov-white);border:2px solid var(--moov-primary)}
+.ab-side h3{margin:0 0 8px;font-size:14px;font-weight:650;color:var(--moov-neutral-700)}
+.ab-side h3:not(:first-child){margin-top:18px}
+.ab-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ab-row,.ab-trip-row{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--moov-neutral-100);background:var(--moov-neutral-25);text-align:left;font:inherit;color:inherit}
+.ab-row{cursor:pointer;transition:background-color .18s var(--fg-ease,ease),border-color .18s var(--fg-ease,ease)}
+.ab-row:hover{background:var(--moov-white);border-color:var(--moov-neutral-200)}
+.ab-row.is-selected{background:var(--moov-danger-50);border-color:var(--moov-danger-100)}
+.ab-row:focus-visible{outline:2px solid var(--moov-focus,var(--moov-primary-400));outline-offset:2px}
+.ab-row-dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--moov-danger-500);box-shadow:0 0 0 4px var(--moov-danger-100)}
+.ab-row-text{flex:1;min-width:0;display:grid}
+.ab-row-text strong{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ab-row-text small{font-size:12.5px;color:var(--moov-text-muted)}
+.ab-row-count{flex:none;font-variant-numeric:tabular-nums;color:var(--moov-text-muted);font-size:12.5px}
+.ab-row-count b{font-size:20px;font-weight:700;color:var(--moov-danger-700);letter-spacing:-.02em}
+.ab-trip-row .ab-row-count b{color:var(--moov-primary)}
+.ab-trip-icon{flex:none;width:30px;height:30px;border-radius:9px;background:var(--moov-primary-50);color:var(--moov-primary);display:grid;place-items:center}
+.ab-teams{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ab-teams li{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;padding:7px 9px;border-radius:12px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100);font-size:13px;font-weight:600}
+.ab-teams li small{grid-column:2;font-size:11.5px;font-weight:500;color:var(--moov-success-700)}
+.ab-teams li.is-busy small{color:var(--moov-primary)}
+.ab-avatar{grid-row:span 2;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--moov-primary-50);color:var(--moov-primary);font-size:12px;font-weight:700}
+.ab-teams li.is-busy .ab-avatar{background:var(--moov-primary);color:var(--moov-on-primary)}
+.ab-empty{margin:0;padding:14px;border-radius:14px;background:var(--moov-success-50);color:var(--moov-success-700);font-size:14px}
+
+@media (max-width:1100px){.ab-body{grid-template-columns:1fr}}
+@media (max-width:640px){
+  .ab-panel{padding:16px;gap:12px;border-radius:16px}
+  .ab-head{flex-direction:column;gap:8px}
+  .ab-head h2{font-size:20px}
+  .ab-stage{aspect-ratio:1000/790}
+  .ab-legend{position:static;margin-top:0;background:transparent;box-shadow:none;padding:8px 0 0}
+  .ab-panel .ab-stage{aspect-ratio:auto;overflow:visible;background:transparent}
+  .ab-panel .ab-stage .ab-map{border-radius:12px;background:var(--moov-primary-100);aspect-ratio:740/510;height:auto}
+  .oc-command .oc-network .oc-abidjan{aspect-ratio:auto;background:transparent}
+  .oc-command .oc-network .oc-abidjan .ab-map{aspect-ratio:740/510;height:auto;background:var(--moov-primary-100)}
+  .oc-command .oc-network .oc-abidjan .ab-legend{padding:8px 16px 0}
+  .ab-map:not(.is-focused) .ab-labels text{font-size:24px;stroke-width:5px}
+  .ab-map:not(.is-focused) .ab-pin-label{font-size:23px;stroke-width:5px}
+  .ab-map:not(.is-focused) .ab-water-labels text{font-size:20px}
+  .ab-map:not(.is-focused) .ab-water-labels .ab-forest-label{font-size:17px}
+  .ab-map:not(.is-focused) .ab-pin-dot{r:12}
+  .ab-map:not(.is-focused) .ab-home{r:3.6}
+  .ab-map:not(.is-focused) .ab-base circle{r:12}
+  .ab-map:not(.is-focused) .ab-base text{font-size:14px;transform:translateY(1.4px)}
+  .ab-legend{font-size:11.5px;gap:4px 10px;padding:6px 10px;left:8px;bottom:8px;max-width:calc(100% - 16px)}
+}
+
+/* ---------- Carte « vos voisins » (client) ---------- */
+.journey .j-card.ab-neighbors{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0;padding:0;overflow:hidden;border-color:var(--moov-danger-100)}
+.ab-neighbors-map{position:relative;min-height:280px;background:var(--moov-primary-100)}
+.ab-map.is-focused .ab-labels text{font-size:17px}
+.ab-neighbors-map .ab-map{position:absolute;inset:0}
+.ab-neighbors-text{padding:22px 24px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+.ab-neighbors-text small{font-size:13px;font-weight:600;color:var(--moov-danger-700)}
+.journey .ab-neighbors-text h2{margin:0;font-size:22px;letter-spacing:-.025em;line-height:1.18}
+.ab-neighbors-text p{margin:0;color:var(--moov-text-muted)}
+.ab-neighbors-text .j-button{align-self:flex-start;margin-top:6px}
+@media (max-width:640px){
+  .journey .j-card.ab-neighbors{grid-template-columns:1fr}
+  .ab-neighbors-map{min-height:190px}
+  .ab-neighbors-text{padding:18px}
+  .journey .ab-neighbors-text h2{font-size:20px}
+  .ab-neighbors-text .j-button{align-self:stretch}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .ab-pulse,.ab-live i{animation:none}
+  .ab-pulse{opacity:.6}
+  .ab-van,.ab-route,.ab-commune,.ab-home{transition:none}
+}
+
+/* Centre d'opérations : la carte remplace l'ancien plan schématique dans « Le réseau et les équipes ». */
+.oc-command .oc-network .oc-abidjan{border-radius:0;aspect-ratio:auto;background:transparent;margin:16px 0 12px}
+.oc-command .oc-network .oc-abidjan .ab-map{aspect-ratio:1000/790;height:auto;background:var(--moov-primary-100)}
+.oc-command .oc-network .oc-abidjan .ab-legend{position:static;background:transparent;box-shadow:none;padding:10px 23px 0;max-width:none}
