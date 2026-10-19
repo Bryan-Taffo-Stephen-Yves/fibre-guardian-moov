@@ -110,6 +110,8 @@
   if (typeof module === 'object' && module.exports) { module.exports = geo; return; }
 
   const h = root.React.createElement, {useState, useEffect, useMemo} = root.React;
+  // Date courte, à l'heure d'Abidjan : « mar. 20 oct. à 10 h ».
+  const when = at => { const d = new Date(at), o = {timeZone: 'Africa/Abidjan'}; return d.toLocaleDateString('fr-FR', {...o, weekday: 'short', day: 'numeric', month: 'short'}) + ' à ' + d.toLocaleTimeString('fr-FR', {...o, hour: 'numeric'}).replace(/\D+$/, '') + ' h'; };
   const STATUS = {reported: 'Panne repérée', proposed: 'Analyse prête', approved: 'Intervention validée', rejected: 'Analyse à revoir', dispatched: 'Équipe affectée', en_route: 'Équipe en route', on_site: 'Équipe sur place', verifying: 'Vérification', resolved: 'Rétablie'};
   const segmentOf = i => i && (i.segment_id || i.segment);
   // Sur téléphone, la vue complète se resserre sur le centre de la ville pour garder des noms lisibles.
@@ -136,7 +138,7 @@
   }
   // props : segments [{id,online,total,zone}], incidents [{segment_id|segment,status,technician,position}],
   // technicians [{id,name,busy}], focus (id de segment : carte cadrée sur ce quartier), selected, onSelect.
-  function Map({segments = [], incidents = [], technicians = [], focus, selected, onSelect, label}) {
+  function Map({segments = [], incidents = [], technicians = [], forecasts = [], focus, selected, onSelect, label}) {
     const open = incidents.filter(i => OPEN.includes(i.status) && segmentOf(i));
     const moving = open.filter(i => MOVING.includes(i.status) && i.technician);
     const now = useClock(moving.some(i => i.status === 'en_route'));
@@ -170,7 +172,9 @@
       h('g', {className: 'ab-labels', 'aria-hidden': true}, COMMUNES.map(c => { const [x, y] = project(c.label); return h('text', {key: c.id, x, y, className: downCommunes.has(c.id) ? 'is-down' : undefined}, c.name); })),
       segRows.map(seg => {
         const s = SEGMENTS[seg.id], [x, y] = project(s.at), incident = open.find(i => segmentOf(i) === seg.id), total = seg.total || 20, offline = Number.isFinite(seg.online) ? Math.max(0, total - seg.online) : incident ? total : 0;
-        return h('g', {key: seg.id, className: 'ab-segment' + (incident ? ' is-down' : '') + (selected === seg.id ? ' is-selected' : '')},
+        const foreseen = !incident && forecasts.some(f => f.segment === seg.id);
+        return h('g', {key: seg.id, className: 'ab-segment' + (incident ? ' is-down' : '') + (foreseen ? ' is-foreseen' : '') + (selected === seg.id ? ' is-selected' : '')},
+          foreseen && h('circle', {cx: x, cy: y, r: 30, className: 'ab-foreseen-ring'}),
           incident && h('circle', {cx: x, cy: y, r: 44, className: 'ab-pulse', fill: 'url(#ab-alert)'}),
           incident && h('circle', {cx: x, cy: y, r: 44, className: 'ab-pulse ab-pulse--late', fill: 'url(#ab-alert)'}),
           homes(seg.id, total).map((p, k) => h('circle', {key: k, cx: p.x, cy: p.y, r: 2.6, className: 'ab-home' + (k < offline ? ' is-off' : '')})),
@@ -191,13 +195,13 @@
     );
   }
 
-  function Legend() {
+  function Legend({forecast} = {}) {
     const item = (cls, text) => h('li', null, h('i', {className: 'ab-key ' + cls, 'aria-hidden': true}), text);
-    return h('ul', {className: 'ab-legend'}, item('is-off', 'Client sans fibre'), item('is-on', 'Client connecté'), item('is-van', 'Équipe Moov'), item('is-base', 'Équipe disponible'));
+    return h('ul', {className: 'ab-legend'}, item('is-off', 'Client sans fibre'), item('is-on', 'Client connecté'), forecast && item('is-foreseen', 'Panne prévue'), item('is-van', 'Équipe Moov'), item('is-base', 'Équipe disponible'));
   }
 
   // Panneau « Abidjan en direct » pour l'équipe Moov.
-  function LivePanel({segments = [], incidents = [], technicians = [], selected, onSelect, compact}) {
+  function LivePanel({segments = [], incidents = [], technicians = [], forecasts = [], selected, onSelect, compact}) {
     const now = useClock(true);
     const open = incidents.filter(i => OPEN.includes(i.status) && segmentOf(i));
     const touched = segments.map(s => ({...s, incident: open.find(i => segmentOf(i) === s.id)})).filter(s => s.incident || s.online < s.total);
@@ -209,7 +213,7 @@
         h('div', null, h('h2', {id: 'ab-title'}, 'Abidjan en direct'), h('p', null, touched.length ? offline + ' client' + (offline > 1 ? 's' : '') + ' sans fibre dans ' + touched.length + ' quartier' + (touched.length > 1 ? 's' : '') + '.' : 'Tous les quartiers suivis ont la fibre.')),
         h('span', {className: 'ab-live'}, h('i', {'aria-hidden': true}), 'En direct · ' + new Date(now).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}))),
       h('div', {className: 'ab-body'},
-        h('div', {className: 'ab-stage'}, h(Map, {segments, incidents, technicians, selected, onSelect}), h(Legend)),
+        h('div', {className: 'ab-stage'}, h(Map, {segments, incidents, technicians, forecasts, selected, onSelect}), h(Legend, {forecast: forecasts.length > 0})),
         !compact && h('aside', {className: 'ab-side'},
           h('h3', null, 'Quartiers touchés'),
           touched.length ? h('ul', {className: 'ab-list'}, touched.map(s => { const info = SEGMENTS[s.id] || {area: s.zone}, off = Math.max(0, s.total - s.online);
@@ -218,6 +222,10 @@
               h('span', {className: 'ab-row-text'}, h('strong', null, info.area + ' · ' + (COMMUNES.find(c => c.id === info.commune)?.name || '')), h('small', null, s.incident ? STATUS[s.incident.status] : 'Mesures en baisse')),
               h('span', {className: 'ab-row-count'}, h('b', null, off), h('small', null, ' / ' + s.total)))); }))
             : h('p', {className: 'ab-empty'}, 'Aucune panne en cours. Guardian surveille les box toutes les 5 secondes.'),
+          forecasts.length > 0 && h(root.React.Fragment, null, h('h3', null, 'Pannes évitées à l’avance'), h('ul', {className: 'ab-list'}, forecasts.map((f, k) => { const info = SEGMENTS[f.segment] || {area: f.zone}, days = Math.max(1, Math.round(f.daysLeft || 1));
+            return h('li', {key: k}, h('div', {className: 'ab-row ab-forecast-row'}, h('span', {className: 'ab-row-dot', 'aria-hidden': true}),
+              h('span', {className: 'ab-row-text'}, h('strong', null, f.name.split(' ')[0] + ' · ' + info.area), h('small', null, f.prevention ? (f.technician?.name.split(' ')[0] || 'Technicien') + ' passe ' + when(f.prevention.slot) : 'Rendez-vous proposé au client')),
+              f.prevention ? h('span', {className: 'ab-row-count is-avoided'}, h('small', null, 'Évitée')) : h('span', {className: 'ab-row-count'}, h('small', null, 'coupure dans '), h('b', null, days), h('small', null, ' j')))); }))),
           technicians.length > 0 && h(root.React.Fragment, null, h('h3', null, 'Équipes'), h('ul', {className: 'ab-teams'}, technicians.map(t => { const on = open.find(i => i.technician === t.id); return h('li', {key: t.id, className: on ? 'is-busy' : undefined}, h('span', {className: 'ab-avatar', 'aria-hidden': true}, t.name[0]), h('span', null, t.name.split(' ')[0]), h('small', null, on ? (STATUS[on.status] || 'En mission') : 'Disponible')); }))),
           trips.length > 0 && h(root.React.Fragment, null, h('h3', null, 'Sur la route'), h('ul', {className: 'ab-list'}, trips.map(i => h('li', {key: i.id, className: 'ab-trip-row'}, h('span', {className: 'ab-trip-icon', 'aria-hidden': true}, h('svg', {viewBox: '0 0 24 24', width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round'}, h('path', {d: 'M3 6h11v10H3zM14 10h4l3 3v3h-7M7 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4M17 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4'}))), h('span', {className: 'ab-row-text'}, h('strong', null, i.position.technician), h('small', null, 'Vers ' + (SEGMENTS[segmentOf(i)]?.area || segmentOf(i)))), h('span', {className: 'ab-row-count'}, h('b', null, minutes(i)), h('small', null, ' min'))))))))
     );
@@ -236,6 +244,15 @@
       on_site: (first || 'L’équipe') + ' est sur place et répare la fibre.',
       verifying: 'La réparation est faite. Moov vérifie que tout revient.'
     }[incident.status] || 'Moov a repéré la panne et prépare l’intervention.';
+    // Coupure de courant (CIE) : Moov n'a rien à réparer, la box repart seule au retour du courant.
+    const power = incident.cause === 'POWER_OUTAGE';
+    if (power) return h('section', {className: 'j-card ab-neighbors is-power', role: 'status'},
+      h('div', {className: 'ab-neighbors-map'}, h(Map, {segments: area, incidents: [incident], focus: seg, label: 'Votre quartier sur la carte d’Abidjan'})),
+      h('div', {className: 'ab-neighbors-text'},
+        h('small', null, (info ? info.area + ', ' + COMMUNES.find(c => c.id === info.commune).name : 'Votre quartier')),
+        h('h2', null, 'Coupure de courant dans votre quartier'),
+        h('p', null, 'Ce n’est pas une panne Moov : le courant est coupé' + (n ? ' chez vous et chez ' + n + ' voisin' + (n > 1 ? 's' : '') : ' dans le quartier') + ' (CIE). Votre box repartira toute seule dès le retour du courant.'),
+        h('p', {className: 'ab-neighbors-hint'}, 'Inutile d’appeler le service client ni de redémarrer la box. Guardian vous prévient quand tout revient.')));
     return h('section', {className: 'j-card ab-neighbors', role: 'status'},
       h('div', {className: 'ab-neighbors-map'}, h(Map, {segments: area, incidents: [incident], focus: seg, label: 'Votre quartier sur la carte d’Abidjan'})),
       h('div', {className: 'ab-neighbors-text'},

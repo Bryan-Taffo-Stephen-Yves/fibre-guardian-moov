@@ -1,0 +1,51 @@
+/* « Guardian voit venir la panne » : carte d'accueil avec la courbe de la lumière et le rendez-vous. */
+.journey .j-card.fc-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;align-items:center;border-color:var(--moov-accent-200);background:linear-gradient(180deg,var(--moov-accent-25),var(--moov-white) 60%)}
+.journey .j-card.fc-card.is-booked{border-color:var(--moov-success-300);background:linear-gradient(180deg,var(--moov-success-50),var(--moov-white) 60%)}
+.fc-text{display:flex;flex-direction:column;gap:10px;min-width:0}
+.fc-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--moov-accent-800)}
+.fc-eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--moov-accent);box-shadow:0 0 0 4px var(--moov-accent-100)}
+.is-booked .fc-eyebrow{color:var(--moov-success-700)}
+.is-booked .fc-eyebrow::before{background:var(--moov-success);box-shadow:0 0 0 4px var(--moov-success-100)}
+.journey .fc-text h2{margin:0;font-size:24px;line-height:1.16;letter-spacing:-.025em;text-wrap:balance}
+.fc-text>p{margin:0;color:var(--moov-text-muted);max-width:52ch}
+.fc-offer{display:flex;flex-direction:column;gap:12px;margin-top:6px;padding:16px;border-radius:18px;background:var(--moov-white);border:1px solid var(--moov-line)}
+.fc-person{display:flex;align-items:center;gap:12px}
+.fc-person strong{display:block;font-size:15px}
+.fc-person small{display:block;font-size:13px;color:var(--moov-text-muted)}
+.fc-avatar{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:var(--moov-on-primary);background:var(--moov-primary)}
+.fc-slot{margin:0;font-size:16px}
+.fc-slot strong{display:block;font-size:19px;letter-spacing:-.015em}
+.fc-slots{display:flex;flex-wrap:wrap;gap:8px}
+.fc-chip{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--moov-line);background:var(--moov-white);color:var(--moov-ink);font:inherit;font-size:14px;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.fc-chip:hover{border-color:var(--moov-primary-300)}
+.fc-chip.is-on{background:var(--moov-primary-50);border-color:var(--moov-primary);color:var(--moov-primary-800);font-weight:600}
+.fc-chip:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+.fc-actions{display:flex;flex-wrap:wrap;gap:10px}
+.fc-graph{display:flex;flex-direction:column;gap:10px;min-width:0}
+.fc-chart{width:100%;height:auto;display:block;overflow:visible}
+.fc-stop-top{stop-color:var(--moov-primary);stop-opacity:.22}
+.fc-stop-bottom{stop-color:var(--moov-primary);stop-opacity:0}
+.fc-zone-warn{fill:var(--moov-accent-50)}
+.fc-zone-cut{fill:var(--moov-danger-50)}
+.fc-cut-line{stroke:var(--moov-danger-300);stroke-width:1.5;stroke-dasharray:4 4}
+.fc-cut-label{font-size:12px;fill:var(--moov-danger-700);font-weight:600}
+.fc-line{fill:none;stroke:var(--moov-primary);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.fc-projection{fill:none;stroke:var(--moov-accent);stroke-width:3;stroke-dasharray:2 7;stroke-linecap:round}
+.fc-projection.is-avoided{stroke:var(--moov-neutral-300)}
+.fc-now{fill:var(--moov-primary);stroke:var(--moov-white);stroke-width:3}
+.fc-cut circle{fill:var(--moov-danger-500);stroke:var(--moov-white);stroke-width:3}
+.fc-cut text{font-size:12px;font-weight:700;fill:var(--moov-danger-700)}
+.fc-cut.is-avoided circle{fill:var(--moov-neutral-300)}
+.fc-cut.is-avoided text{fill:var(--moov-success-700)}
+.fc-visit line{stroke:var(--moov-success);stroke-width:2;stroke-dasharray:3 4}
+.fc-visit text{font-size:12px;font-weight:700;fill:var(--moov-success-700)}
+.fc-axis text{font-size:12px;fill:var(--moov-text-muted)}
+.fc-facts{margin:0;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--moov-text-muted)}
+.fc-facts b{color:var(--moov-ink);font-weight:600;font-variant-numeric:tabular-nums}
+@media (max-width:760px){
+  .journey .j-card.fc-card{grid-template-columns:1fr;gap:18px}
+  .journey .fc-text h2{font-size:21px}
+  .fc-actions .j-button{flex:1 1 140px}
+  .fc-chart text{font-size:19px}
+  .fc-chart .fc-cut-label{font-size:17px}
+}
