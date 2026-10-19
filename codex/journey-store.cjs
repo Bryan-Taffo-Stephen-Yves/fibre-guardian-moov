@@ -15,6 +15,7 @@ function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS journey_state(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,body TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS citizen_reports(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,created INTEGER NOT NULL,zone TEXT NOT NULL,description TEXT NOT NULL,photo TEXT NOT NULL,lat REAL NOT NULL,lon REAL NOT NULL,status TEXT NOT NULL DEFAULT 'received',response TEXT NOT NULL DEFAULT '');
  `);usage.migrate(s);s.run('DELETE FROM journey_otp WHERE expires<?',Date.now());}
+const DEVICE_LIMITS=[5,10,20],MANUAL_LIMIT_MS=30*86400000;
 function seed(){return {version:0,mode:'simulation',created:Date.now(),scenario:'normal',usual:4,capacity:100,plan:{id:'demo-100',name:'Essentiel démo',mbps:100,price:25000},zone:'Yopougon · Niangon',segment:'YOP-07',selectedHome:'home-1',devices:[
  {id:'phone',name:'iPhone de Koffi',demand:5,protected:true,recognized:true},
  {id:'mac',name:'MacBook de Hady',demand:12,protected:true,recognized:true},
@@ -123,7 +124,15 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
  }else if(d.type==='cancel-proposal'){st.proposal=null;
  }else if(d.type==='restore'){for(const dev of st.devices){dev.limit=null;dev.until=null;}st.proposal=null;audit(st,'qos.restore','Limites temporaires annulées');
  }else if(d.type==='device'){
-  const dev=st.devices.find(v=>v.id===d.id);insist(dev,'Appareil inconnu.',404);insist(['recognize','block','unblock'].includes(d.action),'Action inconnue.');if(d.action==='recognize')dev.recognized=true;else{insist(!dev.protected,'Cet appareil est protégé.',403);insist(d.confirm===true,'Confirmation obligatoire.');dev.blocked=d.action==='block';}audit(st,'device.'+d.action,dev.name);
+  const dev=st.devices.find(v=>v.id===d.id);insist(dev,'Appareil inconnu.',404);insist(['recognize','block','unblock','limit','unlimit','remove'].includes(d.action),'Action inconnue.');
+  if(d.action==='recognize')dev.recognized=true;
+  else{insist(!dev.protected,'Cet appareil est protégé.',403);insist(d.confirm===true,'Confirmation obligatoire.');
+   // Limite choisie par le client : reste en place jusqu'à ce qu'il l'enlève (plancher de 2 Mbps conservé).
+   if(d.action==='limit'){insist(DEVICE_LIMITS.includes(d.mbps),'Débit proposé : '+DEVICE_LIMITS.join(', ')+' Mbps.');insist(!dev.blocked,'Débloquez d’abord cet appareil.',409);dev.limit=d.mbps;dev.until=now+MANUAL_LIMIT_MS;dev.manual=true;}
+   else if(d.action==='unlimit'){dev.limit=null;dev.until=null;dev.manual=false;}
+   else if(d.action==='remove'){st.devices=st.devices.filter(v=>v.id!==dev.id);if(st.proposal&&(st.proposal.target===dev.id||st.proposal.limits.some(l=>l.id===dev.id)))st.proposal=null;}
+   else dev.blocked=d.action==='block';}
+  audit(st,'device.'+d.action,dev.name+(d.action==='limit'?' · '+d.mbps+' Mbps':''));
  }else if(d.type==='usage-context'){
   insist(d.confirm===true,'Confirmez le contexte d’usage.');insist(Object.hasOwn(usage.CONTEXTS,d.value),'Contexte inconnu.');st.usageContext=d.value;st.proposal=null;audit(st,'usage.context',usage.CONTEXTS[d.value].label+' · aucune action sur le débit');
  }else if(d.type==='baseline'){st.usual=snapshot(st).metrics.connected;audit(st,'baseline','Nombre habituel confirmé : '+st.usual);

@@ -75,9 +75,19 @@ test('Le contexte sélectionné vient du serveur et ne change qu’après confir
  await app.settle();assert.equal(tag(app.tree,'select')[0].props.value,'developers');app.confirmations[0].run();assert.equal(app.actions[0][0],'usage-context');assert.equal(app.actions[0][1].value,'work');assert.equal(app.actions[0][1].confirm,true);
  app.setProps({busy:true});await app.settle();assert.equal(tag(app.tree,'select')[0].props.disabled,true);
 });
-test('Gérer un appareil actif prépare une confirmation, jamais une coupure implicite',async()=>{
- const app=harness();await app.settle();namedButton(article(app.tree,'LG TV du salon'),'Gérer').props.onClick();assert.equal(app.actions.length,0);assert.equal(app.confirmations.length,1);assert.match(app.confirmations[0].title,/Bloquer LG TV/);
+const sheet=root=>all(root,node=>node.props.role==='dialog')[0];
+test('Gérer un appareil actif ouvre sa fiche, jamais une coupure implicite',async()=>{
+ const app=harness();await app.settle();namedButton(article(app.tree,'LG TV du salon'),'Gérer').props.onClick();await app.settle();assert.equal(app.actions.length,0);assert.equal(app.confirmations.length,0);
+ const card=sheet(app.tree);assert.ok(card,'La fiche de l’appareil doit s’ouvrir');assert.match(text(card),/Limiter le débit/);
+ namedButton(card,'Bloquer l’accès à Internet').props.onClick();await app.settle();assert.equal(app.actions.length,0);assert.equal(app.confirmations.length,1);assert.match(app.confirmations[0].title,/Bloquer LG TV/);assert.equal(sheet(app.tree),undefined);
  app.confirmations[0].run();assert.equal(app.actions[0][0],'device');assert.equal(app.actions[0][1].id,'tv');assert.equal(app.actions[0][1].action,'block');assert.equal(app.actions[0][1].confirm,true);
+});
+test('La fiche limite le débit au choix du client et retire un appareil après confirmation',async()=>{
+ const app=harness();await app.settle();namedButton(article(app.tree,'LG TV du salon'),'Gérer').props.onClick();await app.settle();
+ const option=tag(sheet(app.tree),'button').find(node=>text(node).startsWith('10 Mbps'));option.props.onClick();
+ assert.deepEqual([app.actions[0][0],app.actions[0][1].action,app.actions[0][1].mbps,app.actions[0][1].confirm],['device','limit',10,true]);
+ namedButton(sheet(app.tree),'Retirer de mon réseau').props.onClick();await app.settle();assert.equal(app.actions.length,1,'Le retrait attend la confirmation');assert.match(app.confirmations[0].body,/mot de passe Wi-Fi/);
+ app.confirmations[0].run();assert.equal(app.actions[1][1].action,'remove');assert.equal(app.actions[1][1].confirm,true);
 });
 test('Le rafraîchissement attend la requête active et les erreurs deviennent visibles',async()=>{
  let reject;const app=harness({api:()=>new Promise((_,no)=>{reject=no;})});app.render();app.flushEffects();assert.equal(app.apiCalls.length,1);

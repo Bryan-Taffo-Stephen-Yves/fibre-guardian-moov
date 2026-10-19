@@ -6,7 +6,7 @@
  const SIMULATED=[
   ['Box et mesures','Les débits, les appareils connectés et les pannes viennent d’un simulateur. Aucune box réelle n’est lue ni modifiée.'],
   ['SMS','Le code de connexion s’affiche à l’écran au lieu d’être envoyé par SMS. Les notifications restent dans l’application.'],
-  ['GPS et trajets','La carte est un plan schématique. Les véhicules et les heures d’arrivée sont calculés, pas suivis par GPS.'],
+  ['GPS et trajets','La carte est un plan schématique. Les véhicules et les heures d’arrivée sont calculés, pas suivis par GPS.'],['Appel du technicien','Le bouton « Appeler » ouvre un écran d’appel dans l’application. Aucun appel téléphonique n’est passé et les numéros des techniciens sont réservés à la démonstration.'],
   ['Paiement','Le paiement Moov Money est simulé. Aucun argent n’est débité.'],
   ['Systèmes Moov','L’application n’est pas reliée au système d’information de Moov (ACS, facturation, supervision réelle).'],
   ['Guardian','L’assistant suit des règles écrites à l’avance. Il ne fait rien sans l’accord d’une personne.']
