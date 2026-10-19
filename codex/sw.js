@@ -2,8 +2,8 @@
    Les pages et fichiers passent d'abord par le réseau (jamais de version périmée en ligne),
    le cache ne sert qu'en secours. Les données (/api/) ne sont jamais mises en cache. */
 'use strict';
-const CACHE = 'fibre-guardian-v3';
-const SHELL = ['./', './index.html', './offline.html', './bootstrap.js', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png', '../vendor/fonts.css', './moov-theme.css', './moov-brand.css'];
+const CACHE = 'fibre-guardian-v4';
+const SHELL = ['./', './index.html', './offline.html', './bootstrap.js', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png', '../vendor/fonts.css', './moov-theme.css', './moov-brand.css', './fonts.css', './refonte.css'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
