@@ -142,3 +142,18 @@
 .oc-command .oc-network .oc-abidjan{border-radius:0;aspect-ratio:auto;background:transparent;margin:16px 0 12px}
 .oc-command .oc-network .oc-abidjan .ab-map{aspect-ratio:1000/790;height:auto;background:var(--moov-primary-100)}
 .oc-command .oc-network .oc-abidjan .ab-legend{position:static;background:transparent;box-shadow:none;padding:10px 23px 0;max-width:none}
+
+/* Panne prévue : anneau orange en pointillés autour du quartier, avant toute coupure. */
+.ab-foreseen-ring{fill:color-mix(in srgb,var(--moov-accent) 12%,transparent);stroke:var(--moov-accent);stroke-width:2.5;stroke-dasharray:6 5;transform-box:fill-box;transform-origin:center;animation:ab-foresee 14s linear infinite}
+.ab-segment.is-foreseen .ab-pin-dot{fill:var(--moov-accent)}
+.ab-segment.is-foreseen .ab-pin-label{fill:var(--moov-accent-800)}
+.ab-key.is-foreseen{background:transparent;border:2px dashed var(--moov-accent)}
+.ab-forecast-row .ab-row-dot{background:var(--moov-accent);box-shadow:0 0 0 4px var(--moov-accent-100)}
+.ab-row.ab-forecast-row{cursor:default;background:var(--moov-accent-25);border-color:var(--moov-accent-100)}
+.ab-forecast-row .ab-row-count b{color:var(--moov-accent-800)}
+@keyframes ab-foresee{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ab-foreseen-ring{animation:none}}
+.journey .j-card.ab-neighbors.is-power{border-color:var(--moov-warning-300)}
+.ab-neighbors.is-power .ab-neighbors-text small{color:var(--moov-warning-700)}
+.ab-neighbors-text .ab-neighbors-hint{font-size:14px;color:var(--moov-ink)}
+.ab-row-count.is-avoided small{font-weight:650;color:var(--moov-success-700)}

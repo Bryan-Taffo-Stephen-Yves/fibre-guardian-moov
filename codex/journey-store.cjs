@@ -6,6 +6,13 @@ const operator=require('./operator-store.cjs');
 const usage=require('./journey-usage.cjs');
 const langues=require('./langues.cjs'),boxReading=require('./box-reading.cjs');
 const {rebootGate}=require('./ui-model.js');
+const forecastLib=require('./forecast.cjs');
+// Passage préventif : l'équipe fibre du quartier (fiches de noc-store.cjs).
+const PREVENTIVE={'YOP-07':'koffi','COC-03':'yao','MAR-02':'amina'};
+function preventiveTech(segment){const t=require('./noc-store.cjs').TECHS.find(x=>x.id===(PREVENTIVE[segment]||'koffi'));return t?{name:t.name,team:t.team,phone:t.phone}:null;}
+function optical(st,now=Date.now()){return forecastLib.forecast({fadingSince:st.scenario==='fading'?st.fadingSince||now:null,now,technician:preventiveTech(st.segment)});}
+const day=at=>new Date(at).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' à '+new Date(at).getHours()+' h';
+const dbm=v=>String(v).replace('.',',').replace('-','−');
 const REBOOT_MS=20000; // Durée affichée d’un redémarrage de box à distance.
 const STEPS=['reported','confirmed','assigned','en_route','on_site','repairing','verifying','resolved'];
 const LABELS=['Signalement reçu','Incident confirmé','Équipe affectée','En route','Sur place','Réparation en cours','Vérification du réseau','Connexion rétablie'];
@@ -32,7 +39,7 @@ function snapshot(st){const now=Date.now(),down=!!active(st),rebooting=!down&&st
  const devices=st.devices.map(d=>({...d,limit:d.until>now?d.limit:null,until:d.until>now?d.until:null}));
  const demand=devices.map(d=>d.blocked?0:Math.min(d.demand,d.limit??Infinity)),total=demand.reduce((a,b)=>a+b,0);
  devices.forEach((d,i)=>{d.mbps=Math.round((total>cap?demand[i]*cap/total:demand[i])*10)/10;});
- return {...st,devices,metrics:{at:now,capacity:cap,used:Math.round(devices.reduce((a,d)=>a+d.mbps,0)*10)/10,latency:down||rebooting?null:total>cap?85:18,connected:devices.filter(d=>!d.blocked).length,state:down?'panne':rebooting?'redémarrage':total>cap?'dégradée':'stable',rebootUntil:rebooting?st.rebootUntil:null},incidents:st.incidents.map(i=>({...i,progress:i.status==='en_route'?Math.min(1,(now-i.departed)/120000):STEPS.indexOf(i.status)>3?1:0,eta:i.status==='en_route'?Math.max(0,Math.ceil((120000-(now-i.departed))/1000)):null}))};}
+ return {...st,devices,metrics:{at:now,capacity:cap,used:Math.round(devices.reduce((a,d)=>a+d.mbps,0)*10)/10,latency:down||rebooting?null:total>cap?85:18,connected:devices.filter(d=>!d.blocked).length,state:down?'panne':rebooting?'redémarrage':total>cap?'dégradée':'stable',rebootUntil:rebooting?st.rebootUntil:null},optical:optical(st,now),prevention:st.prevention||null,incidents:st.incidents.map(i=>({...i,progress:i.status==='en_route'?Math.min(1,(now-i.departed)/120000):STEPS.indexOf(i.status)>3?1:0,eta:i.status==='en_route'?Math.max(0,Math.ceil((120000-(now-i.departed))/1000)):null}))};}
 function validatePhoto(value){insist(typeof value==='string'&&value.length<480000,'Photo limitée à 350 Ko.');const m=value.match(/^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/);insist(m,'Photo PNG ou JPEG requise.');const bytes=Buffer.from(m[2],'base64');insist(bytes.length>12&&bytes.length<=350000,'Taille de photo invalide.');insist(m[1]==='png'?bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a':bytes[0]===255&&bytes[1]===216&&bytes[2]===255,'Format de photo invalide.');return value;}
 function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context||active(st),connected=snap.devices.filter(d=>!d.blocked),largest=connected.slice().sort((a,b)=>b.mbps-a.mbps)[0];
  const facts=[{label:'Incident du segment',value:fault?(fault.segment||fault.reference||st.segment):'Aucun incident ouvert'},{label:'Appareils connectés',value:connected.length+' / '+st.usual+' habituels'},{label:'Plus gros usage',value:largest?largest.name+' · '+largest.mbps+' Mbps':'Aucun appareil actif'}];
@@ -49,6 +56,9 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   st.upgrade=quote;
   return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mbps : complément unique de '+quote.amount.toLocaleString('fr-FR')+' FCFA, puis 30 000 FCFA par mois. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
  }
+ if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
+  return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
+   facts:[...facts,{label:'Lumière reçue par la box',value:dbm(f.current)+' dBm (coupure vers '+dbm(f.threshold)+' dBm)'},{label:'Baisse mesurée',value:dbm(Math.abs(f.slope))+' dB par jour sur 7 jours'}]};}}
  if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:'Votre débit est tombé à '+snap.metrics.capacity+' Mbps alors que votre offre prévoit '+plan.mbps+' Mbps. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot'};
  if(connected.length>st.usual+1)return {message:'Le nombre d’appareils est inhabituel. Un appareil nouveau n’est pas forcément un intrus : vérifiez ceux auxquels vous avez donné le mot de passe avant de les bloquer.',facts,action:'devices'};
  if(/jeu|gaming|film|visio|meeting|télécharg|download|dévelop|bureau|travail|compil|docker|limite/i.test(text)){
@@ -78,7 +88,9 @@ function snapshotFor(s,uid,st){const result={...snapshot(st),usageContext:st.usa
 function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Démarrez votre démonstration.',409);insist(d.version===st.version,'Le parcours a été actualisé. Réessayez.',409);const now=Date.now();
  usage.observe(s,uid,{...st,sharedIncident:sharedFault(s,uid)},now);
  if(d.type==='scenario'){
-  insist(['normal','download','slow','devices'].includes(d.value),'Scénario inconnu.');const changed=st.scenario!==d.value;st.scenario=d.value;
+  insist(['normal','download','slow','devices','fading'].includes(d.value),'Scénario inconnu.');const changed=st.scenario!==d.value;st.scenario=d.value;
+  if(changed){st.fadingSince=d.value==='fading'?now:null;st.prevention=null;}
+  if(changed&&d.value==='fading'){const f=optical(st,now);st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Guardian a vu venir une panne',body:'La lumière qui arrive à votre box baisse chaque jour. Un passage du technicien est proposé avant la coupure.',read:false});st.notifications=st.notifications.slice(0,100);audit(st,'forecast.detected',dbm(f.current)+' dBm, '+f.slope+' dB par jour');}
   if(d.value!=='devices')st.devices=st.devices.filter(x=>!x.guest);
   st.devices.find(x=>x.id==='ps5').demand=d.value==='download'?110:6;
   if(changed){st.proposal=null;st.upgrade=null;} // Un partage proposé sur un autre scénario ne doit plus être validable.
@@ -89,6 +101,13 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
    st.notifications=st.notifications.slice(0,100);
   }
   audit(st,'scenario',d.value);
+ }else if(d.type==='prevention'){
+  // Le client choisit lui-même le moment du passage ; rien n'est réservé sans son accord.
+  const f=optical(st,now);insist(f.state==='fading','Votre ligne n’a pas besoin de visite pour le moment.',409);
+  const slot=f.slots.find(v=>v.id===d.slot);insist(slot,'Ce moment n’est plus disponible. Choisissez-en un autre.',409);
+  st.prevention={slot:slot.at,technician:f.technician,booked:now};
+  st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Passage du technicien confirmé',body:(f.technician?.name||'Un technicien')+' passe '+day(slot.at)+'. Vous ne serez pas coupé.',read:false});st.notifications=st.notifications.slice(0,100);
+  audit(st,'prevention.booked',day(slot.at));
  }else if(d.type==='chat'){
   // d.meaning est ajouté par le serveur (langues.cjs ou Claude), jamais accepté tel quel du navigateur (voir pilot-server).
   const text=paragraph(d.text,'Message',1200),meaning=d.meaning&&['nouchi','dioula','autre'].includes(d.meaning.lang)?{lang:d.meaning.lang,french:String(d.meaning.french||'').slice(0,300)}:null,fault=sharedFault(s,uid);
@@ -168,4 +187,4 @@ function boxPhoto(s,uid,d,reading){return s.transaction(()=>{const st=get(s,uid)
  st.messages.push({id:id(),role:'user',text:'Voici une photo de ma box.',photo:true},{id:id(),role:'assistant',text:r.message,facts:r.facts,action:r.action,verdict:r.verdict,concord:r.concord,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  audit(st,'photo.read',(reading.source==='claude'?'Lecture Guardian':'Lecture sur le téléphone')+' · '+(r.verdict||'à reprendre')+' · photo non conservée');st.version++;put(s,uid,st);return snapshotFor(s,uid,st);});}
 function refine(s,uid,messageId,text){const st=get(s,uid);if(!st)return null;const m=st.messages.find(x=>x.id===messageId&&x.role==='assistant');if(!m)return snapshotFor(s,uid,st);m.text=text;put(s,uid,st);return snapshotFor(s,uid,st);}
-module.exports={migrate,seed,get,put,snapshot,snapshotFor,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
+module.exports={optical,migrate,seed,get,put,snapshot,snapshotFor,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
