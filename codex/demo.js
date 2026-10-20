@@ -13,6 +13,7 @@
   ['Agents de Guardian','Les quatre agents prennent volontairement une douzaine de secondes pour montrer leur travail. Leurs conclusions viennent de règles testées ; ils n’envoient jamais un technicien sans l’accord d’une personne de Moov.'],
   ['Capteurs d’armoire','Le capteur d’eau des armoires, l’alarme d’ouverture des boîtiers et l’avis de chantier sont imaginés pour la démo. Guardian saurait s’en servir si Moov les installe.'],
   ['Graphiques du tableau de bord','La courbe des box en ligne, les interventions par jour et la part de pannes réglées à temps sont reconstituées jour par jour pour la démo. Seul le point d’aujourd’hui vient des mesures en direct.'],
+  ['Labo réseau','Les mesures du Labo (centrales OLT, box ONT, réflectomètre, console d’alarmes) sont calculées à partir des pannes du simulateur, avec les valeurs habituelles d’un réseau fibre GPON classe C+. Elles ne viennent pas des équipements de Moov. Les seuils réglés et le redémarrage d’une box ne changent que l’écran du Labo.'],
   ['Paiement','Le paiement Moov Money est simulé. Aucun argent n’est débité.'],
   ['Systèmes Moov','L’application n’est pas reliée au système d’information de Moov (ACS, facturation, supervision réelle).'],
   ['Guardian','L’assistant suit des règles écrites à l’avance. Il ne fait rien sans l’accord d’une personne.']
