@@ -12,6 +12,7 @@
   ['WhatsApp et mail','Les messages WhatsApp du simulateur s’affichent dans l’application. Si le bac à sable WhatsApp de Twilio (ou le numéro de test de Meta) est branché, ils partent aussi vers les téléphones inscrits pour la démonstration, et seulement ceux de la commune touchée pour les clients. Les mails à l’équipe s’affichent dans l’application et ne sont pas envoyés.'],
   ['Agents de Guardian','Les quatre agents prennent volontairement une douzaine de secondes pour montrer leur travail. Leurs conclusions viennent de règles testées ; ils n’envoient jamais un technicien sans l’accord d’une personne de Moov.'],
   ['Capteurs d’armoire','Le capteur d’eau des armoires, l’alarme d’ouverture des boîtiers et l’avis de chantier sont imaginés pour la démo. Guardian saurait s’en servir si Moov les installe.'],
+  ['Graphiques du tableau de bord','La courbe des box en ligne, les interventions par jour et la part de pannes réglées à temps sont reconstituées jour par jour pour la démo. Seul le point d’aujourd’hui vient des mesures en direct.'],
   ['Paiement','Le paiement Moov Money est simulé. Aucun argent n’est débité.'],
   ['Systèmes Moov','L’application n’est pas reliée au système d’information de Moov (ACS, facturation, supervision réelle).'],
   ['Guardian','L’assistant suit des règles écrites à l’avance. Il ne fait rien sans l’accord d’une personne.']
