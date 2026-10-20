@@ -1,0 +1,107 @@
+/* Mode survie : le téléphone qui compose *144# sans internet. */
+.sv{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"intro stage" "offers stage";gap:24px 48px;align-items:start}
+.sv-intro{grid-area:intro;display:grid;gap:14px;justify-items:start}
+.sv-intro h1{margin:0;font-family:var(--fg-font-display);font-size:clamp(30px,3.6vw,44px);line-height:1.06;letter-spacing:-.032em;color:var(--moov-ink)}
+.sv-intro p{margin:0;max-width:46ch;font-size:17px;line-height:1.5;color:var(--moov-neutral-700)}
+.sv-intro p strong{color:var(--moov-primary)}
+.sv-code{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:4px}
+.sv-code-chip{font-size:30px;font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums;padding:8px 18px;border-radius:16px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.sv-stage{grid-area:stage;display:grid;justify-items:center}
+.sv-offers{grid-area:offers;display:grid;gap:16px;justify-items:start}
+.sv-offers h2{margin:0;font-size:19px;letter-spacing:-.015em}
+.sv-offers ol{list-style:none;margin:0;padding:0;display:grid;gap:14px;width:100%}
+.sv-offers li{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start}
+.sv-offers li strong{display:block;font-size:15.5px;color:var(--moov-ink)}
+.sv-offers li p{margin:2px 0 0;font-size:14px;color:var(--moov-neutral-600)}
+.sv-num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--moov-primary-50);color:var(--moov-primary);font-weight:700;font-size:14px}
+.journey .sv-note,.sv-note{display:block;width:100%;padding:14px 16px;border-radius:14px;background:var(--moov-primary-25);border:1px solid var(--moov-primary-100)}
+.journey .sv-note strong{display:block;color:var(--moov-primary-700)}
+.sv-note p{margin:4px 0 0;font-size:14px;color:var(--moov-neutral-700)}
+
+/* Le téléphone */
+.sv-phone{position:relative;width:min(340px,100%);height:690px;padding:11px;border-radius:52px;background:var(--moov-neutral-900);box-shadow:0 0 0 2px var(--moov-neutral-700),0 30px 60px -24px color-mix(in srgb,var(--moov-primary-900) 55%,transparent),0 12px 24px -12px color-mix(in srgb,var(--moov-black) 40%,transparent)}
+.sv-notch{position:absolute;top:22px;left:50%;z-index:3;width:92px;height:26px;transform:translateX(-50%);border-radius:999px;background:var(--moov-black)}
+.sv-screen{position:relative;height:100%;overflow:hidden;border-radius:42px;background:var(--moov-surface);display:flex;flex-direction:column;color:var(--moov-ink)}
+.sv-status{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:16px 26px 0 30px;min-height:46px;font-size:13px}
+.sv-status b{font-weight:600}
+.sv-carrier{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px}
+.sv-bars{display:inline-flex;align-items:flex-end;gap:2px;height:13px}
+.sv-bars i{width:3px;border-radius:1px;background:currentColor}
+.sv-offline{align-self:center;display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:4px 10px;border-radius:999px;background:var(--moov-danger-50);color:var(--moov-danger-700);font-size:11px;font-weight:600}
+.sv-home-bar{position:absolute;bottom:19px;left:50%;width:118px;height:5px;transform:translateX(-50%);border-radius:999px;background:var(--moov-neutral-400)}
+.sv-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Le composeur */
+.sv-dialer{flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 26px 40px}
+/* Le style des champs de l'espace client est plus fort : on le remplace ici seulement. */
+.journey .sv-display input,.sv-display input{width:100%;height:auto;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;text-align:center;font:inherit;font-size:36px!important;font-weight:400;letter-spacing:.04em;color:var(--moov-ink);font-variant-numeric:tabular-nums;padding:4px 0!important}
+.sv-display input::placeholder{color:var(--moov-neutral-300)}
+.journey .sv-display input:focus,.sv-display input:focus-visible{outline:none!important;box-shadow:none!important;border:0!important}
+.sv-hint{min-height:20px;margin:2px 0 14px;text-align:center;font-size:13px;color:var(--moov-danger-700)}
+.sv-keys{display:grid;grid-template-columns:repeat(3,68px);justify-content:center;gap:14px 24px}
+.sv-key{display:grid;place-items:center;align-content:center;width:68px;height:68px;border:0;border-radius:50%;background:var(--moov-neutral-100);color:var(--moov-ink);cursor:pointer;transition:background .15s,transform .15s var(--fg-ease)}
+.sv-key b{font-size:30px;font-weight:400;line-height:1}
+.sv-key small{font-size:9px;font-weight:600;letter-spacing:.16em;color:var(--moov-neutral-500);line-height:1.4}
+.sv-key:hover{background:var(--moov-neutral-150)}
+.sv-key:active{background:var(--moov-neutral-200);transform:scale(.94)}
+.sv-key:focus-visible,.sv-call:focus-visible,.sv-erase:focus-visible,.sv-dialog button:focus-visible,.sv-sms-banner:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+.sv-actions{display:grid;grid-template-columns:repeat(3,68px);justify-content:center;gap:24px;margin-top:16px;align-items:center}
+.sv-call{display:grid;place-items:center;width:68px;height:68px;border:0;border-radius:50%;background:var(--moov-success-500);color:var(--moov-white);cursor:pointer;box-shadow:0 8px 18px -8px var(--moov-success-700);transition:transform .15s var(--fg-ease)}
+.sv-call:active{transform:scale(.94)}
+.sv-erase{border:0;background:none;font-size:24px;color:var(--moov-neutral-600);cursor:pointer;height:48px}
+.sv-erase:disabled{visibility:hidden}
+
+/* La fenêtre USSD */
+.sv-veil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;padding:20px;background:color-mix(in srgb,var(--moov-neutral-900) 42%,transparent);animation:sv-fade .2s ease-out}
+.sv-dialog{width:100%;padding:22px 20px 8px;border-radius:24px;background:var(--moov-surface);box-shadow:0 20px 40px -16px color-mix(in srgb,var(--moov-black) 45%,transparent);animation:sv-pop .28s var(--fg-ease)}
+.sv-running{display:flex;align-items:center;gap:14px;padding:22px 20px;font-size:15px;color:var(--moov-neutral-700)}
+.sv-spinner{width:24px;height:24px;flex:none;border-radius:50%;border:3px solid var(--moov-primary-100);border-top-color:var(--moov-primary);animation:sv-spin .8s linear infinite}
+.sv-text{margin:0 0 14px;white-space:pre-line;font-size:15.5px;line-height:1.5;color:var(--moov-ink)}
+.journey .sv-reply,.sv-reply{width:100%;height:auto;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;border-bottom:2px solid var(--moov-primary)!important;background:none!important;font:inherit;font-size:19px!important;padding:6px 2px!important;color:var(--moov-ink)}
+.journey .sv-reply:focus,.sv-reply:focus{outline:none!important;box-shadow:none!important;border-bottom-color:var(--moov-primary-700)!important}
+.sv-buttons{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
+.sv-buttons button{min-height:44px;padding:0 14px;border:0;border-radius:12px;background:none;font:inherit;font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase;color:var(--moov-primary);cursor:pointer}
+.sv-buttons button:hover{background:var(--moov-primary-25)}
+.sv-buttons button:disabled{color:var(--moov-neutral-300);cursor:default;background:none}
+
+/* Le SMS qui arrive */
+.sv-sms-banner{position:absolute;top:48px;left:10px;right:10px;z-index:4;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--moov-line);border-radius:18px;background:var(--moov-surface);box-shadow:var(--fg-shadow-lg);text-align:left;font:inherit;cursor:pointer;animation:sv-drop .45s var(--fg-ease)}
+.sv-sms-banner strong{display:block;font-size:13.5px;color:var(--moov-ink)}
+.sv-sms-banner small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;line-height:1.35;color:var(--moov-neutral-700)}
+.sv-sms-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:10px;background:var(--moov-success-500);color:var(--moov-white);font-size:10px;font-weight:700;letter-spacing:.04em}
+.sv-messages{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;gap:14px;padding:64px 16px 40px;background:var(--moov-neutral-25)}
+.sv-messages header{display:flex;justify-content:space-between;align-items:center}
+.sv-link{border:0;background:none;font:inherit;font-weight:600;color:var(--moov-primary);cursor:pointer;min-height:44px}
+.sv-bubble{align-self:flex-start;max-width:88%;padding:12px 14px;border-radius:18px 18px 18px 6px;background:var(--moov-neutral-150)}
+.sv-bubble p{margin:0;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere}
+.sv-bubble a{color:var(--moov-primary);font-weight:600}
+.sv-bubble time{display:block;margin-top:6px;font-size:11px;color:var(--moov-neutral-500)}
+
+/* Raccourcis dans l'accueil et le signalement */
+.journey .sv-promo{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center}
+.journey .sv-promo h2{margin:0 0 4px;font-size:18px;letter-spacing:-.015em}
+.journey .sv-promo p{margin:0;color:var(--moov-neutral-600);font-size:14.5px}
+.sv-promo-code{padding:14px 16px;border-radius:16px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:22px;font-weight:700;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.journey .sv-report-hint{padding:10px 14px;border-radius:12px;background:var(--moov-primary-25);color:var(--moov-neutral-700);font-size:14.5px}
+.journey .sv-report-hint strong{color:var(--moov-primary)}
+
+@keyframes sv-fade{from{opacity:0}}
+@keyframes sv-pop{from{opacity:0;transform:scale(.94)}}
+@keyframes sv-drop{from{opacity:0;transform:translateY(-24px)}}
+@keyframes sv-spin{to{transform:rotate(360deg)}}
+
+@media(max-width:960px){
+ .sv{grid-template-columns:minmax(0,1fr);grid-template-areas:"intro" "stage" "offers";gap:24px}
+ .journey .sv-promo{grid-template-columns:auto 1fr}
+ .journey .sv-promo>.j-button{grid-column:1/-1;justify-self:start}
+}
+@media(max-width:400px){
+ .sv-phone{height:660px;border-radius:46px;padding:9px}
+ .sv-screen{border-radius:38px}
+ .sv-keys,.sv-actions{grid-template-columns:repeat(3,64px);gap:12px 20px}
+ .sv-key,.sv-call{width:64px;height:64px}
+ .sv-dialer{padding:10px 18px 38px}
+ .journey .sv-promo{grid-template-columns:1fr}
+ .sv-promo-code{justify-self:start}
+}
+@media(prefers-reduced-motion:reduce){.sv-veil,.sv-dialog,.sv-sms-banner,.sv-key,.sv-call{animation:none;transition:none}.sv-spinner{animation-duration:2s}}

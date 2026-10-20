@@ -103,6 +103,8 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
     if(route==='/api/noc/client'&&method==='GET')return json(res,noc.client(store,user.id));
+    // Mode survie : le menu *144# (écran USSD de l'application ; une passerelle d'opérateur appellerait la même fonction).
+    if(route==='/api/ussd'&&method==='POST')return json(res,require('./ussd.cjs').respond(store,user.id,await body(req,1024)));
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
