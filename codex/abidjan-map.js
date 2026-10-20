@@ -18,7 +18,8 @@
     return d + 'Z';
   };
   // Cadre de la vue complète : on retire le haut, peu habité, pour donner la place à la lagune.
-  const FULL = [0, 60, W, 790], NARROW = [60, 250, 740, 510];
+  // Sur téléphone, le cadre va jusqu'à l'encart de Grand-Bassam, au sud-est.
+  const FULL = [0, 60, W, 805], NARROW = [60, 250, 870, 610];
 
   // Rive nord de la lagune, d'est en ouest : Riviera, baie de Cocody, Plateau, baie du Banco, Yopougon.
   const NORTH_SHORE = [[-3.875, 5.335], [-3.89, 5.338], [-3.91, 5.345], [-3.925, 5.343], [-3.94, 5.338], [-3.955, 5.333], [-3.97, 5.33], [-3.985, 5.327], [-3.995, 5.325], [-3.998, 5.335], [-4.002, 5.345], [-4.006, 5.338], [-4.008, 5.328], [-4.012, 5.312], [-4.02, 5.311], [-4.027, 5.318], [-4.028, 5.33], [-4.03, 5.338], [-4.033, 5.345], [-4.037, 5.338], [-4.04, 5.326], [-4.045, 5.318], [-4.055, 5.315], [-4.065, 5.31], [-4.075, 5.315], [-4.085, 5.31], [-4.095, 5.305], [-4.105, 5.312], [-4.115, 5.318], [-4.125, 5.315], [-4.135, 5.312]];
@@ -32,8 +33,11 @@
   const SEA = [[-4.135, 5.232], [-4.08, 5.238], [-4.04, 5.244], [-4.008, 5.25], [-4.002, 5.249], [-3.985, 5.25], [-3.96, 5.252], [-3.93, 5.254], [-3.9, 5.256], [-3.875, 5.258], [-3.875, 5.225], [-4.135, 5.225]];
   const BIETRI = [[-3.99, 5.28], [-3.975, 5.285], [-3.958, 5.284], [-3.95, 5.276], [-3.965, 5.27], [-3.985, 5.272]];
   const BANCO = [[-4.07, 5.36], [-4.06, 5.355], [-4.045, 5.365], [-4.042, 5.39], [-4.06, 5.398], [-4.073, 5.385]];
+  // Grand-Bassam est à 30 km à l'est par la route côtière : on le dessine en encart (contour pointillé)
+  // au large de Port-Bouët, avec sa distance. Ce n'est pas sa vraie place sur la carte.
+  const AWAY = {km: 30, land: [[-3.931, 5.2494], [-3.903, 5.2496], [-3.8985, 5.243], [-3.903, 5.2362], [-3.931, 5.236], [-3.936, 5.2427]]};
 
-  // Les dix communes d'Abidjan. label : position du nom.
+  // Les dix communes d'Abidjan, puis Grand-Bassam en encart (away). label : position du nom.
   const COMMUNES = [
     {id: 'yopougon', name: 'Yopougon', label: [-4.095, 5.355], shape: [[-4.135, 5.312], [-4.125, 5.315], [-4.115, 5.318], [-4.105, 5.312], [-4.095, 5.305], [-4.085, 5.31], [-4.075, 5.315], [-4.065, 5.31], [-4.055, 5.315], [-4.052, 5.33], [-4.06, 5.345], [-4.07, 5.36], [-4.075, 5.385], [-4.1, 5.39], [-4.135, 5.385]]},
     {id: 'attecoube', name: 'Attécoubé', label: [-4.046, 5.334], shape: [[-4.055, 5.315], [-4.045, 5.318], [-4.04, 5.326], [-4.037, 5.338], [-4.033, 5.345], [-4.03, 5.36], [-4.035, 5.375], [-4.045, 5.395], [-4.06, 5.4], [-4.075, 5.385], [-4.07, 5.36], [-4.06, 5.345], [-4.052, 5.33]]},
@@ -44,7 +48,8 @@
     {id: 'treichville', name: 'Treichville', label: [-4.017, 5.288], shape: [[-4.03, 5.29], [-4.03, 5.296], [-4.022, 5.306], [-4.012, 5.305], [-4.0, 5.307], [-3.997, 5.295], [-4.0, 5.283], [-4.015, 5.278], [-4.025, 5.285]]},
     {id: 'marcory', name: 'Marcory', label: [-3.986, 5.307], shape: [[-4.0, 5.307], [-3.99, 5.31], [-3.98, 5.315], [-3.97, 5.313], [-3.968, 5.298], [-3.975, 5.285], [-3.99, 5.28], [-4.0, 5.283], [-3.997, 5.295]]},
     {id: 'koumassi', name: 'Koumassi', label: [-3.948, 5.297], shape: [[-3.97, 5.313], [-3.955, 5.31], [-3.94, 5.306], [-3.928, 5.3], [-3.925, 5.29], [-3.94, 5.284], [-3.95, 5.276], [-3.958, 5.284], [-3.968, 5.298]]},
-    {id: 'portbouet', name: 'Port-Bouët', label: [-3.955, 5.262], shape: [[-4.002, 5.268], [-4.015, 5.278], [-4.0, 5.283], [-3.99, 5.28], [-3.985, 5.272], [-3.965, 5.27], [-3.95, 5.276], [-3.94, 5.284], [-3.925, 5.29], [-3.91, 5.282], [-3.89, 5.28], [-3.875, 5.28], [-3.875, 5.258], [-3.9, 5.256], [-3.93, 5.254], [-3.96, 5.252], [-3.985, 5.25], [-4.002, 5.249]]}
+    {id: 'portbouet', name: 'Port-Bouët', label: [-3.955, 5.262], shape: [[-4.002, 5.268], [-4.015, 5.278], [-4.0, 5.283], [-3.99, 5.28], [-3.985, 5.272], [-3.965, 5.27], [-3.95, 5.276], [-3.94, 5.284], [-3.925, 5.29], [-3.91, 5.282], [-3.89, 5.28], [-3.875, 5.28], [-3.875, 5.258], [-3.9, 5.256], [-3.93, 5.254], [-3.96, 5.252], [-3.985, 5.25], [-4.002, 5.249]]},
+    {id: 'grandbassam', name: 'Grand-Bassam', away: true, label: [-3.962, 5.2445], shape: [[-3.929, 5.2487], [-3.904, 5.2489], [-3.9005, 5.243], [-3.904, 5.2369], [-3.929, 5.2367], [-3.933, 5.2427]]}
   ];
   // Ponts : Houphouët-Boigny et De Gaulle (Plateau ↔ Treichville), Henri-Konan-Bédié (Riviera ↔ Marcory).
   const BRIDGES = [[[-4.023, 5.3125], [-4.0235, 5.3045]], [[-4.0135, 5.3135], [-4.013, 5.3045]], [[-3.9855, 5.3285], [-3.9835, 5.3125]]];
@@ -64,7 +69,8 @@
     'ADJ-01': {commune: 'adjame', area: 'Adjamé Liberté', at: [-4.02, 5.36], side: 'north'},
     'TRE-01': {commune: 'treichville', area: 'Treichville', at: [-4.014, 5.293], side: 'island'},
     'KOU-01': {commune: 'koumassi', area: 'Koumassi', at: [-3.948, 5.297], side: 'island'},
-    'PBT-01': {commune: 'portbouet', area: 'Port-Bouët', at: [-3.94, 5.272], side: 'island'}
+    'PBT-01': {commune: 'portbouet', area: 'Port-Bouët', at: [-3.94, 5.272], side: 'island'},
+    'BAS-01': {commune: 'grandbassam', area: 'Quartier France', at: [-3.917, 5.2428], side: 'island'}
   };
   const BASES = {
     awa: {at: [-4.083, 5.352], side: 'north'}, yao: {at: [-3.972, 5.392], side: 'north'}, amina: {at: [-4.007, 5.299], side: 'island'},
@@ -115,7 +121,7 @@
     if (p.departedAt && p.durationMs) return Math.max(0, Math.min(1, (now - p.departedAt) / p.durationMs));
     return Math.max(0, Math.min(1, Number(p.progress) || 0));
   }
-  const geo = {W, H, project, path, route, along, homes, neighbors, progressOf, SEGMENTS, BASES, COMMUNES, LAND, SEA, BIETRI, BANCO, BRIDGES, ROADS, RUNWAY};
+  const geo = {W, H, project, path, route, along, homes, neighbors, progressOf, SEGMENTS, BASES, COMMUNES, LAND, SEA, BIETRI, BANCO, AWAY, BRIDGES, ROADS, RUNWAY};
   if (typeof module === 'object' && module.exports) { module.exports = geo; return; }
 
   const h = root.React.createElement, {useState, useEffect, useMemo} = root.React;
@@ -168,6 +174,7 @@
       h('rect', {x: 0, y: 0, width: W, height: H, className: 'ab-lagoon', fill: 'url(#ab-water)'}),
       h('path', {d: path(SEA), className: 'ab-sea'}),
       ['mainland', 'island', 'strip', 'boulay'].map(k => h('path', {key: k, d: path(LAND[k]), className: 'ab-land'})),
+      h('path', {d: path(AWAY.land), className: 'ab-land ab-away'}),
       h('path', {d: path(BIETRI), className: 'ab-water-inner'}),
       COMMUNES.map(c => h('path', {key: c.id, d: path(c.shape), className: 'ab-commune' + (downCommunes.has(c.id) ? ' is-down' : '')})),
       h('path', {d: path(BANCO), className: 'ab-forest'}),
@@ -176,9 +183,9 @@
       BRIDGES.map((b, k) => h('path', {key: k, d: 'M' + b.map(p => project(p).join(' ')).join('L'), className: 'ab-bridge'})),
       !focus && h('g', {className: 'ab-water-labels', 'aria-hidden': true},
         h('text', {x: project([-3.945, 5.319])[0], y: project([-3.945, 5.319])[1]}, 'Lagune Ébrié'),
-        h('text', {x: project([-3.93, 5.238])[0], y: project([-3.93, 5.238])[1]}, 'Océan Atlantique'),
+        h('text', {x: project([-4.03, 5.24])[0], y: project([-4.03, 5.24])[1]}, 'Océan Atlantique'),
         h('text', {className: 'ab-forest-label', x: project([-4.058, 5.381])[0], y: project([-4.058, 5.381])[1]}, 'Banco')),
-      h('g', {className: 'ab-labels', 'aria-hidden': true}, COMMUNES.map(c => { const [x, y] = project(c.label); return h('text', {key: c.id, x, y, className: downCommunes.has(c.id) ? 'is-down' : undefined}, c.name); })),
+      h('g', {className: 'ab-labels', 'aria-hidden': true}, COMMUNES.map(c => { const [x, y] = project(c.label); return h('text', {key: c.id, x, y, className: downCommunes.has(c.id) ? 'is-down' : undefined}, c.name, c.away && h('tspan', {x, dy: '1.15em', className: 'ab-away-km'}, 'à ' + AWAY.km + ' km')); })),
       segRows.map(seg => {
         const s = SEGMENTS[seg.id], [x, y] = project(s.at), incident = open.find(i => segmentOf(i) === seg.id), total = seg.total || 20, offline = Number.isFinite(seg.online) ? Math.max(0, total - seg.online) : incident ? total : 0;
         const foreseen = !incident && forecasts.some(f => f.segment === seg.id);

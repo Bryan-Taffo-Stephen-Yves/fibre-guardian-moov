@@ -29,7 +29,8 @@
   const STYLE = {
     plateau: {n: 24, w: [12, 20], h: [30, 70]}, cocody: {n: 60, w: [10, 16], h: [6, 14]}, yopougon: {n: 70, w: [8, 13], h: [4, 9]},
     abobo: {n: 55, w: [8, 12], h: [4, 9]}, adjame: {n: 26, w: [9, 14], h: [8, 18]}, attecoube: {n: 22, w: [8, 12], h: [4, 8]},
-    treichville: {n: 26, w: [9, 14], h: [8, 20]}, marcory: {n: 28, w: [9, 14], h: [6, 14]}, koumassi: {n: 30, w: [8, 13], h: [5, 10]}, portbouet: {n: 26, w: [8, 13], h: [4, 8]}
+    treichville: {n: 26, w: [9, 14], h: [8, 20]}, marcory: {n: 28, w: [9, 14], h: [6, 14]}, koumassi: {n: 30, w: [8, 13], h: [5, 10]}, portbouet: {n: 26, w: [8, 13], h: [4, 8]},
+    grandbassam: {n: 12, w: [7, 11], h: [3, 7]}
   };
   function rng(seed) { let t = 0; for (const ch of seed) t = (t * 31 + ch.charCodeAt(0)) >>> 0; return () => { t = (t + 0x6D2B79F5) >>> 0; let r = Math.imul(t ^ t >>> 15, 1 | t); r ^= r + Math.imul(r ^ r >>> 7, 61 | r); return ((r ^ r >>> 14) >>> 0) / 4294967296; }; }
   function inside(p, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
@@ -66,14 +67,14 @@
   }
   // Vue cadrée : centre, zoom et proportions du cadre. Renvoie le viewBox.
   function frame(rotation, zoom, pan, ratio) {
-    // Cadrage sur les poteaux (et leurs bulles au-dessus), pas sur toute la terre ferme.
-    const v = view(rotation), pts = Object.values(G.SEGMENTS).map(s => v.at(G.project(s.at)));
+    // Cadrage sur les poteaux (et leurs bulles au-dessus) et l'encart de Grand-Bassam, pas sur toute la terre ferme.
+    const v = view(rotation), pts = [...Object.values(G.SEGMENTS).map(s => s.at), ...G.AWAY.land].map(p => v.at(G.project(p)));
     const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), cx = (Math.max(...xs) + Math.min(...xs)) / 2 + pan[0], cy = (Math.min(...ys) - 80 + Math.max(...ys) + 30) / 2 + pan[1];
     const w = 1000 / zoom, hgt = w / ratio;
     return [cx - w / 2, cy - hgt / 2, w, hgt];
   }
 
-  const NAMES = {'YOP-07': 'Yopougon', 'ABO-01': 'Abobo', 'PAL-02': 'Palmeraie', 'COC-03': 'Cocody', 'RIV-04': 'Riviera Golf', 'PLA-01': 'Plateau', 'ADJ-01': 'Adjamé', 'TRE-01': 'Treichville', 'MAR-02': 'Marcory', 'KOU-01': 'Koumassi', 'PBT-01': 'Port-Bouët'};
+  const NAMES = {'YOP-07': 'Yopougon', 'ABO-01': 'Abobo', 'PAL-02': 'Palmeraie', 'COC-03': 'Cocody', 'RIV-04': 'Riviera Golf', 'PLA-01': 'Plateau', 'ADJ-01': 'Adjamé', 'TRE-01': 'Treichville', 'MAR-02': 'Marcory', 'KOU-01': 'Koumassi', 'PBT-01': 'Port-Bouët', 'BAS-01': 'Grand-Bassam'};
   // Pannes proposées sur chaque poteau, branchées sur les scénarios du moteur (noc-store « simulate »).
   const FAULTS = [
     {id: 'pole', title: 'Poteau tombé ou abîmé', text: 'La fibre est arrachée avec le poteau. Un technicien doit se déplacer.', icon: 'M12 3v18M7 7h10M9 21h6'},
@@ -85,6 +86,11 @@
     {id: 'congestion', title: 'Baisse de débit', text: 'Trop de monde en même temps : internet ralentit sans couper.', icon: 'M4 18a8 8 0 1 1 16 0M12 18l4-6'},
     {id: 'olt', title: 'Équipement central en panne', text: 'Toute la commune est coupée. Moov redémarre à distance.', icon: 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01'}
   ];
+  // Câbles de fibre entre poteaux voisins, du central du Plateau vers les quartiers (Grand-Bassam par la route côtière).
+  const LINKS = [['PLA-01', 'ADJ-01'], ['ADJ-01', 'ABO-01'], ['ADJ-01', 'YOP-07'], ['PLA-01', 'COC-03'], ['COC-03', 'RIV-04'], ['RIV-04', 'PAL-02'],
+    ['PLA-01', 'TRE-01'], ['TRE-01', 'MAR-02'], ['COC-03', 'MAR-02'], ['MAR-02', 'KOU-01'], ['KOU-01', 'PBT-01'], ['PBT-01', 'BAS-01']];
+  // État d'un câble : les données passent, ralentissent (réseau saturé) ou s'arrêtent (un des deux poteaux est en panne).
+  const linkState = (a, b) => [a, b].includes('down') ? 'cut' : [a, b].includes('warn') ? 'slow' : 'flow';
   const OPEN = ['reported', 'proposed', 'approved', 'rejected', 'dispatched', 'en_route', 'on_site', 'verifying'];
   const STEPS = [['reported', 'Repérée'], ['approved', 'Validée'], ['dispatched', 'Équipe affectée'], ['en_route', 'En route'], ['on_site', 'Sur place'], ['resolved', 'Réparée']];
   const ORDER = {reported: 0, proposed: 0, rejected: 0, approved: 1, dispatched: 2, en_route: 3, on_site: 4, verifying: 4, resolved: 5};
@@ -101,9 +107,10 @@
   // Range les bulles sans chevauchement : les plus proches gardent leur place, les autres se décalent.
   function place(items, vb, px, compact) {
     const k = px / vb[2], gap = 4 / k, out = {}, boxes = [];
-    const size = it => it.dot ? [26 / k, 26 / k] : [((compact ? 6.2 : 7.4) * it.name.length + (compact ? 26 : 36)) / k, (compact ? 26 : 32) / k];
+    const size = it => it.dot ? [26 / k, 26 / k] : [((compact ? 8.6 : 7.4) * it.name.length + (compact ? 38 : 36)) / k, (compact ? 30 : 32) / k];
     const tries = [[0, 0], [0, -1], [-.55, 0], [.55, 0], [-.55, -1], [.55, -1], [0, -2], [-.6, -2], [.6, -2], [0, -3]];
-    [...items].sort((a, b) => b.a[1] - a.a[1]).forEach(it => {
+    // Les points (poteaux calmes sur téléphone) restent sur leur poteau ; les bulles nommées les contournent.
+    [...items].sort((a, b) => (b.dot ? 1 : 0) - (a.dot ? 1 : 0) || b.a[1] - a.a[1]).forEach(it => {
       const [w, hh] = size(it), lift = 8 / k; let best = null;
       for (const [fx, fy] of it.dot ? [[0, 0]] : tries) {
         let x = it.a[0] + fx * (w + gap), y = it.a[1] + fy * (hh + gap);
@@ -118,7 +125,7 @@
     return out;
   }
 
-  const api = {view, frame, place, buildings, faces, smooth, inside, stateOf, FAULTS, NAMES, STEPS, ORDER};
+  const api = {view, frame, place, buildings, faces, smooth, inside, stateOf, linkState, FAULTS, NAMES, STEPS, ORDER, LINKS};
   if (typeof module === 'object' && module.exports) { module.exports = api; return; }
   const h = root.React.createElement, {useState, useEffect, useMemo, useRef} = root.React;
 
@@ -142,7 +149,16 @@
     const dark = new Set(segments.filter(s => states[s.id].tone === 'down').map(s => s.id));
     const blocks = useMemo(() => buildings().map(b => ({...b, depth: v.depth(b.p)})).sort((a, b) => a.depth - b.depth), [rotation]);
     const downCommunes = new Set(segments.filter(s => dark.has(s.id)).map(s => G.SEGMENTS[s.id]?.commune));
-    const pins = Object.entries(G.SEGMENTS).map(([id, s]) => { const seg = segments.find(x => x.id === id) || {id, online: 20, total: 20}, p = G.project(s.at); return {id, seg, p, depth: v.depth(p), st: states[id] || {tone: 'calm'}}; });
+    const pins = Object.entries(G.SEGMENTS).map(([id, s]) => { const seg = segments.find(x => x.id === id) || {id, online: 20, total: 20}, p = G.project(s.at), st = states[id] || {tone: 'calm'}, [bx, by] = v.at(p), fallen = st.tone === 'down' && seg.scenario === 'pole'; return {id, seg, p, depth: v.depth(p), st, fallen, top: fallen ? [bx + 26, by - 8] : v.at(p, 40), box: fallen ? [bx + 18, by - 5] : v.at(p, 22)}; });
+    // Les câbles partent du boîtier fixé sur le mât, juste sous la bulle du poteau.
+    const tops = Object.fromEntries(pins.map(pin => [pin.id, pin]));
+    const cables = LINKS.filter(([a, b]) => tops[a] && tops[b]).map(([a, b], k) => {
+      const p = tops[a].box, q = tops[b].box, len = Math.hypot(q[0] - p[0], q[1] - p[1]), state = linkState(tops[a].st.tone, tops[b].st.tone);
+      // Le câble pend un peu entre deux poteaux ; les paquets mettent plus de temps sur les longues portées.
+      const d = 'M' + p.join(' ') + 'Q' + ((p[0] + q[0]) / 2).toFixed(1) + ' ' + ((p[1] + q[1]) / 2 + len * .07).toFixed(1) + ' ' + q.join(' ');
+      const dur = (1.4 + len / 260) * (state === 'slow' ? 2.6 : 1);
+      return {id: a + b, d, state, dur, delay: (k * .53) % dur};
+    });
     const vans = incidents.filter(i => i.technician && ['en_route', 'on_site', 'verifying'].includes(i.status) && G.SEGMENTS[i.segment_id]).map(i => {
       const base = typeof i.technician === 'string' ? i.technician : null, path = base && G.route(base, i.segment_id);
       if (!path) return null; const pos = G.along(path, G.progressOf(i, Date.now())); return {id: i.id, p: [pos.x, pos.y]};
@@ -155,6 +171,9 @@
         h('rect', {x: vb[0] - 400, y: vb[1] - 400, width: vb[2] + 800, height: vb[3] + 800, fill: 'url(#sm-water)'}),
         ['mainland', 'island', 'strip', 'boulay'].map(k => h('path', {key: 'c' + k, d: shape(v, G.LAND[k], -9), className: 'sm-cliff'})),
         ['mainland', 'island', 'strip', 'boulay'].map(k => h('path', {key: 'l' + k, d: shape(v, G.LAND[k]), className: 'sm-land'})),
+        // Grand-Bassam en encart : contour pointillé et distance réelle par la route.
+        h('path', {d: shape(v, G.AWAY.land, -9), className: 'sm-cliff'}),
+        h('path', {d: shape(v, G.AWAY.land), className: 'sm-land sm-away'}),
         h('path', {d: shape(v, G.BIETRI), className: 'sm-lagoon'}),
         G.COMMUNES.map(c => h('path', {key: c.id, d: shape(v, c.shape), className: 'sm-commune' + (downCommunes.has(c.id) ? ' is-down' : '')})),
         h('path', {d: shape(v, G.BANCO), className: 'sm-forest'}),
@@ -164,15 +183,25 @@
         [...blocks.map(b => ({kind: 'b', depth: b.depth, b})), ...pins.map(pin => ({kind: 'p', depth: pin.depth + .1, pin})), ...vans.map(van => ({kind: 'v', depth: v.depth(van.p) + .2, van}))].sort((a, b) => a.depth - b.depth).map((it, k) => {
           if (it.kind === 'b') { const f = faces(v, it.b), off = it.b.segment && dark.has(it.b.segment); return h('g', {key: k, className: 'sm-building' + (off ? ' is-off' : '')}, f.walls.map((w, j) => h('path', {key: j, d: w.d, className: 'sm-wall-' + w.side})), h('path', {d: f.roof, className: 'sm-roof'})); }
           if (it.kind === 'v') { const f = faces(v, {p: it.van.p, w: 12, d: 7, h: 7}); return h('g', {key: k, className: 'sm-van'}, f.walls.map((w, j) => h('path', {key: j, d: w.d, className: 'sm-van-' + w.side})), h('path', {d: f.roof, className: 'sm-van-roof'})); }
-          const pin = it.pin, [bx, by] = v.at(pin.p), fallen = pin.st.tone === 'down' && pin.seg.scenario === 'pole', top = fallen ? [bx + 26, by - 8] : v.at(pin.p, 40);
+          const pin = it.pin, [bx, by] = v.at(pin.p), fallen = pin.fallen, top = pin.top;
           return h('g', {key: k, className: 'sm-pole is-' + pin.st.tone + (selected === pin.id ? ' is-selected' : '')},
             h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-ground'}),
-            pin.st.tone === 'down' && h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-pulse'}),
+            pin.st.tone === 'down' ? h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-pulse'})
+              : h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-ring', style: {animationDelay: -(pin.depth % 2.8).toFixed(2) + 's'}}),
             h('line', {x1: bx, y1: by, x2: top[0], y2: top[1], className: 'sm-pole-mast'}),
-            h('line', {x1: top[0] - (fallen ? 3 : 7), y1: top[1] + (fallen ? -6 : 5), x2: top[0] + (fallen ? 3 : 7), y2: top[1] + (fallen ? 6 : 5), className: 'sm-pole-arm'}));
+            h('line', {x1: top[0] - (fallen ? 3 : 7), y1: top[1] + (fallen ? -6 : 5), x2: top[0] + (fallen ? 3 : 7), y2: top[1] + (fallen ? 6 : 5), className: 'sm-pole-arm'}),
+            // Voyant du boîtier fixé sur le poteau : il clignote quand les données passent.
+            h('circle', {cx: pin.box[0], cy: pin.box[1], r: 3.6, className: 'sm-pole-led', style: {animationDelay: -(pin.depth % 1.6).toFixed(2) + 's'}}));
         }),
+        // Les données circulent sur les câbles, dans les deux sens ; elles s'arrêtent au poteau en panne.
+        h('g', {className: 'sm-net', 'aria-hidden': true}, cables.map(c => h('g', {key: c.id, className: 'sm-link is-' + c.state},
+          h('path', {d: c.d, className: 'sm-cable'}),
+          c.state !== 'cut' && [[0, 0], [0, .5], [1, .25]].map(([back, shift], n) => { const style = {animationDuration: c.dur.toFixed(2) + 's', animationDelay: -(c.delay + shift * c.dur).toFixed(2) + 's'}, cls = back ? ' is-back' : '';
+            return [h('path', {key: 'h' + n, d: c.d, pathLength: 1, className: 'sm-packet-halo' + cls, style}), h('path', {key: 'p' + n, d: c.d, pathLength: 1, className: 'sm-packet' + cls, style})]; })))),
         // Fil entre le poteau et sa bulle quand la bulle a dû se pousser.
-        pins.filter(pin => labels[pin.id].moved).map(pin => { const a = labels[pin.id].a, b = labels[pin.id].at; return h('line', {key: 'f' + pin.id, x1: a[0], y1: a[1], x2: b[0], y2: b[1], className: 'sm-leader'}); })),
+        pins.filter(pin => labels[pin.id].moved).map(pin => { const a = labels[pin.id].a, b = labels[pin.id].at; return h('line', {key: 'f' + pin.id, x1: a[0], y1: a[1], x2: b[0], y2: b[1], className: 'sm-leader'}); }),
+        // À gauche de l'encart : la vraie distance de Grand-Bassam.
+        (() => { const [x, y] = v.at(G.project([-3.9385, 5.2392])); return h('text', {x, y, className: 'sm-away-km', style: {fontSize: (12 * vb[2] / px).toFixed(1) + 'px'}}, 'à ' + G.AWAY.km + ' km par la route'); })()),
       pins.map(pin => h('button', {key: pin.id, type: 'button', className: 'sm-bubble is-' + pin.st.tone + (labels[pin.id].dot ? ' is-dot' : '') + (selected === pin.id ? ' is-selected' : ''), style: bubble(pin.id), title: 'Poteau ' + NAMES[pin.id], onClick: () => onPick(pin.id), 'aria-pressed': selected === pin.id, 'aria-label': 'Poteau ' + NAMES[pin.id] + ' : ' + ({down: 'panne en cours', warn: 'débit en baisse', ok: 'réparé', calm: 'tout va bien'})[pin.st.tone]},
         h('i', {'aria-hidden': true}), labels[pin.id].dot ? null : labels[pin.id].name)));
   }
@@ -213,7 +242,7 @@
     const narrow = useNarrow(), [rot, setRot] = useState(-18), rotation = useEased(rot), [zoom, setZoom] = useState(1), [pan, setPan] = useState([0, 0]);
     const [selected, setSelected] = useState(null), [busy, setBusy] = useState(''), [error, setError] = useState('');
     const drag = useRef(null), card = useRef(null), segments = data?.segments || [], incidents = data?.incidents || [];
-    const ratio = narrow ? 1.2 : 1.62, z = narrow ? zoom * 1.3 : zoom * 1.1;
+    const ratio = narrow ? 1.2 : 1.62, z = narrow ? zoom * 1.12 : zoom * 1.1;
     const seg = segments.find(s => s.id === selected);
     async function run(kind, segment, scenario) {
       setBusy(kind); setError('');
@@ -249,7 +278,7 @@
         h('div', {className: 'sm-viewport', onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up},
           h(Scene, {segments, incidents, rotation, zoom: z, pan, ratio, selected, onPick: pick, compact: narrow})),
         narrow && h('div', {className: 'sm-chips', role: 'group', 'aria-label': 'Choisir un poteau'}, Object.keys(NAMES).map(id => { const tone = stateOf(segments.find(x => x.id === id) || {}, incidents).tone; return h('button', {key: id, type: 'button', className: 'sm-chip is-' + tone + (selected === id ? ' is-selected' : ''), 'aria-pressed': selected === id, onClick: () => pick(id)}, h('i', {'aria-hidden': true}), NAMES[id]); })),
-        h('ul', {className: 'sm-legend'}, [['calm', 'Tout va bien'], ['warn', 'Débit en baisse'], ['down', 'Panne en cours'], ['ok', 'Réparé']].map(([k, t]) => h('li', {key: k}, h('i', {className: 'is-' + k, 'aria-hidden': true}), t)))),
+        h('ul', {className: 'sm-legend'}, [['calm', 'Tout va bien'], ['warn', 'Débit en baisse'], ['down', 'Panne en cours'], ['ok', 'Réparé'], ['data', 'Données qui circulent']].map(([k, t]) => h('li', {key: k}, h('i', {className: 'is-' + k, 'aria-hidden': true}), t)))),
       seg && h(Panel, {segment: seg, incidents, data, busy, error, onStep: step, onSimulate: (id, f) => run('simulate', id, f), onRestore: id => run('restore', id, 'normal'), onClose: () => setSelected(null), onOpenIncident, onPick: setSelected}));
   }
 
