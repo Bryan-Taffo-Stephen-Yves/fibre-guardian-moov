@@ -203,3 +203,23 @@ test('Une sélection reçue avant le chargement attend les données autorisées'
  gate.resolve(fixture());await tick();h.render();h.render();
  assert.equal(h.selectedCalls.at(-1),'ticket:T1');assert.ok(!h.selectedCalls.includes('incident:I1'),'Aucun autre dossier ne doit être sélectionné pendant le chargement du lien.');
 });
+
+test('Le tableau de bord montre raccourcis, équipe terrain, quartiers et activité, sans raccourcis pour le terrain',()=>{
+ const h=harness(),names=tree=>nodes(tree,n=>typeof n.type==='function').map(n=>n.type.name);
+ for(const part of ['Shortcuts','Crew','Zones','Activity'])assert.ok(names(h.tree).includes(part),part);
+ const data=fixture();data.scope='assigned';data.role='technician';data.capabilities={};
+ assert.ok(!names(harness(data).tree).includes('Shortcuts'));
+});
+
+test('Les raccourcis respectent les droits et l’équipe terrain suit la mission en route',()=>{
+ const h=harness(),{Shortcuts,Crew,Zones}=h.exports.parts,label=tree=>nodes(tree,n=>n.type==='button').map(b=>text(nodes(b,n=>n.type==='strong')[0]).trim());
+ const admin=fixture();assert.deepEqual(label(Shortcuts({data:admin})).slice(-2),['Équipe et accès','Mode jury']);
+ const agent={...fixture(),role:'agent',capabilities:{}};assert.ok(!label(Shortcuts({data:agent})).includes('Équipe et accès'));assert.ok(!label(Shortcuts({data:agent})).includes('Mode jury'));
+ const now=Date.now(),followed=[],technicians=[{id:'koffi',name:'Koffi N’Guessan',team:'Fibre Ouest',zone:'Yopougon',rating:4.9,missions:312,vehicle:'Fourgon Moov · 5168 JP 01'},{id:'awa',name:'Awa Kouamé',team:'Fibre Ouest',zone:'Yopougon',rating:4.8,missions:214,vehicle:'Fourgon Moov · 2841 KX 01'}];
+ const incidents=[{id:'I1',segment_id:'YOP-07',status:'en_route',technician:'koffi',position:{departedAt:now-60000,durationMs:120000,distanceKm:2.6}}];
+ const crew=Crew({technicians,incidents,queue:[{key:'incident:I1',kind:'incident',id:'I1'}],onFollow:key=>followed.push(key)});
+ assert.match(text(crew),/1 en mission · 1 sur la route · 1 disponible/);assert.match(text(crew),/Arrivée dans/);
+ nodes(crew,n=>n.type==='button'&&/Suivre la mission/.test(text(n)))[0].props.onClick();assert.deepEqual(followed,['incident:I1']);
+ const zones=Zones({segments:[{id:'YOP-07',zone:'Yopougon · Niangon',online:8,total:20,latency:95},{id:'MAR-02',zone:'Marcory · Résidentiel',online:20,total:20,latency:18}],incidents,forecasts:[]});
+ assert.match(text(zones),/Niangon.*Technicien en route/s);assert.match(text(zones),/Résidentiel.*Tout va bien/s);
+});
