@@ -50,10 +50,10 @@ function screen(s,uid,first,rest){
   const [kind,confirm]=rest;
   if(!kind)return con('Quel est le problème ?\n1. Plus d’internet du tout\n2. Internet très lent\n3. Câble ou poteau tombé\n0. Retour');
   if(!KINDS[kind])return end('Choix inconnu. Recomposez le '+CODE+'.');
-  const zone=(st?.zone||'Yopougon · Niangon').split(' · ').pop();
+  const home=noc.memberZone(s,uid)?.zone||st?.zone||'Yopougon · Niangon',zone=home.split(' · ').pop();
   if(!confirm)return con('Signaler « '+KINDS[kind][1]+' » pour votre ligne à '+zone+' ?\n1. Oui, envoyer\n2. Non');
   if(confirm!=='1')return end('Rien n’a été envoyé. Recomposez le '+CODE+' si besoin.');
-  const incident=journey.reportByCode(s,uid,{kind:KINDS[kind][0],description:KINDS[kind][1]+' · signalé par le '+CODE+' (sans internet)'});
+  const incident=journey.reportByCode(s,uid,{kind:KINDS[kind][0],description:KINDS[kind][1]+' · signalé par le '+CODE+' (sans internet)',zone:home});
   return end('Signalement reçu : '+incident.reference+'.\nL’équipe Moov l’analyse. Un SMS vous prévient à chaque étape.',{from:'Moov',text:'Moov Fibre : signalement '+incident.reference+' reçu. Suivez-le au '+CODE+', même sans internet.'});
  }
  if(first==='2'){

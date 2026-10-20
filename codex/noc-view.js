@@ -54,7 +54,7 @@ function ClientIncident({api,incident:i,onSaved}){
   closed:['Dossier clôturé, connexion non vérifiée','Il s’agit d’une clôture administrative du support, pas d’une confirmation de réparation. Si le problème persiste, contactez le support.']
  }[i.status]||['Le support suit votre dossier','Consultez la chronologie pour connaître la dernière décision.'];
  return h('article',{className:'n-client-incident'+(closed?' n-client-incident--closed':'')+(live?' n-client-incident--live':''),'data-status':i.status},
-  h('div',{className:'n-row'},h('span',{className:'n-badge'},labels[i.status]||i.status),h('small',null,(i.segment||'Votre signalement')+' · '+(i.mode==='demo'?'Incident de zone':'Dossier support'))),
+  h('div',{className:'n-row'},h('span',{className:'n-badge'},labels[i.status]||i.status),h('small',null,(i.zone||i.segment||'Votre signalement')+' · '+(i.mode==='demo'?'Incident de zone':'Dossier support'))),
   h('h3',null,i.title),
   h('div',{className:'n-client-next'},h('h4',null,nextStep[0]),h('p',null,nextStep[1])),
   live&&h(window.FGLiveTrip.Card,{incident:i,api,hero:true}),
@@ -84,11 +84,12 @@ function ClientFeed({api,onReport}){
   data&&!active.length&&h('div',{className:'n-empty n-client-empty'},h('h3',null,'Aucune intervention en cours'),h('p',null,history.length?'Vos dossiers terminés restent consultables ci-dessous. Une clôture administrative ne confirme pas le rétablissement de votre connexion.':'Votre compte n’a pas de dossier actif. Un signalement envoyé au support apparaîtra ici.'),h('div',{className:'n-actions'},onReport&&B('Signaler un problème',onReport),LAB&&B('Tester un suivi de quartier',()=>JO(true)))),
   active.map(i=>h(ClientIncident,{api,incident:i,onSaved:load,key:i.id})),
   !!history.length&&h('section',{className:'n-client-history'},h('h3',null,'Dossiers terminés · '+history.length),history.map(i=>h(ClientIncident,{api,incident:i,onSaved:load,key:i.id}))),
-  h('details',{open:joinOpen,onToggle:e=>JO(e.currentTarget.open)},h('summary',null,'Choisir mon quartier'),
+  h('details',{className:'n-zone-pick',open:joinOpen||(!!data&&!data.segment),onToggle:e=>JO(e.currentTarget.open)},h('summary',null,data?.zone?'Mon quartier : '+data.zone:'Choisir mon quartier'),
+   h('p',null,'Vous recevez seulement les alertes de votre quartier. Si un équipement central tombe, toute la commune est prévenue.'),
    h('form',{onSubmit:async e=>{e.preventDefault();if(busy)return;const f=Object.fromEntries(new FormData(e.currentTarget));BZ(true);X('');try{await api('/noc/join','POST',{segment:f.segment,consent:f.consent==='on'});if(flight.current)await flight.current;await load();JO(false);}catch(err){X(err.message);}finally{BZ(false);}}},
-    h('label',null,'Votre quartier',h('select',{name:'segment',key:data?.segment||'none',defaultValue:data?.segment||'YOP-07',disabled:busy},['YOP-07','COC-03','MAR-02'].map(v=>h('option',{key:v},v)))),
+    h('label',null,'Votre quartier',h('select',{name:'segment',key:data?.segment||'none',defaultValue:data?.segment||'YOP-07',disabled:busy},(data?.zones||[{id:'YOP-07',zone:'Yopougon · Niangon'}]).map(z=>h('option',{key:z.id,value:z.id},z.zone)))),
     h('label',{className:'j-check'},h('input',{type:'checkbox',name:'consent',required:true,disabled:busy}),'J’accepte de recevoir les alertes et le suivi des interventions de ce quartier.'),
-    h('button',{className:'j-button',disabled:busy},busy?'Rattachement…':'Rejoindre la zone de démo')
+    h('button',{className:'j-button',disabled:busy},busy?'Enregistrement…':data?.segment?'Changer de quartier':'Recevoir les alertes de ce quartier')
    )
   )
  );

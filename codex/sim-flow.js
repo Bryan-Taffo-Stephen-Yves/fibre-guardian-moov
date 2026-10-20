@@ -66,6 +66,16 @@
     return AGENTS.map(a => { const start = t, end = (t += a.ms), progress = Math.max(0, Math.min(1, (now - start) / a.ms)); return {...a, start, end, progress, state: progress >= 1 ? 'done' : progress > 0 ? 'working' : 'waiting', result: results[a.id]}; });
   }
 
+  // Qui reçoit les messages « client » : les clients rattachés au quartier, ou toute la commune si son équipement central tombe.
+  function reach(incident, segment, segments) {
+    const info = G?.SEGMENTS[segment?.id], commune = G?.COMMUNES.find(c => c.id === info?.commune)?.name || '';
+    const wide = segment?.alarm === 'OLT_DOWN' || (!!incident && kindOf(incident, segment) === 'olt');
+    const list = wide ? (segments || []).filter(g => G?.SEGMENTS[g.id]?.commune === info?.commune) : [segment].filter(Boolean);
+    const names = list.flatMap(g => g.people || []), count = list.reduce((n, g) => n + (g.clients || 0), 0), shown = names.slice(0, 2), others = count - shown.length;
+    const who = others > 0 ? shown.join(', ') + ' et ' + (others > 1 ? others + ' autres clients' : '1 autre client') : shown.join(' et ');
+    return {wide, count, names, who, commune};
+  }
+
   // Messages envoyés par le déroulé, du plus ancien au plus récent ; seuls ceux déjà partis à « now » sont renvoyés.
   function messages(incident, segment, technicians, now) {
     if (!incident) return [];
@@ -106,7 +116,7 @@
     return out.filter(m => m.at <= now).sort((a, b) => a.at - b.at);
   }
 
-  const api = {AGENTS, THINK, KIND, kindOf, nearest, agents, messages, clock};
+  const api = {AGENTS, THINK, KIND, kindOf, nearest, agents, messages, reach, clock};
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.FGSimFlow = api;
 })(typeof window !== 'undefined' ? window : globalThis);
