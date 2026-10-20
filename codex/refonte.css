@@ -155,7 +155,9 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
 .journey .j-companion{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px}
 .journey .j-companion>.j-robot{--orb:132px;position:relative!important;inset:auto!important;opacity:1!important;margin-right:12px!important}
 .journey .j-entry-art>.j-robot{--orb:150px;position:absolute;right:40px;top:56px}
-.journey .j-guardian-stage .j-robot{--orb:120px;position:absolute;left:calc(50% - 60px);top:-60px}
+.journey .j-guardian-stage .j-robot{--orb:120px;position:absolute;left:calc(50% - 60px);top:calc(50% - 60px)}
+/* Carte « Votre compagnon » (fond sombre) : titre lisible, orbe sous le texte et non par-dessus. */
+.journey .j-guardian-card h2{color:var(--moov-white)}
 .journey .j-welcome .j-robot{--orb:110px;margin:4px auto 14px!important}
 .noc .n-agent-visual .j-robot{transform:none!important}
 .journey .j-robot.thinking{animation:fg-orb-think 1.4s ease-in-out infinite}
@@ -334,6 +336,8 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
   .journey .j-entry-art h1{font-size:40px;padding-right:0}
   .journey .j-entry-art>.j-tag:first-child{margin-right:96px}
   .journey .j-dock{right:16px;bottom:calc(84px + env(safe-area-inset-bottom))}
+  /* L’aide Guardian flotte au-dessus de la barre d’onglets, sans cacher « Signaler » ni « Suivi technicien ». */
+  .journey .n-copilot-launch{right:16px;bottom:calc(84px + env(safe-area-inset-bottom))}
   .journey .j-dock>span{display:none}
 
   .noc{display:block;padding:0 16px 24px}

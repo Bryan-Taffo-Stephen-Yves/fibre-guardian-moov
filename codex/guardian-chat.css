@@ -131,3 +131,4 @@
   .mm-burst{display:none}
   .mm-spinner{animation-duration:2.4s}
 }
+.journey .j-chat .j-chat-done{background:var(--moov-success-50);color:var(--moov-success-700)}
