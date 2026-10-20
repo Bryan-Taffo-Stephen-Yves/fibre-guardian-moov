@@ -223,3 +223,12 @@ test('Les raccourcis respectent les droits et l’équipe terrain suit la missio
  const zones=Zones({segments:[{id:'YOP-07',zone:'Yopougon · Niangon',online:8,total:20,latency:95},{id:'MAR-02',zone:'Marcory · Résidentiel',online:20,total:20,latency:18}],incidents,forecasts:[]});
  assert.match(text(zones),/Niangon.*Technicien en route/s);assert.match(text(zones),/Résidentiel.*Tout va bien/s);
 });
+
+test('Les graphiques finissent sur la mesure en direct et la barre du haut propose période, widgets et export',()=>{
+ const h=harness(),{history}=h.exports.parts,data={network:{segments:[{id:'A',total:20,online:8},{id:'B',total:20,online:20}],incidents:[]}};
+ for(const days of [7,30]){const s=history(data,days);assert.equal(s.points.length,days);assert.equal(s.previous.length,days);assert.equal(s.points.at(-1).value,28);assert.equal(s.total,40);assert.ok(s.onTime>=0&&s.onTime<=100);assert.equal(s.week.length,7);}
+ assert.deepEqual(history(data,30).points.slice(0,-1),history(data,30).points.slice(0,-1),'Même historique à chaque actualisation');
+ for(const label of ['Ajouter un widget','Exporter','Demander à Guardian'])assert.ok(nodes(h.tree,n=>n.type==='button'&&text(n).trim()===label).length,label);
+ const names=nodes(h.tree,n=>typeof n.type==='function').map(n=>n.type.name);for(const part of ['Curve','Week','Gauge','Rows','GuardianChat'])assert.ok(names.includes(part),part);
+ h.button('Ajouter un widget').props.onClick();h.render();assert.ok(nodes(h.tree,n=>n.type?.name==='WidgetPanel').length);
+});
