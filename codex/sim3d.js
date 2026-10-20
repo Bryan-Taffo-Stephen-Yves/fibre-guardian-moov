@@ -29,7 +29,8 @@
   const STYLE = {
     plateau: {n: 24, w: [12, 20], h: [30, 70]}, cocody: {n: 60, w: [10, 16], h: [6, 14]}, yopougon: {n: 70, w: [8, 13], h: [4, 9]},
     abobo: {n: 55, w: [8, 12], h: [4, 9]}, adjame: {n: 26, w: [9, 14], h: [8, 18]}, attecoube: {n: 22, w: [8, 12], h: [4, 8]},
-    treichville: {n: 26, w: [9, 14], h: [8, 20]}, marcory: {n: 28, w: [9, 14], h: [6, 14]}, koumassi: {n: 30, w: [8, 13], h: [5, 10]}, portbouet: {n: 26, w: [8, 13], h: [4, 8]}
+    treichville: {n: 26, w: [9, 14], h: [8, 20]}, marcory: {n: 28, w: [9, 14], h: [6, 14]}, koumassi: {n: 30, w: [8, 13], h: [5, 10]}, portbouet: {n: 26, w: [8, 13], h: [4, 8]},
+    grandbassam: {n: 12, w: [7, 11], h: [3, 7]}
   };
   function rng(seed) { let t = 0; for (const ch of seed) t = (t * 31 + ch.charCodeAt(0)) >>> 0; return () => { t = (t + 0x6D2B79F5) >>> 0; let r = Math.imul(t ^ t >>> 15, 1 | t); r ^= r + Math.imul(r ^ r >>> 7, 61 | r); return ((r ^ r >>> 14) >>> 0) / 4294967296; }; }
   function inside(p, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
@@ -66,14 +67,14 @@
   }
   // Vue cadrée : centre, zoom et proportions du cadre. Renvoie le viewBox.
   function frame(rotation, zoom, pan, ratio) {
-    // Cadrage sur les poteaux (et leurs bulles au-dessus), pas sur toute la terre ferme.
-    const v = view(rotation), pts = Object.values(G.SEGMENTS).map(s => v.at(G.project(s.at)));
+    // Cadrage sur les poteaux (et leurs bulles au-dessus) et l'encart de Grand-Bassam, pas sur toute la terre ferme.
+    const v = view(rotation), pts = [...Object.values(G.SEGMENTS).map(s => s.at), ...G.AWAY.land].map(p => v.at(G.project(p)));
     const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), cx = (Math.max(...xs) + Math.min(...xs)) / 2 + pan[0], cy = (Math.min(...ys) - 80 + Math.max(...ys) + 30) / 2 + pan[1];
     const w = 1000 / zoom, hgt = w / ratio;
     return [cx - w / 2, cy - hgt / 2, w, hgt];
   }
 
-  const NAMES = {'YOP-07': 'Yopougon', 'ABO-01': 'Abobo', 'PAL-02': 'Palmeraie', 'COC-03': 'Cocody', 'RIV-04': 'Riviera Golf', 'PLA-01': 'Plateau', 'ADJ-01': 'Adjamé', 'TRE-01': 'Treichville', 'MAR-02': 'Marcory', 'KOU-01': 'Koumassi', 'PBT-01': 'Port-Bouët'};
+  const NAMES = {'YOP-07': 'Yopougon', 'ABO-01': 'Abobo', 'PAL-02': 'Palmeraie', 'COC-03': 'Cocody', 'RIV-04': 'Riviera Golf', 'PLA-01': 'Plateau', 'ADJ-01': 'Adjamé', 'TRE-01': 'Treichville', 'MAR-02': 'Marcory', 'KOU-01': 'Koumassi', 'PBT-01': 'Port-Bouët', 'BAS-01': 'Grand-Bassam'};
   // Pannes proposées sur chaque poteau, branchées sur les scénarios du moteur (noc-store « simulate »).
   const FAULTS = [
     {id: 'pole', title: 'Poteau tombé ou abîmé', text: 'La fibre est arrachée avec le poteau. Un technicien doit se déplacer.', icon: 'M12 3v18M7 7h10M9 21h6'},
@@ -101,7 +102,7 @@
   // Range les bulles sans chevauchement : les plus proches gardent leur place, les autres se décalent.
   function place(items, vb, px, compact) {
     const k = px / vb[2], gap = 4 / k, out = {}, boxes = [];
-    const size = it => it.dot ? [26 / k, 26 / k] : [((compact ? 6.2 : 7.4) * it.name.length + (compact ? 26 : 36)) / k, (compact ? 26 : 32) / k];
+    const size = it => it.dot ? [26 / k, 26 / k] : [((compact ? 8.6 : 7.4) * it.name.length + (compact ? 38 : 36)) / k, (compact ? 30 : 32) / k];
     const tries = [[0, 0], [0, -1], [-.55, 0], [.55, 0], [-.55, -1], [.55, -1], [0, -2], [-.6, -2], [.6, -2], [0, -3]];
     [...items].sort((a, b) => b.a[1] - a.a[1]).forEach(it => {
       const [w, hh] = size(it), lift = 8 / k; let best = null;
@@ -155,6 +156,9 @@
         h('rect', {x: vb[0] - 400, y: vb[1] - 400, width: vb[2] + 800, height: vb[3] + 800, fill: 'url(#sm-water)'}),
         ['mainland', 'island', 'strip', 'boulay'].map(k => h('path', {key: 'c' + k, d: shape(v, G.LAND[k], -9), className: 'sm-cliff'})),
         ['mainland', 'island', 'strip', 'boulay'].map(k => h('path', {key: 'l' + k, d: shape(v, G.LAND[k]), className: 'sm-land'})),
+        // Grand-Bassam en encart : contour pointillé et distance réelle par la route.
+        h('path', {d: shape(v, G.AWAY.land, -9), className: 'sm-cliff'}),
+        h('path', {d: shape(v, G.AWAY.land), className: 'sm-land sm-away'}),
         h('path', {d: shape(v, G.BIETRI), className: 'sm-lagoon'}),
         G.COMMUNES.map(c => h('path', {key: c.id, d: shape(v, c.shape), className: 'sm-commune' + (downCommunes.has(c.id) ? ' is-down' : '')})),
         h('path', {d: shape(v, G.BANCO), className: 'sm-forest'}),
@@ -172,7 +176,9 @@
             h('line', {x1: top[0] - (fallen ? 3 : 7), y1: top[1] + (fallen ? -6 : 5), x2: top[0] + (fallen ? 3 : 7), y2: top[1] + (fallen ? 6 : 5), className: 'sm-pole-arm'}));
         }),
         // Fil entre le poteau et sa bulle quand la bulle a dû se pousser.
-        pins.filter(pin => labels[pin.id].moved).map(pin => { const a = labels[pin.id].a, b = labels[pin.id].at; return h('line', {key: 'f' + pin.id, x1: a[0], y1: a[1], x2: b[0], y2: b[1], className: 'sm-leader'}); })),
+        pins.filter(pin => labels[pin.id].moved).map(pin => { const a = labels[pin.id].a, b = labels[pin.id].at; return h('line', {key: 'f' + pin.id, x1: a[0], y1: a[1], x2: b[0], y2: b[1], className: 'sm-leader'}); }),
+        // Sous l'encart : la vraie distance de Grand-Bassam.
+        (() => { const [x, y] = v.at(G.project([-3.917, 5.2296])); return h('text', {x, y, className: 'sm-away-km', style: {fontSize: (12 * vb[2] / px).toFixed(1) + 'px'}}, 'à ' + G.AWAY.km + ' km par la route'); })()),
       pins.map(pin => h('button', {key: pin.id, type: 'button', className: 'sm-bubble is-' + pin.st.tone + (labels[pin.id].dot ? ' is-dot' : '') + (selected === pin.id ? ' is-selected' : ''), style: bubble(pin.id), title: 'Poteau ' + NAMES[pin.id], onClick: () => onPick(pin.id), 'aria-pressed': selected === pin.id, 'aria-label': 'Poteau ' + NAMES[pin.id] + ' : ' + ({down: 'panne en cours', warn: 'débit en baisse', ok: 'réparé', calm: 'tout va bien'})[pin.st.tone]},
         h('i', {'aria-hidden': true}), labels[pin.id].dot ? null : labels[pin.id].name)));
   }
@@ -213,7 +219,7 @@
     const narrow = useNarrow(), [rot, setRot] = useState(-18), rotation = useEased(rot), [zoom, setZoom] = useState(1), [pan, setPan] = useState([0, 0]);
     const [selected, setSelected] = useState(null), [busy, setBusy] = useState(''), [error, setError] = useState('');
     const drag = useRef(null), card = useRef(null), segments = data?.segments || [], incidents = data?.incidents || [];
-    const ratio = narrow ? 1.2 : 1.62, z = narrow ? zoom * 1.3 : zoom * 1.1;
+    const ratio = narrow ? 1.2 : 1.62, z = narrow ? zoom * 1.12 : zoom * 1.1;
     const seg = segments.find(s => s.id === selected);
     async function run(kind, segment, scenario) {
       setBusy(kind); setError('');

@@ -23,6 +23,8 @@
 .sm-commune{fill:var(--moov-neutral-25);stroke:var(--moov-neutral-200);stroke-width:1.2;transition:fill .4s ease}
 .sm-commune.is-down{fill:var(--moov-danger-50);stroke:var(--moov-danger-100)}
 .sm-forest{fill:var(--moov-success-100);opacity:.8}
+.sm-away{stroke:var(--moov-primary-300);stroke-width:1.5;stroke-dasharray:5 4}
+.sm-away-km{fill:var(--moov-text-muted);font-weight:500;text-anchor:middle}
 .sm-road{fill:none;stroke:var(--moov-neutral-150);stroke-width:3;stroke-linecap:round}
 .sm-bridge{fill:none;stroke:var(--moov-neutral-400);stroke-width:4;stroke-linecap:round}
 .sm-roof{fill:var(--moov-white);stroke:var(--moov-primary-200);stroke-width:.6}
