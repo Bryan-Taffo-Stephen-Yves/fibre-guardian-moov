@@ -78,8 +78,12 @@
   const FAULTS = [
     {id: 'pole', title: 'Poteau tombé ou abîmé', text: 'La fibre est arrachée avec le poteau. Un technicien doit se déplacer.', icon: 'M12 3v18M7 7h10M9 21h6'},
     {id: 'fiber', title: 'Fibre coupée', text: 'Le câble est sectionné entre le poteau et les maisons.', icon: 'M3 12h6l2-3 2 6 2-3h6'},
+    {id: 'works', title: 'Câble arraché par un chantier', text: 'Des engins de travaux ont arraché le câble. Deux équipes partent.', icon: 'M9.5 4h5l4 16h-13zM7.6 10h8.8M6.4 15h11.2M3 20h18'},
+    {id: 'theft', title: 'Vol de câble', text: 'Le boîtier a été forcé et le câble emporté.', icon: 'M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.1 7.9 20 18M8.1 16.1 20 6'},
+    {id: 'flood', title: 'Armoire inondée', text: 'L’eau est entrée après la pluie. On attend qu’elle se retire.', icon: 'M12 3s-5 6-5 9.5a5 5 0 0 0 10 0C17 9 12 3 12 3zM2 21c2.5 0 2.5-1.5 5-1.5s2.5 1.5 5 1.5 2.5-1.5 5-1.5 2.5 1.5 5 1.5'},
     {id: 'power', title: 'Coupure de courant CIE', text: 'Les box s’éteignent faute de courant. Ce n’est pas une panne Moov.', icon: 'M13 2 4 14h7l-1 8 9-12h-7z'},
-    {id: 'congestion', title: 'Baisse de débit', text: 'Trop de monde en même temps : internet ralentit sans couper.', icon: 'M4 18a8 8 0 1 1 16 0M12 18l4-6'}
+    {id: 'congestion', title: 'Baisse de débit', text: 'Trop de monde en même temps : internet ralentit sans couper.', icon: 'M4 18a8 8 0 1 1 16 0M12 18l4-6'},
+    {id: 'olt', title: 'Équipement central en panne', text: 'Toute la commune est coupée. Moov redémarre à distance.', icon: 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01'}
   ];
   const OPEN = ['reported', 'proposed', 'approved', 'rejected', 'dispatched', 'en_route', 'on_site', 'verifying'];
   const STEPS = [['reported', 'Repérée'], ['approved', 'Validée'], ['dispatched', 'Équipe affectée'], ['en_route', 'En route'], ['on_site', 'Sur place'], ['resolved', 'Réparée']];
@@ -173,10 +177,13 @@
         h('i', {'aria-hidden': true}), labels[pin.id].dot ? null : labels[pin.id].name)));
   }
 
-  function Panel({segment, incidents, data, busy, error, onSimulate, onRestore, onStep, onClose, onOpenIncident}) {
+  function Panel({segment, incidents, data, busy, error, onSimulate, onRestore, onStep, onClose, onOpenIncident, onPick}) {
     const [fault, setFault] = useState('pole');
     const st = stateOf(segment, incidents), info = G.SEGMENTS[segment.id], commune = G.COMMUNES.find(c => c.id === info?.commune);
     const i = st.incident, step = i ? ORDER[i.status] ?? 0 : -1, skipVisit = i && i.plan && i.plan.dispatch === false, live = i && !['resolved', 'closed'].includes(i.status);
+    // Quartier coupé par l'équipement central de sa commune : il revient avec lui, on agit sur le poteau qui porte la panne.
+    const central = segment.alarm === 'UPSTREAM' && (data?.segments || []).find(g => g.alarm === 'OLT_DOWN' && G.SEGMENTS[g.id]?.commune === info?.commune);
+    const locked = live || segment.alarm === 'UPSTREAM';
     return h('aside', {className: 'sm-panel', 'aria-labelledby': 'sm-panel-title'},
       h('header', {className: 'sm-panel-head'},
         h('div', null, h('small', null, (commune?.name || '') + ' · ' + segment.id), h('h2', {id: 'sm-panel-title'}, 'Poteau ' + NAMES[segment.id])),
@@ -187,16 +194,19 @@
       i && root.FGSimFlowView && h(root.FGSimFlowView.Flow, {key: i.id, incident: i, segment, data, run: onStep, busy: !!busy}),
       i && h('ol', {className: 'sm-steps', 'aria-label': 'Avancement de l’intervention'}, STEPS.filter(([k]) => !(skipVisit && ['dispatched', 'en_route', 'on_site'].includes(k))).map(([k, label]) => h('li', {key: k, className: ORDER[k] < step || (k === 'resolved' && step === 5) ? 'is-done' : ORDER[k] === step ? 'is-now' : ''}, label))),
       i && h('button', {type: 'button', className: 'sm-link', onClick: () => onOpenIncident(i.id)}, 'Ouvrir le dossier de la panne'),
-      !live && h('fieldset', {className: 'sm-faults', disabled: busy},
+      segment.alarm === 'UPSTREAM' && h('div', {className: 'sm-upstream'},
+        h('p', null, 'Ce quartier dépend de l’équipement central de ' + (commune?.name || 'la commune') + ', en panne. Il reviendra en même temps que lui.'),
+        central && h('button', {type: 'button', className: 'sm-link', onClick: () => onPick(central.id)}, 'Voir le poteau ' + NAMES[central.id])),
+      !locked && h('fieldset', {className: 'sm-faults', disabled: busy},
         h('legend', null, 'Choisir une panne'),
         FAULTS.map(f => h('label', {key: f.id, className: 'sm-fault' + (fault === f.id ? ' is-on' : '')},
           h('input', {type: 'radio', name: 'sm-fault', value: f.id, checked: fault === f.id, onChange: () => setFault(f.id)}),
           h('svg', {viewBox: '0 0 24 24', width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true}, h('path', {d: f.icon})),
           h('span', null, h('b', null, f.title), h('small', null, f.text))))),
       error && h('p', {className: 'sm-error', role: 'alert'}, error),
-      h('div', {className: 'sm-actions' + (live ? ' is-single' : '')},
+      segment.alarm !== 'UPSTREAM' && h('div', {className: 'sm-actions' + (live ? ' is-single' : '')},
         !live && h('button', {type: 'button', className: 'sm-go', disabled: busy, onClick: () => onSimulate(segment.id, fault)}, busy === 'simulate' ? 'Panne en cours de création…' : 'Simuler la panne'),
-        h('button', {type: 'button', className: 'sm-restore', disabled: busy || (st.tone === 'calm' && segment.online === segment.total), onClick: () => onRestore(segment.id)}, busy === 'restore' ? 'Rétablissement…' : live ? 'Remettre le quartier en état' : 'Rétablir')));
+        h('button', {type: 'button', className: 'sm-restore', disabled: busy || (st.tone === 'calm' && segment.online === segment.total), onClick: () => onRestore(segment.id)}, busy === 'restore' ? 'Rétablissement…' : live ? (segment.alarm === 'OLT_DOWN' ? 'Remettre la commune en état' : 'Remettre le quartier en état') : 'Rétablir')));
   }
 
   function View({data, api: call, onChanged, onOpenIncident}) {
@@ -240,7 +250,7 @@
           h(Scene, {segments, incidents, rotation, zoom: z, pan, ratio, selected, onPick: pick, compact: narrow})),
         narrow && h('div', {className: 'sm-chips', role: 'group', 'aria-label': 'Choisir un poteau'}, Object.keys(NAMES).map(id => { const tone = stateOf(segments.find(x => x.id === id) || {}, incidents).tone; return h('button', {key: id, type: 'button', className: 'sm-chip is-' + tone + (selected === id ? ' is-selected' : ''), 'aria-pressed': selected === id, onClick: () => pick(id)}, h('i', {'aria-hidden': true}), NAMES[id]); })),
         h('ul', {className: 'sm-legend'}, [['calm', 'Tout va bien'], ['warn', 'Débit en baisse'], ['down', 'Panne en cours'], ['ok', 'Réparé']].map(([k, t]) => h('li', {key: k}, h('i', {className: 'is-' + k, 'aria-hidden': true}), t)))),
-      seg && h(Panel, {segment: seg, incidents, data, busy, error, onStep: step, onSimulate: (id, f) => run('simulate', id, f), onRestore: id => run('restore', id, 'normal'), onClose: () => setSelected(null), onOpenIncident}));
+      seg && h(Panel, {segment: seg, incidents, data, busy, error, onStep: step, onSimulate: (id, f) => run('simulate', id, f), onRestore: id => run('restore', id, 'normal'), onClose: () => setSelected(null), onOpenIncident, onPick: setSelected}));
   }
 
   root.FGSim3D = {...api, View};

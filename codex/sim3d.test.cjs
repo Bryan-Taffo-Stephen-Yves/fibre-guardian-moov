@@ -49,7 +49,7 @@ test('État du poteau : calme, panne, débit en baisse, réparé',()=>{
  assert.equal(S.stateOf({...seg,online:10},[]).tone,'down');
  assert.equal(S.stateOf(seg,[{segment_id:'YOP-07',status:'proposed',terminal:false,plan:{cause:'UPLINK_CONGESTION'}}]).tone,'warn');
  assert.equal(S.stateOf(seg,[{segment_id:'YOP-07',status:'resolved',terminal:true,updated:Date.now()}]).tone,'ok');
- assert.deepEqual(S.FAULTS.map(f=>f.id),['pole','fiber','power','congestion']);
+ assert.deepEqual(S.FAULTS.map(f=>f.id),['pole','fiber','works','theft','flood','power','congestion','olt']);
 });
 
 test('La panne choisie sur un poteau est retenue, et le rétablissement remet le quartier en ligne',async()=>{

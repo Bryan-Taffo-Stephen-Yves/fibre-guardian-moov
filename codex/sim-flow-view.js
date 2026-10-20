@@ -11,7 +11,7 @@
   function ticker(agent, now, offline, total) {
     const k = Math.floor(now / 380);
     if (agent.id === 'watch') { const box = k % total + 1; return 'Box ' + String(box).padStart(2, '0') + ' · ' + (box <= offline ? 'hors ligne' : 'en ligne'); }
-    if (agent.id === 'cause') return ['Courant CIE ?', 'Lumière de la fibre ?', 'Charge du réseau ?', 'Alarme des box ?'][k % 4];
+    if (agent.id === 'cause') return ['Courant CIE ?', 'Lumière de la fibre ?', 'Chantier déclaré ?', 'Capteur d’eau ?', 'Boîtier forcé ?', 'Équipement central ?', 'Charge du réseau ?'][k % 7];
     if (agent.id === 'plan') return ['Équipe la plus proche…', 'Matériel à prévoir…', 'Consignes de sécurité…'][k % 3];
     return ['Clients du quartier…', 'Équipe Moov…', 'Technicien…'][k % 3];
   }
@@ -33,22 +33,26 @@
   // Prochaine décision humaine. Chaque bouton passe par le serveur, qui vérifie les droits.
   function NextStep({incident, segment, data, now, run, busy}) {
     const ready = now >= (F.agents(incident, segment, data.technicians, now).at(-1).end), dispatch = incident.plan?.dispatch;
-    const [tech, setTech] = useState(''), [safe, setSafe] = useState(false), suggested = F.nearest(incident.segment_id, data.technicians);
-    useEffect(() => { setTech(''); setSafe(false); }, [incident.id, incident.status]);
+    const [tech, setTech] = useState(''), [safe, setSafe] = useState(false), [dry, setDry] = useState(false), suggested = F.nearest(incident.segment_id, data.technicians);
+    useEffect(() => { setTech(''); setSafe(false); setDry(false); }, [incident.id, incident.status]);
+    const kind = F.kindOf(incident, segment), flood = kind === 'flood';
+    // Action à distance (pas de déplacement) : ce que Guardian attend avant de clôturer, et le bouton qui le confirme.
+    const remote = {olt: ['Guardian redémarre l’équipement central, puis vérifie les box de toute la commune avant de clôturer.', 'Redémarrer et vérifier'], power: ['Quand le courant CIE revient, Guardian vérifie les box puis clôture.', 'Le courant est revenu'], congestion: ['Quand la capacité est ajoutée, Guardian vérifie le débit puis clôture.', 'Ajouter la capacité et vérifier']}[kind];
     const who = (data.technicians || []).find(t => t.id === incident.technician), first = who ? who.name.split(' ')[0] : 'l’équipe';
     const base = {id: incident.id, version: incident.version};
     let body = null;
     if (!ready) body = h('p', {className: 'sf-wait'}, 'Guardian termine son analyse. La validation s’ouvre juste après.');
     else if (incident.status === 'proposed') body = data.canApprove
-      ? [h('p', {key: 'p'}, dispatch ? 'Guardian propose une intervention. Rien ne part sans votre accord.' : 'Guardian propose une action à distance. Rien ne part sans votre accord.'), h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'approve', note: 'Plan validé depuis le simulateur.'})}, 'Valider le plan')]
+      ? [h('p', {key: 'p'}, dispatch ? 'Guardian propose une intervention. Rien ne part sans votre accord.' : kind === 'olt' ? 'Guardian propose de redémarrer l’équipement central à distance. Rien ne se fait sans votre accord.' : 'Guardian propose une action à distance. Rien ne part sans votre accord.'), h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'approve', note: 'Plan validé depuis le simulateur.'})}, 'Valider le plan')]
       : h('p', null, 'Un responsable Moov doit valider le plan.');
     else if (incident.status === 'approved' && dispatch) body = data.canDispatch
       ? [h('label', {key: 't', className: 'sf-field'}, 'Équipe à envoyer', h('select', {value: tech || suggested?.id || '', onChange: e => setTech(e.target.value)}, (data.technicians || []).filter(t => !t.busy).map(t => h('option', {key: t.id, value: t.id}, t.name + ' · ' + (t.id === suggested?.id ? 'la plus proche' : t.team))))),
+        flood && h('label', {key: 'w', className: 'sf-check'}, h('input', {type: 'checkbox', checked: dry, onChange: e => setDry(e.target.checked)}), 'L’eau s’est retirée (photo du gardien reçue)'),
         h('label', {key: 's', className: 'sf-check'}, h('input', {type: 'checkbox', checked: safe, onChange: e => setSafe(e.target.checked)}), 'Consignes de sécurité vérifiées'),
-        h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy || !safe || !(tech || suggested), onClick: () => run({...base, type: 'dispatch', technician: tech || suggested.id, safety: true})}, 'Envoyer l’équipe')]
+        h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy || !safe || (flood && !dry) || !(tech || suggested), onClick: () => run({...base, type: 'dispatch', technician: tech || suggested.id, safety: true, ...(flood ? {waterCleared: true} : {})})}, flood && !dry ? 'Attendre que l’eau se retire' : 'Envoyer l’équipe')]
       : h('p', null, 'Un responsable Moov doit choisir l’équipe.');
     else if (['dispatched', 'en_route', 'on_site'].includes(incident.status)) body = h('button', {type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'advance'})}, ({dispatched: 'Confirmer le départ de ' + first, en_route: first + ' est arrivé' + (/a$/.test(first) ? 'e' : '') + ' sur place', on_site: 'Réparation terminée'})[incident.status]);
-    else if (incident.status === 'verifying' || (incident.status === 'approved' && !dispatch)) body = [h('p', {key: 'p'}, incident.status === 'verifying' ? 'Guardian vérifie que toutes les box reviennent avant de clôturer.' : 'Quand le quartier est rétabli, Guardian vérifie les box puis clôture.'), h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'verify'}, {restore: segment.id})}, 'Rétablir et vérifier')];
+    else if (incident.status === 'verifying' || (incident.status === 'approved' && !dispatch)) body = [h('p', {key: 'p'}, incident.status === 'verifying' ? 'Guardian vérifie que toutes les box reviennent avant de clôturer.' : remote ? remote[0] : 'Quand le quartier est rétabli, Guardian vérifie les box puis clôture.'), h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'verify'}, {restore: segment.id})}, incident.status === 'approved' && remote ? remote[1] : 'Rétablir et vérifier')];
     if (!body) return null;
     return h('section', {className: 'sf-next', 'aria-label': 'Étape suivante'}, h('b', null, 'À vous de jouer'), body);
   }
