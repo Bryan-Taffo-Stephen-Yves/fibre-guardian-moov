@@ -3,7 +3,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {Store}=require('./pilot-store.cjs');
 const {createGuardianServer}=require('./pilot-server.cjs');
-const {seedDemo,DEMO}=require('./seed-demo.cjs');
+const {seedDemo,DEMO,NEIGHBOURS}=require('./seed-demo.cjs');
 
 const COUNTS=['users','noc_incidents','noc_notifications','audit'];
 function counts(store){return Object.fromEntries(COUNTS.map(t=>[t,store.get('SELECT count(*) AS n FROM '+t).n]));}
@@ -15,7 +15,7 @@ test('La démo pré-remplie crée la situation attendue, et un second passage ne
  try{
   const first=await seedDemo(store);assert.equal(first.seeded,true);
   const before=counts(store);
-  assert.equal(before.users,3);
+  assert.equal(before.users,3+NEIGHBOURS.length,'3 comptes et un client par quartier');
   const incidents=store.all('SELECT segment_id AS segment,status FROM noc_incidents ORDER BY segment_id');
   assert.ok(incidents.some(i=>i.segment==='COC-03'&&i.status==='proposed'),'COC-03 en attente de validation');
   assert.ok(incidents.some(i=>i.segment==='YOP-07'&&i.status==='resolved'),'YOP-07 résolu dans la nuit');
@@ -37,6 +37,6 @@ test('Réinitialiser la démo : refusé au client, accepté pour l’administrat
   store.run("UPDATE noc_incidents SET status='resolved' WHERE segment_id='COC-03'");
   const r=await admin('/demo/reset',{confirm:true});assert.equal(r.status,200);
   assert.equal(store.get("SELECT status FROM noc_incidents WHERE segment_id='COC-03'").status,'proposed','la démo est rejouée');
-  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3);
+  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length);
  }finally{if(saved===undefined)delete process.env[DEMO.admin.env];else process.env[DEMO.admin.env]=saved;server.close();}
 });

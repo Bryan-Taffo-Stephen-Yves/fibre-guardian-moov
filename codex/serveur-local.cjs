@@ -18,7 +18,7 @@ if (require.main === module) {
   // Première ouverture : base vide, on installe la démo pré-remplie (une seule fois).
   const demo = require('./seed-demo.cjs');
   const ready = env.GUARDIAN_SEED_DEMO !== '0' && demo.isEmpty(pilot.guardianStore)
-    ? demo.seedDemo(pilot.guardianStore, { log: console.log, credentialsFile: path.join(path.dirname(dbFile), 'identifiants-demo.txt') }).then(r => { if (r.seeded) console.log('Démo pré-remplie installée (3 comptes, voir README).'); })
+    ? demo.seedDemo(pilot.guardianStore, { log: console.log, credentialsFile: path.join(path.dirname(dbFile), 'identifiants-demo.txt') }).then(r => { if (r.seeded) console.log('Démo pré-remplie installée (3 comptes et un client par quartier, voir README).'); })
     : Promise.resolve();
   console.log(require('./guardian-ai.cjs').available() ? 'Guardian : réponses rédigées avec Claude (clé ANTHROPIC_API_KEY trouvée).' : 'Guardian : réponses du moteur à règles (pas de clé ANTHROPIC_API_KEY).');
   pilot.on('error', e => { console.error(e.message); process.exitCode = 1; });

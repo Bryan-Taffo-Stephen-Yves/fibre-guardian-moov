@@ -64,7 +64,8 @@
     const tabs = [['client', 'Client'], ['team', 'Équipe Moov'], ['tech', 'Technicien']];
     const mine = list.filter(m => m.to === tab);
     useEffect(() => { seen.current[tab] = mine.length; if (body.current) body.current.scrollTop = body.current.scrollHeight; }, [tab, mine.length]);
-    const contact = {client: ['Client de ' + area, 'Reçoit les messages de Moov'], team: ['Équipe Moov', 'Chaque membre de l’équipe'], tech: [who ? who.name : 'Technicien de garde', who ? who.team : '']}[tab];
+    const r = F.reach(incident, segment, data.segments);
+    const contact = {client: [r.names[0] || 'Client de ' + area, r.count > 1 ? 'Envoyé aussi à ' + (r.count - 1) + (r.count > 2 ? ' autres clients' : ' autre client') : area], team: ['Équipe Moov', 'Chaque membre de l’équipe'], tech: [who ? who.name : 'Technicien de garde', who ? who.team : '']}[tab];
     return h('section', {className: 'sf-phone-wrap', 'aria-label': 'Messages envoyés'},
       h('header', {className: 'sf-phone-head'}, h('b', null, 'Messages envoyés'), h('span', null, list.length ? list.length + ' message' + (list.length > 1 ? 's' : '') : 'Aucun pour l’instant')),
       h('div', {className: 'sf-tabs', role: 'tablist'}, tabs.map(([k, label]) => { const n = list.filter(m => m.to === k).length, fresh = Math.max(0, n - (seen.current[k] || 0)); return h('button', {key: k, type: 'button', role: 'tab', 'aria-selected': tab === k, className: tab === k ? 'is-on' : '', onClick: () => setTab(k)}, label, k !== tab && fresh > 0 && h('em', {'aria-label': fresh + ' nouveau' + (fresh > 1 ? 'x' : '')}, fresh)); })),
