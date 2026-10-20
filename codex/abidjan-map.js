@@ -55,7 +55,16 @@
   const SEGMENTS = {
     'YOP-07': {commune: 'yopougon', area: 'Niangon', at: [-4.106, 5.331], side: 'north'},
     'COC-03': {commune: 'cocody', area: 'Cité des Arts', at: [-3.99, 5.352], side: 'north'},
-    'MAR-02': {commune: 'marcory', area: 'Résidentiel', at: [-3.984, 5.296], side: 'island'}
+    'MAR-02': {commune: 'marcory', area: 'Résidentiel', at: [-3.984, 5.296], side: 'island'},
+    // Quartiers ajoutés pour la régie des pannes : un poteau par quartier.
+    'ABO-01': {commune: 'abobo', area: 'Abobo Gare', at: [-4.02, 5.42], side: 'north'},
+    'PAL-02': {commune: 'cocody', area: 'Palmeraie', at: [-3.94, 5.372], side: 'north'},
+    'RIV-04': {commune: 'cocody', area: 'Riviera Golf', at: [-3.955, 5.343], side: 'north'},
+    'PLA-01': {commune: 'plateau', area: 'Plateau', at: [-4.018, 5.322], side: 'north'},
+    'ADJ-01': {commune: 'adjame', area: 'Adjamé Liberté', at: [-4.02, 5.36], side: 'north'},
+    'TRE-01': {commune: 'treichville', area: 'Treichville', at: [-4.014, 5.293], side: 'island'},
+    'KOU-01': {commune: 'koumassi', area: 'Koumassi', at: [-3.948, 5.297], side: 'island'},
+    'PBT-01': {commune: 'portbouet', area: 'Port-Bouët', at: [-3.94, 5.272], side: 'island'}
   };
   const BASES = {
     awa: {at: [-4.083, 5.352], side: 'north'}, yao: {at: [-3.972, 5.392], side: 'north'}, amina: {at: [-4.007, 5.299], side: 'island'},
@@ -106,7 +115,7 @@
     if (p.departedAt && p.durationMs) return Math.max(0, Math.min(1, (now - p.departedAt) / p.durationMs));
     return Math.max(0, Math.min(1, Number(p.progress) || 0));
   }
-  const geo = {W, H, project, path, route, along, homes, neighbors, progressOf, SEGMENTS, BASES, COMMUNES};
+  const geo = {W, H, project, path, route, along, homes, neighbors, progressOf, SEGMENTS, BASES, COMMUNES, LAND, SEA, BIETRI, BANCO, BRIDGES, ROADS, RUNWAY};
   if (typeof module === 'object' && module.exports) { module.exports = geo; return; }
 
   const h = root.React.createElement, {useState, useEffect, useMemo} = root.React;
