@@ -149,7 +149,7 @@ td .lb-bar{display:inline-block;width:60px;vertical-align:middle}
 .lb-fibre{fill:none;stroke:var(--moov-primary-400);stroke-width:3;stroke-linecap:round;stroke-dasharray:6 8;animation:lb-flow 1.2s linear infinite}
 .lb-fibre.is-dead{stroke:var(--moov-danger-300);stroke-dasharray:3 6;animation:none}
 @keyframes lb-flow{to{stroke-dashoffset:-14}}
-.lb-drop{stroke:var(--moov-neutral-200);stroke-width:1.5}
+.lb-drop{stroke:var(--moov-neutral-200);stroke-width:1.5;pointer-events:none}
 .lb-node{fill:var(--moov-white);stroke:var(--moov-primary-500);stroke-width:2}
 .lb-node.is-olt{fill:var(--moov-neutral-900);stroke:var(--moov-neutral-900)}
 .lb-svg-label{font-size:11px;fill:var(--moov-text-muted);font-weight:600}
