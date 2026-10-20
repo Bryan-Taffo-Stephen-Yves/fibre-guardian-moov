@@ -25,6 +25,7 @@ test('Les box du Labo suivent les pannes du simulateur',async()=>{
   const yop=port('YOP-07');assert.equal(yop.online,8);assert.equal(yop.onts.filter(o=>o.status==='los').length,12);assert.equal(yop.tone,'down');
   assert.ok(yop.since,'heure de la panne connue');
   assert.ok(port('MAR-02').dots.every(d=>d==='dying'),'coupure de courant : dernier souffle de toutes les box');
+  assert.equal(port('PLA-01').rxs.filter(v=>v!==null).length,20,'la lumière de chaque box, pour les seuils réglés à l’écran');
   assert.equal(port('ABO-01').online,20);assert.ok(port('ABO-01').utilisation>=95,'liaison saturée');
   assert.ok(s.console.some(l=>l.code==='LOS'&&l.equipment.includes('Yopougon')),'alarme dans la console');
   // Lumière crédible pour du GPON classe C+ : entre −8 et −30 dBm pour une box en ligne.

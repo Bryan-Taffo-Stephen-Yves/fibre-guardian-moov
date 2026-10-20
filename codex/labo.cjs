@@ -192,7 +192,7 @@ function snapshot(s,uid,q={},now=Date.now()){
   const hist=Array.from({length:HISTORY},(_,i)=>{const t=now-(HISTORY-1-i)*STEP,v=portAt(g,plans[g.id],g._change,t);return {rx:v.rxAvg,down:v.downMbps,online:v.live,fec:v.fec};});
   const flagged=cur.onts.filter(o=>['warn','weak'].includes(o.status));
   return {id:g.id,zone:g.zone,commune,olt:'OLT '+commune,pon:'0/1/'+(siblings.indexOf(g)+1),alarm:g.alarm,alarmInfo:ALARMS[g.alarm]||ALARMS.NONE,total:g.total,online:cur.live,rxAvg:cur.rxAvg,rxMin:cur.rxMin,fec:cur.fec,downMbps:cur.downMbps,upMbps:cur.upMbps,utilisation:cur.utilisation,latency:cur.latency,
-   since:g._change&&g.alarm!=='NONE'?g._change.at:null,history:hist,flagged:flagged.map(o=>({n:o.n,rx:o.rx,fec:o.fec,flaw:o.flaw,status:o.status})),dots:cur.onts.map(o=>o.status),onts:selected===g.id?cur.onts:undefined,feeder:plans[g.id].feeder,branches:plans[g.id].branches,
+   since:g._change&&g.alarm!=='NONE'?g._change.at:null,history:hist,flagged:flagged.map(o=>({n:o.n,rx:o.rx,fec:o.fec,flaw:o.flaw,status:o.status})),dots:cur.onts.map(o=>o.status),rxs:cur.onts.map(o=>o.rx),onts:selected===g.id?cur.onts:undefined,feeder:plans[g.id].feeder,branches:plans[g.id].branches,
    tone:g.alarm!=='NONE'?(cur.live===0||FIBRE_CUT.includes(g.alarm)||g.alarm==='WATER'?'down':'warn'):flagged.some(o=>o.status==='weak')?'warn':'ok'};
  });
  const olts=communes.map(c=>{

@@ -89,7 +89,7 @@
       h('p', null, hint));
   }
   function PortCard({port: p, th, onOpen, rebooting}) {
-    const dots = p.dots.map((s, i) => statusOf({status: s, rx: s === 'online' || s === 'warn' || s === 'weak' ? (p.flagged.find(f => f.n === i + 1)?.rx ?? -18) : null}, th, rebooting[p.id + ':' + (i + 1)]));
+    const dots = p.dots.map((s, i) => statusOf({status: s, rx: p.rxs[i]}, th, rebooting[p.id + ':' + (i + 1)]));
     return h('button', {type: 'button', className: 'lb-port is-' + p.tone, onClick: () => onOpen(p.id), 'aria-label': p.zone + ', ' + p.online + ' box sur ' + p.total + ' en ligne' + (p.alarm !== 'NONE' ? ', alarme ' + p.alarmInfo.label : '')},
       h('div', {className: 'lb-port-top'}, h('strong', null, p.zone.split(' · ').pop()), h('span', {className: 'lb-mono'}, p.olt.replace('OLT ', '') + ' ' + p.pon)),
       h('div', {className: 'lb-dots', 'aria-hidden': true}, dots.map((s, i) => h('i', {key: i, className: 'is-' + STATUS[s][1]}))),
@@ -163,8 +163,8 @@
           h('path', {d: 'M' + L.cab + ' 145 C ' + (L.cab + 40) + ' 145, ' + (L.cab + 30) + ' ' + branchY(b) + ', ' + (L.pole - 9) + ' ' + branchY(b), className: 'lb-fibre' + (dead(mine) ? ' is-dead' : '')}),
           h('rect', {x: L.pole - 9, y: branchY(b) - 9, width: 18, height: 18, rx: 5, className: 'lb-node'}),
           h('text', {x: L.pole, y: branchY(b) - 15, className: 'lb-svg-label', textAnchor: 'middle'}, 'Poteau ' + (b + 1)),
+          mine.length > 0 && h('path', {d: 'M' + (L.pole + 9) + ' ' + branchY(b) + ' L' + (L.box + (mine.length - 1) * L.step) + ' ' + branchY(b), className: 'lb-drop'}),
           mine.map((o, k) => { const x = L.box + k * L.step, y = branchY(b); return h('g', {key: o.n, className: 'lb-ont is-' + STATUS[o.view][1] + (open === o.n ? ' is-open' : ''), onClick: () => onOpen(o.n), role: 'button', tabIndex: 0, 'aria-label': 'Box ' + o.n + ' : ' + STATUS[o.view][0], onKeyDown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(o.n); } }},
-            h('path', {d: 'M' + (L.pole + 9) + ' ' + y + ' L' + (x - L.r) + ' ' + y, className: 'lb-drop'}),
             h('rect', {x: x - L.r, y: y - L.r, width: 2 * L.r, height: 2 * L.r, rx: 8}),
             h('text', {x, y: y + 4, textAnchor: 'middle'}, o.n)); })); }),
         h('rect', {x: L.olt, y: 125, width: 40, height: 40, rx: 10, className: 'lb-node is-olt'}),
@@ -250,13 +250,16 @@
   // ——— Réflectomètre ———
   function Otdr({snap, api, onPick}) {
     const p = snap.ports.find(x => x.id === snap.selected), [nm, setNm] = S(1310), [trace, setTrace] = S(null), [phase, setPhase] = S('idle'), [error, setError] = S('');
-    E(() => { setTrace(null); setPhase('idle'); }, [p.id]);
+    // Chaque mesure porte un numéro : une mesure lancée sur un autre quartier ou une autre longueur d'onde est ignorée.
+    const runId = R(0);
+    E(() => { runId.current++; setTrace(null); setPhase('idle'); }, [p.id]);
     async function run() {
+      const id = ++runId.current;
       setPhase('run'); setError('');
       try {
         const [r] = await Promise.all([api('/noc/labo?segment=' + encodeURIComponent(p.id) + '&otdr=1&nm=' + nm), new Promise(ok => setTimeout(ok, 2600))]);
-        setTrace(r.otdr); setPhase('done');
-      } catch (e) { setError(e.message || 'La mesure n’a pas abouti.'); setPhase('idle'); }
+        if (id === runId.current) { setTrace(r.otdr); setPhase('done'); }
+      } catch (e) { if (id === runId.current) { setError(e.message || 'La mesure n’a pas abouti.'); setPhase('idle'); } }
     }
     const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 600px)').matches;
     const W = narrow ? 400 : 760, H = narrow ? 280 : 300, pad = {l: 40, r: narrow ? 26 : 34, t: 16, b: 30};
@@ -268,7 +271,7 @@
         h('div', {className: 'lb-otdr-bar'},
           h('div', null, h('h2', {id: 'lb-otdr-title'}, 'Réflectomètre · ' + p.zone), h('p', null, 'On envoie un éclair de lumière dans la fibre et on écoute ce qui revient. Chaque défaut laisse une trace à sa distance exacte.')),
           h('div', {className: 'lb-otdr-tools'},
-            h('div', {className: 'lb-seg', role: 'group', 'aria-label': 'Longueur d’onde'}, [1310, 1550].map(v => h('button', {key: v, type: 'button', 'aria-pressed': nm === v, className: nm === v ? 'is-on' : '', onClick: () => { setNm(v); setPhase('idle'); setTrace(null); }}, v + ' nm'))),
+            h('div', {className: 'lb-seg', role: 'group', 'aria-label': 'Longueur d’onde'}, [1310, 1550].map(v => h('button', {key: v, type: 'button', 'aria-pressed': nm === v, className: nm === v ? 'is-on' : '', onClick: () => { runId.current++; setNm(v); setPhase('idle'); setTrace(null); }}, v + ' nm'))),
             h('button', {type: 'button', className: 'lb-btn is-primary', onClick: run, disabled: phase === 'run'}, h(Icon, {name: 'play'}), phase === 'run' ? 'Mesure en cours…' : trace ? 'Mesurer à nouveau' : 'Lancer la mesure'))),
         h('div', {className: 'lb-otdr-plot' + (phase === 'run' ? ' is-running' : '')},
           h('svg', {viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': trace ? 'Courbe du réflectomètre : ' + trace.verdict : 'Courbe du réflectomètre, aucune mesure'},
