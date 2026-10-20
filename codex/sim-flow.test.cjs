@@ -35,7 +35,7 @@ test('Poteau tombé : équipe, mail, technicien et client prévenus ; puis en ro
   assert.ok(m.some(x=>x.to==='team'&&x.channel==='whatsapp'&&/poteau endommagé, 10 clients sans internet/.test(x.body)));
   const mail=m.find(x=>x.channel==='mail');assert.ok(mail&&/Niangon/.test(mail.subject));assert.ok(mail.lines.some(([k,v])=>k==='Matériel'&&/poteau/.test(v)));
   assert.ok(m.some(x=>x.to==='tech'&&/Préparez-vous/.test(x.body)));
-  assert.ok(m.some(x=>x.to==='client'&&/Vous n’avez rien à faire/.test(x.body)));
+  assert.ok(m.some(x=>x.to==='client'&&/Vous n’avez pas à vous inquiéter/.test(x.body)));
   t.act('YOP-07',{type:'approve',note:'ok'});t.act('YOP-07',{type:'dispatch',technician:'awa',safety:true});t.act('YOP-07',{type:'advance'});
   o=t.view();i=t.find(o,'YOP-07');m=F.messages(i,seg,o.technicians,Date.now()+F.THINK+10);
   assert.ok(m.some(x=>x.to==='client'&&/Awa est en route, arrivée vers \d{2} h \d{2}/.test(x.body)),'heure d’arrivée annoncée');

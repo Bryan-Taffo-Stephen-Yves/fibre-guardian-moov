@@ -61,7 +61,7 @@
    on_site:tech+' est arrivé. Il répare le câble ; je surveille le retour du signal.',
    verifying:'La réparation est faite. Je vérifie que la connexion revient chez tout le monde.',
    resolved:'Votre connexion est rétablie et vérifiée. Merci pour votre patience !'
-  })[scene.status]||cause+(down?' '+down+' foyers sont concernés.':'')+' Moov est déjà prévenu et prépare l’intervention. Vous n’avez rien à faire : je vous préviens à chaque étape.';
+  })[scene.status]||cause+(down?' '+down+' foyers sont concernés.':'')+' Moov est déjà prévenu et prépare l’intervention. Vous n’avez pas à vous inquiéter : je vous préviens à chaque étape.';
  }
  const TOASTS={dispatched:t=>t+' est affecté à votre quartier',en_route:t=>t+' est en route vers vous',on_site:t=>t+' est arrivé dans votre quartier',verifying:()=>'Réparation terminée, vérification en cours',resolved:()=>'Connexion rétablie et vérifiée'};
 
