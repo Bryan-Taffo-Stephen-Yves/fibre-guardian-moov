@@ -65,6 +65,59 @@ test('Baisse de débit et coupure CIE : personne ne se déplace, le client sait 
  }finally{t.server.close();}
 });
 
+test('Chantier, vol de câble, armoire inondée : la bonne cause, les bons messages et la bonne précaution',async()=>{
+ const t=await setup();
+ try{
+  t.sim('YOP-07','works');t.sim('ABO-01','theft');t.sim('MAR-02','flood');
+  let o=t.view();const later=()=>Date.now()+F.THINK+10;
+  const cases=[['YOP-07','works','ROADWORK_CUT',/arraché/],['ABO-01','theft','CABLE_THEFT',/endommagé/],['MAR-02','flood','CABINET_FLOOD',/dès que l’eau se retire/]];
+  for(const [seg,kind,cause,client] of cases){
+   const i=t.find(o,seg),g=o.segments.find(x=>x.id===seg),m=F.messages(i,g,o.technicians,later());
+   assert.equal(i.plan.cause,cause);assert.equal(i.plan.dispatch,true);assert.equal(F.kindOf(i,g),kind);
+   assert.ok(m.some(x=>x.to==='client'&&client.test(x.body)),kind+' : message client');
+   assert.equal(N.overview(t.s,t.u.id).alerts.find(a=>a.segment===seg).cause,cause);
+  }
+  const mail=seg=>F.messages(t.find(o,seg),o.segments.find(x=>x.id===seg),o.technicians,later()).find(x=>x.channel==='mail');
+  assert.ok(mail('YOP-07').lines.some(([k])=>k==='Constat'),'constat pour se faire rembourser le chantier');
+  assert.ok(mail('ABO-01').lines.some(([k,v])=>k==='Déclaration à la police'&&/commissariat/.test(v)));
+  assert.ok(F.messages(t.find(o,'MAR-02'),null,o.technicians,later()).some(x=>x.to==='tech'&&/Attendez le feu vert/.test(x.body)));
+  // L'armoire inondée : personne ne part tant que l'eau n'est pas retirée, même avec un plan validé.
+  t.act('MAR-02',{type:'approve',note:'ok'});
+  assert.throws(()=>t.act('MAR-02',{type:'dispatch',technician:'amina',safety:true}),/eau se retire/);
+  t.act('MAR-02',{type:'dispatch',technician:'amina',safety:true,waterCleared:true});
+  o=t.view();assert.equal(t.find(o,'MAR-02').status,'dispatched');
+  assert.ok(F.messages(t.find(o,'MAR-02'),null,o.technicians,later()).some(x=>x.to==='tech'&&/Feu vert/.test(x.body)));
+  // Le chantier : deux équipes et l'heure de retour d'internet annoncée au client.
+  t.act('YOP-07',{type:'approve',note:'ok'});t.act('YOP-07',{type:'dispatch',technician:'awa',safety:true});t.act('YOP-07',{type:'advance'});
+  o=t.view();const m=F.messages(t.find(o,'YOP-07'),null,o.technicians,later());
+  assert.ok(m.some(x=>x.to==='team'&&/génie civil/.test(x.body)));
+  assert.ok(m.some(x=>x.to==='client'&&/Retour d’internet prévu vers \d{2} h \d{2}/.test(x.body)));
+ }finally{t.server.close();}
+});
+
+test('Équipement central en panne : toute la commune tombe, un seul dossier, redémarrage à distance',async()=>{
+ const t=await setup();
+ try{
+  t.sim('COC-03','olt');let o=t.view();const cocody=['COC-03','PAL-02','RIV-04'];
+  for(const id of cocody)assert.equal(o.segments.find(g=>g.id===id).online,0,id+' coupé');
+  assert.equal(o.segments.find(g=>g.id==='PAL-02').alarm,'UPSTREAM');
+  assert.equal(o.segments.find(g=>g.id==='YOP-07').online,20,'les autres communes ne bougent pas');
+  const open=o.incidents.filter(i=>cocody.includes(i.segment_id)&&!i.terminal);
+  assert.equal(open.length,1,'un seul dossier pour la commune');
+  const i=open[0],g=o.segments.find(x=>x.id==='COC-03'),later=Date.now()+F.THINK+10;
+  assert.equal(i.plan.cause,'OLT_FAILURE');assert.equal(i.plan.dispatch,false);assert.equal(F.kindOf(i,g),'olt');
+  assert.match(F.agents(i,g,o.technicians,later)[0].result,/3 quartiers, 60 box éteintes/);
+  const m=F.messages(i,g,o.technicians,later);
+  assert.ok(m.some(x=>x.to==='team'&&/toute la commune de Cocody/.test(x.body)));
+  assert.ok(m.some(x=>x.to==='client'&&/redémarre à distance/.test(x.body)));
+  assert.equal(m.filter(x=>x.to==='tech').length,0,'personne ne se déplace');
+  t.act('COC-03',{type:'approve',note:'redémarrage'});t.sim('COC-03','normal');t.act('COC-03',{type:'verify'});
+  o=t.view();assert.equal(t.find(o,'COC-03').status,'resolved');
+  for(const id of cocody){const s=o.segments.find(x=>x.id===id);assert.equal(s.online,s.total,id+' revenu');assert.equal(s.alarm,'NONE');}
+  assert.ok(F.messages(t.find(o,'COC-03'),g,[],Date.now()+F.THINK+10).some(x=>x.to==='team'&&/rétabli dans toute la commune/.test(x.body)));
+ }finally{t.server.close();}
+});
+
 test('Rétablir avant tout départ clôt le dossier ; une équipe déjà affectée n’est jamais effacée',async()=>{
  const t=await setup();
  try{

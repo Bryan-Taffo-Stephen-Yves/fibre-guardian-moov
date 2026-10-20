@@ -9,6 +9,18 @@
   const writeSeen = set => { try { root.sessionStorage.setItem(KEY, JSON.stringify([...set].slice(-50))); } catch { /* navigation privée : on garde en mémoire */ } };
 
   // Durée lisible : « 8 s », « 2 min 10 s », « 1 h 05 ».
+  // Ce que voit l'équipe Moov en premier : la cause quand Guardian la connaît, sinon le nombre de clients coupés.
+  function headline(a) {
+    const clients = a.offline + ' client' + (a.offline > 1 ? 's' : '') + ' sans fibre';
+    return ({
+      UPLINK_CONGESTION: 'débit en baisse, réseau saturé',
+      POWER_OUTAGE: 'coupure de courant CIE, ' + a.offline + ' box éteinte' + (a.offline > 1 ? 's' : ''),
+      OLT_FAILURE: 'équipement central en panne, toute la commune est coupée',
+      CABINET_FLOOD: 'armoire inondée, ' + clients,
+      ROADWORK_CUT: 'câble arraché par un chantier, ' + clients,
+      CABLE_THEFT: 'vol de câble probable, ' + clients
+    })[a.cause] || clients;
+  }
   function span(ms) {
     const t = Math.max(0, Math.round(ms / 1000)), m = Math.floor(t / 60), s = t % 60;
     if (t < 60) return t + ' s';
@@ -51,7 +63,7 @@
         h('span', {className: 'na-beacon', 'aria-hidden': true}, h('i'), h('i')),
         h('div', {className: 'na-text'},
           h('small', null, 'Guardian a repéré une panne · il y a ' + span(now - a.detectedAt)),
-          h('strong', null, place(a.segment) + ' : ' + (a.cause === 'UPLINK_CONGESTION' ? 'débit en baisse, réseau saturé' : a.cause === 'POWER_OUTAGE' ? 'coupure de courant CIE, ' + a.offline + ' box éteinte' + (a.offline > 1 ? 's' : '') : a.offline + ' client' + (a.offline > 1 ? 's' : '') + ' sans fibre')),
+          h('strong', null, place(a.segment) + ' : ' + headline(a)),
           h('p', {className: 'na-lead' + (a.firstReport ? '' : ' is-ahead')}, a.firstReport
             ? 'Repérée ' + span(lead) + ' avant le premier client qui s’est plaint.'
             : 'Aucun client ne s’est encore plaint : Moov a ' + span(lead) + ' d’avance.'),

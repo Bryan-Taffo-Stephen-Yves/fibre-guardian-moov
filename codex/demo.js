@@ -10,6 +10,7 @@
   ['Impact pour Moov','Les valeurs de départ de l’écran Impact sont des estimations. Les parts d’appels, de déplacements et de clients évités restent à mesurer lors d’un essai réel.'],
   ['WhatsApp et mail','Dans le simulateur de pannes, les messages WhatsApp et les mails à l’équipe s’affichent dans l’application. Aucun n’est encore envoyé à un vrai numéro ni à une vraie adresse.'],
   ['Agents de Guardian','Les quatre agents prennent volontairement une douzaine de secondes pour montrer leur travail. Leurs conclusions viennent de règles testées ; ils n’envoient jamais un technicien sans l’accord d’une personne de Moov.'],
+  ['Capteurs d’armoire','Le capteur d’eau des armoires, l’alarme d’ouverture des boîtiers et l’avis de chantier sont imaginés pour la démo. Guardian saurait s’en servir si Moov les installe.'],
   ['Paiement','Le paiement Moov Money est simulé. Aucun argent n’est débité.'],
   ['Systèmes Moov','L’application n’est pas reliée au système d’information de Moov (ACS, facturation, supervision réelle).'],
   ['Guardian','L’assistant suit des règles écrites à l’avance. Il ne fait rien sans l’accord d’une personne.']
