@@ -86,6 +86,11 @@
     {id: 'congestion', title: 'Baisse de débit', text: 'Trop de monde en même temps : internet ralentit sans couper.', icon: 'M4 18a8 8 0 1 1 16 0M12 18l4-6'},
     {id: 'olt', title: 'Équipement central en panne', text: 'Toute la commune est coupée. Moov redémarre à distance.', icon: 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01'}
   ];
+  // Câbles de fibre entre poteaux voisins, du central du Plateau vers les quartiers (Grand-Bassam par la route côtière).
+  const LINKS = [['PLA-01', 'ADJ-01'], ['ADJ-01', 'ABO-01'], ['ADJ-01', 'YOP-07'], ['PLA-01', 'COC-03'], ['COC-03', 'RIV-04'], ['RIV-04', 'PAL-02'],
+    ['PLA-01', 'TRE-01'], ['TRE-01', 'MAR-02'], ['COC-03', 'MAR-02'], ['MAR-02', 'KOU-01'], ['KOU-01', 'PBT-01'], ['PBT-01', 'BAS-01']];
+  // État d'un câble : les données passent, ralentissent (réseau saturé) ou s'arrêtent (un des deux poteaux est en panne).
+  const linkState = (a, b) => [a, b].includes('down') ? 'cut' : [a, b].includes('warn') ? 'slow' : 'flow';
   const OPEN = ['reported', 'proposed', 'approved', 'rejected', 'dispatched', 'en_route', 'on_site', 'verifying'];
   const STEPS = [['reported', 'Repérée'], ['approved', 'Validée'], ['dispatched', 'Équipe affectée'], ['en_route', 'En route'], ['on_site', 'Sur place'], ['resolved', 'Réparée']];
   const ORDER = {reported: 0, proposed: 0, rejected: 0, approved: 1, dispatched: 2, en_route: 3, on_site: 4, verifying: 4, resolved: 5};
@@ -104,7 +109,8 @@
     const k = px / vb[2], gap = 4 / k, out = {}, boxes = [];
     const size = it => it.dot ? [26 / k, 26 / k] : [((compact ? 8.6 : 7.4) * it.name.length + (compact ? 38 : 36)) / k, (compact ? 30 : 32) / k];
     const tries = [[0, 0], [0, -1], [-.55, 0], [.55, 0], [-.55, -1], [.55, -1], [0, -2], [-.6, -2], [.6, -2], [0, -3]];
-    [...items].sort((a, b) => b.a[1] - a.a[1]).forEach(it => {
+    // Les points (poteaux calmes sur téléphone) restent sur leur poteau ; les bulles nommées les contournent.
+    [...items].sort((a, b) => (b.dot ? 1 : 0) - (a.dot ? 1 : 0) || b.a[1] - a.a[1]).forEach(it => {
       const [w, hh] = size(it), lift = 8 / k; let best = null;
       for (const [fx, fy] of it.dot ? [[0, 0]] : tries) {
         let x = it.a[0] + fx * (w + gap), y = it.a[1] + fy * (hh + gap);
@@ -119,7 +125,7 @@
     return out;
   }
 
-  const api = {view, frame, place, buildings, faces, smooth, inside, stateOf, FAULTS, NAMES, STEPS, ORDER};
+  const api = {view, frame, place, buildings, faces, smooth, inside, stateOf, linkState, FAULTS, NAMES, STEPS, ORDER, LINKS};
   if (typeof module === 'object' && module.exports) { module.exports = api; return; }
   const h = root.React.createElement, {useState, useEffect, useMemo, useRef} = root.React;
 
@@ -143,7 +149,16 @@
     const dark = new Set(segments.filter(s => states[s.id].tone === 'down').map(s => s.id));
     const blocks = useMemo(() => buildings().map(b => ({...b, depth: v.depth(b.p)})).sort((a, b) => a.depth - b.depth), [rotation]);
     const downCommunes = new Set(segments.filter(s => dark.has(s.id)).map(s => G.SEGMENTS[s.id]?.commune));
-    const pins = Object.entries(G.SEGMENTS).map(([id, s]) => { const seg = segments.find(x => x.id === id) || {id, online: 20, total: 20}, p = G.project(s.at); return {id, seg, p, depth: v.depth(p), st: states[id] || {tone: 'calm'}}; });
+    const pins = Object.entries(G.SEGMENTS).map(([id, s]) => { const seg = segments.find(x => x.id === id) || {id, online: 20, total: 20}, p = G.project(s.at), st = states[id] || {tone: 'calm'}, [bx, by] = v.at(p), fallen = st.tone === 'down' && seg.scenario === 'pole'; return {id, seg, p, depth: v.depth(p), st, fallen, top: fallen ? [bx + 26, by - 8] : v.at(p, 40), box: fallen ? [bx + 18, by - 5] : v.at(p, 22)}; });
+    // Les câbles partent du boîtier fixé sur le mât, juste sous la bulle du poteau.
+    const tops = Object.fromEntries(pins.map(pin => [pin.id, pin]));
+    const cables = LINKS.filter(([a, b]) => tops[a] && tops[b]).map(([a, b], k) => {
+      const p = tops[a].box, q = tops[b].box, len = Math.hypot(q[0] - p[0], q[1] - p[1]), state = linkState(tops[a].st.tone, tops[b].st.tone);
+      // Le câble pend un peu entre deux poteaux ; les paquets mettent plus de temps sur les longues portées.
+      const d = 'M' + p.join(' ') + 'Q' + ((p[0] + q[0]) / 2).toFixed(1) + ' ' + ((p[1] + q[1]) / 2 + len * .07).toFixed(1) + ' ' + q.join(' ');
+      const dur = (1.4 + len / 260) * (state === 'slow' ? 2.6 : 1);
+      return {id: a + b, d, state, dur, delay: (k * .53) % dur};
+    });
     const vans = incidents.filter(i => i.technician && ['en_route', 'on_site', 'verifying'].includes(i.status) && G.SEGMENTS[i.segment_id]).map(i => {
       const base = typeof i.technician === 'string' ? i.technician : null, path = base && G.route(base, i.segment_id);
       if (!path) return null; const pos = G.along(path, G.progressOf(i, Date.now())); return {id: i.id, p: [pos.x, pos.y]};
@@ -168,17 +183,25 @@
         [...blocks.map(b => ({kind: 'b', depth: b.depth, b})), ...pins.map(pin => ({kind: 'p', depth: pin.depth + .1, pin})), ...vans.map(van => ({kind: 'v', depth: v.depth(van.p) + .2, van}))].sort((a, b) => a.depth - b.depth).map((it, k) => {
           if (it.kind === 'b') { const f = faces(v, it.b), off = it.b.segment && dark.has(it.b.segment); return h('g', {key: k, className: 'sm-building' + (off ? ' is-off' : '')}, f.walls.map((w, j) => h('path', {key: j, d: w.d, className: 'sm-wall-' + w.side})), h('path', {d: f.roof, className: 'sm-roof'})); }
           if (it.kind === 'v') { const f = faces(v, {p: it.van.p, w: 12, d: 7, h: 7}); return h('g', {key: k, className: 'sm-van'}, f.walls.map((w, j) => h('path', {key: j, d: w.d, className: 'sm-van-' + w.side})), h('path', {d: f.roof, className: 'sm-van-roof'})); }
-          const pin = it.pin, [bx, by] = v.at(pin.p), fallen = pin.st.tone === 'down' && pin.seg.scenario === 'pole', top = fallen ? [bx + 26, by - 8] : v.at(pin.p, 40);
+          const pin = it.pin, [bx, by] = v.at(pin.p), fallen = pin.fallen, top = pin.top;
           return h('g', {key: k, className: 'sm-pole is-' + pin.st.tone + (selected === pin.id ? ' is-selected' : '')},
             h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-ground'}),
-            pin.st.tone === 'down' && h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-pulse'}),
+            pin.st.tone === 'down' ? h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-pulse'})
+              : h('ellipse', {cx: bx, cy: by, rx: 15, ry: 15 * TILT, className: 'sm-pole-ring', style: {animationDelay: -(pin.depth % 2.8).toFixed(2) + 's'}}),
             h('line', {x1: bx, y1: by, x2: top[0], y2: top[1], className: 'sm-pole-mast'}),
-            h('line', {x1: top[0] - (fallen ? 3 : 7), y1: top[1] + (fallen ? -6 : 5), x2: top[0] + (fallen ? 3 : 7), y2: top[1] + (fallen ? 6 : 5), className: 'sm-pole-arm'}));
+            h('line', {x1: top[0] - (fallen ? 3 : 7), y1: top[1] + (fallen ? -6 : 5), x2: top[0] + (fallen ? 3 : 7), y2: top[1] + (fallen ? 6 : 5), className: 'sm-pole-arm'}),
+            // Voyant du boîtier fixé sur le poteau : il clignote quand les données passent.
+            h('circle', {cx: pin.box[0], cy: pin.box[1], r: 3.6, className: 'sm-pole-led', style: {animationDelay: -(pin.depth % 1.6).toFixed(2) + 's'}}));
         }),
+        // Les données circulent sur les câbles, dans les deux sens ; elles s'arrêtent au poteau en panne.
+        h('g', {className: 'sm-net', 'aria-hidden': true}, cables.map(c => h('g', {key: c.id, className: 'sm-link is-' + c.state},
+          h('path', {d: c.d, className: 'sm-cable'}),
+          c.state !== 'cut' && [[0, 0], [0, .5], [1, .25]].map(([back, shift], n) => { const style = {animationDuration: c.dur.toFixed(2) + 's', animationDelay: -(c.delay + shift * c.dur).toFixed(2) + 's'}, cls = back ? ' is-back' : '';
+            return [h('path', {key: 'h' + n, d: c.d, pathLength: 1, className: 'sm-packet-halo' + cls, style}), h('path', {key: 'p' + n, d: c.d, pathLength: 1, className: 'sm-packet' + cls, style})]; })))),
         // Fil entre le poteau et sa bulle quand la bulle a dû se pousser.
         pins.filter(pin => labels[pin.id].moved).map(pin => { const a = labels[pin.id].a, b = labels[pin.id].at; return h('line', {key: 'f' + pin.id, x1: a[0], y1: a[1], x2: b[0], y2: b[1], className: 'sm-leader'}); }),
-        // Sous l'encart : la vraie distance de Grand-Bassam.
-        (() => { const [x, y] = v.at(G.project([-3.917, 5.2296])); return h('text', {x, y, className: 'sm-away-km', style: {fontSize: (12 * vb[2] / px).toFixed(1) + 'px'}}, 'à ' + G.AWAY.km + ' km par la route'); })()),
+        // À gauche de l'encart : la vraie distance de Grand-Bassam.
+        (() => { const [x, y] = v.at(G.project([-3.9385, 5.2392])); return h('text', {x, y, className: 'sm-away-km', style: {fontSize: (12 * vb[2] / px).toFixed(1) + 'px'}}, 'à ' + G.AWAY.km + ' km par la route'); })()),
       pins.map(pin => h('button', {key: pin.id, type: 'button', className: 'sm-bubble is-' + pin.st.tone + (labels[pin.id].dot ? ' is-dot' : '') + (selected === pin.id ? ' is-selected' : ''), style: bubble(pin.id), title: 'Poteau ' + NAMES[pin.id], onClick: () => onPick(pin.id), 'aria-pressed': selected === pin.id, 'aria-label': 'Poteau ' + NAMES[pin.id] + ' : ' + ({down: 'panne en cours', warn: 'débit en baisse', ok: 'réparé', calm: 'tout va bien'})[pin.st.tone]},
         h('i', {'aria-hidden': true}), labels[pin.id].dot ? null : labels[pin.id].name)));
   }
@@ -255,7 +278,7 @@
         h('div', {className: 'sm-viewport', onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up},
           h(Scene, {segments, incidents, rotation, zoom: z, pan, ratio, selected, onPick: pick, compact: narrow})),
         narrow && h('div', {className: 'sm-chips', role: 'group', 'aria-label': 'Choisir un poteau'}, Object.keys(NAMES).map(id => { const tone = stateOf(segments.find(x => x.id === id) || {}, incidents).tone; return h('button', {key: id, type: 'button', className: 'sm-chip is-' + tone + (selected === id ? ' is-selected' : ''), 'aria-pressed': selected === id, onClick: () => pick(id)}, h('i', {'aria-hidden': true}), NAMES[id]); })),
-        h('ul', {className: 'sm-legend'}, [['calm', 'Tout va bien'], ['warn', 'Débit en baisse'], ['down', 'Panne en cours'], ['ok', 'Réparé']].map(([k, t]) => h('li', {key: k}, h('i', {className: 'is-' + k, 'aria-hidden': true}), t)))),
+        h('ul', {className: 'sm-legend'}, [['calm', 'Tout va bien'], ['warn', 'Débit en baisse'], ['down', 'Panne en cours'], ['ok', 'Réparé'], ['data', 'Données qui circulent']].map(([k, t]) => h('li', {key: k}, h('i', {className: 'is-' + k, 'aria-hidden': true}), t)))),
       seg && h(Panel, {segment: seg, incidents, data, busy, error, onStep: step, onSimulate: (id, f) => run('simulate', id, f), onRestore: id => run('restore', id, 'normal'), onClose: () => setSelected(null), onOpenIncident, onPick: setSelected}));
   }
 
