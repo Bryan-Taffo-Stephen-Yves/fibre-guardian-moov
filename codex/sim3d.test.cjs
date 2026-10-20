@@ -52,6 +52,14 @@ test('État du poteau : calme, panne, débit en baisse, réparé',()=>{
  assert.deepEqual(S.FAULTS.map(f=>f.id),['pole','fiber','works','theft','flood','power','congestion','olt']);
 });
 
+test('Câbles entre poteaux : chaque poteau est relié, les données s’arrêtent au poteau en panne et ralentissent quand le réseau sature',()=>{
+ const ids=new Set(Object.keys(A.SEGMENTS)),linked=new Set(S.LINKS.flat());
+ for(const [a,b] of S.LINKS)assert.ok(ids.has(a)&&ids.has(b),a+' – '+b);
+ assert.deepEqual([...ids].filter(id=>!linked.has(id)),[],'aucun poteau isolé');
+ assert.ok(S.LINKS.some(l=>l.includes('BAS-01')&&l.includes('PBT-01')),'Grand-Bassam relié par la route côtière');
+ assert.equal(S.linkState('calm','ok'),'flow');assert.equal(S.linkState('warn','calm'),'slow');assert.equal(S.linkState('calm','down'),'cut');assert.equal(S.linkState('warn','down'),'cut');
+});
+
 test('La panne choisie sur un poteau est retenue, et le rétablissement remet le quartier en ligne',async()=>{
  const server=createGuardianServer({db:':memory:',onError:()=>{}}),s=server.guardianStore;
  try{
