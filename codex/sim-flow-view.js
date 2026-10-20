@@ -65,12 +65,16 @@
     const mine = list.filter(m => m.to === tab);
     useEffect(() => { seen.current[tab] = mine.length; if (body.current) body.current.scrollTop = body.current.scrollHeight; }, [tab, mine.length]);
     const r = F.reach(incident, segment, data.segments);
+    // Vrais WhatsApp (si le service est branché) : combien sont partis pour ce destinataire, ou pourquoi l'un a échoué.
+    const real = (data.whatsapp?.sent || []).filter(x => x.incidentId === incident.id && x.to === tab), sent = real.filter(x => x.status === 'sent').length, failed = real.find(x => x.status === 'failed');
     const contact = {client: [r.names[0] || 'Client de ' + area, r.count > 1 ? 'Envoyé aussi à ' + (r.count - 1) + (r.count > 2 ? ' autres clients' : ' autre client') : area], team: ['Équipe Moov', 'Chaque membre de l’équipe'], tech: [who ? who.name : 'Technicien de garde', who ? who.team : '']}[tab];
     return h('section', {className: 'sf-phone-wrap', 'aria-label': 'Messages envoyés'},
       h('header', {className: 'sf-phone-head'}, h('b', null, 'Messages envoyés'), h('span', null, list.length ? list.length + ' message' + (list.length > 1 ? 's' : '') : 'Aucun pour l’instant')),
       h('div', {className: 'sf-tabs', role: 'tablist'}, tabs.map(([k, label]) => { const n = list.filter(m => m.to === k).length, fresh = Math.max(0, n - (seen.current[k] || 0)); return h('button', {key: k, type: 'button', role: 'tab', 'aria-selected': tab === k, className: tab === k ? 'is-on' : '', onClick: () => setTab(k)}, label, k !== tab && fresh > 0 && h('em', {'aria-label': fresh + ' nouveau' + (fresh > 1 ? 'x' : '')}, fresh)); })),
       h('div', {className: 'sf-phone'},
         h('div', {className: 'sf-phone-bar'}, h('span', {className: 'sf-avatar', 'aria-hidden': true}, contact[0].slice(0, 1)), h('span', null, h('b', null, contact[0]), h('small', null, contact[1])), h('span', {className: 'sf-wa'}, 'WhatsApp')),
+        sent > 0 && h('p', {className: 'sf-real', role: 'status'}, icon('M5 12l5 5 9-10', 14), sent > 1 ? sent + ' messages partis aussi sur un vrai téléphone' : 'Parti aussi sur un vrai téléphone'),
+        failed && h('p', {className: 'sf-real is-off', role: 'status'}, failed.error),
         h('div', {className: 'sf-thread', ref: body, role: 'log', 'aria-live': 'polite'},
           mine.length ? mine.map(m => m.channel === 'mail' ? h(Mail, {key: m.id, m}) : m.channel === 'app'
             ? h('p', {key: m.id, className: 'sf-note'}, icon('M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21h4', 14), 'Notification : ' + m.body)

@@ -73,6 +73,29 @@ Sans clé, Guardian répond avec ses règles écrites à l'avance. Avec une clé
 
 Garde-fous de dépense : 20 réponses rédigées par abonné toutes les 10 minutes et 400 par jour pour toute l'application ; au-delà, Guardian revient à ses règles.
 
+## Vrais messages WhatsApp (facultatif)
+
+Sans réglage, les messages du Simulateur restent dans le téléphone affiché à l'écran. Avec les réglages ci-dessous, les mêmes messages partent aussi sur de vrais téléphones WhatsApp : le client ne reçoit que les pannes de sa commune, l'équipe Moov et le technicien reçoivent les leurs. Chaque message ne part qu'une fois. Le Simulateur affiche « Parti aussi sur un vrai téléphone », ou la raison d'un échec en mots simples.
+
+**Twilio (le plus rapide, gratuit, sans carte bancaire)** :
+
+1. Créez un compte sur twilio.com/try-twilio et confirmez votre e-mail et votre numéro.
+2. Menu **Messaging**, puis **Try it out**, puis **Send a WhatsApp message**. La page affiche un mot de code (par exemple « join fresh-tiger ») et le numéro +1 415 523 8886.
+3. Sur chaque téléphone de la démo, envoyez ce mot de code par WhatsApp à ce numéro. À refaire tous les 3 jours (et le matin du jury).
+4. Sur la page d'accueil de la console Twilio, copiez **Account SID** et **Auth Token**.
+
+**Sur Render** (onglet **Environment**) ou **Railway** (onglet **Variables**), ajoutez :
+
+- `TWILIO_ACCOUNT_SID` : l'Account SID ;
+- `TWILIO_AUTH_TOKEN` : l'Auth Token ;
+- `WHATSAPP_NUMEROS` : qui reçoit quoi, par exemple `Grand-Bassam=2250701020304, equipe=2250705060708, technicien=2250709101112`. À gauche du signe `=`, une commune (Cocody), un quartier (Palmeraie) ou son code (BAS-01) pour un client, ou bien `equipe` ou `technicien` ; à droite, le numéro WhatsApp complet avec l'indicatif 225 (par exemple `2250701020304` pour le 07 01 02 03 04).
+
+Le compte gratuit envoie environ 100 messages, un toutes les 3 secondes : le client reçoit le sien en premier.
+
+**Meta (numéro de test WhatsApp Cloud)** fonctionne aussi : `WHATSAPP_TOKEN` et `WHATSAPP_PHONE_ID` à la place des deux réglages Twilio, 5 téléphones autorisés au plus, chacun doit d'abord écrire au numéro de test.
+
+Comme pour la clé Claude : ces réglages ne se collent jamais dans une discussion ni dans GitHub. En local, ils peuvent aller dans `codex/.env`.
+
 ## Étape 7 : l'application Android (fichier APK)
 
 Le concours demande une application qui fonctionne sur Android. Fibre Guardian en devient une grâce à PWABuilder, un service gratuit de Microsoft qui emballe le site en vraie application Android. Il faut que le site soit déjà en ligne (étapes 1 à 6).
@@ -150,6 +173,10 @@ L'image `codex/Dockerfile` fonctionne chez tout hébergeur qui accepte Docker et
 | `ANTHROPIC_MODEL` | Modèle utilisé | `claude-opus-5-5` |
 | `GUARDIAN_AI` | `0` pour couper Claude même si la clé est présente | actif si clé |
 | `GUARDIAN_AI_TIMEOUT_MS` | Délai maximal d'attente de Claude avant la réponse habituelle | `8000` |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Vrais WhatsApp par le bac à sable Twilio (`whatsapp.cjs`) | aucun (messages affichés seulement) |
+| `TWILIO_WHATSAPP_FROM` | Numéro d'envoi Twilio | `whatsapp:+14155238886` |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_API_VERSION` | Vrais WhatsApp par l'API WhatsApp Cloud de Meta (si Twilio n'est pas réglé) | aucun, `v23.0` |
+| `WHATSAPP_NUMEROS` | Destinataires : `commune, quartier ou code=numéro`, `equipe=numéro`, `technicien=numéro`, séparés par des virgules | aucun |
 | `GUARDIAN_ANDROID_PACKAGE` | Nom du paquet de l'application Android, publié dans `/.well-known/assetlinks.json` | aucun |
 | `GUARDIAN_ANDROID_SHA256` | Empreinte(s) SHA-256 de la clé de signature Android, séparées par des virgules | aucune |
 | `GUARDIAN_TLS_KEY`, `GUARDIAN_TLS_CERT` | HTTPS géré par l'application elle-même (sans proxy) | aucun |
