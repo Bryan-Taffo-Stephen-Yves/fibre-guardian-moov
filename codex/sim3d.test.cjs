@@ -4,9 +4,9 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const S=require('./sim3d.js'),A=require('./abidjan-map.js'),N=require('./noc-store.cjs'),O=require('./operator-store.cjs'),{createGuardianServer}=require('./pilot-server.cjs');
 
-test('Onze poteaux, chacun nommé et posé dans sa commune',()=>{
+test('Douze poteaux, chacun nommé et posé dans sa commune, Grand-Bassam compris',()=>{
  const ids=Object.keys(A.SEGMENTS);
- assert.equal(ids.length,11);
+ assert.equal(ids.length,12);assert.equal(S.NAMES['BAS-01'],'Grand-Bassam');
  for(const id of ids){
   assert.ok(S.NAMES[id],'nom affiché pour '+id);
   const c=A.COMMUNES.find(v=>v.id===A.SEGMENTS[id].commune);
@@ -27,7 +27,7 @@ test('Relief : un toit et au plus deux murs visibles, quelle que soit l’orient
 });
 
 test('Cadrage : tous les poteaux tiennent dans la vue de départ, sur ordinateur et sur téléphone',()=>{
- for(const [ratio,zoom] of [[1.62,1.1],[1.2,1.3]]){
+ for(const [ratio,zoom] of [[1.62,1.1],[1.2,1.12]]){
   const v=S.view(-18),[x,y,w,hh]=S.frame(-18,zoom,[0,0],ratio);
   for(const s of Object.values(A.SEGMENTS)){const [px,py]=v.at(A.project(s.at));assert.ok(px>x&&px<x+w&&py>y&&py<y+hh,'poteau visible');}
  }

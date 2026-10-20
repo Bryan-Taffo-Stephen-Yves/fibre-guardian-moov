@@ -17,6 +17,8 @@
 .ab-water-labels .ab-forest-label{fill:var(--moov-success-700);font-size:13px}
 .ab-labels text{fill:var(--moov-neutral-600);font-size:16px;font-weight:600;letter-spacing:-.01em;text-anchor:middle;paint-order:stroke;stroke:var(--moov-white);stroke-width:3px;stroke-linejoin:round}
 .ab-labels text.is-down{fill:var(--moov-danger-700)}
+.ab-away{stroke:var(--moov-primary-300);stroke-width:2;stroke-dasharray:6 5}
+.ab-labels .ab-away-km{font-size:.8em;font-weight:500;fill:var(--moov-text-muted)}
 
 /* Quartiers suivis : box des clients et repère */
 .ab-home{fill:var(--moov-primary-300);opacity:.75;transition:fill .5s var(--fg-ease,ease),opacity .5s}
@@ -58,7 +60,7 @@
 @keyframes ab-live{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-danger-500) 50%,transparent)}100%{box-shadow:0 0 0 9px color-mix(in srgb,var(--moov-danger-500) 0%,transparent)}}
 .ab-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
 .ab-panel.is-compact .ab-body{grid-template-columns:1fr}
-.ab-stage{position:relative;border-radius:var(--fg-radius,14px);overflow:hidden;background:var(--moov-primary-100);aspect-ratio:1000/790;width:100%}
+.ab-stage{position:relative;border-radius:var(--fg-radius,14px);overflow:hidden;background:var(--moov-primary-100);aspect-ratio:1000/805;width:100%}
 .ab-panel.is-compact .ab-stage{aspect-ratio:16/10}
 .ab-legend{position:absolute;left:12px;bottom:12px;display:flex;flex-wrap:wrap;gap:6px 14px;margin:0;padding:8px 12px;list-style:none;background:color-mix(in srgb,var(--moov-white) 92%,transparent);border-radius:12px;box-shadow:var(--fg-shadow-xs);font-size:12px;color:var(--moov-neutral-700);max-width:calc(100% - 24px)}
 .ab-legend li{display:flex;align-items:center;gap:6px}
@@ -96,12 +98,12 @@
   .ab-panel{padding:16px;gap:12px;border-radius:16px}
   .ab-head{flex-direction:column;gap:8px}
   .ab-head h2{font-size:20px}
-  .ab-stage{aspect-ratio:1000/790}
+  .ab-stage{aspect-ratio:1000/805}
   .ab-legend{position:static;margin-top:0;background:transparent;box-shadow:none;padding:8px 0 0}
   .ab-panel .ab-stage{aspect-ratio:auto;overflow:visible;background:transparent}
-  .ab-panel .ab-stage .ab-map{border-radius:12px;background:var(--moov-primary-100);aspect-ratio:740/510;height:auto}
+  .ab-panel .ab-stage .ab-map{border-radius:12px;background:var(--moov-primary-100);aspect-ratio:870/610;height:auto}
   .oc-command .oc-network .oc-abidjan{aspect-ratio:auto;background:transparent}
-  .oc-command .oc-network .oc-abidjan .ab-map{aspect-ratio:740/510;height:auto;background:var(--moov-primary-100)}
+  .oc-command .oc-network .oc-abidjan .ab-map{aspect-ratio:870/610;height:auto;background:var(--moov-primary-100)}
   .oc-command .oc-network .oc-abidjan .ab-legend{padding:8px 16px 0}
   .ab-map:not(.is-focused) .ab-labels text{font-size:24px;stroke-width:5px}
   .ab-map:not(.is-focused) .ab-pin-label{font-size:23px;stroke-width:5px}
@@ -140,7 +142,7 @@
 
 /* Centre d'opérations : la carte remplace l'ancien plan schématique dans « Le réseau et les équipes ». */
 .oc-command .oc-network .oc-abidjan{border-radius:0;aspect-ratio:auto;background:transparent;margin:16px 0 12px}
-.oc-command .oc-network .oc-abidjan .ab-map{aspect-ratio:1000/790;height:auto;background:var(--moov-primary-100)}
+.oc-command .oc-network .oc-abidjan .ab-map{aspect-ratio:1000/805;height:auto;background:var(--moov-primary-100)}
 .oc-command .oc-network .oc-abidjan .ab-legend{position:static;background:transparent;box-shadow:none;padding:10px 23px 0;max-width:none}
 
 /* Panne prévue : anneau orange en pointillés autour du quartier, avant toute coupure. */

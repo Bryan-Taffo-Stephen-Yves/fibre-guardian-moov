@@ -10,7 +10,9 @@ test('Chaque quartier suivi et chaque équipe sont placés sur la carte, dans le
   assert.ok(A.COMMUNES.some(c=>c.id===s.commune),id+' rattaché à une commune connue');
  }
  for(const t of N.TECHS)assert.ok(A.BASES[t.id],'base connue pour '+t.name);
- assert.equal(A.COMMUNES.length,10,'les dix communes d’Abidjan');
+ assert.equal(A.COMMUNES.filter(c=>!c.away).length,10,'les dix communes d’Abidjan');
+ const bassam=A.COMMUNES.find(c=>c.away);assert.equal(bassam.name,'Grand-Bassam','Grand-Bassam en encart, à part des dix communes');
+ assert.equal(A.SEGMENTS['BAS-01'].commune,bassam.id);assert.ok(A.AWAY.km>=25&&A.AWAY.km<=40,'distance réelle par la route');
 });
 
 test('Trajet : départ à la base, arrivée au quartier, passage par un pont pour changer de rive',()=>{
