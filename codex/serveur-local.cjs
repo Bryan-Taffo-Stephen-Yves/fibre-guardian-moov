@@ -21,6 +21,8 @@ if (require.main === module) {
     ? demo.seedDemo(pilot.guardianStore, { log: console.log, credentialsFile: path.join(path.dirname(dbFile), 'identifiants-demo.txt') }).then(r => { if (r.seeded) console.log('Démo pré-remplie installée (3 comptes et un client par quartier, voir README).'); })
     : Promise.resolve();
   console.log(require('./guardian-ai.cjs').available() ? 'Guardian : réponses rédigées avec Claude (clé ANTHROPIC_API_KEY trouvée).' : 'Guardian : réponses du moteur à règles (pas de clé ANTHROPIC_API_KEY).');
+  const wa = require('./whatsapp.cjs').config(env);
+  console.log(wa ? 'WhatsApp : vrais messages par ' + (wa.provider === 'twilio' ? 'Twilio' : 'Meta') + ' vers ' + wa.list.length + ' téléphone(s).' : 'WhatsApp : messages affichés dans le Simulateur seulement (pas de réglage TWILIO_* ni WHATSAPP_*).');
   pilot.on('error', e => { console.error(e.message); process.exitCode = 1; });
   ready.catch(e => { console.error('Démo pré-remplie impossible :', e.message); })
     .then(() => pilot.listen(port, host, () => console.log('Fibre Guardian : ' + (env.GUARDIAN_ORIGIN || 'http://127.0.0.1:' + port) + '/codex/ (données : ' + path.dirname(dbFile) + ') ; Ctrl+C pour arrêter.')));

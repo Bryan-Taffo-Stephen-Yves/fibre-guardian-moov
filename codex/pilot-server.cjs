@@ -20,6 +20,8 @@ function createGuardianServer(options={}){
  journey.migrate(store);
  noc.migrate(store);
  jury.migrate(store);
+ // Vrais WhatsApp seulement si WHATSAPP_TOKEN et WHATSAPP_PHONE_ID sont réglés ; sinon rien ne part.
+ const WA=require('./whatsapp.cjs'),whatsapp=WA.start(store,{env:options.env||process.env,onError:e=>options.onError?.(e)});
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -97,7 +99,7 @@ function createGuardianServer(options={}){
      return json(res,{...jury.status(store,r.user.id,origin),user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});}
     if(route==='/api/guardian/chat'&&method==='POST')return json(res,require('./guardian-copilot.cjs').reply(store,user,await body(req,4096)));
     if(route==='/api/noc/feedback'&&method==='POST')return json(res,noc.feedback(store,user.id,await body(req,4096)));
-    if(route==='/api/noc/overview'&&method==='GET')return json(res,noc.overview(store,user.id));
+    if(route==='/api/noc/overview'&&method==='GET')return json(res,{...noc.overview(store,user.id),whatsapp:WA.status(store,whatsapp.cfg)});
     if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
@@ -174,6 +176,6 @@ function createGuardianServer(options={}){
    let data;try{data=await fs.promises.readFile(target);}catch(_){throw new Problem(404,'Introuvable');}res.writeHead(200,{'Content-Type':TYPES[ext]});res.end(method==='HEAD'?undefined:data);
   }catch(e){if(res.headersSent){res.end();return;}json(res,{error:e instanceof Problem?e.message:'Erreur interne. Aucune action confirmée.'},e instanceof Problem?e.status:500);if(!(e instanceof Problem)&&options.onError)options.onError(e);}
  };
- const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const cleanup=setInterval(()=>store.cleanup(),3600000);cleanup.unref();server.on('close',()=>{clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
+ const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const cleanup=setInterval(()=>store.cleanup(),3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
 }
 module.exports={createGuardianServer};
