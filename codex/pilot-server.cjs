@@ -58,6 +58,8 @@ function createGuardianServer(options={}){
      else result={user:await store.login(d.email,d.password)};
      const s=store.session(result.user);cookie(res,s.secret,8*3600);return json(res,{...result,user:{...result.user,csrf:s.csrf,role:workspace.sessionRole(store,result.user.id)}});
     }
+    // Lien de suivi du technicien : public, en lecture seule, limité en débit.
+    if(route.startsWith('/api/track/')&&route!=='/api/track/link'&&method==='GET'){store.rate('track:'+ip(req),120);return json(res,noc.tracked(store,decodeURIComponent(route.slice(11))));}
     if(route==='/api/participant/join'&&method==='POST'){
      store.rate('join:'+ip(req),20);const d=await body(req,4096);insist(d.consent===true,'Votre consentement est nécessaire.');const l=store.get('SELECT * FROM labs WHERE code=?',String(d.code||''));insist(l&&!l.closed&&l.expires>Date.now(),'Invitation expirée ou incorrecte.',404);insist(store.get('SELECT count(*) AS n FROM participants WHERE lab=? AND revoked=0',l.id).n<30,'Session limitée à 30 participants.',409);const pid=id(),secret=token(),name=word(d.name,'Nom de l’appareil',80);store.run('INSERT INTO participants(id,lab,name,secret,joined,last_seen) VALUES(?,?,?,?,?,?)',pid,l.id,name,hash(secret),Date.now(),Date.now());store.event(l.home,null,'participant.join',name);return json(res,{id:pid,secret,name,expires:l.expires});
     }
@@ -99,6 +101,7 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
+    if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
     if(route==='/api/noc/client'&&method==='GET')return json(res,noc.client(store,user.id));
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));

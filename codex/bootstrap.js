@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const files = FG.LANG_FILES.filter(id => /^[a-z0-9_-]+$/i.test(id)).map(id => '../src/lang/' + id + '.js')
-    .concat(['theme.js', '../src/agent.js', '../src/vision.js', 'ui-model.js', 'scenes.js', 'wifi-placement.js', 'wifi-map.js', 'support-views.js', 'household-model.js', 'household-analytics.js', 'household-scenario.js', 'household-view.js', 'incident-model.js', 'incident-view.js', 'shared-telemetry-view.js', 'approval-view.js', 'operator-view.js', 'pilot-lab-view.js', 'pilot-view.js', 'guardian-map.js', 'abidjan-map.js', 'forecast-view.js', 'impact-view.js', 'sim3d.js', 'noc-alert.js', 'demo.js', 'live-trip.js', 'noc-command-view.js', 'noc-view.js', 'device-usage-view.js', 'guardian-voice.js', 'guardian-pay.js', 'journey.js', 'lib/qrcode.js', 'jury.js', 'app.js']);
+    .concat(['theme.js', '../src/agent.js', '../src/vision.js', 'ui-model.js', 'scenes.js', 'wifi-placement.js', 'wifi-map.js', 'support-views.js', 'household-model.js', 'household-analytics.js', 'household-scenario.js', 'household-view.js', 'incident-model.js', 'incident-view.js', 'shared-telemetry-view.js', 'approval-view.js', 'operator-view.js', 'pilot-lab-view.js', 'pilot-view.js', 'guardian-map.js', 'abidjan-map.js', 'forecast-view.js', 'impact-view.js', 'sim3d.js', 'noc-alert.js', 'demo.js', 'ride-map.js', 'live-trip.js', 'noc-command-view.js', 'noc-view.js', 'device-usage-view.js', 'guardian-voice.js', 'guardian-pay.js', 'journey.js', 'lib/qrcode.js', 'jury.js', 'app.js']);
   function next() {
     const path = files.shift(); if (!path) return;
     const script = document.createElement('script'); script.src = path; script.onload = next;
