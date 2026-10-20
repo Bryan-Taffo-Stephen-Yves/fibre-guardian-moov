@@ -110,6 +110,8 @@ function createGuardianServer(options={}){
     if(route==='/api/ussd'&&method==='POST')return json(res,require('./ussd.cjs').respond(store,user.id,await body(req,1024)));
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
+    // Bouton « Appeler Moov » : le serveur vocal dit d'abord ce que Moov sait du quartier (appels.cjs).
+    if(route==='/api/noc/call'&&method==='POST')return json(res,require('./appels.cjs').call(store,user.id,await body(req,1024)));
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
     if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}

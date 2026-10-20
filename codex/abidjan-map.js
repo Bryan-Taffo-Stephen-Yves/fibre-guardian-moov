@@ -248,7 +248,7 @@
   }
 
   // Carte « vos voisins » côté client : son quartier, les box éteintes autour de lui, l'équipe qui arrive.
-  function NeighborsCard({incident, onTrack}) {
+  function NeighborsCard({incident, onTrack, call}) {
     if (!incident || !OPEN.includes(incident.status)) return null;
     const seg = segmentOf(incident), info = SEGMENTS[seg], n = neighbors(incident.area);
     const area = incident.area ? [{id: seg, online: incident.area.online, total: incident.area.total}] : [];
@@ -268,14 +268,17 @@
         h('small', null, (info ? info.area + ', ' + COMMUNES.find(c => c.id === info.commune).name : 'Votre quartier')),
         h('h2', null, 'Coupure de courant dans votre quartier'),
         h('p', null, 'Ce n’est pas une panne Moov : le courant est coupé' + (n ? ' chez vous et chez ' + n + ' voisin' + (n > 1 ? 's' : '') : ' dans le quartier') + ' (CIE). Votre box repartira toute seule dès le retour du courant.'),
-        h('p', {className: 'ab-neighbors-hint'}, 'Inutile d’appeler le service client ni de redémarrer la box. Guardian vous prévient quand tout revient.')));
+        h('p', {className: 'ab-neighbors-hint'}, 'Inutile d’appeler le service client ni de redémarrer la box. Guardian vous prévient quand tout revient.'),
+        call && h('div', {className: 'ab-neighbors-actions'}, call)));
     return h('section', {className: 'j-card ab-neighbors', role: 'status'},
       h('div', {className: 'ab-neighbors-map'}, h(Map, {segments: area, incidents: [incident], focus: seg, label: 'Votre quartier sur la carte d’Abidjan'})),
       h('div', {className: 'ab-neighbors-text'},
         h('small', null, (info ? info.area + ', ' + COMMUNES.find(c => c.id === info.commune).name : 'Votre quartier')),
         h('h2', null, n === null ? 'Votre quartier est touché par une panne' : n === 0 ? 'Votre box est la seule touchée' : n + ' voisin' + (n > 1 ? 's ont' : ' a') + ' le même souci'),
         h('p', null, 'Ce n’est pas votre box : c’est la fibre du quartier. ' + line + ' Vous n’avez pas à vous inquiéter.'),
-        onTrack && h('button', {type: 'button', className: 'j-button primary', onClick: onTrack}, 'Suivre l’intervention')));
+        root.FGAppel && h(root.FGAppel.Restore, {restore: incident.restore}),
+        (onTrack || call) && h('div', {className: 'ab-neighbors-actions'},
+          onTrack && h('button', {type: 'button', className: 'j-button primary', onClick: onTrack}, 'Suivre l’intervention'), call)));
   }
 
   root.FGAbidjan = {...geo, Map, LivePanel, NeighborsCard, Legend};
