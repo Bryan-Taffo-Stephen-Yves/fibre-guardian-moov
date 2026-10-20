@@ -1,0 +1,62 @@
+/* Panneau du poteau : agents de Guardian, étape à valider, téléphone WhatsApp et mail à l'équipe. */
+.sf{display:grid;gap:14px}
+.sf-agents{padding:14px;border-radius:18px;background:var(--moov-primary-25);border:1px solid var(--moov-primary-100)}
+.sf-agents header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.sf-agents header b{font-size:15px;letter-spacing:-.01em}
+.sf-live{flex:none;white-space:nowrap;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--moov-white);color:var(--moov-primary-800)}
+.sf-agents ol{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.sf-agent{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;transition:opacity .3s ease}
+.sf-agent.is-waiting{opacity:.5}
+.sf-agent-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--moov-white);border:1px solid var(--moov-primary-100);color:var(--moov-primary-700);transition:background .3s ease,color .3s ease}
+.sf-agent.is-working .sf-agent-icon{background:var(--moov-primary);border-color:var(--moov-primary);color:var(--moov-on-primary);animation:sf-ring 1.4s ease-out infinite}
+.sf-agent.is-done .sf-agent-icon{background:var(--moov-success-50);border-color:var(--moov-success-100);color:var(--moov-success-700);animation:sf-pop .35s cubic-bezier(.2,.8,.2,1)}
+.sf-agent strong{display:block;font-size:14px;line-height:1.3}
+.noc .sf-agent p{margin:2px 0 0;font-size:13px;line-height:1.45;color:var(--moov-text-muted)}
+.sf-agent.is-done p{color:var(--moov-ink)}
+.noc .sf-tick{display:block;margin-top:4px;font-size:12px;font-weight:600;color:var(--moov-primary-700);font-variant-numeric:tabular-nums}
+.sf-bar{display:block;height:4px;margin-top:6px;border-radius:999px;background:var(--moov-primary-100);overflow:hidden}
+.sf-bar i{display:block;height:100%;background:var(--moov-primary);transform-origin:left;transition:transform .25s linear}
+.sf-next{display:grid;gap:10px;padding:14px;border-radius:18px;background:var(--moov-white);border:1.5px solid var(--moov-primary-200);box-shadow:0 10px 24px -20px var(--moov-primary-900);animation:sf-in .35s cubic-bezier(.2,.8,.2,1)}
+.sf-next>b{font-size:13px;font-weight:650;color:var(--moov-primary-800)}
+.noc .sf-next p{margin:0;font-size:14px;line-height:1.5}
+.noc .sf-wait{color:var(--moov-text-muted)}
+.sf-primary{min-height:48px;padding:0 16px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s ease,transform .15s ease}
+.sf-primary:hover{background:var(--moov-primary-700)}
+.sf-primary:active{transform:scale(.98)}
+.noc .sf-field{display:grid;gap:6px;margin:0;font-size:13px;font-weight:600}
+.noc .sf-field select{min-height:44px;font-size:14px}
+.noc .sf-check{display:flex;align-items:center;gap:10px;margin:0;font-size:14px;font-weight:500}
+.sf-check input{width:20px;height:20px;accent-color:var(--moov-primary)}
+.sf-phone-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.sf-phone-head b{font-size:15px}
+.sf-phone-head span{font-size:13px;color:var(--moov-text-muted)}
+.sf-tabs{display:flex;gap:4px;padding:4px;margin-bottom:10px;border-radius:12px;background:var(--moov-neutral-100)}
+.sf-tabs button{position:relative;flex:1;min-height:36px;border:0;border-radius:9px;background:none;color:var(--moov-text-muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.sf-tabs button.is-on{background:var(--moov-white);color:var(--moov-ink);box-shadow:0 1px 3px color-mix(in srgb,var(--moov-primary-900) 14%,transparent)}
+.sf-tabs em{position:absolute;top:-4px;right:4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--moov-danger-500);color:var(--moov-on-primary);font-style:normal;font-size:11px;line-height:18px;animation:sf-pop .3s ease}
+.sf-phone{border:6px solid var(--moov-neutral-900);border-radius:28px;overflow:hidden;background:var(--moov-neutral-50)}
+.sf-phone-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--moov-white);border-bottom:1px solid var(--moov-line)}
+.sf-avatar{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--moov-primary-100);color:var(--moov-primary-800);font-weight:700}
+.sf-phone-bar>span:nth-child(2){flex:1;min-width:0;display:grid}
+.sf-phone-bar b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.noc .sf-phone-bar small{font-size:12px;color:var(--moov-text-muted)}
+.sf-wa{flex:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--moov-success-50);color:var(--moov-success-700)}
+.sf-thread{display:grid;align-content:start;gap:8px;min-height:180px;max-height:320px;overflow-y:auto;padding:12px;scroll-behavior:smooth}
+.sf-msg{justify-self:start;max-width:90%;padding:8px 10px 6px;border-radius:4px 14px 14px 14px;background:var(--moov-white);box-shadow:0 1px 2px color-mix(in srgb,var(--moov-primary-900) 10%,transparent);animation:sf-in .35s cubic-bezier(.2,.8,.2,1)}
+.noc .sf-msg p{margin:0;font-size:14px;line-height:1.45}
+.sf-msg time{display:block;margin-top:2px;text-align:right;font-size:11px;color:var(--moov-text-muted)}
+.noc .sf-note{justify-self:center;display:flex;align-items:center;gap:6px;margin:0;padding:5px 10px;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary-800);font-size:12.5px;animation:sf-in .35s ease}
+.noc .sf-empty{align-self:center;justify-self:center;margin:40px 0;font-size:13px;color:var(--moov-text-muted)}
+.sf-mail{border-radius:14px;background:var(--moov-white);border:1px solid var(--moov-primary-100);overflow:hidden;animation:sf-in .35s ease}
+.sf-mail button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:none;color:var(--moov-primary-800);font:inherit;text-align:left;cursor:pointer}
+.sf-mail button span{display:grid}
+.noc .sf-mail small{font-size:12px;color:var(--moov-text-muted)}
+.sf-mail b{font-size:14px;color:var(--moov-ink)}
+.sf-mail dl{margin:0;padding:0 12px 12px;display:grid;gap:8px}
+.sf-mail dt{font-size:12px;font-weight:650;color:var(--moov-primary-800)}
+.sf-mail dd{margin:0;font-size:13px;line-height:1.45}
+.sf-tabs button:focus-visible,.sf-primary:focus-visible,.sf-mail button:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+@keyframes sf-ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-primary) 45%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+@keyframes sf-pop{from{transform:scale(.6);opacity:0}}
+@keyframes sf-in{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){.sf-agent-icon,.sf-tabs em,.sf-msg,.sf-note,.sf-mail,.sf-next{animation:none}.sf-bar i{transition:none}.sf-thread{scroll-behavior:auto}}

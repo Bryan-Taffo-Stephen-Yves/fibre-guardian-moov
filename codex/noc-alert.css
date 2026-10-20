@@ -18,7 +18,8 @@
 @keyframes na-in{from{opacity:0;transform:translateY(-10px) scale(.98)}}
 @keyframes na-ping{from{transform:scale(.45);opacity:.7}to{transform:scale(1.15);opacity:0}}
 @media (max-width:640px){
-  .na-stack{top:72px}
+  .na-stack{position:relative;top:0}
+  .noc .na-lead{font-size:13px}
   .na-banner{flex-wrap:wrap;gap:12px;padding:14px}
   .na-beacon{width:30px;height:30px}
   .na-beacon i:first-child{inset:9px}
@@ -30,3 +31,5 @@
 @media (prefers-reduced-motion:reduce){.na-banner,.na-beacon i:last-child{animation:none}}
 .noc .na-stack{background:none;border:0;padding:0;box-shadow:none}
 .noc .na-more{margin:4px 0 0;font-size:13px;color:var(--moov-on-primary);opacity:.8}
+.na-banner.is-warn{background:linear-gradient(135deg,var(--moov-accent-800),var(--moov-accent-700));box-shadow:0 18px 40px -18px var(--moov-accent-800)}
+.na-banner.is-warn .na-open{color:var(--moov-accent-800)}
