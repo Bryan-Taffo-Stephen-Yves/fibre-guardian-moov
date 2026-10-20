@@ -431,5 +431,6 @@
     }
     // Démonstration du jury : le téléphone d'un membre du jury (?jury=CODE) ou la régie (?section=regie).
     const juryRoute = window.FGJury && FGJury.route();
-    ReactDOM.createRoot(document.getElementById('root')).render(juryRoute === 'jury' ? h(FGJury.Juror, { code: FGJury.code() }) : juryRoute === 'regie' ? h(FGJury.Regie) : h(FGJourney.App,{Legacy:App}));
+    const trackToken = window.FGLiveTrip && FGLiveTrip.route();
+    ReactDOM.createRoot(document.getElementById('root')).render(trackToken ? h(FGLiveTrip.Public, { token: trackToken }) : juryRoute === 'jury' ? h(FGJury.Juror, { code: FGJury.code() }) : juryRoute === 'regie' ? h(FGJury.Regie) : h(FGJourney.App,{Legacy:App}));
 })();

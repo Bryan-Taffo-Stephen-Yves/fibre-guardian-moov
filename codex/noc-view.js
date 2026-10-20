@@ -57,7 +57,7 @@ function ClientIncident({api,incident:i,onSaved}){
   h('div',{className:'n-row'},h('span',{className:'n-badge'},labels[i.status]||i.status),h('small',null,(i.segment||'Votre signalement')+' · '+(i.mode==='demo'?'Incident de zone':'Dossier support'))),
   h('h3',null,i.title),
   h('div',{className:'n-client-next'},h('h4',null,nextStep[0]),h('p',null,nextStep[1])),
-  live&&h(window.FGLiveTrip.Card,{incident:i,map:incident=>h(NetworkMap,{incident})}),
+  live&&h(window.FGLiveTrip.Card,{incident:i,api,hero:true}),
   !closed&&!live&&h(TrackingSteps,{incident:i}),
   !closed&&!live&&i.status!=='en_route'&&i.technician&&h('div',{className:'n-technician-profile'},h('span',{className:'n-user'},i.technician.name[0]),h('div',null,h('strong',null,i.technician.name),h('p',null,i.technician.team+' · '+labels[i.status]))),
   verified&&h(Feedback,{api,incident:i,onSaved}),
