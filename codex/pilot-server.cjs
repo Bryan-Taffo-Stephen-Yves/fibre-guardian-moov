@@ -100,6 +100,7 @@ function createGuardianServer(options={}){
     if(route==='/api/guardian/chat'&&method==='POST')return json(res,require('./guardian-copilot.cjs').reply(store,user,await body(req,4096)));
     if(route==='/api/noc/feedback'&&method==='POST')return json(res,noc.feedback(store,user.id,await body(req,4096)));
     if(route==='/api/noc/overview'&&method==='GET')return json(res,{...noc.overview(store,user.id),whatsapp:WA.status(store,whatsapp.cfg)});
+    if(route==='/api/noc/labo'&&method==='GET')return json(res,require('./labo.cjs').snapshot(store,user.id,{segment:url.searchParams.get('segment'),otdr:url.searchParams.get('otdr')==='1',nm:url.searchParams.get('nm')}));
     if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
