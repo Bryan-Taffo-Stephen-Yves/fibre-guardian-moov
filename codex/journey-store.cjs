@@ -85,6 +85,13 @@ function sharedFault(s,uid){const noc=require('./noc-store.cjs');return noc.clie
 // Incident de quartier réparé dans les dernières 24 h : l'accueil le signale au client.
 function zoneNews(s,uid,now=Date.now()){const noc=require('./noc-store.cjs');const i=noc.client(s,uid).incidents.filter(x=>x.status==='resolved'&&x.restorationVerified&&x.events?.length).map(x=>({segment:x.segment,zone:x.zone,start:x.events[0].at,end:x.events.at(-1).at})).filter(x=>now-x.end<24*3600000).sort((a,b)=>b.end-a.end)[0];return i||null;}
 function snapshotFor(s,uid,st){const result={...snapshot(st),usageContext:st.usageContext||'home',sharedIncident:sharedFault(s,uid),zoneNews:zoneNews(s,uid),homeZone:require('./noc-store.cjs').memberZone(s,uid)};usage.observe(s,uid,result);return result;}
+function openIncident(st,now,{zone,description,photo=null,lat,lon,kind,channel='app'}){const incident={id:id(),reference:'FG-'+String(st.incidents.length+1).padStart(3,'0'),segment:st.segment,zone,description,photo,lat,lon,status:'reported',created:now,events:[{at:now,label:LABELS[0]}],confirmations:['home-1'],electrical:kind==='pole',kind,channel};st.incidents.unshift(incident);audit(st,'report',incident.reference+(channel==='ussd'?' · code court sans internet':''));return incident;}
+// Mode survie : signalement fait depuis le menu USSD (ussd.cjs), sans internet, donc sans photo ni position.
+// Mêmes règles que l'application : un seul incident ouvert par tronçon, 15 au plus par parcours.
+function reportByCode(s,uid,{kind,description,zone}){return s.transaction(()=>{let st=get(s,uid);if(!st){st=seed();put(s,uid,st);}const now=Date.now();
+ insist(!active(st),'Un incident est déjà ouvert sur votre segment.',409);insist(st.incidents.length<15,'Maximum 15 incidents dans ce parcours.');
+ const incident=openIncident(st,now,{zone:zone||st.zone,description:paragraph(description,'Description',500),kind,channel:'ussd'});
+ require('./noc-store.cjs').importReport(s,uid,incident,{mode:'demo',source:'ussd'});st.version++;put(s,uid,st);return incident;});}
 function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Démarrez votre démonstration.',409);insist(d.version===st.version,'Le parcours a été actualisé. Réessayez.',409);const now=Date.now();
  usage.observe(s,uid,{...st,sharedIncident:sharedFault(s,uid)},now);
  if(d.type==='scenario'){
@@ -158,7 +165,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
  }else if(d.type==='report'){
   insist(d.consent===true,'Consentement au partage requis.');insist(st.incidents.length<15,'Maximum 15 incidents dans ce parcours.');const description=paragraph(d.description,'Description',500),zone=word(d.zone,'Zone',100);number(d.lat,'Latitude',-90,90,false);number(d.lon,'Longitude',-180,180,false);const photo=validatePhoto(d.photo);const existing=active(st);
   insist(!existing,'Un incident est déjà ouvert sur votre segment. Utilisez « Je suis aussi touché ».',409);
-  const incident={id:id(),reference:'FG-'+String(st.incidents.length+1).padStart(3,'0'),segment:st.segment,zone,description,photo,lat:d.lat,lon:d.lon,status:'reported',created:now,events:[{at:now,label:LABELS[0]}],confirmations:['home-1'],electrical:d.kind==='pole',kind:d.kind};st.incidents.unshift(incident);audit(st,'report',incident.reference);
+  openIncident(st,now,{zone,description,photo,lat:d.lat,lon:d.lon,kind:d.kind});
  }else if(d.type==='affected'){
   const i=st.incidents.find(v=>v.id===d.id),home=st.homes.find(v=>v.id===d.home);insist(i&&home&&home.segment===i.segment,'Foyer non concerné.',403);if(!i.confirmations.includes(home.id))i.confirmations.push(home.id);
  }else if(d.type==='assign'){
@@ -187,4 +194,4 @@ function boxPhoto(s,uid,d,reading){return s.transaction(()=>{const st=get(s,uid)
  st.messages.push({id:id(),role:'user',text:'Voici une photo de ma box.',photo:true},{id:id(),role:'assistant',text:r.message,facts:r.facts,action:r.action,verdict:r.verdict,concord:r.concord,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  audit(st,'photo.read',(reading.source==='claude'?'Lecture Guardian':'Lecture sur le téléphone')+' · '+(r.verdict||'à reprendre')+' · photo non conservée');st.version++;put(s,uid,st);return snapshotFor(s,uid,st);});}
 function refine(s,uid,messageId,text){const st=get(s,uid);if(!st)return null;const m=st.messages.find(x=>x.id===messageId&&x.role==='assistant');if(!m)return snapshotFor(s,uid,st);m.text=text;put(s,uid,st);return snapshotFor(s,uid,st);}
-module.exports={optical,migrate,seed,get,put,snapshot,snapshotFor,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
+module.exports={optical,migrate,seed,get,put,snapshot,snapshotFor,active,reportByCode,STEPS,LABELS,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};

@@ -48,7 +48,7 @@ function scan(s){if(settings(s).paused)return;const now=Date.now();s.run('UPDATE
  for(const {id:iid} of s.all("SELECT id FROM noc_incidents WHERE status='reported' ORDER BY created LIMIT 5")){const i=readIncident(s,iid),plan=analyze(s,i);s.run("UPDATE noc_incidents SET plan=?,status='proposed',version=version+1,updated=? WHERE id=?",JSON.stringify(plan),now,iid);event(s,iid,null,'plan.proposed','Analyse préparée. Validation du responsable attendue.',{plan});}
 }
 function importReport(s,uid,r,{mode='local',source='customer_report'}={}){const existing=s.get('SELECT status,mode FROM noc_incidents WHERE id=?',r.id);if(existing){if(existing.mode==='local'&&r.status==='resolved'&&existing.status!=='closed')syncLocalReport(s,r,null);return;}const segment=mode==='demo'?s.get('SELECT segment_id FROM noc_members WHERE user_id=?',uid)?.segment_id||'YOP-07':null;
- s.run('INSERT INTO noc_incidents(id,segment_id,reporter,source,mode,status,title,description,photo,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?,?)',r.id,segment,uid,source,mode,'reported','Signalement · '+r.zone,r.description,r.photo||null,r.created||Date.now(),Date.now());
+ s.run('INSERT INTO noc_incidents(id,segment_id,reporter,source,mode,status,title,description,photo,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?,?)',r.id,segment,uid,source,mode,'reported',(source==='ussd'?'Signalement par *144# · ':'Signalement · ')+r.zone,r.description,r.photo||null,r.created||Date.now(),Date.now());
  event(s,r.id,uid,'received','Votre signalement a été reçu par le support Moov.',{source});
  if(mode==='local'&&r.status==='resolved')syncLocalReport(s,r,null);
 }

@@ -4,7 +4,7 @@ const context={window:{},URL,URLSearchParams,React:{createElement(){}}};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'journey.js'),'utf8'),context);
 const {readRoute,routeUrl}=context.window.FGJourney;
 test('Chaque page client garde son lien profond au rechargement',()=>{
- for(const page of ['home','devices','report','tracking','notifications','real','reports']){
+ for(const page of ['home','devices','report','tracking','notifications','survie','real','reports']){
   const url=routeUrl(page,'http://localhost/codex/?revision=design');
   assert.equal(readRoute(url),page);assert.equal(url.searchParams.get('portal'),'client');assert.equal(url.searchParams.get('revision'),'design');
  }
