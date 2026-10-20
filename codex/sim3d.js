@@ -206,6 +206,15 @@
         h('i', {'aria-hidden': true}), labels[pin.id].dot ? null : labels[pin.id].name)));
   }
 
+  // Qui recevra les alertes de ce poteau : seulement les clients du quartier (toute la commune si l'équipement central tombe).
+  function Reach({incident, segment, segments}) {
+    const r = root.FGSimFlow ? root.FGSimFlow.reach(incident, segment, segments) : {count: 0};
+    return h('div', {className: 'sm-clients'},
+      h('svg', {viewBox: '0 0 24 24', width: 20, height: 20, fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true}, h('path', {d: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6'})),
+      h('p', null, r.count ? ['Alertes envoyées à ', h('b', {key: 'b'}, r.who)] : 'Aucun client rattaché à ce quartier pour l’instant.',
+        r.count > 0 && h('small', null, r.wide ? 'Toute la commune de ' + r.commune + ' est prévenue.' : 'Les autres quartiers ne reçoivent rien.')));
+  }
+
   function Panel({segment, incidents, data, busy, error, onSimulate, onRestore, onStep, onClose, onOpenIncident, onPick}) {
     const [fault, setFault] = useState('pole');
     const st = stateOf(segment, incidents), info = G.SEGMENTS[segment.id], commune = G.COMMUNES.find(c => c.id === info?.commune);
@@ -220,6 +229,7 @@
       h('div', {className: 'sm-meter is-' + st.tone},
         h('strong', null, segment.online, h('small', null, ' / ' + segment.total)), h('span', null, 'box en ligne'),
         h('em', null, ({down: 'Panne en cours', warn: 'Débit en baisse', ok: 'Réparé', calm: 'Tout va bien'})[st.tone])),
+      h(Reach, {incident: i, segment, segments: data?.segments}),
       i && root.FGSimFlowView && h(root.FGSimFlowView.Flow, {key: i.id, incident: i, segment, data, run: onStep, busy: !!busy}),
       i && h('ol', {className: 'sm-steps', 'aria-label': 'Avancement de l’intervention'}, STEPS.filter(([k]) => !(skipVisit && ['dispatched', 'en_route', 'on_site'].includes(k))).map(([k, label]) => h('li', {key: k, className: ORDER[k] < step || (k === 'resolved' && step === 5) ? 'is-done' : ORDER[k] === step ? 'is-now' : ''}, label))),
       i && h('button', {type: 'button', className: 'sm-link', onClick: () => onOpenIncident(i.id)}, 'Ouvrir le dossier de la panne'),

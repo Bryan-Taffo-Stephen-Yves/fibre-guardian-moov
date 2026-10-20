@@ -113,6 +113,11 @@
 .sm-fault span{display:grid;gap:2px}
 .sm-fault b{font-size:14px}
 .noc .sm-fault small{font-size:13px;color:var(--moov-text-muted)}
+.sm-clients{display:flex;align-items:flex-start;gap:10px;padding:2px 4px;color:var(--moov-primary-700)}
+.sm-clients svg{flex:none;margin-top:1px}
+.noc .sm-clients p{margin:0;font-size:14px;line-height:1.45;color:var(--moov-ink)}
+.sm-clients b{font-weight:600}
+.sm-clients small{display:block;margin-top:2px;font-size:13px;color:var(--moov-text-muted)}
 .sm-upstream{display:grid;gap:8px;padding:12px 14px;border-radius:14px;background:var(--moov-neutral-50);border:1px solid var(--moov-line)}
 .noc .sm-upstream p{margin:0;font-size:14px;line-height:1.5}
 .sm-error{margin:0;padding:10px 12px;border-radius:12px;background:var(--moov-danger-50);color:var(--moov-danger-700);font-size:14px}

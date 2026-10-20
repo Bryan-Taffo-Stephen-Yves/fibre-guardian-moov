@@ -9,6 +9,13 @@ const DEMO={
  admin:{email:'direction@demo.fibre-guardian.ci',name:'Direction technique',env:'GUARDIAN_DEMO_ADMIN_PASSWORD',fallback:null},
  technician:{email:'ibrahim.traore@demo.fibre-guardian.ci',name:'Ibrahim Traoré',env:'GUARDIAN_DEMO_TECH_PASSWORD',fallback:'ibrahim-demo-2026'}
 };
+// Un client par poteau du simulateur (Awa habite Niangon) : chacun ne reçoit que les alertes de son quartier.
+// Même mot de passe que la cliente Awa.
+const NEIGHBOURS=[
+ ['COC-03','Aya Kouadio'],['PAL-02','Serge Gnagne'],['RIV-04','Mariam Diabaté'],['MAR-02','Fabrice Aké'],
+ ['ABO-01','Moussa Coulibaly'],['PLA-01','Christelle Kassi'],['ADJ-01','Salif Ouattara'],['TRE-01','Adjoua Brou'],
+ ['KOU-01','Didier Zadi'],['PBT-01','Fanta Sylla'],['BAS-01','Rose Ehui']
+].map(([segment,name])=>({segment,name,email:name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ /g,'.')+'@demo.fibre-guardian.ci'}));
 const MIN=60000,HOUR=3600000;
 
 function isSeeded(store){return !!store.get('SELECT id FROM users WHERE email=?',DEMO.admin.email);}
@@ -51,6 +58,9 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   const relogin=async()=>{direction=await auth('login',DEMO.admin);awa=await auth('login',DEMO.client);};
   await auth('register',DEMO.technician);
   await request(direction,'/noc/workspace/action',{type:'field-account',email:DEMO.technician.email,technicianId:'ibrahim',enabled:true,confirm:true});
+  // Les voisins sont créés par les fonctions du serveur (même validation) : 11 inscriptions de suite dépasseraient la limite anti-abus.
+  const noc=require('./noc-store.cjs');
+  for(const n of NEIGHBOURS){const {user}=await store.register({email:n.email,name:n.name,password:passwords[DEMO.client.email]});noc.join(store,user.id,{segment:n.segment,consent:true});}
 
   // --- Espace d'Awa : sa box à Yopougon et son quartier suivi
   let journey=(await request(awa,'/journey/start',{})).state;
@@ -108,7 +118,7 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
 
   Date.now=realNow;
   store.event(null,direction.id,'demo.seeded','Démo pré-remplie installée');
-  const summary={seeded:true,accounts:Object.values(DEMO).map(a=>({email:a.email,name:a.name,password:passwords[a.email],generated:generated.includes(a)}))};
+  const summary={seeded:true,accounts:Object.values(DEMO).map(a=>({email:a.email,name:a.name,password:passwords[a.email],generated:generated.includes(a)})),neighbours:NEIGHBOURS.map(n=>({email:n.email,name:n.name,segment:n.segment}))};
   if(credentialsFile&&generated.length){
    fs.mkdirSync(path.dirname(credentialsFile),{recursive:true,mode:0o700});
    fs.writeFileSync(credentialsFile,'Identifiants de la démo Fibre Guardian (fichier local, hors git)\n\n'+summary.accounts.map(a=>a.name+' : '+a.email+' / '+a.password).join('\n')+'\n',{mode:0o600});
@@ -130,7 +140,7 @@ async function resetDemo(store,options={}){
  return seedDemo(store,options);
 }
 
-module.exports={seedDemo,resetDemo,isSeeded,isComplete,isEmpty,DEMO};
+module.exports={seedDemo,resetDemo,isSeeded,isComplete,isEmpty,DEMO,NEIGHBOURS};
 
 if(require.main===module){
  const {Store}=require('./pilot-store.cjs');
