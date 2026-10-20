@@ -65,3 +65,4 @@
 .noc .im-hero h2{opacity:.92}
 .noc .im-parts small{color:var(--moov-on-primary);opacity:.78}
 .noc .im-field input[type=range]{border:0;padding:0;min-height:0;box-shadow:none;background:transparent}
+.im-source{margin:4px 0 0;font-size:12px;color:var(--moov-text-muted)}
