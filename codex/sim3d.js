@@ -90,7 +90,7 @@
     if (open) return {tone: seg.alarm === 'UPLINK_HIGH' || open.plan?.cause === 'UPLINK_CONGESTION' ? 'warn' : 'down', incident: open};
     if (seg.alarm === 'UPLINK_HIGH') return {tone: 'warn', incident: null};
     if (seg.online < seg.total) return {tone: 'down', incident: null};
-    const done = incidents.find(i => i.segment_id === seg.id && i.status === 'resolved' && Date.now() - (i.updated || 0) < 10 * 60000);
+    const done = incidents.find(i => i.segment_id === seg.id && ['resolved', 'closed'].includes(i.status) && Date.now() - (i.updated || 0) < 10 * 60000);
     return {tone: done ? 'ok' : 'calm', incident: done || null};
   }
 
@@ -173,10 +173,10 @@
         h('i', {'aria-hidden': true}), labels[pin.id].dot ? null : labels[pin.id].name)));
   }
 
-  function Panel({segment, incidents, busy, error, onSimulate, onRestore, onClose, onOpenIncident}) {
+  function Panel({segment, incidents, data, busy, error, onSimulate, onRestore, onStep, onClose, onOpenIncident}) {
     const [fault, setFault] = useState('pole');
     const st = stateOf(segment, incidents), info = G.SEGMENTS[segment.id], commune = G.COMMUNES.find(c => c.id === info?.commune);
-    const i = st.incident, step = i ? ORDER[i.status] ?? 0 : -1, skipVisit = i && i.plan && i.plan.dispatch === false;
+    const i = st.incident, step = i ? ORDER[i.status] ?? 0 : -1, skipVisit = i && i.plan && i.plan.dispatch === false, live = i && !['resolved', 'closed'].includes(i.status);
     return h('aside', {className: 'sm-panel', 'aria-labelledby': 'sm-panel-title'},
       h('header', {className: 'sm-panel-head'},
         h('div', null, h('small', null, (commune?.name || '') + ' · ' + segment.id), h('h2', {id: 'sm-panel-title'}, 'Poteau ' + NAMES[segment.id])),
@@ -184,18 +184,19 @@
       h('div', {className: 'sm-meter is-' + st.tone},
         h('strong', null, segment.online, h('small', null, ' / ' + segment.total)), h('span', null, 'box en ligne'),
         h('em', null, ({down: 'Panne en cours', warn: 'Débit en baisse', ok: 'Réparé', calm: 'Tout va bien'})[st.tone])),
+      i && root.FGSimFlowView && h(root.FGSimFlowView.Flow, {key: i.id, incident: i, segment, data, run: onStep, busy: !!busy}),
       i && h('ol', {className: 'sm-steps', 'aria-label': 'Avancement de l’intervention'}, STEPS.filter(([k]) => !(skipVisit && ['dispatched', 'en_route', 'on_site'].includes(k))).map(([k, label]) => h('li', {key: k, className: ORDER[k] < step || (k === 'resolved' && step === 5) ? 'is-done' : ORDER[k] === step ? 'is-now' : ''}, label))),
       i && h('button', {type: 'button', className: 'sm-link', onClick: () => onOpenIncident(i.id)}, 'Ouvrir le dossier de la panne'),
-      h('fieldset', {className: 'sm-faults', disabled: busy},
+      !live && h('fieldset', {className: 'sm-faults', disabled: busy},
         h('legend', null, 'Choisir une panne'),
         FAULTS.map(f => h('label', {key: f.id, className: 'sm-fault' + (fault === f.id ? ' is-on' : '')},
           h('input', {type: 'radio', name: 'sm-fault', value: f.id, checked: fault === f.id, onChange: () => setFault(f.id)}),
           h('svg', {viewBox: '0 0 24 24', width: 22, height: 22, fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true}, h('path', {d: f.icon})),
           h('span', null, h('b', null, f.title), h('small', null, f.text))))),
       error && h('p', {className: 'sm-error', role: 'alert'}, error),
-      h('div', {className: 'sm-actions'},
-        h('button', {type: 'button', className: 'sm-go', disabled: busy, onClick: () => onSimulate(segment.id, fault)}, busy === 'simulate' ? 'Panne en cours de création…' : 'Simuler la panne'),
-        h('button', {type: 'button', className: 'sm-restore', disabled: busy || (st.tone === 'calm' && segment.online === segment.total), onClick: () => onRestore(segment.id)}, busy === 'restore' ? 'Rétablissement…' : 'Rétablir')));
+      h('div', {className: 'sm-actions' + (live ? ' is-single' : '')},
+        !live && h('button', {type: 'button', className: 'sm-go', disabled: busy, onClick: () => onSimulate(segment.id, fault)}, busy === 'simulate' ? 'Panne en cours de création…' : 'Simuler la panne'),
+        h('button', {type: 'button', className: 'sm-restore', disabled: busy || (st.tone === 'calm' && segment.online === segment.total), onClick: () => onRestore(segment.id)}, busy === 'restore' ? 'Rétablissement…' : live ? 'Remettre le quartier en état' : 'Rétablir')));
   }
 
   function View({data, api: call, onChanged, onOpenIncident}) {
@@ -210,12 +211,21 @@
       catch (e) { setError(e.message || 'L’action n’a pas abouti.'); }
       finally { setBusy(''); }
     }
+    // Étapes du dossier lancées depuis le panneau ; le serveur vérifie les droits à chaque fois.
+    async function step(body, opts = {}) {
+      setBusy('step'); setError('');
+      try {
+        if (opts.restore) { await call('/noc/action', 'POST', {type: 'simulate', segment: opts.restore, scenario: 'normal'}); const fresh = (await call('/noc/overview')).incidents.find(x => x.id === body.id); if (fresh) body = {...body, version: fresh.version}; }
+        await call('/noc/action', 'POST', body); await onChanged?.();
+      } catch (e) { setError(e.message || 'L’action n’a pas abouti.'); await onChanged?.(); }
+      finally { setBusy(''); }
+    }
     // Glisser pour déplacer la maquette ; les boutons tournent et zooment.
     const down = e => { if (e.target.closest('button')) return; drag.current = {x: e.clientX, y: e.clientY, pan, w: e.currentTarget.getBoundingClientRect().width}; e.currentTarget.setPointerCapture?.(e.pointerId); };
     const move = e => { const d = drag.current; if (!d) return; const k = 1000 / z / d.w; setPan([d.pan[0] - (e.clientX - d.x) * k, d.pan[1] - (e.clientY - d.y) * k]); };
     const up = () => { drag.current = null; };
     const pick = id => { setSelected(id); setError(''); if (narrow) { const p = view(rot).at(G.project(G.SEGMENTS[id].at)), base = frame(rot, z, [0, 0], ratio); setPan([p[0] - (base[0] + base[2] / 2), p[1] - (base[1] + base[3] / 2) + 30]); setTimeout(() => root.document?.querySelector('.sm-panel')?.scrollIntoView({behavior: 'smooth', block: 'start'}), 60); } };
-    const touched = segments.filter(s => stateOf(s, incidents).tone !== 'calm').length;
+    const touched = segments.filter(s => ['down', 'warn'].includes(stateOf(s, incidents).tone)).length;
     return h('div', {className: 'sm' + (seg ? ' has-panel' : '')},
       h('section', {className: 'sm-card', ref: card},
         h('header', {className: 'sm-head'},
@@ -230,7 +240,7 @@
           h(Scene, {segments, incidents, rotation, zoom: z, pan, ratio, selected, onPick: pick, compact: narrow})),
         narrow && h('div', {className: 'sm-chips', role: 'group', 'aria-label': 'Choisir un poteau'}, Object.keys(NAMES).map(id => { const tone = stateOf(segments.find(x => x.id === id) || {}, incidents).tone; return h('button', {key: id, type: 'button', className: 'sm-chip is-' + tone + (selected === id ? ' is-selected' : ''), 'aria-pressed': selected === id, onClick: () => pick(id)}, h('i', {'aria-hidden': true}), NAMES[id]); })),
         h('ul', {className: 'sm-legend'}, [['calm', 'Tout va bien'], ['warn', 'Débit en baisse'], ['down', 'Panne en cours'], ['ok', 'Réparé']].map(([k, t]) => h('li', {key: k}, h('i', {className: 'is-' + k, 'aria-hidden': true}), t)))),
-      seg && h(Panel, {segment: seg, incidents, busy, error, onSimulate: (id, f) => run('simulate', id, f), onRestore: id => run('restore', id, 'normal'), onClose: () => setSelected(null), onOpenIncident}));
+      seg && h(Panel, {segment: seg, incidents, data, busy, error, onStep: step, onSimulate: (id, f) => run('simulate', id, f), onRestore: id => run('restore', id, 'normal'), onClose: () => setSelected(null), onOpenIncident}));
   }
 
   root.FGSim3D = {...api, View};

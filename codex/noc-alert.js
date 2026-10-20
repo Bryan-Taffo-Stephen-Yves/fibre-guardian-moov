@@ -47,11 +47,11 @@
     const others = live.length - 1;
     return h('div', {className: 'na-stack', role: 'alert', 'aria-live': 'assertive'}, live.slice(0, 1).map(a => {
       const lead = a.firstReport ? a.firstReport - a.detectedAt : now - a.detectedAt;
-      return h('section', {key: a.id, className: 'na-banner'},
+      return h('section', {key: a.id, className: 'na-banner' + (a.cause === 'UPLINK_CONGESTION' ? ' is-warn' : '')},
         h('span', {className: 'na-beacon', 'aria-hidden': true}, h('i'), h('i')),
         h('div', {className: 'na-text'},
           h('small', null, 'Guardian a repéré une panne · il y a ' + span(now - a.detectedAt)),
-          h('strong', null, place(a.segment) + ' : ' + a.offline + ' client' + (a.offline > 1 ? 's' : '') + ' sans fibre'),
+          h('strong', null, place(a.segment) + ' : ' + (a.cause === 'UPLINK_CONGESTION' ? 'débit en baisse, réseau saturé' : a.cause === 'POWER_OUTAGE' ? 'coupure de courant CIE, ' + a.offline + ' box éteinte' + (a.offline > 1 ? 's' : '') : a.offline + ' client' + (a.offline > 1 ? 's' : '') + ' sans fibre')),
           h('p', {className: 'na-lead' + (a.firstReport ? '' : ' is-ahead')}, a.firstReport
             ? 'Repérée ' + span(lead) + ' avant le premier client qui s’est plaint.'
             : 'Aucun client ne s’est encore plaint : Moov a ' + span(lead) + ' d’avance.'),
