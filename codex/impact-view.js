@@ -5,21 +5,21 @@
   'use strict';
   // Chiffres de Moov : le manager les remplace par les siens.
   const FIELDS = [
-    {key: 'subscribers', label: 'Abonnés fibre', min: 5000, max: 500000, step: 5000, unit: 'abonnés'},
-    {key: 'calls', label: 'Appels au service client par mois', hint: 'pour la fibre', min: 0, max: 60000, step: 500, unit: 'appels'},
-    {key: 'visits', label: 'Déplacements de technicien par mois', min: 0, max: 15000, step: 100, unit: 'déplacements'},
-    {key: 'visitCost', label: 'Prix d’un déplacement', min: 0, max: 60000, step: 500, unit: 'FCFA'},
-    {key: 'lost', label: 'Clients perdus après une panne, par an', min: 0, max: 30000, step: 100, unit: 'clients'},
-    {key: 'arpu', label: 'Abonnement moyen par mois', min: 5000, max: 100000, step: 1000, unit: 'FCFA'}
+    {key: 'subscribers', label: 'Abonnés fibre', min: 5000, max: 500000, step: 1, unit: 'abonnés', source: 'Internet fixe Moov : ARTCI, 1er trimestre 2026'},
+    {key: 'calls', label: 'Appels au service client par mois', hint: 'pour la fibre', min: 0, max: 60000, step: 500, unit: 'appels', source: 'Chiffre interne de Moov : mettez le vôtre'},
+    {key: 'visits', label: 'Déplacements de technicien par mois', min: 0, max: 15000, step: 100, unit: 'déplacements', source: 'Chiffre interne de Moov : mettez le vôtre'},
+    {key: 'visitCost', label: 'Prix d’un déplacement', min: 0, max: 60000, step: 500, unit: 'FCFA', source: 'Coût moyen constaté d’une intervention'},
+    {key: 'lost', label: 'Clients perdus après une panne, par an', min: 0, max: 30000, step: 100, unit: 'clients', source: 'Chiffre interne de Moov : mettez le vôtre'},
+    {key: 'arpu', label: 'Abonnement moyen par mois', min: 5000, max: 100000, step: 1000, unit: 'FCFA', source: 'Fibre 100 Mb/s : grille publique Moov'}
   ];
-  // Ce que Guardian évite : nos estimations, réglables elles aussi.
+  // Ce que Guardian évite. Une seule part a été mesurée ailleurs (les appels) ; les deux autres se mesurent pendant l'essai.
   const RATES = [
-    {key: 'callCost', label: 'Coût d’un appel traité', min: 0, max: 10000, step: 100, unit: 'FCFA'},
-    {key: 'callRate', label: 'Appels évités', min: 0, max: .8, step: .01, percent: true, why: 'Le client est prévenu avant d’appeler : panne de quartier, coupure de courant, redémarrage à distance.'},
-    {key: 'visitRate', label: 'Déplacements évités', min: 0, max: .8, step: .01, percent: true, why: 'Diagnostic à distance, et un seul passage préventif au lieu d’une panne puis d’une réparation.'},
-    {key: 'keepRate', label: 'Clients gardés après une panne', min: 0, max: .6, step: .01, percent: true, why: 'Un client prévenu et suivi en direct part moins souvent après une panne.'}
+    {key: 'callCost', label: 'Coût d’un appel traité', min: 0, max: 10000, step: 100, unit: 'FCFA', source: 'Chiffre interne de Moov : mettez le vôtre'},
+    {key: 'callRate', label: 'Appels évités', min: 0, max: .8, step: .01, percent: true, why: 'Le client est prévenu avant d’appeler : panne de quartier, coupure de courant, redémarrage à distance.', source: 'Mesuré : −18 % d’appels pendant les pannes quand les clients sont prévenus (KUBRA)'},
+    {key: 'visitRate', label: 'Déplacements évités', min: 0, max: .8, step: .01, percent: true, why: 'Diagnostic à distance, et un seul passage préventif au lieu d’une panne puis d’une réparation.', source: 'À mesurer pendant l’essai dans un quartier'},
+    {key: 'keepRate', label: 'Clients gardés après une panne', min: 0, max: .6, step: .01, percent: true, why: 'Un client prévenu et suivi en direct part moins souvent après une panne.', source: 'À mesurer pendant l’essai dans un quartier'}
   ];
-  const DEFAULTS = {subscribers: 60000, calls: 12000, visits: 2500, visitCost: 15000, lost: 6000, arpu: 25000, callCost: 1500, callRate: .35, visitRate: .4, keepRate: .15};
+  const DEFAULTS = {subscribers: 66723, calls: 12000, visits: 2500, visitCost: 10000, lost: 6000, arpu: 20000, callCost: 1500, callRate: .18, visitRate: .4, keepRate: .15};
 
   // Gains sur 12 mois. Les clients gardés comptent pour une année d'abonnement.
   function compute(input) {
@@ -62,7 +62,8 @@
     return h('div', {className: 'im-field'},
       h('label', {htmlFor: id}, h('span', null, field.label, field.hint && h('small', null, ' ' + field.hint)), h('output', {htmlFor: id}, shown)),
       h('input', {id, type: 'range', min: field.min, max: field.max, step: field.step, value, style: {'--im-fill': Math.max(0, Math.min(100, fill)) + '%'}, onChange: e => onChange(field.key, Number(e.target.value)), 'aria-valuetext': shown}),
-      field.why && h('p', {className: 'im-why'}, field.why));
+      field.why && h('p', {className: 'im-why'}, field.why),
+      field.source && h('p', {className: 'im-source'}, field.source));
   }
 
   function View({data}) {
@@ -96,12 +97,12 @@
         h('div', {className: 'im-card-head'}, h('div', null, h('h2', {id: 'im-inputs-title'}, 'Vos chiffres'), h('p', null, 'Glissez chaque curseur. Le total change aussitôt.')),
           touched && h('button', {type: 'button', className: 'n-button', onClick: () => setValues({...DEFAULTS})}, 'Valeurs de départ')),
         h('div', {className: 'im-fields'}, FIELDS.map(f => h(Slider, {key: f.key, field: f, value: values[f.key], onChange: change}))),
-        h('button', {type: 'button', className: 'im-more', 'aria-expanded': open, 'aria-controls': 'im-rates', onClick: () => setOpen(!open)}, open ? 'Masquer nos estimations' : 'Ce que Guardian évite : nos estimations'),
+        h('button', {type: 'button', className: 'im-more', 'aria-expanded': open, 'aria-controls': 'im-rates', onClick: () => setOpen(!open)}, open ? 'Masquer ce que Guardian évite' : 'Ce que Guardian évite, et d’où viennent les chiffres'),
         open && h('div', {id: 'im-rates', className: 'im-fields im-rates'}, RATES.map(f => h(Slider, {key: f.key, field: f, value: values[f.key], onChange: change})))),
       h('section', {className: 'im-card im-measured', 'aria-labelledby': 'im-measured-title'},
         h('h2', {id: 'im-measured-title'}, 'Mesuré dans cette démo'),
         h('ul', null, measured.map(m => h('li', {key: m.label}, h('strong', null, m.value), h('span', null, m.label)))),
-        h('p', null, 'Les parts évitées sont des estimations. Un essai dans un quartier permettra de les mesurer pour de vrai.')));
+        h('p', null, 'Chaque curseur dit d’où vient son chiffre. Les déplacements évités et les clients gardés se mesureront pendant un essai dans un quartier.')));
   }
 
   root.FGImpact = {View, compute, money, DEFAULTS};

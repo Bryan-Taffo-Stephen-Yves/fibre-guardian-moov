@@ -4,11 +4,18 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const I=require('./impact-view.js');
 
+// Valeurs de départ réelles : abonnés internet fixe Moov (ARTCI), intervention à 10 000 F, fibre 100 Mb/s à 20 000 F,
+// et la seule baisse d'appels mesurée publiée (−18 %).
 test('Valeurs de départ : appels, déplacements et clients gardés sur 12 mois',()=>{
  const r=I.compute({});
- assert.equal(r.calls,12*12000*.35*1500);assert.equal(r.visits,12*2500*.4*15000);
- assert.equal(r.kept,900);assert.equal(r.revenue,900*25000*12);
- assert.equal(r.total,r.calls+r.visits+r.revenue);assert.equal(r.perSubscriber,r.total/60000);
+ assert.equal(r.calls,12*12000*.18*1500);assert.equal(r.visits,12*2500*.4*10000);
+ assert.equal(r.kept,900);assert.equal(r.revenue,900*20000*12);
+ assert.equal(r.total,r.calls+r.visits+r.revenue);assert.equal(r.perSubscriber,r.total/66723);
+});
+
+test('Chaque chiffre de départ dit d’où il vient',()=>{
+ for(const f of [...I.FIELDS,...I.RATES])assert.ok(f.source,f.key+' sans source');
+ assert.equal(I.DEFAULTS.visitCost,10000);assert.equal(I.DEFAULTS.subscribers,66723);
 });
 
 test('Les chiffres du manager changent le total ; les valeurs absurdes sont bornées',()=>{

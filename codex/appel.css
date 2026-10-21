@@ -1,0 +1,72 @@
+/* « Le client n'appelle plus » (appel-view.js) : heure de retour, appel au serveur vocal, compteur Moov.
+   Couleurs : variables de marque uniquement. */
+
+/* ---------- Heure de retour ---------- */
+.ap-restore{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:10px 14px;border-radius:14px;background:var(--moov-primary-25);color:var(--moov-primary-800);font-size:15px;line-height:1.35}
+.ap-restore b{font-weight:700;font-variant-numeric:tabular-nums}
+.ap-restore small{margin-left:auto;padding:2px 8px;border-radius:99px;background:var(--moov-accent-50);color:var(--moov-accent-text);font-size:12px;font-weight:600}
+.ap-restore.is-late{background:var(--moov-accent-25);color:var(--moov-ink)}
+.ap-restore.is-pending{background:var(--moov-neutral-50);color:var(--moov-text-muted);font-size:14px}
+.ap-restore.is-compact{margin-top:8px;padding:8px 12px;font-size:14px}
+.ap-restore-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--moov-primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-primary) 18%,transparent);animation:ap-pulse 2s ease-in-out infinite}
+.ap-restore.is-late .ap-restore-dot{background:var(--moov-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-accent) 22%,transparent)}
+.ap-restore.is-pending .ap-restore-dot{background:var(--moov-neutral-300);box-shadow:none;animation:none}
+@keyframes ap-pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--moov-primary) 0%,transparent)}}
+
+/* ---------- Bouton « Appeler Moov » ---------- */
+.ap-call-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.ab-neighbors-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.ab-neighbors-actions .j-button{margin:0}
+
+/* ---------- Appel ---------- */
+.ap-layer{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--moov-primary-900) 55%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:ap-fade .2s ease-out}
+.ap-call{display:flex;flex-direction:column;width:min(420px,100%);height:min(760px,100%);padding:28px 22px 22px;border-radius:32px;background:linear-gradient(170deg,var(--moov-primary-800),var(--moov-primary-900));color:var(--moov-white);box-shadow:0 30px 80px -20px color-mix(in srgb,var(--moov-primary-900) 70%,transparent);outline:none;animation:ap-rise .32s cubic-bezier(.2,.8,.2,1)}
+.ap-head{text-align:center}
+.ap-head h2{margin:14px 0 4px;font-size:22px;letter-spacing:-.02em;color:var(--moov-white)}
+.ap-head p{margin:0;font-size:14px;color:var(--moov-primary-200);font-variant-numeric:tabular-nums}
+.ap-avatar{position:relative;display:inline-grid;place-items:center;width:76px;height:76px;border-radius:50%;background:var(--moov-primary);color:var(--moov-white)}
+.ap-avatar svg{position:relative}
+.ap-avatar i{position:absolute;inset:0;border-radius:50%;border:2px solid var(--moov-primary-300);animation:ap-ring 2.4s ease-out infinite}
+.ap-avatar i+i{animation-delay:1.2s}
+.ap-lines{flex:1;display:flex;flex-direction:column;gap:10px;margin:22px 0 14px;padding:0;list-style:none;overflow-y:auto}
+.ap-lines li{align-self:flex-start;max-width:92%;padding:11px 15px;border-radius:18px 18px 18px 6px;background:color-mix(in srgb,var(--moov-white) 12%,transparent);font-size:16px;line-height:1.4;animation:ap-rise .3s ease-out}
+.ap-lines li.is-hello{font-weight:600}
+.ap-typing{display:flex;gap:5px;padding:14px 16px!important}
+.ap-typing i{width:7px;height:7px;border-radius:50%;background:var(--moov-primary-200);animation:ap-dot 1.1s infinite}
+.ap-typing i:nth-child(2){animation-delay:.15s}.ap-typing i:nth-child(3){animation-delay:.3s}
+.ap-done{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;gap:8px}
+.ap-done strong{font-size:22px;letter-spacing:-.02em}
+.ap-done p{margin:0;color:var(--moov-primary-100);font-size:16px}
+.ap-error{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:var(--moov-danger-50);color:var(--moov-danger-700);font-size:14px}
+.ap-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.ap-primary,.ap-secondary,.ap-voice{min-height:50px;border:0;border-radius:16px;font:inherit;font-size:16px;font-weight:650;cursor:pointer}
+.ap-primary{background:var(--moov-white);color:var(--moov-primary-800)}
+.ap-secondary{background:color-mix(in srgb,var(--moov-white) 14%,transparent);color:var(--moov-white)}
+.ap-voice{min-height:40px;background:none;color:var(--moov-primary-200);font-size:14px;font-weight:600}
+.ap-hang{align-self:center;display:grid;place-items:center;width:64px;height:64px;border:0;border-radius:50%;background:var(--moov-danger);color:var(--moov-white);cursor:pointer}
+.ap-hang svg{transform:rotate(135deg)}
+.ap-primary:disabled,.ap-secondary:disabled{opacity:.6;cursor:default}
+.ap-primary:focus-visible,.ap-secondary:focus-visible,.ap-voice:focus-visible,.ap-hang:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+@keyframes ap-fade{from{opacity:0}}
+@keyframes ap-rise{from{opacity:0;transform:translateY(12px)}}
+@keyframes ap-ring{from{transform:scale(1);opacity:.8}to{transform:scale(1.7);opacity:0}}
+@keyframes ap-dot{50%{opacity:.3;transform:translateY(-3px)}}
+@media (max-width:520px){.ap-layer{padding:0}.ap-call{width:100%;height:100%;border-radius:0;padding-top:max(36px,env(safe-area-inset-top));padding-bottom:max(22px,env(safe-area-inset-bottom))}}
+@media (prefers-reduced-motion:reduce){.ap-layer,.ap-call,.ap-lines li,.ap-avatar i,.ap-restore-dot,.ap-typing i{animation:none}}
+
+/* ---------- Tableau de bord Moov : appels évités ---------- */
+.ap-board-big{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin-top:6px}
+.ap-board-big strong{font-size:44px;line-height:1;letter-spacing:-.03em;color:var(--moov-primary);font-variant-numeric:tabular-nums}
+.ap-board-big span{color:var(--moov-text-muted);font-size:14px}
+.ap-board-bar{height:10px;margin:14px 0;border-radius:99px;background:var(--moov-primary-50);overflow:hidden}
+.ap-board-bar i{display:block;height:100%;border-radius:99px;background:var(--moov-primary);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.ap-board-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;padding:0;list-style:none}
+.ap-board-stats li{display:flex;flex-direction:column;gap:2px;padding:10px;border-radius:14px;background:var(--moov-neutral-25)}
+.ap-board-stats b{font-size:20px;font-variant-numeric:tabular-nums;color:var(--moov-ink)}
+.ap-board-stats span{font-size:12px;line-height:1.3;color:var(--moov-text-muted)}
+.ap-board-stats li.is-warn b{color:var(--moov-accent-text)}
+.ap-board-rows{display:flex;flex-direction:column;gap:6px;margin:12px 0 0;padding:0;list-style:none;font-size:13px}
+.ap-board-rows li{display:flex;justify-content:space-between;gap:10px;color:var(--moov-text-muted)}
+.ap-board-zone{color:var(--moov-ink);font-weight:600}
+.ap-board-zone.is-open::before{content:'';display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:var(--moov-danger);vertical-align:1px}
+.n-client-incident>.ap-restore{grid-column:1/-1;margin:0 0 4px}
