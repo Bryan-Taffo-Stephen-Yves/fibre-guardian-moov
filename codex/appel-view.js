@@ -20,18 +20,21 @@
  }
 
  function CallSheet({api,onClose,onGuardian,onSupport}){
-  const [data,D]=S(null),[shown,SH]=S(0),[error,X]=S(''),[done,DONE]=S(null),[busy,BZ]=S(false),[seconds,SEC]=S(0),[voice,VOICE]=S(true);
-  const box=R(null),list=R(null),spoken=R(0),hasVoice=typeof window!=='undefined'&&'speechSynthesis' in window;
+  const [data,D]=S(null),[shown,SH]=S(0),[error,X]=S(''),[done,DONE]=S(null),[busy,BZ]=S(false),[seconds,SEC]=S(0),[voice,VOICE]=S(true),[ringing,RG]=S(true);
+  const box=R(null),list=R(null),spoken=R(0),ring=R(null),hasVoice=typeof window!=='undefined'&&'speechSynthesis' in window,sound=window.FGSonnerie;
   E(()=>{let live=true;api('/noc/call','POST',{type:'start'}).then(r=>{if(live)D(r);}).catch(e=>{if(live)X(e.message||'L’appel n’a pas abouti. Réessayez.');});
-   const t=setInterval(()=>SEC(v=>v+1),1000);const prev=document.activeElement;box.current?.focus();
+   // La ligne sonne d'abord (« tuut… tuut »), puis le serveur vocal décroche au début de la deuxième sonnerie.
+   ring.current=sound?.ringback()||null;const pick=setTimeout(()=>{ring.current?.();ring.current=null;RG(false);},matchMedia('(prefers-reduced-motion: reduce)').matches?600:6500);
+   const prev=document.activeElement;box.current?.focus();
    const key=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',key);
-   return()=>{live=false;clearInterval(t);document.removeEventListener('keydown',key);if(hasVoice)speechSynthesis.cancel();prev?.focus?.();};},[]);
+   return()=>{live=false;clearTimeout(pick);ring.current?.();document.removeEventListener('keydown',key);if(hasVoice)speechSynthesis.cancel();sound?.mute(false);prev?.focus?.();};},[]);
+  E(()=>{if(ringing)return;const t=setInterval(()=>SEC(v=>v+1),1000);return()=>clearInterval(t);},[ringing]);
   // Les phrases arrivent une à une, comme au téléphone ; la voix les lit si le téléphone sait le faire.
-  E(()=>{if(!data||shown>=data.lines.length)return;const t=setTimeout(()=>SH(v=>v+1),shown?1300:500);return()=>clearTimeout(t);},[data,shown]);
+  E(()=>{if(ringing||!data||shown>=data.lines.length)return;const t=setTimeout(()=>SH(v=>v+1),shown?1300:500);return()=>clearTimeout(t);},[data,shown]);
   E(()=>{if(!voice||!hasVoice||!data)return;while(spoken.current<shown){const u=new SpeechSynthesisUtterance(data.lines[spoken.current++]);u.lang='fr-FR';u.rate=1.02;speechSynthesis.speak(u);}},[shown,voice,data]);
-  E(()=>{if(!voice&&hasVoice)speechSynthesis.cancel();},[voice]);
+  E(()=>{sound?.mute(!voice);if(!voice&&hasVoice)speechSynthesis.cancel();},[voice]);
   E(()=>{const el=list.current;if(el)el.scrollTop=el.scrollHeight;},[shown]);
-  function close(){if(hasVoice)speechSynthesis.cancel();onClose();}
+  function close(){ring.current?.();ring.current=null;if(hasVoice)speechSynthesis.cancel();if(!done)sound?.end();onClose();}
   async function finish(outcome){if(busy)return;BZ(true);X('');
    try{await api('/noc/call','POST',{type:'end',outcome,incident:data?.incident||null});if(hasVoice)speechSynthesis.cancel();
     if(outcome==='guardian'){onClose();onGuardian?.();return;}DONE(outcome);}
@@ -41,11 +44,11 @@
   return ReactDOM.createPortal(h('div',{className:'ap-layer',onClick:e=>{if(e.target===e.currentTarget)close();}},
    h('section',{className:'ap-call',role:'dialog','aria-modal':'true','aria-labelledby':'ap-title',tabIndex:-1,ref:box},
     h('header',{className:'ap-head'},
-     h('span',{className:'ap-avatar','aria-hidden':true},h('i'),h('i'),icon(PHONE,26)),
+     h('span',{className:'ap-avatar'+(ringing?' is-ringing':''),'aria-hidden':true},h('i'),h('i'),icon(PHONE,26)),
      h('h2',{id:'ap-title'},'Service client Moov'),
-     h('p',null,done?'Appel terminé':data?'En ligne · '+two(Math.floor(seconds/60))+':'+two(seconds%60):'Appel en cours…')),
-    !done&&h('ol',{className:'ap-lines','aria-live':'polite',ref:list},(data?.lines||[]).slice(0,shown).map((l,i)=>h('li',{key:i,className:i===0?'is-hello':''},l)),
-     data&&!ready&&h('li',{className:'ap-typing','aria-hidden':true},h('i'),h('i'),h('i'))),
+     h('p',null,done?'Appel terminé':ringing?'Appel…':data?'En ligne · '+two(Math.floor(seconds/60))+':'+two(seconds%60):'Appel en cours…')),
+    !done&&h('ol',{className:'ap-lines','aria-live':'polite',ref:list},(ringing?[]:data?.lines||[]).slice(0,shown).map((l,i)=>h('li',{key:i,className:i===0?'is-hello':''},l)),
+     data&&!ready&&!ringing&&h('li',{className:'ap-typing','aria-hidden':true},h('i'),h('i'),h('i'))),
     done&&h('div',{className:'ap-done',role:'status'},
      done==='reassured'?[h('strong',{key:'a'},'Merci, à tout à l’heure.'),h('p',{key:'b'},'Guardian vous prévient à chaque étape, jusqu’au retour d’internet.')]
      :[h('strong',{key:'a'},'Votre demande est transmise.'),h('p',{key:'b'},'Un conseiller Moov vous répond ici, dans vos notifications.')]),
@@ -63,7 +66,7 @@
  function CallButton({api,onGuardian,onSupport,className='j-button',label='Appeler Moov'}){
   const [open,O]=S(false);
   return h(React.Fragment,null,
-   h('button',{type:'button',className:className+' ap-call-button',onClick:()=>O(true)},icon(PHONE,17),h('span',null,label)),
+   h('button',{type:'button',className:className+' ap-call-button',onClick:()=>{window.FGSonnerie?.unlock();O(true);}},icon(PHONE,17),h('span',null,label)),
    open&&h(CallSheet,{api,onClose:()=>O(false),onGuardian,onSupport}));
  }
 
