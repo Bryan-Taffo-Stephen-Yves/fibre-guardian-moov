@@ -17,6 +17,7 @@ function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS noc_members(user_id TEXT PRIMARY KEY REFERENCES users(id),segment_id TEXT REFERENCES noc_segments(id));
  CREATE TABLE IF NOT EXISTS noc_delegations(user_id TEXT PRIMARY KEY REFERENCES users(id),granted_by TEXT REFERENCES users(id),expires INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS noc_settings(id INTEGER PRIMARY KEY CHECK(id=1),paused INTEGER NOT NULL DEFAULT 0,last_scan INTEGER);
+ CREATE TABLE IF NOT EXISTS noc_sources(segment_id TEXT PRIMARY KEY REFERENCES noc_segments(id),source TEXT NOT NULL,received INTEGER NOT NULL);
  INSERT OR IGNORE INTO noc_settings(id,paused) VALUES(1,0);
  CREATE INDEX IF NOT EXISTS noc_incident_status ON noc_incidents(status,segment_id);
  CREATE INDEX IF NOT EXISTS noc_event_incident ON noc_events(incident_id,at);
@@ -94,7 +95,8 @@ function operate(s,uid,d,{withinTransaction=false}={}){const field=O.role(s,uid)
 // Réseau de démonstration vivant : les box du simulateur continuent d’envoyer leurs mesures (mêmes valeurs),
 // et un segment réparé retrouve des mesures normales. Les validations humaines restent obligatoires.
 function refreshTelemetry(s,{maxAge=150000,recovery=20000}={}){if(settings(s).paused)return;const now=Date.now();
- for(const seg of s.all('SELECT * FROM noc_segments')){
+ // Un quartier branché sur la vraie supervision (branchements.cjs) n'est jamais rafraîchi ni réparé par le simulateur.
+ for(const seg of s.all("SELECT * FROM noc_segments WHERE id NOT IN (SELECT segment_id FROM noc_sources WHERE source='reseau')")){
   const repaired=s.get("SELECT repair_at FROM noc_incidents WHERE segment_id=? AND status='verifying' AND mode='demo' ORDER BY repair_at LIMIT 1",seg.id);
   if(repaired&&seg.alarm!=='NONE'&&now-repaired.repair_at>=recovery){s.run("UPDATE noc_segments SET online=total,latency=18,alarm='NONE',sample_at=? WHERE id=?",now,seg.id);event(s,null,null,'telemetry.recovered','Mesures revenues à la normale sur '+seg.id+'.');continue;}
   if(now-seg.sample_at<maxAge)continue;

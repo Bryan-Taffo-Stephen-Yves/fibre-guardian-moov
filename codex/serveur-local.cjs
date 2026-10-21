@@ -23,6 +23,8 @@ if (require.main === module) {
   console.log(require('./guardian-ai.cjs').available() ? 'Guardian : réponses rédigées avec Claude (clé ANTHROPIC_API_KEY trouvée).' : 'Guardian : réponses du moteur à règles (pas de clé ANTHROPIC_API_KEY).');
   const wa = require('./whatsapp.cjs').config(env);
   console.log(wa ? 'WhatsApp : vrais messages par ' + (wa.provider === 'twilio' ? 'Twilio' : 'Meta') + ' vers ' + wa.list.length + ' téléphone(s).' : 'WhatsApp : messages affichés dans le Simulateur seulement (pas de réglage TWILIO_* ni WHATSAPP_*).');
+  const prises = require('./branchements.cjs').config(env), ouvertes = ['reseau', 'clients', 'ussd', 'sms'].filter(p => prises[p]);
+  console.log('Réseau Moov : ' + (ouvertes.length ? 'prises branchées : ' + ouvertes.join(', ') + '.' : 'simulateur (aucune prise branchée, voir BRANCHEMENTS.md).'));
   pilot.on('error', e => { console.error(e.message); process.exitCode = 1; });
   ready.catch(e => { console.error('Démo pré-remplie impossible :', e.message); })
     .then(() => pilot.listen(port, host, () => console.log('Fibre Guardian : ' + (env.GUARDIAN_ORIGIN || 'http://127.0.0.1:' + port) + '/codex/ (données : ' + path.dirname(dbFile) + ') ; Ctrl+C pour arrêter.')));

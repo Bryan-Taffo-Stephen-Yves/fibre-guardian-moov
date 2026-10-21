@@ -22,6 +22,8 @@ function createGuardianServer(options={}){
  jury.migrate(store);
  // Vrais WhatsApp seulement si WHATSAPP_TOKEN et WHATSAPP_PHONE_ID sont réglés ; sinon rien ne part.
  const WA=require('./whatsapp.cjs'),whatsapp=WA.start(store,{env:options.env||process.env,onError:e=>options.onError?.(e)});
+ // Prises vers le vrai réseau Moov : chacune reste fermée tant que sa clé n'est pas réglée (BRANCHEMENTS.md).
+ const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -47,6 +49,7 @@ function createGuardianServer(options={}){
    if(route.startsWith('/api/')){
     if(mutate&&req.headers.origin)insist(req.headers.origin===origin,'Origine refusée.',403);
     if(mutate&&req.headers['sec-fetch-site'])insist(['same-origin','none'].includes(req.headers['sec-fetch-site']),'Site refusé.',403);
+    if(route.startsWith('/api/branchements')&&await B.route(store,branchements,req,res,route,{json,body,user:()=>auth(req)}))return;
     if(route==='/api/health'&&method==='GET')return json(res,{ok:true,storage:'sqlite',adminSecure:secure||local,origin,version:1,assistant:guardianAi.available()?'claude':'regles'});
     if(route==='/api/session'&&method==='GET'){const u=auth(req);return json(res,{user:u?{...u,role:workspace.sessionRole(store,u.id)}:null});}
     if(route==='/api/journey/otp/request'&&method==='POST')return json(res,await journey.requestOtp(store,await body(req,4096),ip(req)));

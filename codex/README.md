@@ -47,6 +47,8 @@ Client : `http://127.0.0.1:8186/codex/`, puis « Compte existant ». Équipe Moo
 
 ## Mettre en ligne et installer sur téléphone
 
+Pour brancher l'application sur le vrai réseau Moov (états des box, fichier clients, passerelles USSD et SMS) sans la modifier, voir [BRANCHEMENTS.md](BRANCHEMENTS.md).
+
 Fibre Guardian est une application web installable (manifeste, service worker, écran hors ligne). Pour la publier sur Internet (Railway conseillé, avec un volume pour la base), suivre [DEPLOIEMENT.md](DEPLOIEMENT.md). Port, dossier de données et adresse publique se règlent par variables d'environnement.
 
 ## Guardian avec Claude
