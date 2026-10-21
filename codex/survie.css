@@ -18,51 +18,93 @@
 .journey .sv-note strong{display:block;color:var(--moov-primary-700)}
 .sv-note p{margin:4px 0 0;font-size:14px;color:var(--moov-neutral-700)}
 
-/* Le téléphone */
-.sv-phone{position:relative;width:min(340px,100%);height:690px;padding:11px;border-radius:52px;background:var(--moov-neutral-900);box-shadow:0 0 0 2px var(--moov-neutral-700),0 30px 60px -24px color-mix(in srgb,var(--moov-primary-900) 55%,transparent),0 12px 24px -12px color-mix(in srgb,var(--moov-black) 40%,transparent)}
-.sv-notch{position:absolute;top:22px;left:50%;z-index:3;width:92px;height:26px;transform:translateX(-50%);border-radius:999px;background:var(--moov-black)}
-.sv-screen{position:relative;height:100%;overflow:hidden;border-radius:42px;background:var(--moov-surface);display:flex;flex-direction:column;color:var(--moov-ink)}
-.sv-status{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:16px 26px 0 30px;min-height:46px;font-size:13px}
+/* Le téléphone : écran sombre, clavier rond, comme l'application Téléphone de l'iPhone. */
+.sv-phone{position:relative;width:min(350px,100%);height:730px;padding:11px;border-radius:54px;background:var(--moov-neutral-900);box-shadow:0 0 0 2px var(--moov-neutral-700),0 30px 60px -24px color-mix(in srgb,var(--moov-primary-900) 55%,transparent),0 12px 24px -12px color-mix(in srgb,var(--moov-black) 40%,transparent)}
+.sv-notch{position:absolute;top:22px;left:50%;z-index:6;width:94px;height:27px;transform:translateX(-50%);border-radius:999px;background:var(--moov-black)}
+.sv-screen{position:relative;height:100%;overflow:hidden;overflow:clip;border-radius:44px;background:var(--moov-black);display:flex;flex-direction:column;color:var(--moov-white);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",var(--fg-font)}
+.sv-status{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:8px;height:50px;padding:0 26px 0 32px;font-size:14px}
 .sv-status b{font-weight:600}
 .sv-carrier{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px}
 .sv-bars{display:inline-flex;align-items:flex-end;gap:2px;height:13px}
 .sv-bars i{width:3px;border-radius:1px;background:currentColor}
-.sv-offline{align-self:center;display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:4px 10px;border-radius:999px;background:var(--moov-danger-50);color:var(--moov-danger-700);font-size:11px;font-weight:600}
-.sv-home-bar{position:absolute;bottom:19px;left:50%;width:118px;height:5px;transform:translateX(-50%);border-radius:999px;background:var(--moov-neutral-400)}
+.sv-offline{align-self:center;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--moov-danger-500) 22%,transparent);color:var(--moov-danger-100);font-size:11px;font-weight:600}
+.sv-home-bar{position:absolute;bottom:19px;left:50%;z-index:7;width:120px;height:5px;transform:translateX(-50%);border-radius:999px;background:var(--moov-neutral-300)}
 .sv-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-/* Le composeur */
-.sv-dialer{flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 26px 40px}
+/* Le clavier */
+.sv-dialer{flex:1;display:flex;flex-direction:column;padding:8px 24px 12px}
 /* Le style des champs de l'espace client est plus fort : on le remplace ici seulement. */
-.journey .sv-display input,.sv-display input{width:100%;height:auto;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;text-align:center;font:inherit;font-size:36px!important;font-weight:400;letter-spacing:.04em;color:var(--moov-ink);font-variant-numeric:tabular-nums;padding:4px 0!important}
-.sv-display input::placeholder{color:var(--moov-neutral-300)}
+.journey .sv-display input,.sv-display input{width:100%;height:auto;min-height:0!important;margin-top:18px;border:0!important;border-radius:0!important;box-shadow:none!important;background:none!important;color:var(--moov-white)!important;text-align:center;font:inherit;font-size:38px!important;font-weight:500;letter-spacing:.02em;font-variant-numeric:tabular-nums;padding:2px 0!important}
+.sv-display input::placeholder{color:var(--moov-neutral-700)}
 .journey .sv-display input:focus,.sv-display input:focus-visible{outline:none!important;box-shadow:none!important;border:0!important}
-.sv-hint{min-height:20px;margin:2px 0 14px;text-align:center;font-size:13px;color:var(--moov-danger-700)}
-.sv-keys{display:grid;grid-template-columns:repeat(3,68px);justify-content:center;gap:14px 24px}
-.sv-key{display:grid;place-items:center;align-content:center;width:68px;height:68px;border:0;border-radius:50%;background:var(--moov-neutral-100);color:var(--moov-ink);cursor:pointer;transition:background .15s,transform .15s var(--fg-ease)}
-.sv-key b{font-size:30px;font-weight:400;line-height:1}
-.sv-key small{font-size:9px;font-weight:600;letter-spacing:.16em;color:var(--moov-neutral-500);line-height:1.4}
-.sv-key:hover{background:var(--moov-neutral-150)}
-.sv-key:active{background:var(--moov-neutral-200);transform:scale(.94)}
-.sv-key:focus-visible,.sv-call:focus-visible,.sv-erase:focus-visible,.sv-dialog button:focus-visible,.sv-sms-banner:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
-.sv-actions{display:grid;grid-template-columns:repeat(3,68px);justify-content:center;gap:24px;margin-top:16px;align-items:center}
-.sv-call{display:grid;place-items:center;width:68px;height:68px;border:0;border-radius:50%;background:var(--moov-success-500);color:var(--moov-white);cursor:pointer;box-shadow:0 8px 18px -8px var(--moov-success-700);transition:transform .15s var(--fg-ease)}
+.sv-match{display:flex;align-items:center;justify-content:center;gap:7px;min-height:30px;margin:4px auto 0;padding:4px 14px;border-radius:999px;font-size:14px;color:var(--moov-neutral-200);transition:background .2s}
+.sv-match.is-on{background:var(--moov-neutral-800)}
+.sv-match-dot{width:8px;height:8px;border-radius:50%;background:var(--moov-primary-300)}
+.sv-hint{min-height:30px;margin:4px 0 0;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;line-height:1.3;color:var(--moov-danger-300)}
+.sv-keys{display:grid;grid-template-columns:repeat(3,72px);justify-content:center;gap:14px 26px;margin-top:auto}
+.sv-key{display:grid;place-items:center;align-content:center;width:72px;height:72px;border:0;border-radius:50%;background:var(--moov-neutral-800);color:var(--moov-white);cursor:pointer;transition:background .25s,transform .12s}
+.sv-key b{font-size:33px;font-weight:400;line-height:1}
+.sv-key small{margin-top:1px;font-size:9.5px;font-weight:700;letter-spacing:.2em;color:var(--moov-neutral-200);line-height:1.2}
+.sv-key.is-sign b{font-size:36px}
+.sv-key:hover{background:var(--moov-neutral-700)}
+.sv-key:active{background:var(--moov-neutral-500);transform:scale(.95);transition:none}
+.sv-key:focus-visible,.sv-call:focus-visible,.sv-erase:focus-visible,.sv-ussd button:focus-visible,.sv-sms-banner:focus-visible,.sv-calling button:focus-visible,.sv-hang:focus-visible{outline:3px solid var(--moov-primary-300);outline-offset:2px}
+.sv-actions{display:grid;grid-template-columns:repeat(3,72px);justify-content:center;gap:26px;margin-top:16px;align-items:center}
+.sv-call{display:grid;place-items:center;width:72px;height:72px;border:0;border-radius:50%;background:var(--moov-success-500);color:var(--moov-white);cursor:pointer;transition:transform .12s}
 .sv-call:active{transform:scale(.94)}
-.sv-erase{border:0;background:none;font-size:24px;color:var(--moov-neutral-600);cursor:pointer;height:48px}
+.sv-erase{display:grid;place-items:center;border:0;background:none;color:var(--moov-neutral-500);cursor:pointer;height:48px}
 .sv-erase:disabled{visibility:hidden}
+.sv-tabs{display:flex;justify-content:space-around;margin:14px -8px 22px;padding:6px 4px;border-radius:999px;background:var(--moov-neutral-900)}
+.sv-tabs span{display:grid;justify-items:center;gap:2px;padding:4px 14px;border-radius:999px;font-size:10.5px;font-weight:600;color:var(--moov-neutral-300)}
+.sv-tabs span.is-on{background:var(--moov-neutral-800);color:var(--moov-primary-300)}
 
-/* La fenêtre USSD */
-.sv-veil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;padding:20px;background:color-mix(in srgb,var(--moov-neutral-900) 42%,transparent);animation:sv-fade .2s ease-out}
-.sv-dialog{width:100%;padding:22px 20px 8px;border-radius:24px;background:var(--moov-surface);box-shadow:0 20px 40px -16px color-mix(in srgb,var(--moov-black) 45%,transparent);animation:sv-pop .28s var(--fg-ease)}
-.sv-running{display:flex;align-items:center;gap:14px;padding:22px 20px;font-size:15px;color:var(--moov-neutral-700)}
-.sv-spinner{width:24px;height:24px;flex:none;border-radius:50%;border:3px solid var(--moov-primary-100);border-top-color:var(--moov-primary);animation:sv-spin .8s linear infinite}
-.sv-text{margin:0 0 14px;white-space:pre-line;font-size:15.5px;line-height:1.5;color:var(--moov-ink)}
-.journey .sv-reply,.sv-reply{width:100%;height:auto;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;border-bottom:2px solid var(--moov-primary)!important;background:none!important;font:inherit;font-size:19px!important;padding:6px 2px!important;color:var(--moov-ink)}
-.journey .sv-reply:focus,.sv-reply:focus{outline:none!important;box-shadow:none!important;border-bottom-color:var(--moov-primary-700)!important}
-.sv-buttons{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
-.sv-buttons button{min-height:44px;padding:0 14px;border:0;border-radius:12px;background:none;font:inherit;font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase;color:var(--moov-primary);cursor:pointer}
-.sv-buttons button:hover{background:var(--moov-primary-25)}
-.sv-buttons button:disabled{color:var(--moov-neutral-300);cursor:default;background:none}
+/* La fenêtre USSD : plein écran gris, texte centré, « Fermer » et « Répondre » en bas */
+.sv-ussd{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;padding:96px 20px 40px;background:var(--moov-neutral-600);color:var(--moov-white);animation:sv-fade .2s ease-out}
+.sv-ussd-text{margin:0;white-space:pre-line;text-align:center;font-size:16.5px;line-height:1.42}
+.sv-running{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:60px}
+.sv-spinner{width:26px;height:26px;flex:none;border-radius:50%;border:3px solid color-mix(in srgb,var(--moov-white) 25%,transparent);border-top-color:var(--moov-white);animation:sv-spin .8s linear infinite}
+.sv-ussd-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin-top:auto}
+.sv-ussd-buttons button{min-height:58px;border:0;border-radius:10px;font:inherit;font-size:21px;font-weight:500;cursor:pointer}
+.sv-ussd-buttons .is-light{background:var(--moov-white);color:var(--moov-black)}
+.sv-ussd-buttons .is-dark{background:var(--moov-black);color:var(--moov-white)}
+.sv-ussd-buttons button:disabled{opacity:.45;cursor:default}
+.sv-ussd.is-reply{padding-top:70px}
+.sv-ussd-form{display:flex;flex-direction:column;gap:12px;margin-top:auto}
+.journey .sv-reply,.sv-reply{width:100%;height:auto;min-height:0!important;border:0!important;border-radius:10px!important;box-shadow:none!important;background:var(--moov-white)!important;color:var(--moov-black)!important;font:inherit;font-size:20px!important;text-align:center;padding:10px!important}
+.journey .sv-reply:focus,.sv-reply:focus{outline:none!important;box-shadow:none!important}
+.sv-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px -8px -8px;padding:8px;border-radius:14px;background:var(--moov-neutral-700)}
+.sv-pad button{min-height:42px;border:0;border-radius:8px;background:var(--moov-neutral-500);color:var(--moov-white);font:inherit;font-size:21px;cursor:pointer}
+.sv-pad button:active{background:var(--moov-neutral-400)}
+
+/* L'appel : la ligne sonne, puis le serveur vocal parle */
+.sv-calling{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;padding:78px 22px 44px;background:linear-gradient(180deg,var(--moov-neutral-700),var(--moov-neutral-900) 70%);color:var(--moov-white);animation:sv-fade .25s ease-out}
+.sv-calling header{text-align:center}
+.sv-calling h3{margin:14px 0 4px;font-size:28px;font-weight:500;letter-spacing:-.01em;color:var(--moov-white)}
+.sv-calling header p{margin:0;font-size:16px;color:var(--moov-neutral-200);font-variant-numeric:tabular-nums}
+.sv-calling-avatar{position:relative;display:inline-grid;place-items:center;width:84px;height:84px;border-radius:50%;background:var(--moov-primary);font-size:34px;font-weight:700}
+.sv-calling-avatar i{position:absolute;inset:0;border-radius:50%;border:2px solid var(--moov-primary-300);opacity:0}
+.sv-calling-avatar.is-ringing i{animation:sv-ring 2.5s ease-out infinite}
+.sv-calling-avatar.is-ringing i+i{animation-delay:1.25s}
+.sv-calling-lines{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;margin:16px 0 10px;padding:0;list-style:none;overflow-y:auto}
+.sv-calling-lines li{align-self:flex-start;max-width:94%;padding:9px 13px;border-radius:16px 16px 16px 5px;background:color-mix(in srgb,var(--moov-white) 13%,transparent);font-size:14px;line-height:1.38;animation:sv-pop .3s ease-out}
+.sv-calling-done{flex:1;min-height:0;display:grid;place-items:center;margin:0;text-align:center;font-size:16px;line-height:1.45;color:var(--moov-neutral-100)}
+.sv-calling-choices{display:grid;gap:8px;margin-bottom:14px}
+.sv-calling-choices button{min-height:46px;border:0;border-radius:14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.sv-calling-choices .is-light{background:var(--moov-white);color:var(--moov-primary-800)}
+.sv-calling-choices .is-glass{background:color-mix(in srgb,var(--moov-white) 16%,transparent);color:var(--moov-white)}
+.sv-calling-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:auto}
+.sv-calling-lines+.sv-calling-grid,.sv-calling-choices+.sv-calling-grid,.sv-calling-done+.sv-calling-grid{margin-top:0}
+.sv-calling-grid button{display:grid;justify-items:center;gap:6px;border:0;background:none;color:var(--moov-white);font:inherit;font-size:12px;cursor:pointer}
+.sv-calling-grid button span{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:color-mix(in srgb,var(--moov-white) 16%,transparent)}
+.sv-calling-grid button[aria-pressed=true] span{background:var(--moov-white);color:var(--moov-neutral-900)}
+.sv-calling-grid button:disabled{cursor:default;opacity:.55}
+.sv-hang{align-self:center;display:grid;place-items:center;width:72px;height:72px;margin-top:18px;border:0;border-radius:50%;background:var(--moov-danger-500);color:var(--moov-white);cursor:pointer}
+.sv-hang svg{transform:rotate(135deg)}
+.sv-calling.is-live{padding-top:64px}
+.sv-calling.is-live .sv-calling-avatar{width:56px;height:56px;font-size:24px}
+.sv-calling.is-live h3{margin-top:8px;font-size:22px}
+.sv-calling.is-live .sv-calling-grid button span{width:54px;height:54px}
+.sv-calling.is-live .sv-hang{width:64px;height:64px;margin-top:12px}
 
 /* Le SMS qui arrive */
 .sv-sms-banner{position:absolute;top:48px;left:10px;right:10px;z-index:4;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--moov-line);border-radius:18px;background:var(--moov-surface);box-shadow:var(--fg-shadow-lg);text-align:left;font:inherit;cursor:pointer;animation:sv-drop .45s var(--fg-ease)}
@@ -89,6 +131,7 @@
 @keyframes sv-pop{from{opacity:0;transform:scale(.94)}}
 @keyframes sv-drop{from{opacity:0;transform:translateY(-24px)}}
 @keyframes sv-spin{to{transform:rotate(360deg)}}
+@keyframes sv-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.7);opacity:0}}
 
 @media(max-width:960px){
  .sv{grid-template-columns:minmax(0,1fr);grid-template-areas:"intro" "stage" "offers";gap:24px}
@@ -96,12 +139,13 @@
  .journey .sv-promo>.j-button{grid-column:1/-1;justify-self:start}
 }
 @media(max-width:400px){
- .sv-phone{height:660px;border-radius:46px;padding:9px}
- .sv-screen{border-radius:38px}
- .sv-keys,.sv-actions{grid-template-columns:repeat(3,64px);gap:12px 20px}
- .sv-key,.sv-call{width:64px;height:64px}
- .sv-dialer{padding:10px 18px 38px}
+ .sv-phone{height:700px;border-radius:48px;padding:9px}
+ .sv-screen{border-radius:40px}
+ .sv-keys,.sv-actions{grid-template-columns:repeat(3,66px);gap:12px 22px}
+ .sv-key,.sv-call{width:66px;height:66px}
+ .sv-key b{font-size:30px}
+ .sv-dialer{padding:6px 16px 10px}
  .journey .sv-promo{grid-template-columns:1fr}
  .sv-promo-code{justify-self:start}
 }
-@media(prefers-reduced-motion:reduce){.sv-veil,.sv-dialog,.sv-sms-banner,.sv-key,.sv-call{animation:none;transition:none}.sv-spinner{animation-duration:2s}}
+@media(prefers-reduced-motion:reduce){.sv-ussd,.sv-calling,.sv-calling-lines li,.sv-sms-banner,.sv-key,.sv-call{animation:none;transition:none}.sv-calling-avatar.is-ringing i{animation:none;opacity:.6}.sv-spinner{animation-duration:2s}}
