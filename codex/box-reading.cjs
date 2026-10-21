@@ -19,7 +19,7 @@ function interpret(reading,snap){
  const measuredDown=snap.metrics?.state==='panne'||!!shared;
  const facts=[];
  const say=(message,{verdict=null,action=null,concord=true}={})=>({message,facts,verdict,action,concord});
- const context=()=>{facts.push({label:'Mesures de la box',value:measuredDown?'Pas de signal Internet':snap.metrics.state==='redémarrage'?'Redémarrage en cours':snap.metrics.capacity+' Mbps disponibles'},{label:'Votre quartier',value:shared?'Coupure en cours ('+shared.segment+')':'Aucune coupure signalée'});};
+ const context=()=>{facts.push({label:'Mesures de la box',value:measuredDown?'Pas de signal Internet':snap.metrics.state==='redémarrage'?'Redémarrage en cours':snap.metrics.capacity+' Mbps disponibles'},{label:'Votre quartier',value:shared?'Coupure en cours ('+(shared.zone||shared.segment)+')':'Aucune coupure signalée'});};
 
  if(reading.source==='claude'){
   facts.push({label:'Lecture des voyants',value:'Faite par Guardian sur votre photo'});
