@@ -40,3 +40,22 @@ test('Réinitialiser la démo : refusé au client, accepté pour l’administrat
   assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length);
  }finally{if(saved===undefined)delete process.env[DEMO.admin.env];else process.env[DEMO.admin.env]=saved;server.close();}
 });
+
+test('Remise à zéro répétée pendant la répétition : jamais bloquée par la limite anti-abus des connexions',async()=>{
+ const {store,server}=await fresh();
+ const {resetDemo}=require('./seed-demo.cjs');
+ try{
+  await seedDemo(store);
+  // Quatre remises à zéro dans la même minute : chacune recrée et reconnecte les comptes de la démo.
+  for(let n=0;n<4;n++){const r=await resetDemo(store);assert.equal(r.seeded,true,'remise à zéro n° '+(n+1));}
+  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length,'tous les comptes de la démo sont là');
+ }finally{server.close();}
+});
+
+test('Clients de quartier : leur espace est ouvert, l’accueil peut montrer la panne du quartier dès la connexion',async()=>{
+ const {store,server}=await fresh();
+ try{
+  await seedDemo(store);
+  for(const n of NEIGHBOURS){const u=store.get('SELECT id FROM users WHERE email=?',n.email);assert.ok(store.get('SELECT 1 AS ok FROM journey_state WHERE user_id=?',u.id),'espace ouvert pour '+n.email);}
+ }finally{server.close();}
+});

@@ -41,6 +41,9 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
    const data=await r.json();if(!r.ok)throw new Error('Démo pré-remplie : '+route+(body?.type?' ('+body.type+')':'')+' → '+(data.error||r.status));return data;
   }
   async function auth(kind,account){
+   // Ces connexions viennent du serveur privé de la démo (127.0.0.1), pas d'un visiteur : elles ne comptent pas
+   // dans la limite anti-abus, sinon deux remises à zéro dans la même minute laisseraient la base vide.
+   store.run("DELETE FROM limits WHERE key IN ('auth:127.0.0.1','auth:::ffff:127.0.0.1','auth:::1')");
    const r=await fetch(base+'/api/auth/'+kind,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:account.email,password:passwords[account.email],name:account.name})});
    const data=await r.json();if(!r.ok)throw new Error('Démo pré-remplie : compte '+account.email+' → '+data.error);
    return {id:data.user.id,email:account.email,csrf:data.user.csrf,cookie:r.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ')};
@@ -60,7 +63,9 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   await request(direction,'/noc/workspace/action',{type:'field-account',email:DEMO.technician.email,technicianId:'ibrahim',enabled:true,confirm:true});
   // Les voisins sont créés par les fonctions du serveur (même validation) : 11 inscriptions de suite dépasseraient la limite anti-abus.
   const noc=require('./noc-store.cjs');
-  for(const n of NEIGHBOURS){const {user}=await store.register({email:n.email,name:n.name,password:passwords[DEMO.client.email]});noc.join(store,user.id,{segment:n.segment,consent:true});}
+  // Leur espace est déjà ouvert (comme pour le jury) : à la première connexion, l'accueil montre tout de suite la panne de leur quartier.
+  const J=require('./journey-store.cjs');
+  for(const n of NEIGHBOURS){const {user}=await store.register({email:n.email,name:n.name,password:passwords[DEMO.client.email]});J.put(store,user.id,J.seed());noc.join(store,user.id,{segment:n.segment,consent:true});}
 
   // --- Espace d'Awa : sa box à Yopougon et son quartier suivi
   let journey=(await request(awa,'/journey/start',{})).state;
