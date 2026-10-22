@@ -1,0 +1,66 @@
+/* Carte des pannes côté client : « est-ce que c'est général ? ». La maquette reprend les styles de sim3d.css. */
+.journey .vl-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center}
+.journey .vl-card-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--moov-primary-50);color:var(--moov-primary)}
+.journey .vl-card.is-down .vl-card-icon{background:var(--moov-danger-50);color:var(--moov-danger-700)}
+.journey .vl-card.is-warn .vl-card-icon{background:var(--moov-accent-50);color:var(--moov-accent-800)}
+.journey .vl-card-text small{font-size:13px;color:var(--moov-text-muted)}
+.journey .vl-card-text h2{margin:2px 0 4px;font-size:18px;letter-spacing:-.015em}
+.journey .vl-card-text p{margin:0;color:var(--moov-neutral-600);font-size:14.5px;line-height:1.45}
+.journey .vl-card-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.journey .vl-pills{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.journey .vl-pills li{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:13px;background:var(--moov-neutral-50);border:1px solid var(--moov-line)}
+.journey .vl-pills li small{color:var(--moov-text-muted);font-size:12px}
+.journey .vl-pills li.is-down{background:var(--moov-danger-50);border-color:var(--moov-danger-100);color:var(--moov-danger-700)}
+.journey .vl-pills li.is-warn{background:var(--moov-accent-25);border-color:var(--moov-accent-100);color:var(--moov-accent-800)}
+.journey .vl-pills li.is-more{color:var(--moov-text-muted)}
+.vl-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--moov-primary)}
+.vl-dot.is-down{background:var(--moov-danger-500);box-shadow:0 0 0 3px var(--moov-danger-100);animation:vl-blink 1.4s ease-in-out infinite}
+.vl-dot.is-warn{background:var(--moov-accent)}
+.vl-dot.is-ok{background:var(--moov-success)}
+@keyframes vl-blink{50%{opacity:.6}}
+
+.journey .vl-page{display:grid;gap:16px}
+.journey .vl-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.journey .vl-head h1{margin:0;font-size:28px;letter-spacing:-.025em}
+.journey .vl-head p{margin:4px 0 0;color:var(--moov-neutral-600);font-size:15px;max-width:60ch}
+.journey .vl-live{flex:none;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:var(--moov-success-50);color:var(--moov-success-700);font-size:13px;font-weight:600}
+.journey .vl-live i{width:8px;height:8px;border-radius:50%;background:var(--moov-success);animation:vl-blink 1.6s ease-in-out infinite}
+.journey .vl-verdict{border-left:5px solid var(--moov-primary)}
+.journey .vl-verdict.is-down{border-left-color:var(--moov-danger-500);background:var(--moov-danger-50)}
+.journey .vl-verdict.is-warn{border-left-color:var(--moov-accent);background:var(--moov-accent-25)}
+.journey .vl-verdict h2{margin:0 0 6px;font-size:22px;letter-spacing:-.02em}
+.journey .vl-verdict p{margin:0 0 4px;font-size:15.5px;line-height:1.5;color:var(--moov-ink)}
+.journey .vl-verdict .j-button{margin-top:10px}
+.journey .vl-map-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.journey .vl-map-head h2,.journey .vl-list h2{margin:0;font-size:18px;letter-spacing:-.015em}
+.journey .vl-viewport{position:relative;border-radius:18px;overflow:hidden;background:var(--moov-primary-100)}
+.journey .vl-detail{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--moov-neutral-50);border:1px solid var(--moov-line)}
+.journey .vl-detail.is-down{background:var(--moov-danger-50);border-color:var(--moov-danger-100)}
+.journey .vl-detail.is-warn{background:var(--moov-accent-25);border-color:var(--moov-accent-100)}
+.journey .vl-detail.is-ok{background:var(--moov-success-50);border-color:var(--moov-success-100)}
+.journey .vl-detail-head{display:flex;align-items:center;gap:8px;font-size:15.5px}
+.journey .vl-detail p{margin:4px 0 0;font-size:14px;color:var(--moov-neutral-700)}
+.journey .vl-detail .vl-detail-step{color:var(--moov-text-muted)}
+.journey .vl-home-tag{margin-left:auto;padding:3px 9px;border-radius:999px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:12px;font-weight:600}
+.journey .vl-rows{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.journey .vl-row{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--moov-line);background:var(--moov-white);font:inherit;text-align:left;cursor:pointer;color:var(--moov-ink);min-height:44px}
+.journey .vl-row:hover,.journey .vl-row.is-selected{border-color:var(--moov-primary-300);background:var(--moov-primary-25)}
+.journey .vl-row:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+.journey .vl-row>span{display:grid;gap:2px}
+.journey .vl-row small{color:var(--moov-text-muted);font-size:13px}
+.journey .vl-empty,.journey .vl-calm{margin:12px 0 0;font-size:14px;color:var(--moov-neutral-700);display:flex;gap:8px;align-items:baseline;line-height:1.5}
+.journey .vl-calm .vl-dot{transform:translateY(-1px)}
+.journey .vl-note{margin:12px 0 0;font-size:13px;color:var(--moov-text-muted)}
+.journey .vl-error{color:var(--moov-danger-700)}
+@media (max-width:760px){
+  .journey .vl-card{grid-template-columns:auto minmax(0,1fr);gap:12px 14px;align-items:start}
+  .journey .vl-card-actions{grid-column:1/-1;align-items:stretch}
+  .journey .vl-card-actions .j-button{width:100%}
+  .journey .vl-head{flex-direction:column;gap:10px}
+  .journey .vl-head h1{font-size:24px}
+  .journey .vl-verdict h2{font-size:19px}
+  .journey .vl-map-head h2{font-size:16px}
+  .journey .vl-map-head .sm-tools button{width:36px;height:36px}
+  .journey .vl-page{padding-bottom:72px}
+}
+@media (prefers-reduced-motion:reduce){.vl-dot.is-down,.journey .vl-live i{animation:none}}

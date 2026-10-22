@@ -292,5 +292,5 @@
       seg && h(Panel, {segment: seg, incidents, data, busy, error, onStep: step, onSimulate: (id, f) => run('simulate', id, f), onRestore: id => run('restore', id, 'normal'), onClose: () => setSelected(null), onOpenIncident, onPick: setSelected}));
   }
 
-  root.FGSim3D = {...api, View};
+  root.FGSim3D = {...api, View, Scene};
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -113,6 +113,8 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
     if(route==='/api/noc/client'&&method==='GET')return json(res,noc.client(store,user.id));
+    // Carte des pannes côté client : état de chaque quartier, chiffres seulement (voir ville.cjs).
+    if(route==='/api/ville'&&method==='GET')return json(res,require('./ville.cjs').snapshot(store,user.id));
     // Mode survie : le menu *144# (écran USSD de l'application ; une passerelle d'opérateur appellerait la même fonction).
     if(route==='/api/ussd'&&method==='POST')return json(res,require('./ussd.cjs').respond(store,user.id,await body(req,1024)));
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
