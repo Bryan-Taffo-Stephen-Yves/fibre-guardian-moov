@@ -2,7 +2,7 @@
 // Gestion des appareils par le client : limiter, bloquer, retirer. Base éphémère, contrôles côté serveur.
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {createGuardianServer}=require('./pilot-server.cjs');
-test('Le client limite, bloque et retire un appareil ; les appareils protégés et les débits hors liste sont refusés',async()=>{
+test('Le client limite, bloque et retire un appareil ; les appareils protégés se limitent mais ne se coupent pas, les débits hors liste sont refusés',async()=>{
  const server=createGuardianServer({db:':memory:'});await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{
   const base='http://127.0.0.1:'+server.address().port;
@@ -19,7 +19,10 @@ test('Le client limite, bloque et retire un appareil ; les appareils protégés 
   await send({id:'tv',action:'block',confirm:true});assert.equal(tv().blocked,true);assert.equal(tv().mbps,0);
   await send({id:'tv',action:'limit',mbps:5,confirm:true},409);
   await send({id:'tv',action:'unblock',confirm:true});
-  for(const action of ['limit','remove','block'])await send({id:'phone',action,mbps:5,confirm:true},403);
+  // Appareil protégé : on peut réduire son débit, jamais le couper ni le retirer.
+  for(const action of ['remove','block'])await send({id:'phone',action,confirm:true},403);
+  await send({id:'phone',action:'limit',mbps:5,confirm:true});assert.equal(state.devices.find(d=>d.id==='phone').limit,5);
+  await send({id:'phone',action:'unlimit',confirm:true});assert.equal(state.devices.find(d=>d.id==='phone').limit,null);
   await send({id:'ps5',action:'remove'},400);
   await send({id:'ps5',action:'remove',confirm:true});assert.equal(state.devices.some(d=>d.id==='ps5'),false);assert.match(state.audit[0].action,/device.remove/);
   await send({id:'ps5',action:'block',confirm:true},404);

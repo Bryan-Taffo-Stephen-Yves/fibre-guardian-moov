@@ -52,9 +52,12 @@ test('Les appareils absents conservent leur volume sans proposer de commande',as
  assert.equal(namedButton(row,'Gérer'),undefined);assert.equal(namedButton(row,'Rétablir'),undefined);assert.equal(namedButton(row,'Reconnaître'),undefined);
  namedButton(row,'Détails de Ancien appareil invité').props.onClick();await app.settle();assert.match(text(app.tree),/Graphique filtré sur Ancien appareil invité/);assert.equal(app.actions.length,0);assert.equal(app.confirmations.length,0);
 });
-test('Un appareil protégé est consultable mais ne propose jamais de blocage',async()=>{
- const app=harness();await app.settle();const row=article(app.tree,'iPhone protégé');assert.match(text(row),/Protégé/);assert.equal(namedButton(row,'Gérer'),undefined);assert.equal(namedButton(row,'Rétablir'),undefined);
- namedButton(row,'Détails de iPhone protégé').props.onClick();await app.settle();assert.match(text(article(app.tree,'iPhone protégé')),/aucune réduction ou coupure/);assert.equal(app.actions.length,0);
+test('Un appareil protégé peut être limité, mais jamais bloqué ni retiré',async()=>{
+ const app=harness();await app.settle();const row=article(app.tree,'iPhone protégé');assert.match(text(row),/Protégé/);assert.equal(namedButton(row,'Rétablir'),undefined);
+ namedButton(row,'Détails de iPhone protégé').props.onClick();await app.settle();assert.match(text(article(app.tree,'iPhone protégé')),/jamais être coupé ni retiré/);assert.equal(app.actions.length,0);
+ namedButton(article(app.tree,'iPhone protégé'),'Gérer').props.onClick();await app.settle();const sheet=all(app.tree,node=>node.props.role==='dialog')[0];assert.ok(sheet,'La fiche Gérer s’ouvre');
+ assert.match(text(sheet),/jamais coupé ni retiré/);assert.doesNotMatch(text(sheet),/Bloquer|Retirer de mon réseau/);
+ const option=tag(sheet,'button').find(node=>text(node).startsWith('10 Mbps'));option.props.onClick();await app.settle();assert.equal(app.actions.at(-1)[0],'device');assert.equal(app.actions.at(-1)[1].action,'limit');assert.equal(app.actions.at(-1)[1].mbps,10);
 });
 test('Un volume absent reste inconnu, le graphique ne le transforme pas en zéro',async()=>{
  const data=fixture();data.summary.bytes=null;data.summary.observedMs=0;data.summary.coverageRatio=0;data.buckets=[data.buckets[0]];

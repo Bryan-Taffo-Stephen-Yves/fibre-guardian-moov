@@ -202,7 +202,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
  }else if(d.type==='device'){
   const dev=st.devices.find(v=>v.id===d.id);insist(dev,'Appareil inconnu.',404);insist(['recognize','block','unblock','limit','unlimit','remove'].includes(d.action),'Action inconnue.');
   if(d.action==='recognize')dev.recognized=true;
-  else{insist(!dev.protected,'Cet appareil est protégé.',403);insist(d.confirm===true,'Confirmation obligatoire.');
+  else{insist(!dev.protected||['limit','unlimit'].includes(d.action),'Cet appareil est protégé : vous pouvez réduire son débit, pas le couper ni le retirer.',403);insist(d.confirm===true,'Confirmation obligatoire.');
    // Limite choisie par le client : reste en place jusqu'à ce qu'il l'enlève (plancher de 2 Mbps conservé).
    if(d.action==='limit'){insist(DEVICE_LIMITS.includes(d.mbps),'Débit proposé : '+DEVICE_LIMITS.join(', ')+' Mbps.');insist(!dev.blocked,'Débloquez d’abord cet appareil.',409);dev.limit=d.mbps;dev.until=now+MANUAL_LIMIT_MS;dev.manual=true;}
    else if(d.action==='unlimit'){dev.limit=null;dev.until=null;dev.manual=false;}
