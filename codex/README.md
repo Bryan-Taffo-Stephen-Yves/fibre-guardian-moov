@@ -27,9 +27,10 @@ Au premier démarrage de `node codex/serveur-local.cjs` sur une base vide, la d�
 | Cliente Awa Koné (Yopougon, 100 Mbps à 20 000 FCFA) | `awa.kone@demo.fibre-guardian.ci` | `awa-demo-2026` (ou `GUARDIAN_DEMO_CLIENT_PASSWORD`) |
 | Direction technique (administrateur Moov) | `direction@demo.fibre-guardian.ci` | `GUARDIAN_DEMO_ADMIN_PASSWORD`, sinon généré au premier lancement et écrit dans `codex/.local/identifiants-demo.txt` (hors git) |
 | Technicien Ibrahim Traoré (Fibre Cocody) | `ibrahim.traore@demo.fibre-guardian.ci` | `ibrahim-demo-2026` (ou `GUARDIAN_DEMO_TECH_PASSWORD`) |
+| Les autres techniciens du simulateur : Yao Konan (Fibre Est), Koffi N’Guessan et Awa Kouamé (Fibre Ouest), Amina Traoré (Fibre Centre) | `yao.konan@…`, `koffi.nguessan@…`, `awa.kouame@…`, `amina.traore@…` (`@demo.fibre-guardian.ci`) | même mot de passe qu'Ibrahim |
 | Un client par poteau du simulateur (voir ci-dessous) | | même mot de passe qu'Awa |
 
-Chaque client ne reçoit que les alertes de son quartier ; si l'équipement central d'une commune tombe, tous les clients de la commune sont prévenus. Awa Koné habite Niangon (YOP-07). Les autres clients de démonstration :
+Quand Moov envoie un technicien sur une panne du simulateur, la mission apparaît dans l'application de ce technicien (connectez-vous avec son compte). Chaque client ne reçoit que les alertes de son quartier ; si l'équipement central d'une commune tombe, tous les clients de la commune sont prévenus. Awa Koné habite Niangon (YOP-07). Les autres clients de démonstration :
 
 - Cocody · Cité des Arts (COC-03) : Aya Kouadio, `aya.kouadio@demo.fibre-guardian.ci`
 - Cocody · Palmeraie (PAL-02) : Serge Gnagne, `serge.gnagne@demo.fibre-guardian.ci`
