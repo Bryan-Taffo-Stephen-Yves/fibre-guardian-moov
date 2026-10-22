@@ -177,6 +177,8 @@ L'image `codex/Dockerfile` fonctionne chez tout hébergeur qui accepte Docker et
 | `TWILIO_WHATSAPP_FROM` | Numéro d'envoi Twilio | `whatsapp:+14155238886` |
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_API_VERSION` | Vrais WhatsApp par l'API WhatsApp Cloud de Meta (si Twilio n'est pas réglé) | aucun, `v23.0` |
 | `WHATSAPP_NUMEROS` | Destinataires : `commune, quartier ou code=numéro`, `equipe=numéro`, `technicien=numéro`, séparés par des virgules | aucun |
+| `GUARDIAN_RESEAU_CLE`, `GUARDIAN_CLIENTS_CLE`, `GUARDIAN_USSD_CLE` | Clés (32 caractères ou plus) des prises vers le vrai réseau Moov : états des box, fichier clients, passerelle USSD. Voir [BRANCHEMENTS.md](BRANCHEMENTS.md) | aucune (prises fermées, simulateur) |
+| `GUARDIAN_SMS_URL`, `GUARDIAN_SMS_CLE`, `GUARDIAN_SMS_EXPEDITEUR` | Passerelle SMS de Moov (https) pour les SMS du menu USSD | aucune, `Moov` |
 | `GUARDIAN_ANDROID_PACKAGE` | Nom du paquet de l'application Android, publié dans `/.well-known/assetlinks.json` | aucun |
 | `GUARDIAN_ANDROID_SHA256` | Empreinte(s) SHA-256 de la clé de signature Android, séparées par des virgules | aucune |
 | `GUARDIAN_TLS_KEY`, `GUARDIAN_TLS_CERT` | HTTPS géré par l'application elle-même (sans proxy) | aucun |
