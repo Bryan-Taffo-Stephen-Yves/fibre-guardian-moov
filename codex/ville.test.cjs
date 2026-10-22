@@ -86,3 +86,10 @@ test('Côté client : page « Carte des pannes », carte 3D en lecture seule, au
  assert.doesNotMatch(view,/simulé|fictif|moteur à règles|pas de LLM/i);
  assert.doesNotMatch(read('ville.css'),/#[0-9a-f]{3,6}\b|rgb\(/i,'couleurs Moov seulement');
 });
+
+test('Carte des pannes : on peut zoomer, déplacer et tourner, au doigt comme à la souris',()=>{
+ const view=fs.readFileSync(path.join(__dirname,'ville-view.js'),'utf8'),css=fs.readFileSync(path.join(__dirname,'ville.css'),'utf8');
+ for(const label of ['Zoomer','Dézoomer','Tourner à gauche','Tourner à droite','Revenir à la vue de départ'])assert.ok(view.includes("'"+label+"'"),label);
+ assert.match(view,/onPointerDown/);assert.match(view,/addEventListener\('wheel'/);assert.match(view,/n\.d\/g\.d/,'pincer pour zoomer');
+ assert.match(css,/\.vl-viewport\{[^}]*touch-action:none/,'le doigt déplace la carte, pas la page');
+});
