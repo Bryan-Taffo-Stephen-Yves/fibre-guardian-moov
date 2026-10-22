@@ -12,7 +12,8 @@
  const reduced=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
  // « 1 min 20 s », « 45 s ».
  function left(ms){const s=Math.max(0,Math.ceil(ms/1000));if(s<60)return s+' s';const m=Math.floor(s/60),r=s%60;return m+' min'+(r?' '+String(r).padStart(2,'0')+' s':'');}
- const etaMin=ms=>Math.max(1,Math.ceil(ms/60000))+' min';
+ // Le trajet de démonstration dure 30 s : sous la minute, on compte les secondes.
+ const etaMin=ms=>ms<1000?'Il arrive':ms<60000?Math.ceil(ms/1000)+' s':Math.max(1,Math.ceil(ms/60000))+' min';
  const firstName=name=>String(name||'').split(/\s+/)[0];
  const initials=name=>String(name||'T').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
  const store={get(k){try{return localStorage.getItem(k);}catch{return null;}},set(k,v){try{localStorage.setItem(k,v);}catch{}}};

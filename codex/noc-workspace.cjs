@@ -129,6 +129,8 @@ function action(s,uid,d){
    else {s.run('INSERT INTO support_events VALUES(?,?,?,?,?,?)',id(),i.id,uid,Date.now(),'support.template',template.body);s.notice(i.home,'Suivi de votre dossier : '+i.title,template.body);s.run('UPDATE support_shares SET version=version+1 WHERE ticket_id=?',i.id);}
    log(s,i.key,uid,'notified','Gabarit « '+template.label+' » publié dans l’espace client local.');
   }else if(d.type==='advance'){
+   // « C'est réparé » : le technicien laisse son compte rendu, lu par l'équipe dans les notes du dossier.
+   if(d.report!=null){insist(i.status==='on_site','Le compte rendu accompagne la fin de la réparation.',409);log(s,i.key,uid,'note','Compte rendu : '+paragraph(d.report,'Compte rendu',1000));}
    N.operate(s,uid,{type:'advance',id:i.id,version:i.version},{withinTransaction:true});log(s,i.key,uid,'advanced','Avancement terrain déclaré, sans présumer le retour du réseau.');
   }else if(d.type==='ticket-status'){
    O.update(s,uid,i.id,{status:d.status,message:d.body??d.message,version:i.version},{withinTransaction:true});
