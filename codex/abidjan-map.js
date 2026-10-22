@@ -73,8 +73,8 @@
     'BAS-01': {commune: 'grandbassam', area: 'Quartier France', at: [-3.917, 5.2428], side: 'island'}
   };
   const BASES = {
-    awa: {at: [-4.083, 5.352], side: 'north'}, yao: {at: [-3.972, 5.392], side: 'north'}, amina: {at: [-4.007, 5.299], side: 'island'},
-    ibrahim: {at: [-3.938, 5.356], side: 'north'}, koffi: {at: [-4.015, 5.349], side: 'north'}
+    awa: {at: [-4.015, 5.349], side: 'north'}, yao: {at: [-3.972, 5.392], side: 'north'}, amina: {at: [-4.007, 5.299], side: 'island'},
+    ibrahim: {at: [-3.938, 5.356], side: 'north'}, koffi: {at: [-4.083, 5.352], side: 'north'}
   };
   // Côté client, le technicien arrive par son nom : « Koffi N’Guessan » → base « koffi ».
   const baseOf = name => { const key = String(name || '').split(' ')[0].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); return BASES[key] ? key : null; };
@@ -274,8 +274,9 @@
       h('div', {className: 'ab-neighbors-map'}, h(Map, {segments: area, incidents: [incident], focus: seg, label: 'Votre quartier sur la carte d’Abidjan'})),
       h('div', {className: 'ab-neighbors-text'},
         h('small', null, (info ? info.area + ', ' + COMMUNES.find(c => c.id === info.commune).name : 'Votre quartier')),
-        h('h2', null, n === null ? 'Votre quartier est touché par une panne' : n === 0 ? 'Votre box est la seule touchée' : n + ' voisin' + (n > 1 ? 's ont' : ' a') + ' le même souci'),
-        h('p', null, 'Ce n’est pas votre box : c’est la fibre du quartier. ' + line + ' Vous n’avez pas à vous inquiéter.'),
+        h('h2', null, n === null ? 'Votre quartier est touché par une panne' : n === 0 ? 'Votre signalement est chez Moov' : n + ' voisin' + (n > 1 ? 's ont' : ' a') + ' le même souci'),
+        // Un seul signalement (les box des voisins marchent) : on ne parle pas de panne de quartier.
+        h('p', null, (n === 0 ? 'Les box de vos voisins fonctionnent : Moov a bien reçu votre signalement et vérifie votre ligne. ' + (MOVING.includes(incident.status) ? line + ' ' : '') : 'Ce n’est pas votre box : c’est la fibre du quartier. ' + line + ' ') + 'Vous n’avez pas à vous inquiéter.'),
         root.FGAppel && h(root.FGAppel.Restore, {restore: incident.restore}),
         (onTrack || call) && h('div', {className: 'ab-neighbors-actions'},
           onTrack && h('button', {type: 'button', className: 'j-button primary', onClick: onTrack}, 'Suivre l’intervention'), call)));
