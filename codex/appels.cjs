@@ -100,4 +100,4 @@ function stats(s,now=Date.now()){
  return {since,incidents:rows.length,informed:sum('informed'),opened:sum('opened'),reassured:sum('reassured'),called:sum('called'),avoided:sum('avoided'),rows:rows.slice(0,5)};
 }
 
-module.exports={migrate,estimate,promise,decorate,tick,call,stats,clock,STEP};
+module.exports={migrate,estimate,promise,decorate,tick,call,stats,clock,STEP,CAUSE,STAGE,where};

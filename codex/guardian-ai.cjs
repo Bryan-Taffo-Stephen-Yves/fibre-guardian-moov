@@ -81,7 +81,7 @@ function json(msg){try{return JSON.parse(text(msg));}catch{return null;}}
 const UNDERSTAND='Tu aides Guardian, l’assistant fibre de Moov Africa Côte d’Ivoire, à comprendre les messages des abonnés. Ils écrivent en français, en nouchi (argot ivoirien) ou en dioula, parfois mélangés.\n'+
  'Donne la langue principale du message et son sens en français standard simple, en une ou deux phrases courtes, à la première personne comme si l’abonné parlait. Garde les chiffres tels quels, n’ajoute rien qui ne soit pas dans le message. Si le message est déjà en français standard, recopie-le.';
 const UNDERSTAND_SCHEMA={type:'object',properties:{lang:{type:'string',enum:['fr','nouchi','dioula','autre']},french:{type:'string'}},required:['lang','french'],additionalProperties:false};
-async function understand(message,{store,uid,log=()=>{},timeoutMs=3500}={}){
+async function understand(message,{store,uid,log=()=>{},timeoutMs=4500}={}){
  if(!available()||!message)return null;
  if(!budget(store,uid))return null;
  const msg=await send({max_tokens:600,output_config:{effort:'low',format:{type:'json_schema',schema:UNDERSTAND_SCHEMA}},system:UNDERSTAND,messages:[{role:'user',content:'Message de l’abonné : « '+String(message).slice(0,1200)+' »'}]},{timeoutMs,log,what:'la compréhension du message'});

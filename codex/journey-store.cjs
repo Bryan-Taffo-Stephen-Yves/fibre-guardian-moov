@@ -41,11 +41,49 @@ function snapshot(st){const now=Date.now(),down=!!active(st),rebooting=!down&&st
  devices.forEach((d,i)=>{d.mbps=Math.round((total>cap?demand[i]*cap/total:demand[i])*10)/10;});
  return {...st,devices,metrics:{at:now,capacity:cap,used:Math.round(devices.reduce((a,d)=>a+d.mbps,0)*10)/10,latency:down||rebooting?null:total>cap?85:18,connected:devices.filter(d=>!d.blocked).length,state:down?'panne':rebooting?'redémarrage':total>cap?'dégradée':'stable',rebootUntil:rebooting?st.rebootUntil:null},optical:optical(st,now),prevention:st.prevention||null,incidents:st.incidents.map(i=>({...i,progress:i.status==='en_route'?Math.min(1,(now-i.departed)/120000):STEPS.indexOf(i.status)>3?1:0,eta:i.status==='en_route'?Math.max(0,Math.ceil((120000-(now-i.departed))/1000)):null}))};}
 function validatePhoto(value){insist(typeof value==='string'&&value.length<480000,'Photo limitée à 350 Ko.');const m=value.match(/^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/);insist(m,'Photo PNG ou JPEG requise.');const bytes=Buffer.from(m[2],'base64');insist(bytes.length>12&&bytes.length<=350000,'Taille de photo invalide.');insist(m[1]==='png'?bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a':bytes[0]===255&&bytes[1]===216&&bytes[2]===255,'Format de photo invalide.');return value;}
+// Ce que veut l'abonné, d'après ses mots (et le sens en français pour le nouchi ou le dioula).
+// Les demandes de forfait, de jeu, de film ou de visio gardent leurs règles plus bas.
+const INTENTS=[
+ ['resiliation',/resili|(annuler|arreter|stopper) (mon |l')?abonnement|quitter moov/],
+ ['upgrade',/forfait (plus|superieur)|meilleur forfait|changer de forfait|plus de debit|plus rapide|augmenter (mon )?debit|upgrade|\b\d+ ?(mbps|megabits)/],
+ ['prix',/combien|prix|tarif|facture|payer|forfait|abonnement/],
+ ['voyants',/voyant|clignot|lumiere (rouge|orange)|\blos\b|\bpon\b|box (est )?(rouge|orange)|\bled\b/],
+ ['reboot',/redemarr|reboot|relancer (la|ma) box|rallum|eteindre (la|ma) box|debranch/],
+ ['humain',/conseiller|humain|agent|parler a|service client|appeler|telephoner|\b101\b|\b111\b/],
+ ['suivi',/technicien|intervention|reparat|quand .*(revient|retour|arrive)|revient quand|ca revient|reseau revient|(heure|delai) de retour/],
+ ['wifi',/wi-?fi|sans fil|chambre|etage|signal faible|capte mal|mot de passe/],
+ ['coupure',/coupe|coupure|pas d'?internet|plus d'?internet|plus de connexion|pas de connexion|(ne )?(marche|fonctionne) (plus|pas)|rien ne (marche|charge|passe)|hors service|est parti|connexion partie|pas de reseau|aucun reseau|ne capte|plus rien|mais pas (moi|chez moi)/],
+ ['lent',/lent|rame|ralenti|lag|saccad|charge (pas|mal|lentement)|bug|debit|connexion|internet|reseau|ma ligne|ca va/],
+ ['merci',/^(ok |d'accord |super |parfait )?(merci|c'est bon|c est bon|ok merci|top|parfait|super)\b.{0,25}$/],
+ ['salut',/^(bonjour|bonsoir|salut|coucou|hello|allo|yako|on dit quoi|i ni ce|i ni sogoma|i ni wula|a ni ce)\b/],
+ ['usage',/jeu|gaming|film|visio|meeting|telecharg|download|develop|bureau|travail|compil|docker|limite|tv|ps5|console/]
+];
+function intent(text){
+ const t=langues.fold(text).replace(/[!?.,;:]+/g,' ').replace(/\s+/g,' ').trim();
+ // « Merci » et « Bonjour » seuls : on ne cherche pas d'autre demande dedans.
+ if(INTENTS.find(x=>x[0]==='merci')[1].test(t))return 'merci';
+ if(/^(bonjour|bonsoir|salut|coucou|hello|allo|yako|on dit quoi|i ni ce|i ni sogoma|i ni wula|a ni ce)( [a-z]+)?$/.test(t))return 'salut';
+ const hit=INTENTS.find(([k,re])=>!['merci','salut'].includes(k)&&re.test(t));
+ if(hit)return hit[0]==='usage'?'usage':hit[0];
+ return INTENTS.find(x=>x[0]==='salut')[1].test(t)?'salut':'inconnu';
+}
+// Pendant une panne, Guardian dit la même chose que le serveur vocal « Appeler Moov » : lieu, cause, étape, heure de retour.
+function faultMessage(fault,st){
+ const call=require('./appels.cjs'),r=fault.restore;
+ if(fault.mode!=='demo'||!fault.zone||!call.STAGE)return 'Un incident concerne votre quartier ('+(fault.zone||st.zone||'votre zone')+'). '+({reported:'Votre signalement est reçu, une équipe l’analyse.',confirmed:'L’incident est confirmé ; une équipe va être affectée.',assigned:'Une équipe est affectée. Son départ n’est pas encore confirmé.',proposed:'Une équipe Moov prépare l’intervention.',approved:'L’intervention est validée.',dispatched:'Un technicien est affecté.',en_route:'Le technicien est en route.'+(fault.position?.eta?' Arrivée estimée dans '+Math.ceil(fault.position.eta/60)+' minute'+(Math.ceil(fault.position.eta/60)>1?'s':'')+'.':''),on_site:'Le technicien est actuellement sur place.',verifying:'La réparation est faite, nous vérifions le retour du réseau.'}[fault.status]||'Une équipe Moov s’en occupe.')+' Votre box n’est pas en cause. Suivez l’intervention étape par étape.';
+ return 'Nous savons déjà qu’internet est coupé '+call.where(fault.zone)+' : '+(call.CAUSE[fault.cause]||'une panne touche le quartier')+'. '+(call.STAGE[fault.status]||'Une équipe Moov s’en occupe.')+(fault.status==='en_route'&&fault.position?.eta?' Arrivée estimée dans '+Math.ceil(fault.position.eta/60)+' minute'+(Math.ceil(fault.position.eta/60)>1?'s':'')+'.':'')+' '+(r?.power?'Votre box repartira toute seule au retour du courant.':r?.label?'Internet devrait revenir vers '+r.label+'.':'Vous aurez l’heure de retour dès que le plan est validé.')+' Votre box n’est pas en cause : vous n’avez rien à faire.';
+}
 function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context||active(st),connected=snap.devices.filter(d=>!d.blocked),largest=connected.slice().sort((a,b)=>b.mbps-a.mbps)[0];
  const facts=[{label:'Incident du quartier',value:fault?(fault.zone||fault.segment||fault.reference||st.segment):'Aucun incident ouvert'},{label:'Appareils connectés',value:connected.length+' / '+st.usual+' habituels'},{label:'Plus gros usage',value:largest?largest.name+' · '+largest.mbps+' Mbps':'Aucun appareil actif'}];
- if(fault){st.proposal=null;st.upgrade=null;const stages={reported:'Votre signalement est reçu, une analyse est attendue.',proposed:'Le plan attend la validation du responsable technique.',approved:'Le plan est approuvé ; la prise en charge est en préparation.',dispatched:'Une équipe est affectée. Son départ n’est pas encore confirmé.',en_route:'Le technicien est en route.'+(fault.position?.eta?' Arrivée estimée dans '+Math.ceil(fault.position.eta/60)+' minute(s).':' Confirmation d’arrivée attendue.'),on_site:'Le technicien est actuellement sur place pour traiter l’incident.',verifying:'La réparation est déclarée ; nous vérifions le retour du réseau.',rejected:'Le support doit revoir le plan d’intervention.'};return {message:'Un incident concerne '+(fault.segment||st.segment)+'. '+(stages[fault.status]||'La prise en charge est en cours.')+' Le partage du débit ou un forfait supérieur ne corrige pas cet incident. Consultez le suivi partagé.',facts,action:'tracking'};}
+ const ask=intent(text),hello=ask==='salut'?'Bonjour ! ':'';
+ if(fault){st.proposal=null;st.upgrade=null;
+  if(ask==='merci')return {message:'Avec plaisir. Je vous préviens dès que votre internet revient.',facts,action:'tracking'};
+  return {message:hello+faultMessage(fault,st)+(['upgrade','usage'].includes(ask)?' Un forfait plus rapide ou un partage du débit ne réglerait pas cette coupure.':''),facts,action:'tracking'};}
+ if(ask==='merci')return {message:'Avec plaisir. Je reste là si votre connexion fait des siennes.',facts};
+ if(ask==='resiliation')return {message:'Je suis désolé que vous en soyez là. Une résiliation se fait en agence Moov ou au service client, pas depuis Guardian. Dites-moi d’abord ce qui ne va pas : je peux peut-être le régler tout de suite.',facts};
  const requested=Number(text.match(/(\d+)\s*(?:mbps|mégabits|megabits)/i)?.[1]||0),plan=st.plan||{id:'demo-100',name:'Essentiel démo',mbps:100,price:25000};
- if(/forfait|upgrade|plus de débit|plus rapide/i.test(text)||requested>plan.mbps){
+ if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mbps pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Le détail de vos factures est dans votre espace Moov. Si vous voulez plus de débit, dites-le-moi.',facts};
+ if(ask==='upgrade'||requested>plan.mbps){
   st.proposal=null;st.upgrade=null;
   if(st.scenario==='slow')return {message:'Votre débit est anormalement bas : un forfait plus rapide ne réglerait pas ce souci. Commençons par redémarrer votre box à distance.',facts};
   if(st.declinedUntil>Date.now())return {message:'C’est noté. Je ne vous proposerai pas d’autre offre pendant 24 heures.',facts};
@@ -59,8 +97,17 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
  if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
   return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
    facts:[...facts,{label:'Lumière reçue par la box',value:dbm(f.current)+' dBm (coupure vers '+dbm(f.threshold)+' dBm)'},{label:'Baisse mesurée',value:dbm(Math.abs(f.slope))+' dB par jour sur 7 jours'}]};}}
- if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:'Votre débit est tombé à '+snap.metrics.capacity+' Mbps alors que votre offre prévoit '+plan.mbps+' Mbps. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot'};
+ if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:hello+'Votre débit est tombé à '+snap.metrics.capacity+' Mbps alors que votre offre prévoit '+plan.mbps+' Mbps. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot'};
  if(connected.length>st.usual+1)return {message:'Le nombre d’appareils est inhabituel. Un appareil nouveau n’est pas forcément un intrus : vérifiez ceux auxquels vous avez donné le mot de passe avant de les bloquer.',facts,action:'devices'};
+ const line=snap.metrics.state==='redémarrage'?null:snap.metrics.capacity;
+ if(ask==='coupure')return line?{message:'J’ai vérifié : de notre côté, votre box est en ligne et reçoit '+line+' Mbps, et aucune panne n’est signalée dans votre quartier. Le souci vient sans doute d’un appareil ou du Wi-Fi. Redémarrer la box à distance règle souvent ce souci. Si rien ne revient ensuite, signalez la panne : elle part directement à l’équipe Moov.',facts,action:'reboot'}:{message:'Votre box est en train de redémarrer : internet revient dans quelques secondes.',facts};
+ if(ask==='reboot')return line?{message:'Je peux redémarrer votre box à distance. Internet sera coupé quelques secondes, le temps qu’elle redémarre. Appuyez sur le bouton ci-dessous pour confirmer.',facts,action:'reboot'}:{message:'Votre box est déjà en train de redémarrer : internet revient dans quelques secondes.',facts};
+ if(ask==='wifi')return {message:'La fibre arrive bien jusqu’à votre box'+(line?' : '+line+' Mbps':'')+'. Le souci vient du Wi-Fi, qui passe mal à travers les murs. Rapprochez-vous de la box, ou placez-la en hauteur, au centre du logement. Si un seul appareil est touché, éteignez son Wi-Fi puis rallumez-le.',facts};
+ if(ask==='voyants')return {message:'Envoyez-moi une photo de votre box avec le bouton « Photo de ma box ». Je lis les voyants et je les compare aux mesures de votre ligne pour vous dire d’où vient le souci.',facts};
+ if(ask==='humain')return {message:'Vous pouvez appeler Moov à tout moment avec le bouton « Appeler Moov ». J’ai déjà vérifié : votre box est en ligne et aucune panne n’est signalée dans votre quartier. Si quelque chose ne marche pas chez vous, signalez la panne : un technicien de Moov la reçoit directement.',facts,action:'report'};
+ if(ask==='suivi')return {message:'Aucune intervention n’est en cours chez vous en ce moment : votre ligne fonctionne et aucune panne n’est signalée dans votre quartier. Si quelque chose ne marche pas, dites-le-moi.',facts};
+ if(ask==='salut')return {message:'Bonjour ! J’ai vérifié votre ligne : '+(line?'tout va bien, '+line+' Mbps disponibles.':'votre box redémarre, internet revient dans quelques secondes.')+' Que puis-je faire pour vous ?',facts};
+ if(ask==='inconnu')return {message:'Je m’occupe de votre connexion Moov Fibre. Je peux vérifier votre débit, redémarrer votre box, lire ses voyants sur une photo ou suivre une panne dans votre quartier. Que se passe-t-il avec votre internet ?',facts};
  if(/jeu|gaming|film|visio|meeting|télécharg|download|dévelop|bureau|travail|compil|docker|limite/i.test(text)){
   const usageName=/jeu|gaming/i.test(text)?'gaming':/visio|meeting/i.test(text)?'visioconférence':/film/i.test(text)?'film':/dévelop|bureau|travail|compil|docker/i.test(text)?'travail':'téléchargement';
   const target=st.devices.find(d=>d.id===(usageName==='gaming'||usageName==='téléchargement'?'ps5':usageName==='film'?'tv':'mac'));
@@ -77,7 +124,7 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   st.proposal={id:id(),usage:usageName,target:target.id,limits,minutes:30,expires:Date.now()+300000};
   return {message:'Pour votre '+usageName+', je propose un partage temporaire pendant 30 minutes. Aucune limite n’est réglée sous 2 Mbps ; les appareils protégés ne sont pas limités. Le débit obtenu dépend de la capacité partagée. Confirmez avant application.',facts,proposal:st.proposal};
  }
- return {message:(snap.metrics.used>=snap.metrics.capacity*.9?'La connexion est très sollicitée. ': 'J’ai vérifié vos mesures. ')+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mbps. ':'')+(['work','developers'].includes(st.usageContext)?'Cet usage peut être nécessaire au travail : un gros volume n’est pas une anomalie. Quelle tâche souhaitez-vous préserver, et quels transferts peuvent attendre ?':'Que souhaitez-vous faire : jouer, regarder un film, télécharger ou participer à une visio ?'),facts,action:'usage'};
+ return {message:hello+(snap.metrics.used>=snap.metrics.capacity*.9?'La connexion est très sollicitée. ': 'J’ai vérifié vos mesures. ')+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mbps. ':'')+(['work','developers'].includes(st.usageContext)?'Cet usage peut être nécessaire au travail : un gros volume n’est pas une anomalie. Quelle tâche souhaitez-vous préserver, et quels transferts peuvent attendre ?':'Que souhaitez-vous faire : jouer, regarder un film, télécharger ou participer à une visio ?'),facts,action:'usage'};
 }
 async function requestOtp(s,d,ip){insist(d.mode==='demo','Connexion par SMS momentanément indisponible. Réessayez plus tard.',503);s.rate('otp-ip:'+ip,8,600000);const phone=String(d.phone||'').replace(/[\s()-]/g,'');insist(/^\+[1-9]\d{7,14}$/.test(phone),'Numéro au format international, par exemple +2250700000001.');s.rate('otp-phone:'+hash(phone),3,600000);const name=word(d.name||'Visiteur','Nom',60),cid=id(),proof=token(),code=String(crypto.randomInt(100000,1000000));s.run('DELETE FROM journey_otp WHERE expires<?',Date.now());s.run('INSERT INTO journey_otp(id,proof,code,name,expires) VALUES(?,?,?,?,?)',cid,hash(proof),hash(cid+code),name,Date.now()+300000);return {id:cid,proof,demoCode:code,expires:Date.now()+300000,mode:'demo',notice:'Code envoyé. Il est valable 5 minutes.'};}
 async function verifyOtp(s,d,ip){s.rate('otp-verify:'+ip,25,600000);const row=s.get('SELECT * FROM journey_otp WHERE id=?',String(d.id||''));insist(row&&row.proof===hash(String(d.proof||''))&&!row.used&&row.expires>Date.now()&&row.attempts<5,'Code expiré ou trop de tentatives. Demandez un nouveau code.',401);s.run('UPDATE journey_otp SET attempts=attempts+1 WHERE id=?',row.id);insist(hash(row.id+String(d.code||''))===row.code,'Code incorrect.',401);s.run('UPDATE journey_otp SET used=1 WHERE id=?',row.id);const result=await s.register({email:'demo-'+id()+'@guardian.invalid',name:row.name,password:token()});put(s,result.user.id,seed());return result.user;}
@@ -117,10 +164,10 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   audit(st,'prevention.booked',day(slot.at));
  }else if(d.type==='chat'){
   // d.meaning est ajouté par le serveur (langues.cjs ou Claude), jamais accepté tel quel du navigateur (voir pilot-server).
-  const text=paragraph(d.text,'Message',1200),meaning=d.meaning&&['nouchi','dioula','autre'].includes(d.meaning.lang)?{lang:d.meaning.lang,french:String(d.meaning.french||'').slice(0,300)}:null,fault=sharedFault(s,uid);
+  const text=paragraph(d.text,'Message',1200),meaning=d.meaning&&['fr','nouchi','dioula','autre'].includes(d.meaning.lang)?{lang:d.meaning.lang,french:String(d.meaning.french||'').slice(0,300)}:null,fault=sharedFault(s,uid);
   const reply=diagnostic(st,meaning?.french?text+' '+meaning.french:text,fault);
   const voice=meaning?.lang==='dioula'?langues.voice(langues.voiceKey({fault,action:reply.action,state:snapshot(st).metrics.state,greeting:/^\s*(bonjour|salut|i ni|a ni)/i.test(text)&&text.length<40})):null;
-  st.messages.push({id:id(),role:'user',text,...(meaning?{lang:meaning.lang,meaning:meaning.french||null}:{})},{id:id(),role:'assistant',text:reply.message,facts:reply.facts,action:reply.action,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
+  st.messages.push({id:id(),role:'user',text,...(meaning&&meaning.lang!=='fr'?{lang:meaning.lang,meaning:meaning.french||null}:{})},{id:id(),role:'assistant',text:reply.message,facts:reply.facts,action:reply.action,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  }else if(d.type==='apply'){
   const p=st.proposal;insist(d.confirm===true&&p&&d.id===p.id&&p.expires>now,'Confirmation valide requise.',409);insist(!active(st)&&!sharedFault(s,uid),'Une panne de zone est en cours : action annulée.',409);
   for(const l of p.limits){const dev=st.devices.find(v=>v.id===l.id);insist(dev&&!dev.protected&&!dev.blocked,'Appareil indisponible ou protégé.',409);insist(l.mbps>=2,'Plancher de sécurité requis.');dev.limit=l.mbps;dev.until=now+p.minutes*60000;}
@@ -194,4 +241,4 @@ function boxPhoto(s,uid,d,reading){return s.transaction(()=>{const st=get(s,uid)
  st.messages.push({id:id(),role:'user',text:'Voici une photo de ma box.',photo:true},{id:id(),role:'assistant',text:r.message,facts:r.facts,action:r.action,verdict:r.verdict,concord:r.concord,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  audit(st,'photo.read',(reading.source==='claude'?'Lecture Guardian':'Lecture sur le téléphone')+' · '+(r.verdict||'à reprendre')+' · photo non conservée');st.version++;put(s,uid,st);return snapshotFor(s,uid,st);});}
 function refine(s,uid,messageId,text){const st=get(s,uid);if(!st)return null;const m=st.messages.find(x=>x.id===messageId&&x.role==='assistant');if(!m)return snapshotFor(s,uid,st);m.text=text;put(s,uid,st);return snapshotFor(s,uid,st);}
-module.exports={optical,migrate,seed,get,put,snapshot,snapshotFor,active,reportByCode,STEPS,LABELS,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
+module.exports={intent,optical,migrate,seed,get,put,snapshot,snapshotFor,active,reportByCode,STEPS,LABELS,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
