@@ -47,7 +47,7 @@
   const row=(icon,label,hint,onClick,extra)=>h('button',{type:'button',className:'ch-row',onClick},h('span',{className:'ch-row-icon'},h(Icon,{name:icon,size:19})),h('span',null,h('b',null,label),hint&&h('small',null,hint)),extra,h(Icon,{name:'chevron',size:18}));
   return h('div',{className:'ch-account'},
    h('section',{className:'ch-profile'},h(Face,{name:user.name,size:72,role:'client'}),h('div',null,h('h1',null,user.name),h('p',null,zone?'Fibre Moov · '+zone:'Client Moov Fibre')),
-    plan&&h('div',{className:'ch-plan'},h('div',null,h('small',null,'Votre offre'),h('strong',null,plan.mbps+' Mb/s')),h('div',null,h('small',null,'Chaque mois'),h('strong',null,(plan.price||0).toLocaleString('fr-FR')+' F')),h('button',{type:'button',className:'ch-chip light',onClick:()=>go('guardian')},'Demander à Guardian'))),
+    plan&&h('div',{className:'ch-plan'},h('div',null,h('small',null,'Votre offre'),h('strong',null,plan.mbps+' Mb/s')),h('div',null,h('small',null,'Chaque mois'),h('strong',null,(plan.price||0).toLocaleString('fr-FR')+' F')),h('button',{type:'button',className:'ch-chip strong',onClick:()=>go('forfait')},'Changer de forfait'),state?.nextPlan&&h('p',{className:'ch-plan-next'},'À partir du '+new Date(state.nextPlan.at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}).replace(/^1 /,'1er ')+' : '+state.nextPlan.plan.mbps+' Mb/s pour '+(state.nextPlan.plan.price||0).toLocaleString('fr-FR')+' F par mois.'))),
    h('section',{className:'ch-group'},h('h2',null,'Suivi et alertes'),
     row('bell','Notifications',bell?bell+' non lue'+(bell>1?'s':''):'Tout est lu',()=>go('notifications'),bell?h('span',{className:'ch-badge'},bell>9?'9+':bell):null),
     row('truck','Suivi du technicien','Où en est votre intervention',()=>go('tracking')),

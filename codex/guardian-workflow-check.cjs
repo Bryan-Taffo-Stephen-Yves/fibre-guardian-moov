@@ -12,9 +12,9 @@ try {
  const baseline=s.get('SELECT count(*) n FROM noc_events').n;await req(admin,'/guardian/chat',{portal:'noc',page:'settings',text:'Qui peut approuver ?'});A.equal(s.get('SELECT count(*) n FROM noc_events').n,baseline);console.log('PASS copilote authentifié, rôle NOC, CSRF et lecture sans commande implicite');
  await action({type:'chat',text:'Un meilleur forfait ?'});A.equal(state.upgrade,null);await action({type:'chat',text:'Je veux 500 Mbps'});A.equal(state.upgrade,null);
  await action({type:'scenario',value:'slow'});await action({type:'chat',text:'Je veux 200 Mbps'});A.ok(!state.upgrade);
- await action({type:'scenario',value:'normal'});await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade.amount,5000);A.equal(state.upgrade.to.price,30000);const quote=state.upgrade.id;
+ await action({type:'scenario',value:'normal'});await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade.amount,5000);A.equal(state.upgrade.to.price,25000);const quote=state.upgrade.id;
  await action({type:'upgrade-pay',id:quote},400);
- await action({type:'upgrade-pay',id:quote,confirm:true});A.equal(state.capacity,200);A.equal(state.payment.amount,5000);A.equal(state.plan.price,30000);
+ await action({type:'upgrade-pay',id:quote,confirm:true});A.equal(state.capacity,200);A.equal(state.payment.amount,5000);A.equal(state.plan.price,25000);
  await action({type:'upgrade-pay',id:quote,confirm:true});A.equal(state.audit.filter(v=>v.action==='upgrade.activated').length,1);A.equal((await req(client,'/journey/state')).state.capacity,200);
  await action({type:'chat',text:'Je veux un meilleur forfait'});A.equal(state.upgrade,null);console.log('PASS offre justifiée, complément exact, confirmation, persistance et paiement simulé idempotent');
  await action({type:'reset'});await action({type:'chat',text:'Je veux 200 Mbps'});await action({type:'upgrade-decline'});await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade,null);

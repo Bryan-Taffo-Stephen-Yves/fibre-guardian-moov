@@ -16,7 +16,7 @@
  // Garde le focus dans la fenêtre et ferme avec Échap.
  function useDialog(onClose,first){E(()=>{const prev=document.activeElement;first.current?.focus();const k=e=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return()=>{removeEventListener('keydown',k);prev?.focus?.();};},[]);}
 
- function Checkout({quote,customer,account,onPay,onDone,onClose}){
+ function Checkout({quote,customer,account,onPay,onDone,onClose,backLabel='Retour à Guardian'}){
   const [step,ST]=S('review'),[pin,P]=S(''),[phone,PH]=S(customer?.phone||''),[error,X]=S(''),first=R(null);
   useDialog(()=>{if(step!=='processing')onClose();},first);
   const plan=quote.to||{},amount=quote.amount||0;
@@ -47,10 +47,10 @@
      h('label',{className:'mm-field'},h('span',null,'Code secret'),h('input',{className:'mm-pin',type:'password',inputMode:'numeric',autoComplete:'off',maxLength:4,pattern:'[0-9]{4}',value:pin,onChange:e=>P(e.target.value.replace(/\D/g,'').slice(0,4)),placeholder:'••••','aria-describedby':'mm-pin-help'}),h('small',{id:'mm-pin-help'},'4 chiffres. Votre code reste sur ce téléphone.')),
      error&&h('p',{className:'mm-error',role:'alert'},error),
      h('button',{className:'mm-pay',type:'submit'},'Payer '+fcfa(amount)),
-     h('button',{type:'button',className:'mm-cancel',onClick:onClose},h(Icon,{d:I.back,size:16}),'Retour à Guardian'))));
+     h('button',{type:'button',className:'mm-cancel',onClick:onClose},h(Icon,{d:I.back,size:16}),backLabel))));
  }
 
- function Success({plan,amount,account,onClose,onDiscover}){
+ function Success({plan,amount,account,onClose,onDiscover,closeLabel='Continuer avec Guardian'}){
   const first=R(null),[code]=S(ref),when=new Date().toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
   useDialog(onClose,first);
   return h('div',{className:'mm-overlay mm-overlay--center',role:'dialog','aria-modal':'true','aria-labelledby':'mm-ok-title'},
@@ -68,7 +68,7 @@
      h('div',null,h('dt',null,'Référence'),h('dd',null,code)),
      h('div',null,h('dt',null,'Date'),h('dd',null,when))),
     h('button',{type:'button',className:'mm-pay',ref:first,onClick:onDiscover},'Voir ma connexion'),
-    h('button',{type:'button',className:'mm-cancel',onClick:onClose},'Continuer avec Guardian')));
+    h('button',{type:'button',className:'mm-cancel',onClick:onClose},closeLabel)));
  }
  window.FGPay={Checkout,Success};
 })();

@@ -1,0 +1,85 @@
+/* Changer de forfait (plan-view.js) : mobile d'abord, puis grille de cartes sur grand écran */
+@keyframes pv-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.pv{display:grid;gap:14px;max-width:980px;animation:pv-in .4s var(--fg-ease,ease) both}
+.pv-back{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px 0 6px;border:0;border-radius:99px;background:none;color:var(--moov-primary);font:600 14.5px var(--fg-font,inherit);cursor:pointer}
+.pv-back:hover{background:var(--moov-primary-50)}
+.pv-head{display:grid;gap:14px}
+.pv-head h1{margin:0;font-size:28px;line-height:1.1;letter-spacing:-.03em;color:var(--moov-ink)}
+.pv-head p{margin:6px 0 0;font-size:15px;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.pv-now{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:20px;background:var(--moov-surface);box-shadow:0 10px 26px color-mix(in srgb,var(--moov-ink) 5%,transparent)}
+.pv-now small{display:block;font-size:12px;color:var(--moov-neutral-500)}
+.pv-now strong{font-size:18px;letter-spacing:-.02em;color:var(--moov-ink)}
+.pv-now span{margin-left:8px;font-size:14px;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.pv-next{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 12px;padding:14px 16px;border-radius:20px;background:var(--moov-warning-100);color:var(--moov-ink)}
+.pv-next-ico{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--moov-surface);color:var(--moov-warning-700)}
+.pv-next strong{display:block;font-size:15.5px}
+.pv-next small{display:block;font-size:13.5px;color:var(--moov-neutral-700)}
+.pv-link{grid-column:1/-1;justify-self:start;min-height:40px;padding:0 14px;border:1px solid var(--moov-warning-300);border-radius:99px;background:var(--moov-surface);color:var(--moov-ink);font:600 14px var(--fg-font,inherit);cursor:pointer}
+.pv-tip{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;padding:14px 16px;border-radius:20px;background:linear-gradient(135deg,var(--moov-primary-50),var(--moov-surface))}
+.pv-tip small{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--moov-primary)}
+.pv-tip p{margin:3px 0 0;font-size:14.5px;line-height:1.45;color:var(--moov-ink)}
+.pv-list{display:grid;gap:10px}
+.pv-plan{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:88px;padding:14px 44px 14px 14px;border:1.5px solid var(--moov-neutral-150);border-radius:20px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s}
+.pv-plan:hover{border-color:var(--moov-primary-200);transform:translateY(-1px)}
+.pv-plan:active{transform:scale(.99)}
+.pv-plan:focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:2px}
+.pv-plan.mine{background:var(--moov-primary-25,var(--moov-primary-50));border-color:var(--moov-primary-100);cursor:default}
+.pv-plan.chosen{border-color:var(--moov-primary);box-shadow:0 12px 30px color-mix(in srgb,var(--moov-primary) 16%,transparent)}
+.pv-speed{display:grid;place-items:center;align-content:center;width:64px;height:64px;border-radius:18px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.pv-plan.chosen .pv-speed{background:var(--moov-primary);color:var(--moov-on-primary,var(--moov-white))}
+.pv-speed b{font:700 24px/1 var(--fg-font-display,inherit);letter-spacing:-.03em}
+.pv-speed small{font-size:11px;font-weight:600;color:inherit;opacity:.85}
+.pv-info{display:grid;gap:5px;min-width:0}
+.pv-info>small{font-size:13.5px;line-height:1.35;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.pv-tags{display:flex;flex-wrap:wrap;gap:5px}
+.pv-tags:empty{display:none}
+.pv-tag{padding:3px 8px;border-radius:99px;font-size:11.5px;font-weight:600;font-style:normal;white-space:nowrap}
+.pv-tag.mine{background:var(--moov-primary);color:var(--moov-on-primary,var(--moov-white))}
+.pv-tag.tip{background:var(--moov-success-50);color:var(--moov-success-700)}
+.pv-tag.later{background:var(--moov-warning-100);color:var(--moov-warning-700)}
+.pv-price{display:grid;justify-items:end;gap:1px;text-align:right}
+.pv-price strong{font-size:16.5px;letter-spacing:-.02em;white-space:nowrap}
+.pv-price small{font-size:12px;color:var(--moov-neutral-500)}
+.pv-price i{margin-top:3px;font-size:12px;font-style:normal;font-weight:600;white-space:nowrap}
+.pv-price i.more{color:var(--moov-neutral-600)}
+.pv-price i.less{color:var(--moov-success-700)}
+.pv-radio{position:absolute;right:14px;top:50%;display:grid;place-items:center;width:22px;height:22px;margin-top:-11px;border:2px solid var(--moov-neutral-200);border-radius:50%;color:var(--moov-on-primary,var(--moov-white))}
+.pv-plan.chosen .pv-radio{border-color:var(--moov-primary);background:var(--moov-primary)}
+.pv-plan.mine .pv-radio{border-color:var(--moov-primary-200)}
+.pv-review{display:grid;gap:12px;padding:18px;border-radius:24px;background:var(--moov-surface);box-shadow:0 18px 40px color-mix(in srgb,var(--moov-ink) 9%,transparent);animation:pv-in .3s var(--fg-ease,ease) both;scroll-margin-bottom:96px}
+.pv-review h2{margin:0;font-size:20px;letter-spacing:-.02em;color:var(--moov-ink)}
+.pv-review dl{display:grid;margin:0;border-radius:16px;background:var(--moov-neutral-25)}
+.pv-review dl>div{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 14px}
+.pv-review dl>div+div{border-top:1px solid var(--moov-neutral-100)}
+.pv-review dt{font-size:14px;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.pv-review dd{margin:0;font-size:15.5px;font-weight:700;text-align:right;color:var(--moov-ink)}
+.pv-review dd small{display:block;font-size:12px;font-weight:500;color:var(--moov-neutral-500)}
+.pv-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:54px;padding:0 18px;border:0;border-radius:16px;background:var(--moov-primary);color:var(--moov-on-primary,var(--moov-white));font:600 16px var(--fg-font,inherit);cursor:pointer;box-shadow:0 12px 26px color-mix(in srgb,var(--moov-primary) 28%,transparent)}
+.pv-cta:hover{background:var(--moov-primary-hover,var(--moov-primary-700))}
+.pv-cta:disabled{opacity:.6;cursor:default}
+.pv-cta.mm{background:var(--moov-accent);color:var(--moov-on-accent,var(--moov-white));box-shadow:0 12px 26px color-mix(in srgb,var(--moov-accent) 30%,transparent)}
+.pv-cta.mm:hover{background:var(--moov-accent-600)}
+.pv-mm{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--moov-white);color:var(--moov-accent);font-weight:800}
+.pv-cancel{min-height:44px;border:0;background:none;color:var(--moov-neutral-600);font:600 14.5px var(--fg-font,inherit);cursor:pointer}
+.pv-hint{display:flex;align-items:center;gap:8px;margin:0;padding:4px 4px 0;font-size:13.5px;color:var(--moov-neutral-500)}
+.pv-hint svg{flex:none;color:var(--moov-accent)}
+/* Bouton « Changer de forfait » de la page Compte */
+.ch-plan .ch-chip.strong{background:var(--moov-primary);border-color:transparent;color:var(--moov-on-primary,var(--moov-white))}
+.ch-plan .ch-chip.strong:hover{background:var(--moov-primary-hover,var(--moov-primary-700));color:var(--moov-on-primary,var(--moov-white))}
+.ch-plan-next{flex-basis:100%;font-size:13px;color:var(--moov-warning-700)}
+
+@media(min-width:761px){
+ .pv-head{grid-template-columns:1fr auto;align-items:end}
+ .pv-head h1{font-size:34px}
+ .pv-next{grid-template-columns:auto 1fr auto}
+ .pv-link{grid-column:auto;justify-self:end}
+ .pv-list{grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch}
+ .pv-plan{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;justify-items:start;align-items:start;gap:12px;min-height:250px;padding:18px}
+ .pv-price{justify-items:start;text-align:left}
+ .pv-radio{top:18px;margin-top:0;right:16px}
+ .pv-review{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);align-items:center;gap:14px 24px;padding:22px 26px}
+ .pv-review h2{grid-column:1}
+ .pv-review dl{grid-column:2;grid-row:1/span 3}
+ .pv-review .pv-cta,.pv-review .pv-cancel{grid-column:1}
+}
+@media(prefers-reduced-motion:reduce){.pv,.pv-review{animation:none}.pv-plan{transition:none}}

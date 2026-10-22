@@ -23,7 +23,15 @@ function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS citizen_reports(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,created INTEGER NOT NULL,zone TEXT NOT NULL,description TEXT NOT NULL,photo TEXT NOT NULL,lat REAL NOT NULL,lon REAL NOT NULL,status TEXT NOT NULL DEFAULT 'received',response TEXT NOT NULL DEFAULT '');
  `);usage.migrate(s);s.run('DELETE FROM journey_otp WHERE expires<?',Date.now());}
 const DEVICE_LIMITS=[5,10,20],MANUAL_LIMIT_MS=30*86400000;
-function seed(){return {version:0,mode:'simulation',created:Date.now(),scenario:'normal',usual:4,capacity:100,plan:{id:'demo-100',name:'Essentiel démo',mbps:100,price:25000},zone:'Yopougon · Niangon',segment:'YOP-07',selectedHome:'home-1',devices:[
+// Grille publique de la fibre Moov (mafibremoov.ci, octobre 2026) : débit et prix par mois, installation offerte.
+// Les identifiants « demo-… » restent ceux des parcours déjà enregistrés.
+const PLANS=[{id:'demo-50',name:'Fibre 50',mbps:50,price:15000},{id:'demo-100',name:'Fibre 100',mbps:100,price:20000},{id:'demo-200',name:'Fibre 200',mbps:200,price:25000},{id:'demo-300',name:'Fibre 300',mbps:300,price:30000},{id:'demo-500',name:'Fibre 500',mbps:500,price:60000}];
+const planOf=id=>PLANS.find(p=>p.id===id)||null;
+// Le 1er du mois suivant à minuit : date à laquelle un forfait moins cher prend la place de l'actuel.
+function nextMonth(now){const d=new Date(now);return new Date(d.getFullYear(),d.getMonth()+1,1).getTime();}
+// Un forfait moins cher choisi plus tôt devient actif quand son mois commence.
+function applyNextPlan(st,now=Date.now()){const next=st.nextPlan;if(!next||now<next.at)return;st.plan=next.plan;st.capacity=next.plan.mbps;st.nextPlan=null;}
+function seed(){return {version:0,mode:'simulation',created:Date.now(),scenario:'normal',usual:4,capacity:100,plan:{...PLANS[1]},zone:'Yopougon · Niangon',segment:'YOP-07',selectedHome:'home-1',devices:[
  {id:'phone',name:'iPhone de Koffi',demand:5,protected:true,recognized:true},
  {id:'mac',name:'MacBook de Hady',demand:12,protected:true,recognized:true},
  {id:'tv',name:'LG TV du salon',demand:20,recognized:true},
@@ -81,18 +89,18 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   return {message:hello+faultMessage(fault,st)+(['upgrade','usage'].includes(ask)?' Un forfait plus rapide ou un partage du débit ne réglerait pas cette coupure.':''),facts,action:'tracking'};}
  if(ask==='merci')return {message:'Avec plaisir. Je reste là si votre connexion fait des siennes.',facts};
  if(ask==='resiliation')return {message:'Je suis désolé que vous en soyez là. Une résiliation se fait en agence Moov ou au service client, pas depuis Guardian. Dites-moi d’abord ce qui ne va pas : je peux peut-être le régler tout de suite.',facts};
- const requested=Number(text.match(/(\d+)\s*(?:mbps|mégabits|megabits)/i)?.[1]||0),plan=st.plan||{id:'demo-100',name:'Essentiel démo',mbps:100,price:25000};
- if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mbps pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Le détail de vos factures est dans votre espace Moov. Si vous voulez plus de débit, dites-le-moi.',facts};
+ const requested=Number(text.match(/(\d+)\s*(?:mbps|mégabits|megabits)/i)?.[1]||0),plan=st.plan||PLANS[1];
+ if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mbps pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Pour en changer, ouvrez « Changer de forfait » dans votre compte : vous y voyez toutes les offres et leur prix.',facts};
  if(ask==='upgrade'||requested>plan.mbps){
   st.proposal=null;st.upgrade=null;
   if(st.scenario==='slow')return {message:'Votre débit est anormalement bas : un forfait plus rapide ne réglerait pas ce souci. Commençons par redémarrer votre box à distance.',facts};
   if(st.declinedUntil>Date.now())return {message:'C’est noté. Je ne vous proposerai pas d’autre offre pendant 24 heures.',facts};
-  if(plan.mbps>=200)return {message:'Vous avez déjà le forfait 200 Mbps, notre offre la plus rapide.',facts};
-  if(requested>200)return {message:'Notre offre la plus rapide est à 200 Mbps. Je ne peux pas vous promettre plus.',facts};
+  if(plan.mbps>=200)return {message:'Vous avez déjà '+plan.mbps+' Mbps. Pour aller plus haut, ouvrez « Changer de forfait » dans votre compte : toutes les offres y sont, avec leur prix.',facts};
+  if(requested>200)return {message:'Pour plus de 200 Mbps, ouvrez « Changer de forfait » dans votre compte : vous y voyez les offres 300 et 500 Mbps, avec leur prix. Vérifiez d’abord votre Wi-Fi : il limite souvent le débit avant la fibre.',facts};
   if(requested<=plan.mbps&&snap.metrics.used<snap.metrics.capacity*.9)return {message:'Vos mesures ne justifient pas un achat : votre forfait suffit pour l’instant. Dites-moi le débit dont vous avez besoin.',facts};
-  const quote={id:id(),from:plan,to:{id:'demo-200',name:'Confort démo',mbps:200,price:30000},amount:30000-plan.price,expires:Date.now()+300000};
+  const to=planOf('demo-200'),quote={id:id(),from:plan,to,amount:to.price-plan.price,expires:Date.now()+300000};
   st.upgrade=quote;
-  return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mbps : complément unique de '+quote.amount.toLocaleString('fr-FR')+' FCFA, puis 30 000 FCFA par mois. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
+  return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mbps : complément unique de '+quote.amount.toLocaleString('fr-FR')+' FCFA, puis '+to.price.toLocaleString('fr-FR')+' FCFA par mois. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
  }
  if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
   return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
@@ -133,7 +141,7 @@ async function verifyOtp(s,d,ip){s.rate('otp-verify:'+ip,25,600000);const row=s.
 function sharedFault(s,uid){const noc=require('./noc-store.cjs');return noc.client(s,uid).incidents.find(noc.isOpen)||null;}
 // Incident de quartier réparé dans les dernières 24 h : l'accueil le signale au client.
 function zoneNews(s,uid,now=Date.now()){const noc=require('./noc-store.cjs');const i=noc.client(s,uid).incidents.filter(x=>x.status==='resolved'&&x.restorationVerified&&x.events?.length).map(x=>({segment:x.segment,zone:x.zone,start:x.events[0].at,end:x.events.at(-1).at})).filter(x=>now-x.end<24*3600000).sort((a,b)=>b.end-a.end)[0];return i||null;}
-function snapshotFor(s,uid,st){const result={...snapshot(st),usageContext:st.usageContext||'home',sharedIncident:sharedFault(s,uid),zoneNews:zoneNews(s,uid),homeZone:require('./noc-store.cjs').memberZone(s,uid)};usage.observe(s,uid,result);return result;}
+function snapshotFor(s,uid,st){applyNextPlan(st);const result={...snapshot(st),plans:PLANS,usageContext:st.usageContext||'home',sharedIncident:sharedFault(s,uid),zoneNews:zoneNews(s,uid),homeZone:require('./noc-store.cjs').memberZone(s,uid)};usage.observe(s,uid,result);return result;}
 function openIncident(st,now,{zone,description,photo=null,lat,lon,kind,channel='app'}){const incident={id:id(),reference:'FG-'+String(st.incidents.length+1).padStart(3,'0'),segment:st.segment,zone,description,photo,lat,lon,status:'reported',created:now,events:[{at:now,label:LABELS[0]}],confirmations:['home-1'],electrical:kind==='pole',kind,channel};st.incidents.unshift(incident);audit(st,'report',incident.reference+(channel==='ussd'?' · code court sans internet':''));return incident;}
 // Mode survie : signalement fait depuis le menu USSD (ussd.cjs), sans internet, donc sans photo ni position.
 // Mêmes règles que l'application : un seul incident ouvert par tronçon, 15 au plus par parcours.
@@ -141,7 +149,7 @@ function reportByCode(s,uid,{kind,description,zone}){return s.transaction(()=>{l
  insist(!active(st),'Un incident est déjà ouvert sur votre segment.',409);insist(st.incidents.length<15,'Maximum 15 incidents dans ce parcours.');
  const incident=openIncident(st,now,{zone:zone||st.zone,description:paragraph(description,'Description',500),kind,channel:'ussd'});
  require('./noc-store.cjs').importReport(s,uid,incident,{mode:'demo',source:'ussd'});st.version++;put(s,uid,st);return incident;});}
-function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Démarrez votre démonstration.',409);insist(d.version===st.version,'Le parcours a été actualisé. Réessayez.',409);const now=Date.now();
+function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Démarrez votre démonstration.',409);insist(d.version===st.version,'Le parcours a été actualisé. Réessayez.',409);const now=Date.now();applyNextPlan(st,now);
  usage.observe(s,uid,{...st,sharedIncident:sharedFault(s,uid)},now);
  if(d.type==='scenario'){
   insist(['normal','download','slow','devices','fading'].includes(d.value),'Scénario inconnu.');const changed=st.scenario!==d.value;st.scenario=d.value;
@@ -176,16 +184,40 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   for(const l of p.limits){const dev=st.devices.find(v=>v.id===l.id);insist(dev&&!dev.protected&&!dev.blocked,'Appareil indisponible ou protégé.',409);insist(l.mbps>=2,'Plancher de sécurité requis.');dev.limit=l.mbps;dev.until=now+p.minutes*60000;}
   audit(st,'qos.confirm',p.usage+' · 30 minutes · simulation');st.proposal=null;
   }else if(d.type==='upgrade-decline'){st.upgrade=null;st.declinedUntil=now+86400000;audit(st,'upgrade.declined','Offres suspendues pendant 24 heures');
+ }else if(d.type==='plan-quote'){
+  // Le client choisit lui-même un forfait plus rapide dans son compte : le serveur calcule le complément à payer.
+  const to=planOf(d.to),plan=st.plan||PLANS[1];insist(to,'Forfait inconnu.');
+  insist(to.price>plan.price,'Ce forfait n’est pas plus cher que le vôtre : il se choisit sans paiement.',409);
+  insist(!active(st)&&!sharedFault(s,uid),'Une panne est en cours dans votre quartier : un forfait plus rapide ne la réglerait pas. Réessayez quand internet sera revenu.',409);
+  insist(st.scenario!=='slow','Votre débit est anormalement bas : un forfait plus rapide ne réglerait pas ce souci. Redémarrez d’abord votre box.',409);
+  st.proposal=null;st.upgrade={id:id(),from:plan,to,amount:to.price-plan.price,expires:now+300000,source:'compte'};
+  audit(st,'plan.quote',plan.mbps+' → '+to.mbps+' Mbps · complément '+st.upgrade.amount+' FCFA');
+ }else if(d.type==='plan-cancel'){if(st.upgrade?.source==='compte')st.upgrade=null; // Le client referme le paiement : l'offre disparaît, sans bloquer Guardian 24 h.
+ }else if(d.type==='plan-change'){
+  // Forfait moins cher : rien à payer, il commence le mois prochain. Choisir son forfait actuel annule le changement prévu.
+  insist(d.confirm===true,'Confirmez le changement de forfait.');
+  const to=planOf(d.to),plan=st.plan||PLANS[1];insist(to,'Forfait inconnu.');
+  if(to.id===plan.id){insist(st.nextPlan,'C’est déjà votre forfait.',409);st.nextPlan=null;audit(st,'plan.kept',plan.name);}
+  else{
+   insist(to.price<plan.price,'Pour un forfait plus rapide, payez le complément avec Moov Money.',409);
+   st.nextPlan={plan:to,at:nextMonth(now),chosen:now};st.upgrade=null;
+   const when=new Date(st.nextPlan.at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
+   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Changement de forfait enregistré',body:'Vous passerez à '+to.mbps+' Mbps pour '+to.price.toLocaleString('fr-FR')+' FCFA par mois à partir du '+when+'. D’ici là, vous gardez '+plan.mbps+' Mbps.',read:false});st.notifications=st.notifications.slice(0,100);
+   audit(st,'plan.scheduled',plan.mbps+' → '+to.mbps+' Mbps le '+when+' · simulation');
+  }
  }else if(d.type==='upgrade-pay'){
   // Paiement purement fictif, idempotent. Montant et forfait contrôlés côté serveur.
   insist(d.confirm===true,'Confirmez le paiement pour continuer.');
   if(st.payment?.quoteId!==d.id){
    const q=st.upgrade;insist(q&&q.id===d.id&&q.expires>now,'Offre expirée ou introuvable.',409);
    insist(!active(st)&&!sharedFault(s,uid),'Incident de zone en cours : aucun achat proposé.',409);
-   insist(st.scenario!=='slow'&&(st.plan?.id||'demo-100')===q.from.id&&q.to.id==='demo-200'&&q.amount===q.to.price-q.from.price&&q.amount===5000,'Offre modifiée ou devenue inapplicable.',409);
-   st.plan=q.to;st.capacity=q.to.mbps;st.payment={quoteId:q.id,amount:q.amount,at:now,mode:'simulation'};st.upgrade=null;
-   audit(st,'upgrade.activated','Paiement simulé 5 000 FCFA · 200 Mbps · aucun débit réel');
-   st.messages.push({id:id(),role:'assistant',text:'Paiement confirmé : 5 000 FCFA. Votre forfait 200 Mbps est actif.'});
+   const from=planOf(q.from.id),to=planOf(q.to.id);
+   insist(st.scenario!=='slow'&&from&&to&&(st.plan?.id||'demo-100')===from.id&&q.to.price===to.price&&q.amount===to.price-from.price&&q.amount>0,'Offre modifiée ou devenue inapplicable.',409);
+   st.plan={...to};st.capacity=to.mbps;st.nextPlan=null;st.payment={quoteId:q.id,amount:q.amount,at:now,mode:'simulation'};st.upgrade=null;
+   const paid=q.amount.toLocaleString('fr-FR')+' FCFA';
+   audit(st,'upgrade.activated','Paiement simulé '+paid+' · '+to.mbps+' Mbps · aucun débit réel');
+   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Nouveau forfait actif',body:'Paiement Moov Money de '+paid+' reçu. Vous avez maintenant '+to.mbps+' Mbps, pour '+to.price.toLocaleString('fr-FR')+' FCFA par mois.',read:false});st.notifications=st.notifications.slice(0,100);
+   st.messages.push({id:id(),role:'assistant',text:'Paiement confirmé : '+paid+'. Votre forfait '+to.mbps+' Mbps est actif.'});
   }
  }else if(d.type==='reboot'){
   // Redémarrage à distance demandé par le client : même garde-fou que le laboratoire (rebootGate, 2 fois en 10 minutes).
@@ -244,4 +276,4 @@ function boxPhoto(s,uid,d,reading){return s.transaction(()=>{const st=get(s,uid)
  st.messages.push({id:id(),role:'user',text:'Voici une photo de ma box.',photo:true},{id:id(),role:'assistant',text:r.message,facts:r.facts,action:r.action,verdict:r.verdict,concord:r.concord,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  audit(st,'photo.read',(reading.source==='claude'?'Lecture Guardian':'Lecture sur le téléphone')+' · '+(r.verdict||'à reprendre')+' · photo non conservée');st.version++;put(s,uid,st);return snapshotFor(s,uid,st);});}
 function refine(s,uid,messageId,text){const st=get(s,uid);if(!st)return null;const m=st.messages.find(x=>x.id===messageId&&x.role==='assistant');if(!m)return snapshotFor(s,uid,st);m.text=text;put(s,uid,st);return snapshotFor(s,uid,st);}
-module.exports={intent,optical,migrate,seed,get,put,snapshot,snapshotFor,active,reportByCode,STEPS,LABELS,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
+module.exports={PLANS,applyNextPlan,nextMonth,intent,optical,migrate,seed,get,put,snapshot,snapshotFor,active,reportByCode,STEPS,LABELS,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};

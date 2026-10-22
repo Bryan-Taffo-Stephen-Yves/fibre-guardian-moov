@@ -41,7 +41,7 @@ const CALM=[
  ['Je veux parler à un conseiller',{intent:'humain',says:/Appeler Moov/,action:'report'}],
  ['Le service client ne répond pas',{intent:'humain',action:'report'}],
  ['Le technicien arrive quand ?',{intent:'suivi',says:/Aucune intervention n’est en cours/}],
- ['C’est combien mon forfait ?',{intent:'prix',says:/100 Mbps pour 25\s000 FCFA par mois/}],
+ ['C’est combien mon forfait ?',{intent:'prix',says:/100 Mbps pour 20\s000 FCFA par mois/}],
  ['Je veux résilier mon abonnement',{intent:'resiliation',says:/agence Moov/}],
  ['Merci beaucoup',{intent:'merci',says:/^Avec plaisir/}],
  ['ok merci',{intent:'merci',says:/^Avec plaisir/}],
