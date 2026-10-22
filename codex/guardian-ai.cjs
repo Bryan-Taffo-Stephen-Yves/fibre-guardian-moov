@@ -111,6 +111,26 @@ async function readLeds(image,{store,uid,log=()=>{},timeoutMs=9000}={}){
  return {isBox:r.is_box,quality:r.quality,model:String(r.model||'').slice(0,60),leds:r.leds.slice(0,12).filter(l=>l&&typeof l.name==='string').map(l=>({name:l.name,state:l.state,color:l.color}))};
 }
 
+// Guardian Superviseur (équipe Moov) : répondre à une question sur tout le réseau, à partir de l'état que l'agent voit.
+// Mêmes garde-fous que pour les clients : aucun chiffre absent de l'état, pas de mise en forme, 5 phrases au plus.
+const SUPERVISE='Tu es Guardian Superviseur, l’agent qui surveille tout le réseau fibre de Moov Africa Côte d’Ivoire pour l’équipe technique de Moov (superviseurs, support, direction).\n'+
+ 'On te donne l’état complet du réseau à l’instant, vu par les autres agents (détection des pannes, plans d’intervention, mesures du Labo, équipes terrain, serveur vocal, WhatsApp, prévisions), puis la question d’un membre de l’équipe et une réponse préparée.\n'+
+ 'Règles strictes :\n'+
+ '1. Français simple et direct, vouvoiement, 2 à 4 phrases courtes, moins de 600 caractères, sans liste, sans titre, sans emoji, sans mise en forme.\n'+
+ '2. Donne d’abord la réponse, puis la cause probable et l’action que tu conseilles. Tu ne déclenches jamais rien toi-même : un responsable valide.\n'+
+ '3. N’utilise que des faits et des chiffres présents dans l’état. Si l’état ne permet pas de répondre, dis-le et reprends la réponse préparée.\n'+
+ '4. Ne parle jamais de toi comme d’une intelligence artificielle ou d’un programme, et ne cite aucune marque d’assistant.\n'+
+ 'Réponds uniquement par le texte destiné à l’équipe.';
+async function supervise({question,draft,etat},{store,uid,log=()=>{},timeoutMs=TIMEOUT_MS}={}){
+ if(!available()||!question||!draft)return null;
+ if(!budget(store,uid))return null;
+ const msg=await send({max_tokens:2000,output_config:{effort:'low'},system:SUPERVISE,messages:[{role:'user',content:'État du réseau :\n'+etat.join('\n')+'\n\nRéponse préparée :\n« '+draft+' »\n\nQuestion de l’équipe :\n« '+question+' »'}]},{timeoutMs,log,what:'la réponse du superviseur'});
+ if(!msg)return null;
+ const g=guard(text(msg),[draft,...etat]);
+ if(!g.ok){log('Guardian Superviseur : garde-fou ('+g.why+'), réponse préparée gardée.');return null;}
+ return g.text;
+}
+
 // Renvoie le texte rédigé, ou null pour garder la réponse du moteur à règles.
 async function rephrase(input,{store,uid,log=()=>{},timeoutMs=TIMEOUT_MS}={}){
  if(!available()||!input?.draft||!input?.question)return null;
@@ -129,4 +149,4 @@ async function rephrase(input,{store,uid,log=()=>{},timeoutMs=TIMEOUT_MS}={}){
  }catch(e){log('Guardian : Claude indisponible ('+(e.name==='TimeoutError'?'délai dépassé':e.message)+'), réponse du moteur gardée.');return null;}
 }
 
-module.exports={available,rephrase,understand,readLeds,guard,setTransport,SYSTEM};
+module.exports={available,rephrase,understand,readLeds,supervise,guard,setTransport,SYSTEM,SUPERVISE};
