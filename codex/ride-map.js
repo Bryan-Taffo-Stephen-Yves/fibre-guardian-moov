@@ -140,7 +140,8 @@
 
  // Portrait illustré du technicien : visage, casquette Moov, tenue de travail. Couleur de peau selon la personne.
  const SKINS=['var(--moov-illu-skin-1)','var(--moov-illu-skin-3)','var(--moov-illu-skin-8)','var(--moov-illu-skin-2)','var(--moov-illu-skin-5)'];
- function Portrait({name='',size=56}){
+ function Portrait({name='',size=56,role}){
+  if(window.FGAvatar)return h(window.FGAvatar.Face,{name,size,role,className:'rm-portrait'});
   const n=[...String(name)].reduce((a,ch)=>a+ch.charCodeAt(0),0),skin=SKINS[n%SKINS.length],woman=/^(Awa|Amina|Aya|Mariam|Fatou|Adjoua)/i.test(name);
   return h('svg',{width:size,height:size,viewBox:'0 0 64 64',className:'rm-portrait','aria-hidden':true},
    h('circle',{cx:32,cy:32,r:32,className:'rm-portrait-bg'}),

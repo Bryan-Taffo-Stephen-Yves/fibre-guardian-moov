@@ -11,6 +11,7 @@
   --moov-warning-100:#fcefd8;--moov-warning-300:#f0c77d;--moov-warning-700:#8a5206;
   --moov-danger-100:#fbe4e5;--moov-danger-300:#eba3a7;--moov-danger-500:#c8323c;--moov-danger-700:#9b2530;
   --moov-illu-skin-1:#75452f;--moov-illu-skin-2:#633d2b;--moov-illu-skin-3:#805136;--moov-illu-skin-4:#553724;--moov-illu-skin-5:#3c241b;--moov-illu-skin-6:#f1cfb3;--moov-illu-skin-7:#edddc8;--moov-illu-skin-8:#956a49;--moov-illu-skin-9:#e6c5ac;--moov-illu-skin-10:#efcfb0;
+  --moov-illu-hair-1:#1b120d;--moov-illu-hair-2:#2c1d15;--moov-illu-hair-3:#3d2a1f;--moov-illu-lip:#7c2f2b;--moov-illu-blush:#f08a72;--moov-illu-sclera:#ffffff;--moov-illu-wax-1:#f28e39;--moov-illu-wax-2:#1f8a4c;--moov-illu-wax-3:#7b4bb7;--moov-illu-wax-4:#d4415c;
   /* Refonte 2026-10 (style tableau de bord clair) : fond de page, voile bleu léger, ombres teintées. */
   --moov-canvas:#f3f5f8;--moov-primary-25:#f6faff;--moov-sky-300:#6fb2ef;--moov-success-50:#ecf8f0;--moov-danger-50:#fdf1f2;--moov-accent-25:#fffaf4;
   /* Rôles : à utiliser de préférence dans les composants. */
