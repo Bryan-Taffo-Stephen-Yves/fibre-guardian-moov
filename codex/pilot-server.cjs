@@ -117,6 +117,8 @@ function createGuardianServer(options={}){
     if(route==='/api/ville'&&method==='GET')return json(res,require('./ville.cjs').snapshot(store,user.id));
     // Mode survie : le menu *144# (écran USSD de l'application ; une passerelle d'opérateur appellerait la même fonction).
     if(route==='/api/ussd'&&method==='POST')return json(res,require('./ussd.cjs').respond(store,user.id,await body(req,1024)));
+    // Bandeaux en direct d'une mission (client, technicien, équipe Moov), voir mission-feed.cjs.
+    if(route==='/api/noc/pings'&&method==='GET')return json(res,require('./mission-feed.cjs').pings(store,user.id,url.searchParams.get('since')));
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
     // Bouton « Appeler Moov » : le serveur vocal dit d'abord ce que Moov sait du quartier (appels.cjs).
@@ -190,6 +192,6 @@ function createGuardianServer(options={}){
    let data;try{data=await fs.promises.readFile(target);}catch(_){throw new Problem(404,'Introuvable');}res.writeHead(200,{'Content-Type':TYPES[ext]});res.end(method==='HEAD'?undefined:data);
   }catch(e){if(res.headersSent){res.end();return;}json(res,{error:e instanceof Problem?e.message:'Erreur interne. Aucune action confirmée.'},e instanceof Problem?e.status:500);if(!(e instanceof Problem)&&options.onError)options.onError(e);}
  };
- const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const cleanup=setInterval(()=>store.cleanup(),3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
+ const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const cleanup=setInterval(()=>store.cleanup(),3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
 }
 module.exports={createGuardianServer};

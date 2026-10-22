@@ -12,19 +12,24 @@
 
  // Le suivi apparaît tout seul dès qu'un technicien est choisi pour votre quartier.
  function LiveTrip({api,onTrack}){
-  const [data,D]=S(null),alive=R(true);
-  E(()=>{alive.current=true;const load=()=>api('/noc/client').then(r=>{if(alive.current)D(r);}).catch(()=>{});load();const t=setInterval(load,5000);return()=>{alive.current=false;clearInterval(t);};},[]);
-  const list=data?.incidents||[];
+  const [data,D]=S(null),[,tick]=S(0),alive=R(true);
+  E(()=>{alive.current=true;const load=()=>api('/noc/client').then(r=>{if(alive.current)D(r);}).catch(()=>{});load();const t=setInterval(load,4000);addEventListener('fg-mission-ping',load);return()=>{alive.current=false;clearInterval(t);removeEventListener('fg-mission-ping',load);};},[]);
+  // Le serveur dit « dispatched » quand le technicien est choisi : la carte apparaît dès ce moment-là.
+  const list=(data?.incidents||[]).map(i=>i.status==='dispatched'?{...i,status:'assigned'}:i);
   const live=list.find(i=>!i.terminal&&i.technician&&['assigned','en_route','on_site','repairing','verifying'].includes(i.status));
   const done=!live&&list.find(i=>i.terminal&&i.status==='resolved'&&i.technician&&!i.feedback&&Date.now()-new Date(i.events?.at(-1)?.at||0).getTime()<6*3600e3);
-  const item=live||done;if(!item)return null;
-  const t=item.technician,eta=mins(item.position?.eta),step=Math.max(0,ORDER.indexOf(item.status));
+  const item=live||done;
+  // Compte à rebours à la seconde pendant le trajet (30 s en démo), d'après l'heure de départ donnée par le serveur.
+  const pos=item?.status==='en_route'?item.position:null,leftMs=pos?.departedAt?Math.max(0,(pos.durationMs||0)-(Date.now()-pos.departedAt)):null;
+  E(()=>{if(!pos)return;const t=setInterval(()=>tick(v=>v+1),1000);return()=>clearInterval(t);},[!!pos]);
+  if(!item)return null;
+  const t=item.technician,eta=leftMs==null||leftMs<1000?null:leftMs<60000?[Math.ceil(leftMs/1000),'s']:[mins(leftMs/1000),'min'],step=Math.max(0,ORDER.indexOf(item.status));
   const title=done?'Internet est revenu':item.status==='en_route'?first(t.name)+' arrive':item.status==='assigned'?first(t.name)+' va venir chez vous':item.status==='on_site'?first(t.name)+' est arrivé':STAGE[item.status];
   const sub=done?'Comment s’est passée l’intervention ? Votre avis aide Moov.':(item.zone||'Votre quartier')+(item.restore?.label?' · retour prévu vers '+item.restore.label:'');
   return h('button',{type:'button',className:'ch-live'+(done?' done':''),onClick:onTrack,'aria-label':title+'. Ouvrir le suivi en direct'},
    h('span',{className:'ch-live-pulse','aria-hidden':true}),
    h('div',{className:'ch-live-top'},h('span',{className:'ch-live-tag'},h('i'),done?'Terminé':'En direct'),h('span',{className:'ch-live-step'},STAGE[item.status])),
-   h('div',{className:'ch-live-main'},h(Face,{name:t.name,size:52}),h('div',null,h('strong',null,title),h('small',null,sub)),eta&&!done?h('em',null,eta,h('small',null,'min')):null),
+   h('div',{className:'ch-live-main'},h(Face,{name:t.name,size:52}),h('div',null,h('strong',null,title),h('small',null,sub)),eta&&!done?h('em',null,eta[0],h('small',null,eta[1])):null),
    !done&&h('div',{className:'ch-live-bar','aria-hidden':true},ORDER.slice(2).map((k,i)=>h('i',{key:k,className:step>=i+2?'on':''}))),
    h('div',{className:'ch-live-foot'},h('span',null,t.vehicle||t.team||'Équipe Moov'),h('b',null,done?'Noter '+first(t.name):'Suivre en direct',h(Icon,{name:'arrow',size:17}))));
  }

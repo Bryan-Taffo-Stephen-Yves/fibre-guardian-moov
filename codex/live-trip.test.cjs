@@ -4,10 +4,11 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const N=require('./noc-store.cjs'),fs=require('node:fs'),path=require('node:path');
 
 test('Trajet en route : départ, durée, distance et position cohérents',()=>{
- const departed=Date.now()-60000,p=N.position({technician:'koffi',segment_id:'YOP-07',status:'en_route',departed});
- assert.equal(p.durationMs,120000);assert.equal(p.departedAt,departed);
+ // Trajet de démonstration ramené à 30 s (N.TRIP_MS) : on se place à mi-chemin.
+ const departed=Date.now()-N.TRIP_MS/2,p=N.position({technician:'koffi',segment_id:'YOP-07',status:'en_route',departed});
+ assert.equal(p.durationMs,30000);assert.equal(p.departedAt,departed);
  assert.ok(p.distanceKm>=0.8&&p.distanceKm<5,'distance plausible en ville');
- assert.ok(Math.abs(p.progress-.5)<.02);assert.ok(p.eta>=59&&p.eta<=61);
+ assert.ok(Math.abs(p.progress-.5)<.02);assert.ok(p.eta>=14&&p.eta<=16);
  assert.equal(p.x,Math.round(p.fromX+(p.targetX-p.fromX)*p.progress));
 });
 

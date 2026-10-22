@@ -90,6 +90,8 @@ function step(s,uid,d,origin){
   if(i.status==='approved'){const free=noc.overview(s,uid).technicians.filter(t=>!t.busy),t=free.find(t=>t.id===TECH)||free.find(t=>t.zone==='Yopougon')||free[0];insist(t,'Toutes les équipes sont déjà en intervention.',409);i=act('dispatch',{technician:t.id,safety:true});}
   if(i.status==='dispatched')i=act('advance');
  }else if(d.type==='arrive'){
+  // Le trajet dure 30 s puis le technicien arrive tout seul : un clic tardif ne fait rien de plus.
+  if(i&&['on_site','verifying'].includes(i.status))return status(s,uid,origin);
   insist(i&&i.status==='en_route','Le technicien n’est pas en route.',409);act('advance');
  }else{
   insist(i&&['on_site','verifying'].includes(i.status),'Le technicien doit être sur place avant la réparation.',409);

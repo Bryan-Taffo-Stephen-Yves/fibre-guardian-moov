@@ -3,10 +3,10 @@
 // 1. Heure de retour : calculée à partir des étapes du dossier, promise une fois, et annoncée de nouveau en cas de retard.
 // 2. Serveur vocal : quand le client appelle Moov, il entend d'abord ce que Moov sait déjà de son quartier.
 // 3. Compteur : clients prévenus, clients qui ont quand même appelé, appels évités. Vu seulement par l'équipe Moov.
-// Les durées sont celles du parcours de démonstration (trajet de 2 minutes, comme position() dans noc-store.cjs).
+// Les durées sont celles du parcours de démonstration (trajet de 30 secondes, TRIP_MS dans noc-store.cjs).
 const {insist}=require('./pilot-model.cjs');
 const MIN=60000;
-const STEP={approval:3*MIN,dispatch:2*MIN,travel:2*MIN,repair:5*MIN,check:MIN,remote:3*MIN};
+const STEP={approval:3*MIN,dispatch:2*MIN,travel:30000,repair:5*MIN,check:MIN,remote:3*MIN};
 const SLOT=5*MIN,NOTICE_GAP=3*MIN;
 const N=()=>require('./noc-store.cjs');
 const OPEN=i=>!['resolved','closed'].includes(i.status);
@@ -63,7 +63,7 @@ function tick(s,now=Date.now()){
 }
 
 // Ce que dit le serveur vocal quand le client appelle Moov depuis l'application.
-const CAUSE={FIBER_CUT_DISTRIBUTION:'un câble de fibre est coupé',ROADWORK_CUT:'un chantier a arraché un câble',CABINET_FLOOD:'une armoire de rue a pris l’eau',CABLE_THEFT:'un câble a été volé',OLT_FAILURE:'un équipement central est en panne',UPLINK_CONGESTION:'le réseau est très chargé',POWER_OUTAGE:'le courant est coupé (CIE)'};
+const CAUSE={FIBER_CUT_DISTRIBUTION:'un câble de fibre est coupé',ROADWORK_CUT:'un chantier a arraché un câble',CABINET_FLOOD:'une armoire de rue a pris l’eau',CABLE_THEFT:'un câble a été volé',OLT_FAILURE:'un équipement central est en panne',UPLINK_CONGESTION:'le réseau est très chargé',POWER_OUTAGE:'le courant est coupé (CIE)',DROP_CABLE:'un câble est tombé dans la rue',POLE_DAMAGE:'un poteau est endommagé',CABINET_OPEN:'un boîtier de rue est abîmé'};
 const STAGE={proposed:'Une équipe Moov prépare l’intervention.',approved:'L’intervention est validée.',dispatched:'Un technicien est affecté.',en_route:'Le technicien est en route.',on_site:'Le technicien est sur place.',verifying:'La réparation est faite, nous vérifions.'};
 // « Grand-Bassam · Quartier France » se dit « dans votre quartier (Quartier France, Grand-Bassam) ».
 function where(zone){const [commune,area]=String(zone||'').split(' · ');if(!commune)return 'dans votre quartier';if(area==='toute la commune')return 'dans toute la commune de '+commune;return 'dans votre quartier ('+(area?area+', ':'')+commune+')';}
