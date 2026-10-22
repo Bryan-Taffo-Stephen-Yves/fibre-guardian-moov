@@ -102,7 +102,7 @@ test('Coupure du quartier + voyant LOS rouge : Guardian confirme et propose de s
   store.run("UPDATE noc_segments SET online=8,latency=95,alarm='LOS',sample_at=? WHERE id='YOP-07'",Date.now());noc.scan(store);
   await c.photo({image:IMAGE});
   assert.equal(c.last.verdict,'rupture');assert.equal(c.last.action,'tracking');assert.match(c.last.text,/coupure dans votre quartier/);
-  assert.ok(c.last.facts.some(f=>f.label==='Votre quartier'&&/YOP-07/.test(f.value)));
+  assert.ok(c.last.facts.some(f=>f.label==='Votre quartier'&&/Niangon/.test(f.value)&&!/YOP-07/.test(f.value)),'le client voit le nom du quartier, pas son code');
  }finally{c.server.close();}
 });
 

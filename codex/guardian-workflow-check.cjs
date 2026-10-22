@@ -25,7 +25,7 @@ try {
  await action({type:'upgrade-pay',id:interrupted,confirm:true},409);
  // Crée une proposition avant la panne pour contrôler une validation arrivée trop tard.
  raw=J.get(s,client.id);raw.proposal={id:qos,limits:[{id:'tv',mbps:5}],minutes:30,expires:Date.now()+60000};J.put(s,client.id,raw);await action({type:'apply',id:qos,confirm:true},409);
- await action({type:'chat',text:'Je veux 200 Mbps pour le gaming'});A.equal(state.proposal,null);A.equal(state.upgrade,null);A.equal(state.messages.at(-1).action,'tracking');A.match(state.messages.at(-1).text,/validation du responsable/);
+ await action({type:'chat',text:'Je veux 200 Mbps pour le gaming'});A.equal(state.proposal,null);A.equal(state.upgrade,null);A.equal(state.messages.at(-1).action,'tracking');A.match(state.messages.at(-1).text,/prépare l’intervention.*dès que le plan est validé.*ne réglerait pas cette coupure/);
  A.equal((await req(other,'/noc/client')).incidents.length,0);const otherReply=await req(other,'/guardian/chat',{portal:'client',text:'Le technicien ?'});A.match(otherReply.message,/Aucun incident ouvert/);console.log('PASS incident partagé prioritaire, actions devenues dangereuses refusées et isolation entre quartiers');
  let incident=(await req(admin,'/noc/overview')).incidents[0];
  const noc=async(type,extra={})=>{incident=(await req(admin,'/noc/overview')).incidents.find(v=>v.id===incident.id);await req(admin,'/noc/action',{type,id:incident.id,version:incident.version,...extra});};

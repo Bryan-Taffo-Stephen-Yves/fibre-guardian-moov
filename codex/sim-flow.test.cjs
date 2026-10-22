@@ -30,7 +30,7 @@ test('Poteau tombé : équipe, mail, technicien et client prévenus ; puis en ro
  try{
   t.sim('YOP-07','pole');let o=t.view(),i=t.find(o,'YOP-07'),seg=o.segments.find(g=>g.id==='YOP-07');
   assert.equal(i.scenario,'pole');assert.equal(F.kindOf(i,seg),'pole');
-  assert.equal(F.nearest('YOP-07',o.technicians).id,'awa','l’équipe la plus proche de Niangon');
+  assert.equal(F.nearest('YOP-07',o.technicians).id,'koffi','l’équipe la plus proche de Niangon : Koffi, de garde à Yopougon, comme dans la régie');
   const later=Date.now()+F.THINK+10;let m=F.messages(i,seg,o.technicians,later);
   assert.ok(m.some(x=>x.to==='team'&&x.channel==='whatsapp'&&/poteau endommagé, 10 clients sans internet/.test(x.body)));
   const mail=m.find(x=>x.channel==='mail');assert.ok(mail&&/Niangon/.test(mail.subject));assert.ok(mail.lines.some(([k,v])=>k==='Matériel'&&/poteau/.test(v)));

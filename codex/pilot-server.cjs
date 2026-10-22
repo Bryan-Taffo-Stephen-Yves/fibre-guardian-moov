@@ -104,6 +104,10 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/feedback'&&method==='POST')return json(res,noc.feedback(store,user.id,await body(req,4096)));
     if(route==='/api/noc/overview'&&method==='GET')return json(res,{...noc.overview(store,user.id),whatsapp:WA.status(store,whatsapp.cfg)});
     if(route==='/api/noc/labo'&&method==='GET')return json(res,require('./labo.cjs').snapshot(store,user.id,{segment:url.searchParams.get('segment'),otdr:url.searchParams.get('otdr')==='1',nm:url.searchParams.get('nm')}));
+    // Guardian Superviseur : équipe Moov seulement (requireOperator dans superviseur.cjs), il propose, un responsable valide.
+    if(route==='/api/noc/superviseur'&&method==='GET')return json(res,require('./superviseur.cjs').bilan(store,user.id,{whatsapp:WA.status(store,whatsapp.cfg)}));
+    if(route==='/api/noc/superviseur/ask'&&method==='POST')return json(res,await require('./superviseur.cjs').ask(store,user.id,await body(req,2048),{whatsapp:WA.status(store,whatsapp.cfg),log:m=>options.onError?options.onError(new Error(m)):console.warn(m)}));
+    if(route==='/api/noc/superviseur/signal'&&method==='POST')return json(res,require('./superviseur.cjs').signal(store,user.id,await body(req,1024),{whatsapp:WA.status(store,whatsapp.cfg)}));
     if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
@@ -123,7 +127,9 @@ function createGuardianServer(options={}){
     if(route==='/api/journey/start'&&method==='POST'){if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return json(res,{state:journey.snapshotFor(store,user.id,journey.get(store,user.id))});}
     if(route==='/api/journey/action'&&method==='POST'){const d=await body(req,600000),started=Date.now(),log=message=>options.onError?options.onError(new Error(message)):console.warn(message);delete d.meaning;
      // Nouchi, dioula : sens en français reconnu sur le serveur (packs de langue, puis Claude s'il est configuré).
-     if(d.type==='chat'&&typeof d.text==='string'){const local=langues.detect(d.text);if(local.lang!=='fr'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});d.meaning=ai&&ai.lang!=='fr'?ai:local;}}
+     if(d.type==='chat'&&typeof d.text==='string'){const local=langues.detect(d.text);if(local.lang!=='fr'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});d.meaning=ai&&ai.lang!=='fr'?ai:local;}
+      // Français familier que les règles ne reconnaissent pas (« la box fait n'importe quoi », « YouTube refuse de s'ouvrir ») : Claude en donne le sens, qui guide la réponse.
+      else if(journey.intent(d.text)==='inconnu'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});if(ai&&journey.intent(ai.french)!=='inconnu')d.meaning=ai.lang==='fr'?{lang:'fr',french:ai.french}:ai;}}
      const state=journey.act(store,user.id,d);
      // Guardian : le moteur à règles a répondu ; Claude reformule si la clé est configurée, sinon rien ne change.
      if(d.type==='chat'&&guardianAi.available()){const [question,answer]=state.messages.slice(-2);const text=await guardianAi.rephrase({name:user.name,question:question?.text,draft:answer?.text,facts:answer?.facts,action:answer?.action,snapshot:state,history:state.messages.slice(0,-2),meaning:question?.lang?{lang:question.lang,french:question.meaning}:null},{store,uid:user.id,log,timeoutMs:Math.max(3000,Math.min(8000,10500-(Date.now()-started)))});if(text)return json(res,{state:journey.refine(store,user.id,answer.id,text)});}
