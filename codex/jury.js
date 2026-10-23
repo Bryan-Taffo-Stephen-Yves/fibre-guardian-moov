@@ -152,6 +152,7 @@
  }
  const STEPS=[['cut','Couper la fibre à Niangon','Les téléphones du jury vibrent avec l’alerte de Guardian.'],['send','Envoyer le technicien','Plan validé, Koffi affecté et en route.'],['arrive','Le technicien est arrivé','Koffi est sur place, la réparation commence.'],['repair','Réparer et vérifier','Les mesures reviennent, le jury reçoit son certificat.']];
  const STATUS={reported:'Coupure détectée',proposed:'Coupure détectée, plan prêt',approved:'Plan validé',dispatched:'Technicien affecté',en_route:'Technicien en route',on_site:'Technicien sur place',verifying:'Vérification des mesures',resolved:'Connexion rétablie et vérifiée',closed:'Dossier clôturé',rejected:'Plan refusé'};
+ function dur(sec){return sec<60?sec+' s':Math.floor(sec/60)+' min '+String(sec%60).padStart(2,'0')+' s';}
  function since(t,now){const s=Math.max(0,Math.floor((now-t)/1000));return Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s';}
 
  function Regie(){
@@ -188,6 +189,13 @@
     room&&next==='repair'&&!scene?.hold&&h('div',{className:'jy-variant'},h('p',null,h('b',null,'Variante pour le jury : '),'la réparation principale est faite, mais 4 foyers restent coupés. Guardian doit refuser de clôturer.'),B(busy==='partial'?'En cours…':'Réparation partielle',()=>run('partial','Réparation partielle : 4 foyers restent coupés. Guardian garde le dossier ouvert.'),{className:'jy-secondary',disabled:!!busy})),
     scene?.hold&&h('p',{className:'jy-hint',role:'status'},'Guardian refuse la clôture : '+scene.hold.remaining+' foyers encore coupés. Étape 4 : contrôle ciblé, puis vérification.'),
     !room&&h('p',{className:'jy-hint'},'Ouvrez d’abord la salle du jury.')),
+   data?.report&&h('section',{className:'jy-card jy-report'},h('p',{className:'jy-kicker'},'RAPPORT DE PREUVES'),h('h2',null,data.report.verified?'Service rétabli et vérifié':'Scène en cours'),
+    h('dl',null,data.report.rows.map(r=>h('div',{key:r.key},h('dt',null,r.label),h('dd',null,r.seconds==null?'—':dur(r.seconds)))),
+     h('div',null,h('dt',null,'Box coupées à la détection'),h('dd',null,data.report.offline==null?'—':data.report.offline+' sur '+data.report.total)),
+     h('div',null,h('dt',null,'Abonnés rétablis, mesurés'),h('dd',null,data.report.restored==null?'—':String(data.report.restored))),
+     h('div',null,h('dt',null,'Clients prévenus · ont lu'),h('dd',null,data.report.notified+' · '+data.report.read))),
+    data.report.partial&&h('p',null,'Réparation partielle jouée : Guardian a refusé la clôture tant que des foyers restaient coupés.'),
+    h('small',null,data.report.source+'. Rien n’est estimé ici ; les économies en francs sont des estimations, sur la page Impact.')),
    h('section',{className:'jy-card jy-score'},h('p',{className:'jy-kicker'},'3 · AVIS DU JURY'),data?.ratings?.count?h('p',null,h('b',null,String(data.ratings.average).replace('.',',')+' / 5'),' · '+data.ratings.count+' avis'):h('p',null,'Les notes du jury apparaîtront ici après la réparation.')),
    h('section',{className:'jy-card jy-reset'},h('p',{className:'jy-kicker'},'REMISE À ZÉRO'),h('p',null,'Remet la démonstration dans son état de départ. Le jury et la régie restent connectés.'),
     confirm?h('div',{className:'jy-actions'},B(busy==='reset'?'Remise à zéro…':'Confirmer',()=>run('reset',ms=>'Tout est remis à zéro en '+(ms/1000).toFixed(1).replace('.',',')+' s. Le jury reste connecté.'),{className:'jy-danger',disabled:!!busy}),B('Annuler',()=>CF(false),{className:'jy-ghost',disabled:!!busy})):
