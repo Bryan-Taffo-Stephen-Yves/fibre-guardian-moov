@@ -1,0 +1,18 @@
+/* Chaîne du dossier : suggestion → décision → mission → action → résultat mesuré. Couleurs : variables --moov-* uniquement. */
+.dc-chain{margin:14px 0;padding:14px 16px;border:1px solid var(--moov-neutral-150);border-radius:16px;background:var(--moov-neutral-25)}
+.dc-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;margin-bottom:10px}
+.dc-head strong{font-size:15px;letter-spacing:-.01em;color:var(--moov-neutral-900)}
+.dc-head small{font-size:12px;color:var(--moov-neutral-600)}
+.dc-chain ol{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.dc-chain li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;position:relative;padding-bottom:12px}
+.dc-chain li:not(:last-child)::before{content:'';position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--moov-neutral-150)}
+.dc-chain li[data-state=done]:not(:last-child)::before{background:var(--moov-primary-200)}
+.dc-dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--moov-neutral-100);color:var(--moov-neutral-600)}
+.dc-chain li[data-state=done] .dc-dot{background:var(--moov-primary);color:var(--moov-on-primary)}
+.dc-chain li[data-state=current] .dc-dot{background:var(--moov-primary-100);color:var(--moov-primary-700);box-shadow:0 0 0 3px var(--moov-primary-50)}
+.dc-chain li[data-state=warn] .dc-dot{background:var(--moov-warning-100);color:var(--moov-warning-700)}
+.dc-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px;align-items:baseline}
+.dc-row b{font-size:14px;color:var(--moov-neutral-900)}
+.dc-row small{font-size:12px;color:var(--moov-neutral-600)}
+.dc-chain p{margin:2px 0 0;font-size:13px;line-height:1.4;color:var(--moov-neutral-700)}
+.dc-chain li[data-state=todo] :is(b,p){color:var(--moov-neutral-500)}

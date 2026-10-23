@@ -42,7 +42,7 @@
    const step=STEPS.findIndex(([k])=>k===m.status),next=NEXT[m.status],list=m.checklist||[],left=list.filter(c=>!c.done).length,blocked=m.status==='on_site'&&left>0;
    return h(React.Fragment,null,
     h('section',{className:'tv-card tv-mission','data-status':m.status},
-     h('div',{className:'tv-mission-top'},h('span',{className:'tv-live'},h('i'),STATUS[m.status]||m.statusLabel),h('small',null,'Affectée à '+hour(m.createdAt))),
+     h('div',{className:'tv-mission-top'},h('span',{className:'tv-live'},h('i'),STATUS[m.status]||m.statusLabel),h('small',null,(m.kind==='incident'&&m.id?'Dossier n° '+String(m.id).replace(/-/g,'').slice(0,6).toUpperCase()+' · ':'')+'Affectée à '+hour(m.createdAt))),
      h('h2',null,place(m,segments)),
      h('p',{className:'tv-mission-sub'},m.plan?.cause?CAUSE[m.plan.cause]||m.title:m.title),
      h('ol',{className:'tv-steps','aria-label':'Étapes de la mission'},STEPS.map(([k,l],i)=>h('li',{key:k,className:i<step?'done':i===step?'on':''},h('span',null,i<step?h(Icon,{name:'check',size:14}):i+1),l))),

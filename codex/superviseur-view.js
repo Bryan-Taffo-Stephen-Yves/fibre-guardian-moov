@@ -75,7 +75,7 @@
         h('p', {className: 'gs-advice'}, h('b', null, 'Mon conseil'), f.advice),
         h('div', {className: 'gs-f-actions'},
           h('button', {type: 'button', className: 'gs-btn is-primary', onClick: () => onGo(f)}, f.go.label, h(Icon, {name: 'arrow', size: 16})),
-          f.signaled ? h('span', {className: 'gs-signaled'}, h(Icon, {name: 'flag', size: 15}), 'Transmis par ' + f.signaled.by + ' à ' + clock(f.signaled.at))
+          f.signaled ? h('span', {className: 'gs-signaled'}, h(Icon, {name: 'flag', size: 15}), 'Transmis par ' + f.signaled.by + ' à ' + clock(f.signaled.at) + (f.ref ? ' · dans le dossier n° ' + f.ref + ', en attente de décision' : ''))
             : h('button', {type: 'button', className: 'gs-btn', onClick: () => onSignal(f), disabled: busy}, h(Icon, {name: 'flag', size: 16}), 'Transmettre au responsable'))));
   }
 

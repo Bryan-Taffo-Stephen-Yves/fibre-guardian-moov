@@ -73,7 +73,8 @@ function findings(s,{ports,incidents,technicians,forecasts,olts,now,signals}){
    else if(['dispatched','en_route','on_site'].includes(i.status)){const t=technicians.find(t=>t.id===i.technician);next=(t?t.name+' ':'L’équipe ')+(i.status==='on_site'?'est sur place.':i.status==='en_route'?'est en route.':'doit confirmer son départ.')+' Je préviens les clients à chaque étape.';go={page:'missions',label:'Suivre l’équipe'};}
    else if(i.status==='verifying'){next='Vérifiez le retour des mesures avant de clore le dossier.';go={page:'incidents',label:'Vérifier le rétablissement'};}
   }else facts.push({label:'Dossier',value:'ouverture au prochain passage de la détection'});
-  out.push({key:'panne:'+p.id,level:p.tone==='down'?'critique':'majeure',segment:p.id,zone:plainZone(p.zone),title,cause,facts,advice:next,go:{...go,incidentId:i?.id||null,segment:p.id},since:p.since||now,incidentId:i?.id||null});
+  if(i)facts.unshift({label:'Dossier n°',value:N.ref(i.id)});
+  out.push({key:'panne:'+p.id,level:p.tone==='down'?'critique':'majeure',segment:p.id,zone:plainZone(p.zone),title,cause,facts,advice:next,go:{...go,incidentId:i?.id||null,segment:p.id},since:p.since||now,incidentId:i?.id||null,ref:i?N.ref(i.id):null});
  }
  // Plan qui attend trop longtemps : on le fait remonter, même si la panne est « seulement » majeure.
  for(const f of out)if(f.go.page==='approvals'){const i=incidents.find(x=>x.id===f.incidentId);if(i&&now-i.updated>180000)f.level='critique';}
@@ -108,7 +109,7 @@ function headline(list,{online,total,ports}){
 // Le journal de l'agent : ce qu'il a vu et ce qui a été décidé, à la première personne.
 function journal(s,ports,now){
  const zoneOf=seg=>plainZone(ports.find(p=>p.id===seg)?.zone||seg);
- const rows=s.all("SELECT e.kind,e.public_text,e.detail,e.at,i.segment_id,u.name AS actor FROM noc_events e LEFT JOIN noc_incidents i ON i.id=e.incident_id LEFT JOIN users u ON u.id=e.actor WHERE e.at>? AND (e.incident_id IS NULL OR i.mode='demo') AND e.kind IN ('simulation','telemetry.recovered','detected','plan.proposed','approved','dispatched','resolved','closed','superviseur.signal') ORDER BY e.at DESC,e.rowid DESC LIMIT 30",now-6*3600000);
+ const rows=s.all("SELECT e.kind,e.public_text,e.detail,e.at,i.segment_id,u.name AS actor FROM noc_events e LEFT JOIN noc_incidents i ON i.id=e.incident_id LEFT JOIN users u ON u.id=e.actor WHERE e.at>? AND (e.incident_id IS NULL OR i.mode='demo') AND e.kind IN ('simulation','telemetry.recovered','detected','plan.proposed','plan.approved','plan.rejected','plan.complement','dispatched','verifying','resolved','closed','superviseur.signal') ORDER BY e.at DESC,e.rowid DESC LIMIT 30",now-6*3600000);
  return rows.map(r=>{
   let d={};try{d=JSON.parse(r.detail||'{}');}catch{}
   const zone=zoneOf(r.segment_id||d.segment);
@@ -117,7 +118,10 @@ function journal(s,ports,now){
    'telemetry.recovered':()=>'Les mesures sont revenues à la normale.',
    detected:()=>'J’ai ouvert un dossier pour '+zone+', avant tout appel de client.',
    'plan.proposed':()=>'J’ai préparé le plan « '+(d.plan?.title||'intervention')+' » et je l’ai envoyé pour validation.',
-   approved:()=>(r.actor||'Un responsable')+' a validé le plan pour '+zone+'.',
+   'plan.approved':()=>(r.actor||'Un responsable')+' a validé le plan pour '+zone+'.',
+   'plan.rejected':()=>(r.actor||'Un responsable')+' a refusé le plan pour '+zone+' : nouvelle analyse à faire.',
+   'plan.complement':()=>(r.actor||'Un responsable')+' demande un complément pour '+zone+(d.note?' : « '+d.note+' »':'')+'.',
+   verifying:()=>'Réparation déclarée à '+zone+' : j’attends les mesures pour la confirmer.',
    dispatched:()=>'Équipe affectée à '+zone+'.',
    resolved:()=>'Retour du réseau vérifié à '+zone+'.',
    closed:()=>'Dossier de '+zone+' clos.',
@@ -145,15 +149,20 @@ function bilan(s,uid,{whatsapp=null,now=Date.now()}={}){
   findings:list.slice(0,12),journal:journal(s,ports,now)};
 }
 
-// Transmettre un problème au responsable : une ligne datée dans le journal, visible par toute l'équipe.
-// Aucune commande réseau, aucune notification aux clients (l'événement n'est rattaché à aucun dossier).
+// Transmettre un problème au responsable. Quand le problème a un dossier, la transmission entre DANS ce dossier
+// (même numéro, auteur, heure) et le dossier remonte en tête des Validations : le responsable y accepte, refuse
+// ou demande un complément, puis la mission, l'action du technicien et le résultat mesuré s'ajoutent au même dossier.
+// Sans dossier (signal faible, centrale chargée), c'est une ligne datée dans le journal de l'équipe.
+// Jamais de commande réseau : seul un responsable décide.
 function signal(s,uid,d,options={}){
  O.requireOperator(s,uid);
  const key=String(d?.key||'');insist(key&&key.length<=120,'Problème inconnu.');
  const b=bilan(s,uid,options),f=b.findings.find(x=>x.key===key);insist(f,'Ce problème n’est plus d’actualité.',404);
  insist(!f.signaled,'Déjà transmis au responsable.',409);
  s.rate('superviseur-signal:'+uid,20,600000);
- s.run('INSERT INTO noc_events VALUES(?,?,?,?,?,?,?)',id(),null,uid,'superviseur.signal','Transmis au responsable : '+f.title,JSON.stringify({key,title:f.title,segment:f.segment,incidentId:f.incidentId||null}),Date.now());
+ const detail={key,title:f.title,segment:f.segment,incidentId:f.incidentId||null,cause:f.cause,advice:f.advice};
+ // Note interne à l'équipe : le dossier ne change pas d'état et les clients ne reçoivent rien (voir N.INTERNAL).
+ s.run('INSERT INTO noc_events VALUES(?,?,?,?,?,?,?)',id(),f.incidentId||null,uid,'superviseur.signal',f.incidentId?'Guardian Superviseur a transmis ce dossier en priorité au responsable : '+f.advice:'Transmis au responsable : '+f.title,JSON.stringify(detail),Date.now());
  return bilan(s,uid,options);
 }
 
