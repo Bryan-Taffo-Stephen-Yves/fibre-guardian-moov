@@ -58,14 +58,14 @@ function status(s,uid,origin){
  const st=scene?.status,step=!scene||['resolved','closed','rejected'].includes(st)?'cut':['reported','proposed','approved','dispatched'].includes(st)?'send':st==='en_route'?'arrive':'repair';
  const seg=s.get('SELECT online,total,alarm FROM noc_segments WHERE id=?',SEGMENT);
  return {room:room?{code:room.code,url:origin+'/codex/?jury='+room.code,expires:room.expires,created:room.created,jurors}:null,
-  scene:scene?{id:scene.id,status:st,created:scene.created,technician:scene.technician,position:scene.position,events:scene.events.map(e=>({kind:e.kind,text:e.public_text,at:e.at}))}:null,
+  scene:scene?{id:scene.id,status:st,hold:scene.hold||null,created:scene.created,technician:scene.technician,position:scene.position,events:scene.events.map(e=>({kind:e.kind,text:e.public_text,at:e.at}))}:null,
   next:room?step:'open',segment:{id:SEGMENT,zone:ZONE,...seg},ratings:{count:ratings.n,average:ratings.avg==null?null:Math.round(ratings.avg*10)/10}};
 }
 
 // Une étape de la scène = une suite d'actions NOC habituelles, faites avec les droits de l'administrateur connecté.
 function step(s,uid,d,origin){
  requireAdmin(s,uid);
- insist(['open','close','cut','send','arrive','repair'].includes(d.type),'Étape inconnue.');
+ insist(['open','close','cut','send','arrive','repair','partial'].includes(d.type),'Étape inconnue.');
  if(d.type==='open'){s.transaction(()=>{s.run('UPDATE jury_rooms SET closed=1 WHERE closed=0');s.run('INSERT INTO jury_rooms VALUES(?,?,?,?,?,0)',id(),code(),uid,Date.now(),Date.now()+ROOM_MS);});return status(s,uid,origin);}
  const room=openRoom(s);insist(room,'Ouvrez d’abord la salle du jury.',409);
  if(d.type==='close'){s.run('UPDATE jury_rooms SET closed=1 WHERE id=?',room.id);return status(s,uid,origin);}
@@ -95,11 +95,18 @@ function step(s,uid,d,origin){
   insist(i&&i.status==='en_route','Le technicien n’est pas en route.',409);act('advance');
  }else{
   insist(i&&['on_site','verifying'].includes(i.status),'Le technicien doit être sur place avant la réparation.',409);
-  if(i.status==='on_site'){
-   // Les consignes de la checklist terrain sont cochées par l'administrateur, comme dans l'espace Moov.
-   const key='incident:'+i.id;for(const c of s.all('SELECT id FROM noc_checklist WHERE case_key=? AND done=0',key)){const w=workspace.overview(s,uid).queue.find(r=>r.key===key);workspace.action(s,uid,{key,type:'check',itemId:c.id,done:true,version:w.version,sourceVersion:w.sourceVersion});}
-   i=act('advance');
+  // Les consignes de la checklist terrain sont cochées par l'administrateur, comme dans l'espace Moov.
+  const repaired=()=>{const key='incident:'+i.id;for(const c of s.all('SELECT id FROM noc_checklist WHERE case_key=? AND done=0',key)){const w=workspace.overview(s,uid).queue.find(r=>r.key===key);workspace.action(s,uid,{key,type:'check',itemId:c.id,done:true,version:w.version,sourceVersion:w.sourceVersion});}return act('advance');};
+  if(d.type==='partial'){
+   // Variante du jury : la réparation principale est faite mais 4 foyers restent coupés. Guardian doit refuser la clôture.
+   insist(!i.hold,'La réparation partielle est déjà en cours : lancez le contrôle ciblé.',409);
+   if(i.status==='on_site')i=repaired();
+   noc.operate(s,uid,{type:'simulate',segment:SEGMENT,scenario:'partial',remaining:4});
+   return status(s,uid,origin);
   }
+  // Après une réparation partielle : contrôle ciblé demandé au technicien, puis nouvelle réparation déclarée.
+  if(i.status==='verifying'&&i.hold)i=act('followup');
+  if(i.status==='on_site')i=repaired();
   // Le segment réparé renvoie des mesures normales, puis la supervision vérifie avant de clôturer.
   noc.operate(s,uid,{type:'simulate',segment:SEGMENT,scenario:'normal'});
   act('verify');

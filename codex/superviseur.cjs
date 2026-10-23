@@ -75,6 +75,11 @@ function findings(s,{ports,incidents,technicians,forecasts,olts,now,signals}){
   }else facts.push({label:'Dossier',value:'ouverture au prochain passage de la détection'});
   out.push({key:'panne:'+p.id,level:p.tone==='down'?'critique':'majeure',segment:p.id,zone:plainZone(p.zone),title,cause,facts,advice:next,go:{...go,incidentId:i?.id||null,segment:p.id},since:p.since||now,incidentId:i?.id||null});
  }
+ // Réparation déclarée mais des foyers encore coupés : Guardian refuse la clôture et le dit en premier.
+ for(const i of incidents){const hold=N.holdOf(s,i);if(!hold)continue;const p=ports.find(x=>x.id===i.segment_id),zone=plainZone(p?.zone||i.segment_id);
+  out.push({key:'partielle:'+i.id,level:'critique',segment:i.segment_id,zone,title:'Réparation incomplète à '+zone+' : '+hold.remaining+' foyer'+(hold.remaining>1?'s':'')+' encore coupé'+(hold.remaining>1?'s':''),cause:'Branche secondaire encore coupée après la réparation principale (probable)',
+   facts:[{label:'Box en ligne',value:hold.online+' sur '+hold.total},{label:'Réparation déclarée',value:i.repair_at?minutes(now-i.repair_at)+' plus tôt':'—'}],
+   advice:i.status==='verifying'?'Je garde le dossier ouvert. Lancez un contrôle ciblé de la branche secondaire avant toute clôture.':'Contrôle ciblé en cours : je vérifierai les mesures dès que la réparation sera de nouveau déclarée.',go:{page:'incidents',label:'Ouvrir le dossier',incidentId:i.id,segment:i.segment_id},since:hold.at,incidentId:i.id});}
  // Plan qui attend trop longtemps : on le fait remonter, même si la panne est « seulement » majeure.
  for(const f of out)if(f.go.page==='approvals'){const i=incidents.find(x=>x.id===f.incidentId);if(i&&now-i.updated>180000)f.level='critique';}
  for(const o of olts){
@@ -93,7 +98,8 @@ function findings(s,{ports,incidents,technicians,forecasts,olts,now,signals}){
  if(assigned.length&&!freeTechs.length)out.push({key:'equipe:aucune',level:'critique',segment:null,zone:'Équipes',title:'Aucun technicien libre pour '+assigned.length+(assigned.length>1?' plans validés':' plan validé'),cause:'Toutes les équipes sont déjà en mission',facts:[{label:'Techniciens',value:technicians.length+' en mission'}],advice:'Rappeler une équipe d’astreinte ou attendre la fin d’une mission.',go:{page:'missions',label:'Voir les équipes'},since:now});
  // Une transmission vaut pour ce dossier-là : une nouvelle panne au même endroit repart de zéro.
  for(const f of out){const sig=signals[f.key];if(sig&&sig.incidentId===(f.incidentId||null))f.signaled={by:sig.by,at:sig.at};}
- return out.sort((a,b)=>LEVELS.indexOf(a.level)-LEVELS.indexOf(b.level)||a.since-b.since);
+ // Un refus de clôture passe avant les autres problèmes du même niveau : des clients croient la panne finie.
+ return out.sort((a,b)=>LEVELS.indexOf(a.level)-LEVELS.indexOf(b.level)||b.key.startsWith('partielle:')-a.key.startsWith('partielle:')||a.since-b.since);
 }
 
 function headline(list,{online,total,ports}){
