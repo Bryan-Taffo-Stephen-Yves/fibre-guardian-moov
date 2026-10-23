@@ -3,7 +3,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {Store}=require('./pilot-store.cjs');
 const {createGuardianServer}=require('./pilot-server.cjs');
-const {seedDemo,DEMO,NEIGHBOURS}=require('./seed-demo.cjs');
+const {seedDemo,DEMO,NEIGHBOURS,CREW}=require('./seed-demo.cjs');
 
 const COUNTS=['users','noc_incidents','noc_notifications','audit'];
 function counts(store){return Object.fromEntries(COUNTS.map(t=>[t,store.get('SELECT count(*) AS n FROM '+t).n]));}
@@ -15,7 +15,7 @@ test('La démo pré-remplie crée la situation attendue, et un second passage ne
  try{
   const first=await seedDemo(store);assert.equal(first.seeded,true);
   const before=counts(store);
-  assert.equal(before.users,3+NEIGHBOURS.length,'3 comptes et un client par quartier');
+  assert.equal(before.users,3+NEIGHBOURS.length+CREW.length,'3 comptes, un client par quartier et un compte par technicien');
   const incidents=store.all('SELECT segment_id AS segment,status FROM noc_incidents ORDER BY segment_id');
   assert.ok(incidents.some(i=>i.segment==='COC-03'&&i.status==='proposed'),'COC-03 en attente de validation');
   assert.ok(incidents.some(i=>i.segment==='YOP-07'&&i.status==='resolved'),'YOP-07 résolu dans la nuit');
@@ -37,7 +37,7 @@ test('Réinitialiser la démo : refusé au client, accepté pour l’administrat
   store.run("UPDATE noc_incidents SET status='resolved' WHERE segment_id='COC-03'");
   const r=await admin('/demo/reset',{confirm:true});assert.equal(r.status,200);
   assert.equal(store.get("SELECT status FROM noc_incidents WHERE segment_id='COC-03'").status,'proposed','la démo est rejouée');
-  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length);
+  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length+CREW.length);
  }finally{if(saved===undefined)delete process.env[DEMO.admin.env];else process.env[DEMO.admin.env]=saved;server.close();}
 });
 
@@ -48,7 +48,7 @@ test('Remise à zéro répétée pendant la répétition : jamais bloquée par l
   await seedDemo(store);
   // Quatre remises à zéro dans la même minute : chacune recrée et reconnecte les comptes de la démo.
   for(let n=0;n<4;n++){const r=await resetDemo(store);assert.equal(r.seeded,true,'remise à zéro n° '+(n+1));}
-  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length,'tous les comptes de la démo sont là');
+  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length+CREW.length,'tous les comptes de la démo sont là');
  }finally{server.close();}
 });
 
@@ -57,5 +57,26 @@ test('Clients de quartier : leur espace est ouvert, l’accueil peut montrer la 
  try{
   await seedDemo(store);
   for(const n of NEIGHBOURS){const u=store.get('SELECT id FROM users WHERE email=?',n.email);assert.ok(store.get('SELECT 1 AS ok FROM journey_state WHERE user_id=?',u.id),'espace ouvert pour '+n.email);}
+ }finally{server.close();}
+});
+
+test('Panne simulée : le technicien envoyé la voit dans son application, les clients du quartier aussi',async()=>{
+ const {store,server,base}=await fresh();
+ try{
+  const summary=await seedDemo(store),pw=email=>summary.accounts.find(a=>a.email===email)?.password;
+  assert.deepEqual(CREW.map(c=>c.technicianId).sort(),['amina','awa','koffi','yao'],'un compte pour chaque autre technicien');
+  const direction=await login(base,DEMO.admin.email,pw(DEMO.admin.email)),json=async r=>{const d=await r.json();assert.ok(r.ok,d.error);return d;};
+  await json(await direction('/noc/action',{type:'simulate',segment:'PLA-01',scenario:'works'}));
+  let inc;for(let i=0;i<20&&!inc;i++){inc=(await json(await direction('/noc/overview'))).incidents.find(x=>x.segment_id==='PLA-01'&&!x.terminal);if(!inc)await new Promise(r=>setTimeout(r,500));}
+  assert.ok(inc,'dossier créé au Plateau');
+  const act=async(type,extra={})=>{const row=(await json(await direction('/noc/overview'))).incidents.find(x=>x.id===inc.id);return json(await direction('/noc/action',{id:inc.id,type,version:row.version,...extra}));};
+  if(inc.status==='proposed')await act('approve',{note:'Validé pour le test.'});
+  await act('dispatch',{technician:'yao',safety:true});
+  const yao=await login(base,CREW.find(c=>c.technicianId==='yao').email,pw(DEMO.technician.email));
+  const mission=(await json(await yao('/noc/workspace'))).queue.find(r=>r.key==='incident:'+inc.id);assert.ok(mission,'Yao voit sa mission');
+  const ibrahim=await login(base,DEMO.technician.email,pw(DEMO.technician.email));
+  assert.ok(!(await json(await ibrahim('/noc/workspace'))).queue.some(r=>r.key==='incident:'+inc.id),'Ibrahim ne voit pas la mission de Yao');
+  const plateau=NEIGHBOURS.find(n=>n.segment==='PLA-01'),client=await login(base,plateau.email,pw(DEMO.client.email));
+  assert.ok((await json(await client('/noc/client'))).incidents.some(i=>i.segment==='PLA-01'&&i.technician?.name==='Yao Konan'),'le client du Plateau voit Yao arriver');
  }finally{server.close();}
 });
