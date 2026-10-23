@@ -166,3 +166,7 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
  .jy-layout.has-scene>.jy-col:first-child{position:sticky;top:84px}
 }
 @media(prefers-reduced-motion:reduce){.jy-alert,.jy-toast{animation:none}.jy-alert-pulse span,.jy-status--down .jy-pill i{animation:none}.jy-meter-bar i{transition:none}}
+
+/* Variante du jury : réparation partielle (Guardian refuse la clôture) */
+.jy-variant{margin-top:12px;padding:12px 14px;border-radius:14px;border:1px dashed var(--moov-warning-300);background:var(--moov-warning-100);display:grid;gap:8px}
+.jy-variant p{margin:0;font-size:14px;line-height:1.4}
