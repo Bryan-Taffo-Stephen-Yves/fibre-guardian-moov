@@ -30,6 +30,28 @@ function certificate(s,i){
   online:Number.isFinite(detail.online)?detail.online:null,total:Number.isFinite(detail.total)?detail.total:null,verifiedBy:'Supervision Moov'};
 }
 
+// Rapport de preuves de la scène (recommandation de Codex, 2026-10-23) : chaque chiffre vient des événements
+// réellement enregistrés pendant cette démonstration, rien n'est estimé. Les économies en francs restent sur la page Impact.
+function report(s,i){
+ if(!i)return null;
+ const ev=i.events||[],when=k=>ev.find(e=>e.kind===k)?.at||null,last=k=>at(ev,k),detail=k=>{try{return JSON.parse(ev.filter(e=>e.kind===k).at(-1)?.detail||'{}');}catch{return {};}};
+ const cut=s.get("SELECT at FROM noc_events WHERE kind='simulation' AND incident_id IS NULL AND at<=? AND json_extract(detail,'$.segment')=? ORDER BY at DESC,rowid DESC LIMIT 1",i.created,SEGMENT)?.at||null;
+ const detected=when('detected')||i.created,approved=when('plan.approved'),departed=when('en_route'),arrived=when('on_site'),repaired=when('verifying'),restored=last('resolved');
+ const sec=(a,b)=>a&&b&&b>=a?Math.round((b-a)/1000):null;
+ const before=detail('detected'),after=detail('resolved');
+ const notified=s.get("SELECT count(DISTINCT n.user_id) AS n,count(DISTINCT CASE WHEN n.read_at IS NOT NULL THEN n.user_id END) AS read FROM noc_notifications n JOIN noc_events e ON e.id=n.event_id WHERE e.incident_id=?",i.id);
+ const rows=[
+  {key:'detection',label:'Coupure → détection par Guardian',seconds:sec(cut,detected)},
+  {key:'decision',label:'Détection → plan validé par un responsable',seconds:sec(detected,approved)},
+  {key:'trajet',label:'Départ → arrivée du technicien',seconds:sec(departed,arrived)},
+  {key:'intervention',label:'Arrivée → réparation déclarée',seconds:sec(arrived,repaired)},
+  {key:'total',label:'Détection → retour du service vérifié',seconds:sec(detected,restored)}];
+ const restoredBoxes=Number.isFinite(after.online)&&Number.isFinite(before.online)?after.online-before.online:null;
+ return {at:Date.now(),rows,offline:Number.isFinite(before.online)?before.total-before.online:null,total:before.total??null,restored:restoredBoxes,
+  notified:notified.n,read:notified.read,partial:ev.some(e=>e.kind==='guardian.hold'),verified:i.status==='resolved'&&!!i.restorationVerified,
+  source:'Événements enregistrés pendant cette démonstration'};
+}
+
 async function join(s,d,ip){
  s.rate('jury-join:'+ip,40,600000);
  insist(d.consent===true,'Votre accord est nécessaire pour recevoir les alertes du quartier.');
@@ -58,6 +80,7 @@ function status(s,uid,origin){
  const st=scene?.status,step=!scene||['resolved','closed','rejected'].includes(st)?'cut':['reported','proposed','approved','dispatched'].includes(st)?'send':st==='en_route'?'arrive':'repair';
  const seg=s.get('SELECT online,total,alarm FROM noc_segments WHERE id=?',SEGMENT);
  return {room:room?{code:room.code,url:origin+'/codex/?jury='+room.code,expires:room.expires,created:room.created,jurors}:null,
+  report:scene?report(s,scene):null,
   scene:scene?{id:scene.id,status:st,created:scene.created,technician:scene.technician,position:scene.position,events:scene.events.map(e=>({kind:e.kind,text:e.public_text,at:e.at}))}:null,
   next:room?step:'open',segment:{id:SEGMENT,zone:ZONE,...seg},ratings:{count:ratings.n,average:ratings.avg==null?null:Math.round(ratings.avg*10)/10}};
 }
@@ -135,4 +158,4 @@ async function reset(s,uid,options={}){
  return {seeded:result.seeded,user:admin};
 }
 
-module.exports={migrate,join,me,status,step,reset,certificate,SEGMENT,ZONE};
+module.exports={report,migrate,join,me,status,step,reset,certificate,SEGMENT,ZONE};

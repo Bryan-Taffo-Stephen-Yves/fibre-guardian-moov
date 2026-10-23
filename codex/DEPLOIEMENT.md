@@ -137,6 +137,16 @@ Sans réseau, l'application ouvre un écran « Vous êtes hors ligne » avec que
 
 Chaque fusion sur la branche `main` de GitHub relance automatiquement la publication sur Railway. Les données du volume sont conservées.
 
+## Le jour du jury sur Render gratuit (sans carte bancaire)
+
+L'offre gratuite de Render a deux limites connues : le site **s'endort après 15 minutes sans visite** (le réveil prend environ une minute) et **les données repartent de zéro** à chaque réveil ou mise à jour. La démo est faite pour ça : au démarrage, les comptes de démonstration se recréent tout seuls.
+
+1. **Garder le site éveillé, gratuitement** : créez un compte gratuit sur [cron-job.org](https://cron-job.org) (aucune carte demandée), puis une tâche qui ouvre `https://<votre-site>.onrender.com/api/health` **toutes les 10 minutes**. Activez-la la veille du jury, coupez-la après. Un seul site allumé en permanence tient dans les 750 heures gratuites du mois.
+2. **Ne fusionnez rien le jour du jury** : chaque fusion redéploie le site et efface les données.
+3. **Avant de passer** : ouvrez la régie (`?section=regie`), touchez « Tout remettre à zéro », **puis** connectez les téléphones (la remise à zéro déconnecte les comptes clients).
+4. **Même scène à chaque fois** : la régie rejoue la même coupure à Niangon (étapes 1 à 4, et la variante « Réparation partielle » si elle est disponible). Le **rapport de preuves** de la régie donne les chiffres de la scène jouée : temps de détection, décision, trajet, intervention, retour vérifié, box rétablies, clients prévenus. Ils viennent des événements enregistrés ; les économies en francs de la page Impact restent des estimations.
+5. **Plan B** : la même démo tourne sur un ordinateur sans internet (`node codex/serveur-local.cjs`, voir le début de ce guide).
+
 ## En cas de problème
 
 | Ce que vous voyez | Ce qu'il faut faire |
