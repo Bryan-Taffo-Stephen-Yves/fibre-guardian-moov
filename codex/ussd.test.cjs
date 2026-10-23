@@ -27,26 +27,32 @@ test('Signaler, suivre et recevoir le lien du technicien depuis le *144#',async(
   r=await dial(client,'1*1*2');assert.equal(r.end,true);assert.match(r.message,/Rien n’a été envoyé/);
   assert.equal((await call(admin,'/noc/overview')).incidents.filter(i=>i.source==='ussd').length,0,'Un « Non » n’envoie rien');
 
-  r=await dial(client,'1*1*1');assert.equal(r.end,true);assert.match(r.message,/Signalement reçu : FG-001/);assert.match(r.sms.text,/FG-001/);
+  r=await dial(client,'1*1*1');assert.equal(r.end,true);
   let i=(await call(admin,'/noc/overview')).incidents.find(v=>v.source==='ussd');
+  // Même numéro de dossier partout (recommandation de Codex, 2026-10-23) : *144#, SMS, application, équipe Moov.
+  const ref=N.ref(i.id);assert.match(r.message,new RegExp('Signalement reçu : dossier '+ref));assert.match(r.sms.text,new RegExp('dossier '+ref));
+  const mine=()=>call(client,'/noc/client').then(c=>c.incidents.find(v=>v.id===i.id));
+  assert.equal((await mine()).ref,ref,'l’application montre le même dossier');
   assert.ok(i,'Le centre d’opérations reçoit le dossier');assert.match(i.title,/^Signalement par \*144# · /);assert.match(i.description,/\*144#/);assert.equal(i.segment_id,'YOP-07');
   assert.equal((await call(client,'/journey/state')).state.incidents[0].channel,'ussd');
-  assert.match((await dial(client,'1')).message,/déjà le dossier FG-001/,'Pas de doublon');
-  assert.match((await dial(client,'2')).message,/Dossier FG-001/);
+  assert.match((await dial(client,'1')).message,new RegExp('déjà le dossier '+ref),'Pas de doublon');
+  assert.match((await dial(client,'2')).message,new RegExp('Dossier '+ref+'\\nÉtat : Signalement reçu\\.\\nSuite : Moov analyse votre signalement\\.'));
   assert.match((await dial(client,'3')).message,/Pas encore de technicien/);
 
   const act=async(type,extra={})=>{i=(await call(admin,'/noc/overview')).incidents.find(v=>v.id===i.id);await call(admin,'/noc/action',{type,id:i.id,version:i.version,...extra});};
   N.scan(s);assert.match((await dial(client,'2')).message,/En analyse chez Moov/);
   await act('approve',{note:'Plan vérifié'});await act('dispatch',{technician:'koffi',safety:true});await act('advance');
   r=await dial(client,'3');assert.match(r.message,/Koffi N’Guessan est en route/);assert.match(r.message,/Tél : \+225/);
-  assert.match((await dial(client,'2')).message,/Technicien en route\.\nArrivée dans \d+ min/);
+  r=await dial(client,'2');assert.match(r.message,/Technicien en route\.\nSuite : Koffi est en route vers votre quartier\.\nArrivée dans \d+ min/);
+  assert.ok(r.message.includes((await mine()).next),'même prochaine étape que l’application');
   r=await dial(client,'5');assert.match(r.sms.link,/^\/codex\/\?suivi=[A-Za-z0-9_-]{20,40}$/);
   const view=await call(null,'/track/'+r.sms.link.split('=')[1]);assert.equal(view.incident.status,'en_route');
 
   // Un voisin du même quartier : la panne est déjà connue, inutile de la signaler une deuxième fois.
   await call(neighbor,'/noc/join',{segment:'YOP-07',consent:true});
   assert.match((await dial(neighbor,'4')).message,/Oui : panne en cours/);
-  assert.match((await dial(neighbor,'1')).message,/déjà une panne dans votre quartier/);
+  r=await dial(neighbor,'1');assert.match(r.message,new RegExp('Moov connaît déjà cette panne : dossier '+ref));
+  assert.equal((await call(admin,'/noc/overview')).incidents.filter(v=>v.segment_id==='YOP-07'&&!v.terminal).length,1,'pas de second dossier');
   assert.match((await dial(neighbor,'9')).message,/Choix inconnu/);
   assert.match((await dial(neighbor,'0')).message,/\*144#/);
  }finally{server.close();}

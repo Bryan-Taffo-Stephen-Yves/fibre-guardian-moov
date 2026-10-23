@@ -120,7 +120,9 @@
   return h('div',{className:'sv'},
    h('header',{className:'sv-intro'},h('span',{className:'j-tag'},'MODE SURVIE'),h('h1',null,'Plus d’internet ?',h('br'),'Guardian répond quand même.'),
     h('p',null,'Tapez ',h('strong',null,CODE),' sur votre téléphone, comme pour Moov Money. Ça marche sans internet, sur tous les téléphones, même les plus simples. Vous pouvez aussi appeler le ',h('strong',null,SERVICE),'.'),
-    h('div',{className:'sv-code'},h('span',{className:'sv-code-chip'},CODE),h('button',{type:'button',className:'j-button primary',onClick:()=>D({code:CODE,n:Date.now()})},'Essayer ici'),h('button',{type:'button',className:'j-button',onClick:()=>D({code:SERVICE,n:Date.now()})},'Composer le '+SERVICE))),
+    h('div',{className:'sv-code'},h('span',{className:'sv-code-chip'},CODE),h('button',{type:'button',className:'j-button primary',onClick:()=>D({code:CODE,n:Date.now()})},'Essayer ici'),h('button',{type:'button',className:'j-button',onClick:()=>D({code:SERVICE,n:Date.now()})},'Composer le '+SERVICE)),
+    // Recommandation de Codex (2026-10-23) : le jury voit tout de suite que *144# est un code d'exemple.
+    h('p',{className:'sv-example'},h('span',{className:'sv-example-tag'},'Exemple'),CODE+' et le '+SERVICE+' sont des numéros d’exemple : le vrai code court sera créé par Moov. Ici, le menu tourne dans l’application et retrouve le même dossier, la même étape et la même suite que l’application.')),
    h('div',{className:'sv-stage'},h(Phone,{api,dial,onChange})),
    h('section',{className:'sv-offers j-card'},h('h2',null,'Ce que vous pouvez faire'),h('ol',null,OFFERS.map(([t,d],i)=>h('li',{key:t},h('span',{className:'sv-num'},i+1),h('div',null,h('strong',null,t),h('p',null,d))))),
     h('div',{className:'sv-note'},h('strong',null,'Votre signalement compte autant.'),h('p',null,'Il arrive au centre d’opérations Moov exactement comme depuis l’application. Les SMS vous préviennent ensuite à chaque étape.')),

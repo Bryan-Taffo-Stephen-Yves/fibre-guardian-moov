@@ -33,7 +33,9 @@
     meta:repaired?who(repaired)+' · '+time(repaired.at):moving?(moving.kind==='on_site'?'Sur place':'En route')+' · '+time(moving.at):'—',
     text:repaired?'Réparation déclarée. Le dossier attend la preuve des mesures.':moving?'Intervention en cours.':'Le technicien déclare la réparation depuis son application.'});
   }
-  const r=done?detail(done):{};
+  const r=done?detail(done):{},hold=!done&&i.hold;
+  // Réparation partielle : Guardian a mesuré des foyers encore coupés et garde le dossier ouvert.
+  if(hold){out.push({key:'resultat',title:'Résultat mesuré',state:'warn',meta:'Clôture refusée · '+time(hold.at),text:hold.remaining+' foyer'+(hold.remaining>1?'s':'')+' sur '+hold.total+' encore hors ligne : Guardian garde le dossier ouvert.'});return out;}
   out.push({key:'resultat',title:'Résultat mesuré',state:done?'done':closed?'done':repaired||(decided&&plan.dispatch===false)?'current':'todo',
    meta:done?who(done)+' · '+time(done.at):closed?'Clos · '+time(closed.at):'—',
    text:done?(r.online!=null?r.online+' box sur '+r.total+' en ligne, mesurées après la réparation.':'Retour du réseau vérifié sur les mesures.'):closed?closed.public_text:'Le dossier ne se ferme que sur des mesures revenues à la normale.'});

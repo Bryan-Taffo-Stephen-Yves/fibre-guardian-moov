@@ -149,3 +149,7 @@
  .sv-promo-code{justify-self:start}
 }
 @media(prefers-reduced-motion:reduce){.sv-ussd,.sv-calling,.sv-calling-lines li,.sv-sms-banner,.sv-key,.sv-call{animation:none;transition:none}.sv-calling-avatar.is-ringing i{animation:none;opacity:.6}.sv-spinner{animation-duration:2s}}
+
+/* Mention « exemple » visible sur le parcours *144# */
+.sv-example{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:10px 12px;border-radius:12px;background:var(--moov-warning-100);color:var(--moov-neutral-800);font-size:13px;line-height:1.45;max-width:640px}
+.sv-example-tag{flex:none;padding:2px 8px;border-radius:999px;background:var(--moov-warning-700);color:var(--moov-white);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
