@@ -25,7 +25,7 @@
   if(!item)return null;
   const t=item.technician,eta=leftMs==null||leftMs<1000?null:leftMs<60000?[Math.ceil(leftMs/1000),'s']:[mins(leftMs/1000),'min'],step=Math.max(0,ORDER.indexOf(item.status));
   const title=done?'Internet est revenu':item.status==='en_route'?first(t.name)+' arrive':item.status==='assigned'?first(t.name)+' va venir chez vous':item.status==='on_site'?first(t.name)+' est arrivé':STAGE[item.status];
-  const sub=done?'Comment s’est passée l’intervention ? Votre avis aide Moov.':(item.zone||'Votre quartier')+(item.restore?.label?' · retour prévu vers '+item.restore.label:'');
+  const sub=done?'Comment s’est passée l’intervention ? Votre avis aide Moov.':(item.zone||'Votre quartier')+(item.restore?.label?' · retour prévu vers '+item.restore.label:'')+(item.ref?' · dossier '+item.ref:'');
   return h('button',{type:'button',className:'ch-live'+(done?' done':''),onClick:onTrack,'aria-label':title+'. Ouvrir le suivi en direct'},
    h('span',{className:'ch-live-pulse','aria-hidden':true}),
    h('div',{className:'ch-live-top'},h('span',{className:'ch-live-tag'},h('i'),done?'Terminé':'En direct'),h('span',{className:'ch-live-step'},STAGE[item.status])),

@@ -80,7 +80,7 @@ test('Prises clients et USSD : le *144# marche depuis un vrai téléphone relié
   assert.equal((await t.ussd('2250705060708','')).texte.startsWith('END '),true,'Le numéro d’un agent n’ouvre aucun compte');
   u=await t.ussd('2250701020304','');assert.match(u.texte,/^CON Moov Fibre Guardian\n1\. Signaler une panne/);
   u=await t.ussd('2250701020304','1*1');assert.match(u.texte,/^CON .*Niangon/s);
-  u=await t.ussd('2250701020304','1*1*1');assert.match(u.texte,/^END Signalement reçu : FG-\d+/);
+  u=await t.ussd('2250701020304','1*1*1');assert.match(u.texte,/^END Signalement reçu : dossier [0-9A-F]{6}/);
   assert.equal(t.s.get("SELECT count(*) AS n FROM noc_incidents WHERE source='ussd'").n,1,'Un vrai dossier pour l’équipe Moov');
   u=await t.ussd('2250701020304','1;DROP');assert.match(u.texte,/^END Saisie non comprise/);
  }finally{t.server.close();}
