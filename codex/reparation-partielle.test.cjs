@@ -26,6 +26,11 @@ test('Réparation partielle depuis la régie : Guardian refuse la clôture, puis
   let i=N.overview(t.store,t.chef).incidents.find(x=>x.id===st.scene.id);
   const hold=i.events.find(e=>e.kind==='guardian.hold');
   assert.match(hold.public_text,/mais 4 foyers restent hors ligne sur une branche secondaire/);
+  // La chaîne du dossier montre le refus au lieu d'un résultat « en attente ».
+  const ctx={window:{},React:{createElement:()=>null}};require('node:vm').createContext(ctx);
+  require('node:vm').runInContext(require('node:fs').readFileSync(require('node:path').join(__dirname,'dossier-chain.js'),'utf8'),ctx);
+  const result=ctx.window.FGDossierChain.steps(i,N.teamView(t.store)).find(s=>s.key==='resultat');
+  assert.equal(result.state,'warn');assert.match(result.text,/4 foyers sur 20 encore hors ligne/);
   // La clôture est refusée avec les nombres du scénario.
   assert.throws(()=>N.operate(t.store,t.chef,{type:'verify',id:i.id,version:i.version}),e=>e.status===409&&/Guardian refuse la clôture : 4 foyers sur 20 restent hors ligne/.test(e.message));
   // Le Superviseur met ce refus en tête, le client est prévenu sans fausse bonne nouvelle.

@@ -21,6 +21,12 @@
 .journey .j-chat .j-bubble.user p{color:var(--moov-on-primary)}
 .journey .j-chat .j-bubble .j-button{margin-top:10px;min-height:38px;font-size:14px;border-radius:999px}
 .journey .j-chat-facts summary{font-size:13px!important;color:var(--moov-primary)!important;font-weight:600}
+/* Preuves de Guardian : mesuré, supposé, test, ce que le résultat voudra dire */
+.journey .j-proof h4{margin:12px 0 4px;font-size:12px;font-weight:650;letter-spacing:.01em;text-transform:uppercase;color:var(--moov-text-muted)}
+.journey .j-proof h4:nth-of-type(2){color:var(--moov-warning-700)}
+.journey .j-proof ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.journey .j-proof li{font-size:13px;line-height:1.4;color:var(--moov-ink)}
+.journey .j-proof dl{margin-top:4px}
 @keyframes fg-bubble-in{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
 
 /* Offre et accord : une carte nette, le prix en grand */
