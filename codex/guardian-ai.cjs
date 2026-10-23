@@ -38,11 +38,11 @@ function guard(text,sources){
  return {ok:true,text:reply};
 }
 
-function context({name,question,draft,facts,action,snapshot,history,meaning}){
+function context({name,question,draft,facts,proof,action,snapshot,history,meaning}){
  const m=snapshot?.metrics||{},plan=snapshot?.plan||{};
  const devices=(snapshot?.devices||[]).filter(d=>!d.blocked).map(d=>d.name+' : '+d.mbps+' Mbps'+(d.limit?' (limité à '+d.limit+' Mbps)':''));
  const measures=['État de la connexion : '+(m.state||'inconnu'),'Débit disponible : '+(m.capacity??'inconnu')+' Mbps','Débit utilisé : '+(m.used??'inconnu')+' Mbps',m.latency!=null?'Latence : '+m.latency+' ms':'Latence : non mesurable','Appareils connectés : '+(m.connected??'inconnu')+' (habituellement '+(snapshot?.usual??'?')+')',plan.mbps?'Forfait : '+plan.name+', '+plan.mbps+' Mbps, '+plan.price+' FCFA par mois':'',devices.length?'Appareils : '+devices.join(' ; '):''].filter(Boolean);
- const lines=(facts||[]).map(f=>f.label+' : '+f.value);
+ const lines=[...(facts||[]),...(proof?.measured||[])].map(f=>f.label+' : '+f.value);
  const past=(history||[]).slice(-6).map(x=>(x.role==='user'?'Abonné':'Guardian')+' : '+x.text);
  return {measures,lines,past,
   user:'Prénom de l’abonné : '+(name||'inconnu')+'\n\nMesures de sa box, à l’instant :\n'+measures.join('\n')+'\n\nPoints vérifiés :\n'+(lines.join('\n')||'aucun')+(past.length?'\n\nDébut de la conversation :\n'+past.join('\n'):'')+'\n\nAction proposée par Fibre Guardian : '+(ACTIONS[action]||'aucune, seulement expliquer')+'\n\nRéponse validée à reformuler :\n« '+draft+' »\n\nMessage de l’abonné :\n« '+question+' »'+(meaning&&meaning.lang!=='fr'?'\n(écrit en '+meaning.lang+' ; sens : « '+meaning.french+' ». Réponds en français simple, sans te moquer de sa façon de parler.)':'')};
@@ -56,7 +56,8 @@ const SYSTEM='Tu es Guardian, l’assistant de Moov Africa Côte d’Ivoire pour
  '3. N’utilise aucun chiffre qui ne figure pas dans les mesures, les points vérifiés ou la réponse validée. Écris les unités en entier si besoin (Mbps, FCFA, minutes).\n'+
  '4. Explique un mot technique en quelques mots s’il est indispensable.\n'+
  '5. Ne parle jamais de toi comme d’une intelligence artificielle ou d’un programme, et ne cite aucune marque d’assistant.\n'+
- '6. Si le message de l’abonné est hors sujet, réponds en une phrase aimable puis reviens à sa connexion avec la réponse validée.\n'+
+ '6. Si la réponse validée dit qu’une cause n’est pas encore prouvée, garde exactement cette prudence et le test proposé : ne présente jamais une supposition comme une certitude.\n'+
+ '7. Si le message de l’abonné est hors sujet, réponds en une phrase aimable puis reviens à sa connexion avec la réponse validée.\n'+
  'Réponds uniquement par le texte destiné à l’abonné.';
 
 function budget(store,uid){
@@ -144,6 +145,8 @@ async function rephrase(input,{store,uid,log=()=>{},timeoutMs=TIMEOUT_MS}={}){
   if(msg.stop_reason==='refusal'||msg.stop_reason==='max_tokens')return null;
   const text=(msg.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
   const g=guard(text,[input.draft,...c.measures,...c.lines]);
+  // Une supposition reste une supposition : Claude ne doit pas effacer le « je ne peux pas encore conclure ».
+  if(g.ok&&/pas encore (conclure|le prouver)/.test(input.draft)&&!/conclu|prouv|certain|sûr|vérifi|test/i.test(text)){log('Guardian : garde-fou (prudence effacée), réponse du moteur gardée.');return null;}
   if(!g.ok){log('Guardian : garde-fou ('+g.why+'), réponse du moteur gardée.');return null;}
   return g.text;
  }catch(e){log('Guardian : Claude indisponible ('+(e.name==='TimeoutError'?'délai dépassé':e.message)+'), réponse du moteur gardée.');return null;}
