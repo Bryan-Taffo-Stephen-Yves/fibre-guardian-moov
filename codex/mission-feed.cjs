@@ -9,7 +9,7 @@ const first=n=>String(n||'').split(' ')[0];
 // « de Direction », « d’Ibrahim » : élision devant une voyelle.
 const de=n=>(/^[aeiouyàâéèêîôh]/i.test(first(n))?'d’':'de ')+first(n);
 const CLIENT={received:'Signalement reçu',dispatched:'Un technicien est choisi',en_route:'Votre technicien est en route',on_site:'Votre technicien est arrivé',verifying:'Réparation terminée',resolved:'Internet est revenu'};
-const TEAM_KINDS=['received','dispatched','en_route','on_site','verifying','resolved'];
+const TEAM_KINDS=['received','superviseur.signal','dispatched','en_route','on_site','verifying','resolved'];
 
 function pings(s,uid,since){
  const now=Date.now(),from=Number(since);
@@ -31,7 +31,7 @@ function pings(s,uid,since){
   O.requireOperator(s,uid);
   items=[
    ...s.all("SELECT e.id,e.kind,e.at,e.incident_id,i.segment_id,i.source,i.technician FROM noc_events e JOIN noc_incidents i ON i.id=e.incident_id WHERE i.mode='demo' AND e.at>? AND (e.actor IS NULL OR e.actor<>?) AND e.kind IN ("+TEAM_KINDS.map(()=>'?').join(',')+")",after,uid,...TEAM_KINDS).filter(r=>r.kind!=='received'||r.source!=='telemetry').map(r=>{const t=first(N.TECHS.find(v=>v.id===r.technician)?.name),zone=N.zoneName(s,r.segment_id)||'Zone à confirmer';
-    return {id:r.id,kind:r.kind,title:({received:'Nouveau signalement client',dispatched:t+' est affecté',en_route:t+' est en route',on_site:t+' est arrivé sur place',verifying:t+' a terminé la réparation',resolved:'Connexion rétablie'})[r.kind],body:zone,at:r.at,incident:r.incident_id,page:'missions'};}),
+    return {id:r.id,kind:r.kind,title:({received:'Nouveau signalement client','superviseur.signal':'Guardian Superviseur : décision attendue',dispatched:t+' est affecté',en_route:t+' est en route',on_site:t+' est arrivé sur place',verifying:t+' a terminé la réparation',resolved:'Connexion rétablie'})[r.kind],body:zone+' · dossier '+N.ref(r.incident_id),at:r.at,incident:r.incident_id,page:r.kind==='superviseur.signal'?'approvals':'missions'};}),
    ...s.all("SELECT e.id,e.body,e.at,e.case_key,u.name FROM noc_workspace_events e JOIN users u ON u.id=e.actor WHERE e.kind='note' AND e.at>? AND e.actor<>? AND e.actor IN (SELECT user_id FROM noc_field_accounts)",after,uid).map(r=>({id:r.id,kind:'report',title:'Note '+de(r.name),body:r.body,at:r.at,incident:String(r.case_key||'').replace(/^incident:/,''),page:'operations'}))];
  }
  return {now,items:items.sort((a,b)=>a.at-b.at).slice(-4)};
