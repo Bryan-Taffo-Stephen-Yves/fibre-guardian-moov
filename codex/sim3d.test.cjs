@@ -76,6 +76,28 @@ test('La panne choisie sur un poteau est retenue, et le rétablissement remet le
  }finally{server.close();}
 });
 
+test('« Remettre le quartier en état » lève la panne même quand le technicien est déjà en route',async()=>{
+ const server=createGuardianServer({db:':memory:',onError:()=>{}}),s=server.guardianStore,F=require('./sim-flow.js');
+ try{
+  const u=(await s.register({email:'chef@example.test',password:'chef-password-1234',name:'Chef'})).user;O.grant(s,'chef@example.test','admin');
+  N.operate(s,u.id,{type:'simulate',segment:'YOP-07',scenario:'fiber'});
+  const find=()=>N.overview(s,u.id).incidents.find(i=>i.segment_id==='YOP-07');
+  const act=b=>{const i=find();N.operate(s,u.id,{id:i.id,version:i.version,...b});};
+  act({type:'analyze'});act({type:'approve',note:'ok'});
+  const tech=N.overview(s,u.id).technicians.find(t=>!t.busy);act({type:'dispatch',technician:tech.id,safety:true});act({type:'advance'});
+  assert.equal(find().status,'en_route');
+  N.operate(s,u.id,{type:'simulate',segment:'YOP-07',scenario:'normal'});
+  assert.equal(find().status,'en_route','un simple retour des mesures ne coupe pas une mission en cours (la vérification reste le chemin normal)');
+  N.operate(s,u.id,{type:'simulate',segment:'YOP-07',scenario:'normal',close:true});
+  const o=N.overview(s,u.id),i=o.incidents.find(v=>v.segment_id==='YOP-07');
+  assert.equal(i.status,'closed','le bouton du simulateur clôt le dossier');
+  assert.equal(S.stateOf(o.segments.find(v=>v.id==='YOP-07'),o.incidents).tone,'ok','le poteau repasse au vert');
+  assert.ok(!o.technicians.find(t=>t.id===tech.id).busy,'le technicien est libéré');
+  const seg=o.segments.find(v=>v.id==='YOP-07'),msgs=F.messages(i,seg,o.technicians,Date.now()+60000).filter(m=>m.channel==='whatsapp').map(m=>m.to+':'+m.body).join('\n');
+  assert.match(msgs,/tech:Mission arrêtée/);assert.match(msgs,/team:Panne levée à Niangon : la mission de/);assert.doesNotMatch(msgs,/avant tout déplacement/);
+ }finally{server.close();}
+});
+
 test('Le simulateur est chargé dans le portail Moov et n’utilise que les couleurs de marque',()=>{
  const read=f=>fs.readFileSync(path.join(__dirname,f),'utf8');
  assert.match(read('bootstrap.js'),/'sim3d\.js'/);

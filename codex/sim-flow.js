@@ -112,7 +112,11 @@
       add(resolved, 'team', 'whatsapp', 'C’est rétabli ' + (kind === 'olt' ? 'dans toute la commune de ' + where.commune : 'à ' + where.area) + ' : toutes les box sont en ligne.');
       if (dispatch) add(resolved + 1, 'client', 'app', 'Comment s’est passée l’intervention ? Notez-la dans l’application.');
     }
-    if (closed) { add(closed, 'client', 'whatsapp', 'Tout est revenu à la normale dans votre quartier. Votre box est reconnectée, vous n’avez rien à faire.'); add(closed, 'team', 'whatsapp', 'Panne levée à ' + where.area + ' avant tout déplacement. Dossier clôturé.'); }
+    if (closed) {
+      add(closed, 'client', 'whatsapp', 'Tout est revenu à la normale dans votre quartier. Votre box est reconnectée, vous n’avez rien à faire.');
+      add(closed, 'team', 'whatsapp', dispatched ? 'Panne levée à ' + where.area + ' : la mission de ' + first + ' s’arrête. Dossier clôturé.' : 'Panne levée à ' + where.area + ' avant tout déplacement. Dossier clôturé.');
+      if (dispatched) add(closed, 'tech', 'whatsapp', 'Mission arrêtée : tout est revenu à la normale à ' + where.area + '. Vous pouvez rentrer.');
+    }
     return out.filter(m => m.at <= now).sort((a, b) => a.at - b.at);
   }
 
