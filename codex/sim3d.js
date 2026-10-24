@@ -93,7 +93,7 @@
   const linkState = (a, b) => [a, b].includes('down') ? 'cut' : [a, b].includes('warn') ? 'slow' : 'flow';
   const OPEN = ['reported', 'proposed', 'approved', 'rejected', 'dispatched', 'en_route', 'on_site', 'verifying'];
   const STEPS = [['reported', 'Repérée'], ['approved', 'Validée'], ['dispatched', 'Équipe affectée'], ['en_route', 'En route'], ['on_site', 'Sur place'], ['resolved', 'Réparée']];
-  const ORDER = {reported: 0, proposed: 0, rejected: 0, approved: 1, dispatched: 2, en_route: 3, on_site: 4, verifying: 4, resolved: 5};
+  const ORDER = {reported: 0, proposed: 0, rejected: 0, approved: 1, dispatched: 2, en_route: 3, on_site: 4, verifying: 4, resolved: 5, closed: 5};
   // État d'un poteau : panne en cours, débit en baisse, réparé récemment ou normal.
   function stateOf(seg, incidents) {
     const open = incidents.find(i => i.segment_id === seg.id && OPEN.includes(i.status));
@@ -256,7 +256,7 @@
     const seg = segments.find(s => s.id === selected);
     async function run(kind, segment, scenario) {
       setBusy(kind); setError('');
-      try { await call('/noc/action', 'POST', {type: 'simulate', segment, scenario}); await onChanged?.(); if (narrow) card.current?.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+      try { await call('/noc/action', 'POST', {type: 'simulate', segment, scenario, close: kind === 'restore'}); await onChanged?.(); if (narrow) card.current?.scrollIntoView({behavior: 'smooth', block: 'start'}); }
       catch (e) { setError(e.message || 'L’action n’a pas abouti.'); }
       finally { setBusy(''); }
     }
