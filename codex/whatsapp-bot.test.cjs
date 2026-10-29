@@ -73,6 +73,17 @@ test('Un jour normal : Awa écrit « internet est lent », Guardian lui répond 
   } finally { t.close(); }
 });
 
+test('« Bonjour » : Guardian salue et demande comment aider, sans annoncer la panne d’un coup', async () => {
+  const t = await setup();
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.post(message(AWA, 'Bonjour')); await t.until(1);
+    assert.equal(t.sent[0].message, WB.greeting('Awa Koné'));
+    assert.match(t.sent[0].message, /Bonjour Awa ! Je suis Guardian.*Comment puis-je vous aider \?/);
+    assert.doesNotMatch(t.sent[0].message, /coupé|Niangon/, 'la panne attend la question du client');
+  } finally { t.close(); }
+});
+
 test('Pendant une panne à Niangon : « je n’ai plus internet » → quartier, cause et étape, comme le serveur vocal', async () => {
   const t = await setup();
   try {

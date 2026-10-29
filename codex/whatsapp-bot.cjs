@@ -79,6 +79,11 @@ function forWhatsApp(answer, origin, question = '') {
   return HEAD + '\n\n' + text;
 }
 
+function greeting(name) {
+  const first = String(name || '').split(' ')[0];
+  return HEAD + '\n\nBonjour' + (first ? ' ' + first : '') + ' ! Je suis Guardian, l’assistant de Moov Africa Fibre. Comment puis-je vous aider ? Vous pouvez m’écrire par exemple : « internet est lent », « je n’ai plus internet » ou « où en est la réparation ? ».';
+}
+
 async function send(cfg, phone, text, fetchImpl = fetch) {
   const r = await fetchImpl(cfg.url + '/waInstance' + cfg.id + '/sendMessage/' + encodeURIComponent(cfg.token), {
     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -95,6 +100,12 @@ async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now(
   try { s.rate('wa:' + m.phone, 20, 600000); } catch { return {status: 'limited'}; }
   const user = who(s, cfg, m.phone);
   if (!user) { await send(cfg, m.phone, UNKNOWN, fetchImpl); return {status: 'unknown'}; }
+  // « Bonjour » seul : Guardian salue et demande ce qui ne va pas, sans tout déballer d'un coup.
+  if (journey.intent(m.text) === 'salut' && m.text.length <= 40) {
+    const reply = greeting(user.name);
+    await send(cfg, m.phone, reply, fetchImpl);
+    return {status: 'answered', user: user.id, reply};
+  }
   if (!journey.get(s, user.id)) journey.put(s, user.id, journey.seed());
   const state = await chat(user, {type: 'chat', text: m.text, version: journey.get(s, user.id).version});
   const answer = state.messages.filter(x => x.role === 'assistant').at(-1);
@@ -103,4 +114,4 @@ async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now(
   return {status: 'answered', user: user.id, reply};
 }
 
-module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, send, handle, links, UNKNOWN, FRESH};
+module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, links, UNKNOWN, FRESH};
