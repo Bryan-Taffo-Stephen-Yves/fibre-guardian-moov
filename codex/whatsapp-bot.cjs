@@ -5,6 +5,7 @@
 //   GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN : l'instance Green API (page « My instances ») ;
 //   GREENAPI_WEBHOOK_TOKEN : secret que Green API renvoie avec chaque message (champ « webhookUrlToken ») ;
 //   GREENAPI_URL : adresse de l'API si Green API en donne une autre que https://api.green-api.com.
+//   GROQ_API_KEY (facultatif) : Guardian comprend aussi les notes vocales (transcription Whisper chez Groq, gratuite, sans carte).
 // Qui écrit ? Le numéro est cherché dans WHATSAPP_CLIENTS (« 2250701020304=awa.kone@demo.fibre-guardian.ci »),
 // sinon dans WHATSAPP_NUMEROS (« Yopougon=2250701020304 ») : c'est alors le premier client inscrit dans ce quartier.
 // Un numéro inconnu reçoit une réponse polie et rien d'autre : aucun compte n'est lu ni créé.
@@ -30,6 +31,7 @@ function config(env = process.env) {
     url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''),
     secret: String(env.GREENAPI_WEBHOOK_TOKEN || '').trim().replace(/^(Bearer|Basic)\s+/i, ''),
     clients: links(env.WHATSAPP_CLIENTS), numbers: W.numbers(env.WHATSAPP_NUMEROS),
+    groq: /^\S{20,}$/.test(env.GROQ_API_KEY || '') ? {key: env.GROQ_API_KEY.trim(), model: env.GROQ_STT_MODEL || 'whisper-large-v3-turbo'} : null,
     origin: String(env.GUARDIAN_ORIGIN || '').replace(/\/$/, '')
   };
 }
@@ -56,6 +58,11 @@ function incoming(d) {
   const reply = m[m.typeMessage] || m.buttonsResponseMessage || m.interactiveButtonsResponse || m.templateButtonReplyMessage;
   const button = /button|interactive/i.test(String(m.typeMessage)) && reply ? String(reply.selectedButtonId || reply.selectedId || reply.selectedIndex || '') : '';
   if (button) return {...base, button: button.slice(0, 40), text: String(reply.selectedButtonText || reply.selectedDisplayText || '').slice(0, 100)};
+  // Note vocale : Green API donne l'adresse du fichier, qu'on télécharge seulement pour la transcrire.
+  if (m.typeMessage === 'audioMessage') {
+    const url = String(m.fileMessageData?.downloadUrl || '');
+    return /^https:\/\//.test(url) ? {...base, audio: {url, mime: String(m.fileMessageData?.mimeType || 'audio/ogg').split(';')[0]}} : null;
+  }
   const text = m.typeMessage === 'textMessage' ? m.textMessageData?.textMessage : m.typeMessage === 'extendedTextMessage' ? m.extendedTextMessageData?.text : null;
   if (typeof text !== 'string' || !text.trim()) return null;
   return {...base, text: text.trim().slice(0, 1000)};
@@ -136,6 +143,23 @@ async function answer(s, cfg, m, text, buttons, fetchImpl) {
   return {status: 'answered', reply: text, buttons};
 }
 
+const DEAF = 'Je ne peux pas encore écouter les notes vocales. Écrivez-moi en quelques mots ce qui se passe, ou touchez un bouton.';
+const UNHEARD = 'Je n’ai pas bien compris votre note vocale. Pouvez-vous la refaire dans un endroit calme, ou m’écrire en quelques mots ?';
+const MAX_AUDIO = 5 * 1024 * 1024; // environ 5 minutes de note vocale
+// Note vocale → texte (Whisper chez Groq). Le son n'est gardé que le temps de la transcription, jamais enregistré.
+async function transcribe(cfg, audio, fetchImpl) {
+  const file = await fetchImpl(audio.url, {signal: AbortSignal.timeout(15000)});
+  if (!file.ok) throw new Error('Note vocale introuvable (' + file.status + ').');
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (!bytes.length || bytes.length > MAX_AUDIO) throw new Error('Note vocale vide ou trop longue.');
+  const form = new FormData();
+  form.append('file', new Blob([bytes], {type: audio.mime}), 'note.' + (audio.mime.split('/')[1] || 'ogg'));
+  form.append('model', cfg.groq.model); form.append('language', 'fr'); form.append('response_format', 'json');
+  const r = await fetchImpl('https://api.groq.com/openai/v1/audio/transcriptions', {method: 'POST', headers: {Authorization: 'Bearer ' + cfg.groq.key}, body: form, signal: AbortSignal.timeout(20000)});
+  if (!r.ok) throw new Error('Transcription refusée (' + r.status + ').');
+  return String((await r.json()).text || '').trim().slice(0, 1000);
+}
+
 // Un message reçu : Guardian répond une seule fois, avec le même chemin que l'application (chat).
 async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now()} = {}) {
   const m = incoming(payload);
@@ -144,13 +168,22 @@ async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now(
   try { s.rate('wa:' + m.phone, 20, 600000); } catch { return {status: 'limited'}; }
   const user = who(s, cfg, m.phone);
   if (!user) { await send(cfg, m.phone, UNKNOWN, fetchImpl); return {status: 'unknown'}; }
-  const picked = choice(s, m), text = picked ? CHOICES[picked][1] : m.text;
+  // Note vocale : Guardian répète ce qu'il a compris, puis répond comme à un message écrit.
+  let heard = '';
+  if (m.audio) {
+    if (!cfg.groq) return answer(s, cfg, m, DEAF, MENUS.accueil, fetchImpl);
+    try { heard = await transcribe(cfg, m.audio, fetchImpl); } catch { heard = ''; }
+    if (heard.length < 2) return answer(s, cfg, m, UNHEARD, MENUS.accueil, fetchImpl);
+    m.text = heard;
+  }
+  const picked = !heard && choice(s, m), text = picked ? CHOICES[picked][1] : m.text;
+  const echo = heard ? 'Vous avez dit : « ' + heard + ' »\n\n' : '';
   // « Bonjour » seul : Guardian salue et propose les choix, sans tout déballer d'un coup.
-  if (!picked && journey.intent(text) === 'salut' && text.length <= 40) return answer(s, cfg, m, greeting(user.name, text), MENUS.accueil, fetchImpl);
+  if (!picked && journey.intent(text) === 'salut' && text.length <= 40) return answer(s, cfg, m, echo + greeting(user.name, text), MENUS.accueil, fetchImpl);
   if (!journey.get(s, user.id)) journey.put(s, user.id, journey.seed());
   const state = await chat(user, {type: 'chat', text, version: journey.get(s, user.id).version});
   const said = state.messages.filter(x => x.role === 'assistant').at(-1);
-  return answer(s, cfg, m, forWhatsApp(said, cfg.origin), journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
+  return answer(s, cfg, m, echo + forWhatsApp(said, cfg.origin), journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
 }
 
-module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};
+module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, transcribe, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};

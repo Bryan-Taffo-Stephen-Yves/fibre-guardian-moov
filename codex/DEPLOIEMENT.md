@@ -108,6 +108,8 @@ Green API pilote un vrai numéro WhatsApp : utilisez **une puce à part**, jamai
 4. Sur Render (onglet **Environment**), ajoutez : `GREENAPI_ID_INSTANCE` (idInstance), `GREENAPI_API_TOKEN` (apiTokenInstance), `GREENAPI_WEBHOOK_TOKEN` (le même secret qu’à l’étape 3), et dans `WHATSAPP_NUMEROS` le numéro de chaque client qui écrira, avec son quartier (`Yopougon=2250701020304`). Pour relier un numéro à un compte précis : `WHATSAPP_CLIENTS` = `2250701020304=awa.kone@demo.fibre-guardian.ci`.
 5. Écrivez « Bonjour » au numéro de la puce depuis le téléphone du client : Guardian répond en quelques secondes (une minute si le site dormait).
 
+**Notes vocales (facultatif)** : créez un compte gratuit sur **console.groq.com** (sans carte), puis une clé API, et ajoutez-la dans Render sous `GROQ_API_KEY`. Guardian transcrit alors chaque note vocale, répète ce qu’il a compris (« Vous avez dit : … ») et répond. Le son n’est jamais enregistré. Sans cette clé, Guardian demande gentiment d’écrire.
+
 Un numéro qui n’est pas relié reçoit une réponse polie, sans aucune donnée. Un message resté plus de 10 minutes en attente (site endormi) ne reçoit pas de réponse. Si Twilio est aussi réglé, les alertes de panne partent par Twilio ; Guardian répond toujours par Green API.
 
 ## Étape 7 : l'application Android (fichier APK)

@@ -15,9 +15,11 @@ async function setup(env = ENV, {refuseButtons = false} = {}) {
   const chef = (await s.register({email: 'chef@example.test', password: 'chef-password-1234', name: 'Chef'})).user; O.grant(s, 'chef@example.test', 'admin');
   const awa = (await s.register({email: 'awa@example.test', password: 'awa-password-1234', name: 'Awa Koné'})).user; N.join(s, awa.id, {segment: 'YOP-07', consent: true});
   const later = (await s.register({email: 'voisin@example.test', password: 'voisin-password-1234', name: 'Voisin'})).user; N.join(s, later.id, {segment: 'YOP-07', consent: true});
-  const sent = [], real = globalThis.fetch;
+  const sent = [], heard = [], transcript = {value: ''}, real = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
     if (String(url).startsWith(base)) return real(url, init);
+    if (String(url).startsWith('https://media.example.test/')) return {ok: true, status: 200, arrayBuffer: async () => new Uint8Array([79, 103, 103, 83]).buffer};
+    if (String(url).startsWith('https://api.groq.com/')) { heard.push({auth: init.headers.Authorization, model: init.body.get('model'), language: init.body.get('language'), file: init.body.get('file')}); return {ok: true, status: 200, json: async () => ({text: transcript.value})}; }
     const d = JSON.parse(init.body), method = String(url).split('/')[4];
     if (method === 'sendInteractiveButtonsReply' && refuseButtons) return {ok: false, status: 400, json: async () => ({})};
     sent.push({url: String(url), method, ...d, message: d.message ?? d.header + '\n\n' + d.body, labels: (d.buttons || []).map(b => b.buttonText)}); return {ok: true, status: 200, json: async () => ({idMessage: 'OUT'})};
@@ -25,7 +27,7 @@ async function setup(env = ENV, {refuseButtons = false} = {}) {
   const post = (d, token = 'Bearer ' + SECRET) => real(base + '/api/whatsapp/entrant', {method: 'POST', headers: {'Content-Type': 'application/json', ...(token ? {Authorization: token} : {})}, body: JSON.stringify(d)});
   const until = async n => { for (let i = 0; i < 100 && sent.length < n; i++) await new Promise(r => setTimeout(r, 30)); };
   const close = () => { globalThis.fetch = real; server.close(); };
-  return {server, s, chef, awa, later, sent, post, until, close};
+  return {server, s, chef, awa, later, sent, heard, transcript, post, until, close};
 }
 
 test('Réglages : Green API seulement avec l’instance et son jeton ; la porte exige le secret', () => {
@@ -118,6 +120,31 @@ test('Bouton touché, ou « 2 » tapé : Guardian reçoit la phrase complète ; 
     assert.equal(old.sent[0].method, 'sendMessage');
     assert.match(old.sent[0].message, /1\. Internet est lent\n2\. Je n’ai plus internet\n3\. Parler à un conseiller\n\nRépondez 1, 2 ou 3\.$/);
   } finally { old.close(); }
+});
+
+test('Note vocale : Guardian la transcrit (Groq), répète ce qu’il a compris et répond ; sans clé Groq, il demande d’écrire', async () => {
+  const voice = (phone, url = 'https://media.example.test/note.ogg') => ({...message(phone, ''), messageData: {typeMessage: 'audioMessage', fileMessageData: {downloadUrl: url, mimeType: 'audio/ogg; codecs=opus'}}});
+  const deaf = await setup();
+  try {
+    await deaf.post(voice(AWA)); await deaf.until(1);
+    assert.match(deaf.sent[0].message, /Je ne peux pas encore écouter les notes vocales/); assert.equal(deaf.heard.length, 0);
+  } finally { deaf.close(); }
+  const t = await setup({...ENV, GROQ_API_KEY: 'gsk_cle-de-test-groq-1234567890'});
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    t.transcript.value = 'Bonsoir, depuis ce matin je n’ai plus internet à la maison';
+    await t.post(voice(AWA)); await t.until(1);
+    assert.equal(t.heard.length, 1);
+    assert.equal(t.heard[0].auth, 'Bearer gsk_cle-de-test-groq-1234567890'); assert.equal(t.heard[0].model, 'whisper-large-v3-turbo'); assert.equal(t.heard[0].language, 'fr');
+    assert.equal(t.heard[0].file.type, 'audio/ogg');
+    assert.match(t.sent[0].message, /Vous avez dit : « Bonsoir, depuis ce matin je n’ai plus internet à la maison »\n\nNous savons déjà/);
+    assert.match(t.sent[0].message, /Niangon/);
+    t.transcript.value = '';
+    await t.post(voice(AWA)); await t.until(2);
+    assert.match(t.sent[1].message, /pas bien compris votre note vocale/);
+    await t.post(voice(AWA, 'http://media.example.test/note.ogg')); await new Promise(r => setTimeout(r, 300));
+    assert.equal(t.sent.length, 2, 'une adresse de fichier non chiffrée est ignorée');
+  } finally { t.close(); }
 });
 
 test('Numéro inconnu : réponse polie, aucun compte lu ; même message reçu deux fois ou trop vieux : pas de seconde réponse', async () => {
