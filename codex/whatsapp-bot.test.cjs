@@ -8,7 +8,7 @@ const AWA = '2250701020304', OTHER = '2250799999999', SECRET = 'secret-green-api
 const ENV = {GREENAPI_ID_INSTANCE: '7103000001', GREENAPI_API_TOKEN: 'jeton-instance-de-test', GREENAPI_WEBHOOK_TOKEN: SECRET, WHATSAPP_NUMEROS: 'Yopougon=' + AWA};
 const message = (phone, text, extra = {}) => ({typeWebhook: 'incomingMessageReceived', idMessage: 'MSG' + Math.random().toString(36).slice(2), timestamp: Math.floor(Date.now() / 1000), senderData: {chatId: phone + '@c.us', senderName: 'Client'}, messageData: {typeMessage: 'textMessage', textMessageData: {textMessage: text}}, ...extra});
 
-async function setup(env = ENV) {
+async function setup(env = ENV, {refuseButtons = false} = {}) {
   const server = createGuardianServer({db: ':memory:', env, onError: () => {}}), s = server.guardianStore;
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + server.address().port;
@@ -18,7 +18,9 @@ async function setup(env = ENV) {
   const sent = [], real = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
     if (String(url).startsWith(base)) return real(url, init);
-    sent.push({url: String(url), ...JSON.parse(init.body)}); return {ok: true, status: 200, json: async () => ({idMessage: 'OUT'})};
+    const d = JSON.parse(init.body), method = String(url).split('/')[4];
+    if (method === 'sendInteractiveButtonsReply' && refuseButtons) return {ok: false, status: 400, json: async () => ({})};
+    sent.push({url: String(url), method, ...d, message: d.message ?? d.header + '\n\n' + d.body, labels: (d.buttons || []).map(b => b.buttonText)}); return {ok: true, status: 200, json: async () => ({idMessage: 'OUT'})};
   };
   const post = (d, token = 'Bearer ' + SECRET) => real(base + '/api/whatsapp/entrant', {method: 'POST', headers: {'Content-Type': 'application/json', ...(token ? {Authorization: token} : {})}, body: JSON.stringify(d)});
   const until = async n => { for (let i = 0; i < 100 && sent.length < n; i++) await new Promise(r => setTimeout(r, 30)); };
@@ -62,7 +64,8 @@ test('Un jour normal : Awa écrit « internet est lent », Guardian lui répond 
     assert.equal((await t.post(message(AWA, 'Bonjour, internet est lent chez moi'))).status, 200);
     await t.until(1);
     assert.equal(t.sent.length, 1);
-    assert.equal(t.sent[0].url, 'https://api.green-api.com/waInstance7103000001/sendMessage/jeton-instance-de-test');
+    assert.equal(t.sent[0].url, 'https://api.green-api.com/waInstance7103000001/sendInteractiveButtonsReply/jeton-instance-de-test');
+    assert.deepEqual(t.sent[0].labels, ['Mon Wi-Fi capte mal', 'Je n’ai plus internet', 'Parler à un conseiller'], 'des boutons pour la suite, comme chez Wave');
     assert.equal(t.sent[0].chatId, AWA + '@c.us');
     assert.match(t.sent[0].message, /^Guardian · Moov Africa Fibre\n\n/);
     assert.match(t.sent[0].message, /Mbps/, 'Guardian donne la mesure réelle de la ligne');
@@ -78,8 +81,9 @@ test('« Bonjour » : Guardian salue et demande comment aider, sans annoncer la 
   try {
     N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
     await t.post(message(AWA, 'Bonjour')); await t.until(1);
-    assert.equal(t.sent[0].message, WB.greeting('Awa Koné'));
-    assert.match(t.sent[0].message, /Bonjour Awa ! Je suis Guardian.*Comment puis-je vous aider \?/);
+    assert.equal(t.sent[0].message, WB.HEAD + '\n\n' + WB.greeting('Awa Koné'));
+    assert.deepEqual(t.sent[0].labels, ['Internet est lent', 'Je n’ai plus internet', 'Parler à un conseiller']);
+    assert.match(t.sent[0].message, /Bonjour Awa ! Je suis Guardian.*Que se passe-t-il \?/);
     assert.doesNotMatch(t.sent[0].message, /coupé|Niangon/, 'la panne attend la question du client');
   } finally { t.close(); }
 });
@@ -90,16 +94,37 @@ test('Pendant une panne à Niangon : « je n’ai plus internet » → quartier,
     N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
     await t.post(message(AWA, 'Je n’ai plus internet depuis ce matin')); await t.until(1);
     assert.match(t.sent[0].message, /Niangon/); assert.match(t.sent[0].message, /coup/);
+    assert.deepEqual(t.sent[0].labels, ['Où en est la réparation', 'Parler à un conseiller', 'Merci'], 'pendant la panne, les boutons suivent la réparation');
     await t.post(message(AWA, 'merci')); await t.until(2);
-    assert.match(t.sent[1].message, /Avec plaisir/);
+    assert.match(t.sent[1].message, /Avec plaisir/); assert.equal(t.sent[1].method, 'sendMessage', 'après « merci », plus de boutons');
   } finally { t.close(); }
+});
+
+test('Bouton touché, ou « 2 » tapé : Guardian reçoit la phrase complète ; boutons refusés : choix numérotés en texte', async () => {
+  const t = await setup(ENV);
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.post(message(AWA, 'Bonjour')); await t.until(1);
+    await t.post({...message(AWA, ''), messageData: {typeMessage: 'buttonsResponseMessage', buttonsResponseMessage: {stanzaId: 'X', selectedButtonId: 'coupure', selectedButtonText: 'Je n’ai plus internet'}}}); await t.until(2);
+    assert.match(t.sent[1].message, /Niangon/, 'le bouton « Je n’ai plus internet » donne l’état du quartier');
+    await t.post(message(AWA, '1')); await t.until(3);
+    assert.match(t.sent[2].message, /technicien|équipe|intervention/i, '« 1 » = premier bouton du dernier menu (« Où en est la réparation »)');
+    const app = require('./journey-store.cjs').get(t.s, t.awa.id).messages.filter(m => m.role === 'user').map(m => m.text);
+    assert.deepEqual(app.slice(-2), ['Je n’ai plus internet', 'Où en est la réparation ?']);
+  } finally { t.close(); }
+  const old = await setup(ENV, {refuseButtons: true});
+  try {
+    await old.post(message(AWA, 'Bonjour')); await old.until(1);
+    assert.equal(old.sent[0].method, 'sendMessage');
+    assert.match(old.sent[0].message, /1\. Internet est lent\n2\. Je n’ai plus internet\n3\. Parler à un conseiller\n\nRépondez 1, 2 ou 3\.$/);
+  } finally { old.close(); }
 });
 
 test('Numéro inconnu : réponse polie, aucun compte lu ; même message reçu deux fois ou trop vieux : pas de seconde réponse', async () => {
   const t = await setup();
   try {
     await t.post(message(OTHER, 'Bonjour')); await t.until(1);
-    assert.equal(t.sent[0].message, WB.UNKNOWN); assert.equal(t.sent[0].chatId, OTHER + '@c.us');
+    assert.equal(t.sent[0].message, WB.HEAD + '\n\n' + WB.UNKNOWN); assert.equal(t.sent[0].chatId, OTHER + '@c.us');
     const twice = message(AWA, 'Bonjour');
     await t.post(twice); await t.post(twice); await t.until(3); await new Promise(r => setTimeout(r, 200));
     assert.equal(t.sent.length, 2, 'Green API qui renvoie le même message ne crée pas deux réponses');
