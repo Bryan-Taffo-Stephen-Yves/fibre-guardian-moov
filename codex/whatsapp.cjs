@@ -2,6 +2,7 @@
 // Vrais messages WhatsApp pour la démo. Deux services possibles, gratuits et sans carte bancaire :
 //   Twilio (bac à sable WhatsApp) : TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, et TWILIO_WHATSAPP_FROM si le numéro change
 //   Meta (numéro de test)          : WHATSAPP_TOKEN, WHATSAPP_PHONE_ID
+//   Green API (votre propre puce)  : GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN (Guardian y répond aussi : whatsapp-bot.cjs)
 // Dans les deux cas : WHATSAPP_NUMEROS = « Grand-Bassam=2250701020304, equipe=2250705060708, technicien=2250709101112 ».
 // Ces réglages vivent dans les variables de l'hébergeur ou dans codex/.env, jamais dans git.
 // Sans réglage, rien ne part : les messages restent affichés dans le téléphone du simulateur.
@@ -43,6 +44,17 @@ const PROVIDERS = {
       throw failure(e.code, r.status);
     }
   },
+  greenapi: {
+    gap: 1000,
+    async send(cfg, phone, text, fetchImpl) {
+      const r = await fetchImpl(cfg.url + '/waInstance' + cfg.id + '/sendMessage/' + encodeURIComponent(cfg.token), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({chatId: phone + '@c.us', message: text}), signal: AbortSignal.timeout(10000)
+      });
+      if (r.ok) return;
+      throw failure(null, r.status);
+    }
+  },
   meta: {
     gap: 0,
     async send(cfg, phone, text, fetchImpl) {
@@ -61,6 +73,7 @@ const failure = (code, status) => Object.assign(new Error(HINTS[code] || 'WhatsA
 function config(env = process.env) {
   const list = numbers(env.WHATSAPP_NUMEROS), origin = String(env.GUARDIAN_ORIGIN || '').replace(/\/$/, '');
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) return {provider: 'twilio', sid: env.TWILIO_ACCOUNT_SID.trim(), token: env.TWILIO_AUTH_TOKEN.trim(), from: env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', list, origin};
+  if (env.GREENAPI_ID_INSTANCE && env.GREENAPI_API_TOKEN) return {provider: 'greenapi', id: String(env.GREENAPI_ID_INSTANCE).replace(/\D/g, ''), token: String(env.GREENAPI_API_TOKEN).trim(), url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''), list, origin};
   if (env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_ID) return {provider: 'meta', token: env.WHATSAPP_TOKEN.trim(), phoneId: String(env.WHATSAPP_PHONE_ID).replace(/\D/g, ''), version: env.WHATSAPP_API_VERSION || 'v23.0', list, origin};
   return null;
 }
