@@ -22,7 +22,9 @@ if (require.main === module) {
     : Promise.resolve();
   console.log(require('./guardian-ai.cjs').available() ? 'Guardian : réponses rédigées avec Claude (clé ANTHROPIC_API_KEY trouvée).' : 'Guardian : réponses du moteur à règles (pas de clé ANTHROPIC_API_KEY).');
   const wa = require('./whatsapp.cjs').config(env);
-  console.log(wa ? 'WhatsApp : vrais messages par ' + (wa.provider === 'twilio' ? 'Twilio' : 'Meta') + ' vers ' + wa.list.length + ' téléphone(s).' : 'WhatsApp : messages affichés dans le Simulateur seulement (pas de réglage TWILIO_* ni WHATSAPP_*).');
+  console.log(wa ? 'WhatsApp : vrais messages par ' + ({twilio: 'Twilio', greenapi: 'Green API', meta: 'Meta'})[wa.provider] + ' vers ' + wa.list.length + ' téléphone(s).' : 'WhatsApp : messages affichés dans le Simulateur seulement (pas de réglage TWILIO_* ni WHATSAPP_*).');
+  const bot = require('./whatsapp-bot.cjs').config(env);
+  if (bot) console.log(bot.secret.length >= 16 ? 'Guardian sur WhatsApp : branché (Green API' + (bot.groq ? ', notes vocales comprises' : '') + '). Adresse à donner à Green API : ' + (env.GUARDIAN_ORIGIN || 'http://127.0.0.1:' + port) + '/api/whatsapp/entrant' : 'Guardian sur WhatsApp : fermé, GREENAPI_WEBHOOK_TOKEN manque (16 caractères ou plus).');
   const prises = require('./branchements.cjs').config(env), ouvertes = ['reseau', 'clients', 'ussd', 'sms'].filter(p => prises[p]);
   console.log('Réseau Moov : ' + (ouvertes.length ? 'prises branchées : ' + ouvertes.join(', ') + '.' : 'simulateur (aucune prise branchée, voir BRANCHEMENTS.md).'));
   pilot.on('error', e => { console.error(e.message); process.exitCode = 1; });

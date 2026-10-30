@@ -96,6 +96,22 @@ Le compte gratuit envoie environ 100 messages, un toutes les 3 secondes : le cli
 
 Comme pour la clé Claude : ces réglages ne se collent jamais dans une discussion ni dans GitHub. En local, ils peuvent aller dans `codex/.env`.
 
+## Guardian répond sur WhatsApp (facultatif, Green API)
+
+Le client écrit au numéro WhatsApp de la démo (« internet est lent », « je n’ai plus internet », « où en est la réparation ? », « merci »…) et Guardian lui répond comme dans l’application : même moteur, mêmes mesures, même état du quartier, et la conversation apparaît aussi dans l’application du client. Les alertes de panne partent par le même numéro.
+
+Green API pilote un vrai numéro WhatsApp : utilisez **une puce à part**, jamais votre numéro personnel (WhatsApp peut bloquer un numéro relié à un outil non officiel). Formule « Developer » gratuite, sans carte : 3 conversations au plus.
+
+1. Créez un compte sur **green-api.com**, puis une instance « Developer ».
+2. Sur le téléphone de la puce à part, WhatsApp > Appareils connectés > Connecter un appareil, puis scannez le QR code de l’instance.
+3. Dans les réglages de l’instance : **URL du webhook** = `https://<votre-adresse>/api/whatsapp/entrant`, **webhookUrlToken** = un secret de votre choix (16 caractères ou plus), et activez la réception des messages entrants (« incomingWebhook »).
+4. Sur Render (onglet **Environment**), ajoutez : `GREENAPI_ID_INSTANCE` (idInstance), `GREENAPI_API_TOKEN` (apiTokenInstance), `GREENAPI_WEBHOOK_TOKEN` (le même secret qu’à l’étape 3), et dans `WHATSAPP_NUMEROS` le numéro de chaque client qui écrira, avec son quartier (`Yopougon=2250701020304`). Pour relier un numéro à un compte précis : `WHATSAPP_CLIENTS` = `2250701020304=awa.kone@demo.fibre-guardian.ci`.
+5. Écrivez « Bonjour » au numéro de la puce depuis le téléphone du client : Guardian répond en quelques secondes (une minute si le site dormait).
+
+**Notes vocales (facultatif)** : créez un compte gratuit sur **console.groq.com** (sans carte), puis une clé API, et ajoutez-la dans Render sous `GROQ_API_KEY`. Guardian transcrit alors chaque note vocale, répète ce qu’il a compris (« Vous avez dit : … ») et répond. Le son n’est jamais enregistré. Sans cette clé, Guardian demande gentiment d’écrire.
+
+Un numéro qui n’est pas relié reçoit une réponse polie, sans aucune donnée. Un message resté plus de 10 minutes en attente (site endormi) ne reçoit pas de réponse. Si Twilio est aussi réglé, les alertes de panne partent par Twilio ; Guardian répond toujours par Green API.
+
 ## Étape 7 : l'application Android (fichier APK)
 
 Le concours demande une application qui fonctionne sur Android. Fibre Guardian en devient une grâce à PWABuilder, un service gratuit de Microsoft qui emballe le site en vraie application Android. Il faut que le site soit déjà en ligne (étapes 1 à 6).

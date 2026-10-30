@@ -24,6 +24,8 @@ function createGuardianServer(options={}){
  const WA=require('./whatsapp.cjs'),whatsapp=WA.start(store,{env:options.env||process.env,onError:e=>options.onError?.(e)});
  // Prises vers le vrai réseau Moov : chacune reste fermée tant que sa clé n'est pas réglée (BRANCHEMENTS.md).
  const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
+ // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
+ const WB=require('./whatsapp-bot.cjs'),bot=WB.config(options.env||process.env);WB.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -39,6 +41,16 @@ function createGuardianServer(options={}){
  function auth(req){return store.authenticate((req.headers.cookie||'').match(/(?:^|;\s*)guardian=([^;]+)/)?.[1]);}
  function participant(req){const secret=(req.headers.authorization||'').replace(/^Bearer /,'');insist(secret&&secret.length<100,'Accès participant requis.',401);const p=store.get('SELECT p.*,l.home,l.closed,l.expires FROM participants p JOIN labs l ON l.id=p.lab WHERE p.secret=?',hash(secret));insist(p&&!p.revoked&&!p.closed&&p.expires>Date.now(),'Session de test expirée ou révoquée.',401);return p;}
  function snapshot(user,hid){const home=store.home(user.id,hid),samples=store.all('SELECT * FROM samples WHERE home=? ORDER BY at DESC LIMIT 250',hid).map(s=>({...s,metrics:JSON.parse(s.metrics),diagnosis:diagnose(JSON.parse(s.metrics),s.source)}));return {home,samples,labs:store.all('SELECT id,name,code,created,expires,closed FROM labs WHERE home=? ORDER BY created DESC LIMIT 20',hid).map(l=>home.role==='owner'?l:{...l,code:null}),participants:store.all('SELECT p.id,p.lab,p.name,p.joined,p.last_seen,p.revoked,p.fault,p.fault_until FROM participants p JOIN labs l ON l.id=p.lab WHERE l.home=? ORDER BY p.joined DESC LIMIT 100',hid),records:store.all('SELECT id,name,created FROM records WHERE home=? ORDER BY created DESC',hid),devices:store.all('SELECT * FROM devices WHERE home=? ORDER BY seen DESC',hid),notifications:store.all('SELECT * FROM notifications WHERE home=? ORDER BY at DESC',hid),tickets:store.all('SELECT * FROM tickets WHERE home=? ORDER BY created DESC',hid),audit:store.all('SELECT at,action,detail FROM audit WHERE home=? ORDER BY at DESC LIMIT 100',hid),collector:store.get('SELECT last_at,sequence,capabilities FROM collectors WHERE home=?',hid)||null,members:store.all('SELECT u.id,u.name,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.home=?',hid)};}
+ // Une action du parcours client (dont une question à Guardian) : même chemin pour l'application et pour WhatsApp.
+ async function journeyAction(user,d){const started=Date.now(),log=message=>options.onError?options.onError(new Error(message)):console.warn(message);delete d.meaning;
+     // Nouchi, dioula : sens en français reconnu sur le serveur (packs de langue, puis Claude s'il est configuré).
+     if(d.type==='chat'&&typeof d.text==='string'){const local=langues.detect(d.text);if(local.lang!=='fr'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});d.meaning=ai&&ai.lang!=='fr'?ai:local;}
+      // Français familier que les règles ne reconnaissent pas (« la box fait n'importe quoi », « YouTube refuse de s'ouvrir ») : Claude en donne le sens, qui guide la réponse.
+      else if(journey.intent(d.text)==='inconnu'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});if(ai&&journey.intent(ai.french)!=='inconnu')d.meaning=ai.lang==='fr'?{lang:'fr',french:ai.french}:ai;}}
+     const state=journey.act(store,user.id,d);
+     // Guardian : le moteur à règles a répondu ; Claude reformule si la clé est configurée, sinon rien ne change.
+     if(d.type==='chat'&&guardianAi.available()){const [question,answer]=state.messages.slice(-2);const text=await guardianAi.rephrase({name:user.name,question:question?.text,draft:answer?.text,facts:answer?.facts,proof:answer?.proof,action:answer?.action,snapshot:state,history:state.messages.slice(0,-2),meaning:question?.lang?{lang:question.lang,french:question.meaning}:null},{store,uid:user.id,log,timeoutMs:Math.max(3000,Math.min(8000,10500-(Date.now()-started)))});if(text)return journey.refine(store,user.id,answer.id,text);}
+     return state;}
  const listener=async(req,res)=>{
   res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');if(secure)res.setHeader('Strict-Transport-Security','max-age=31536000');
   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
@@ -50,6 +62,9 @@ function createGuardianServer(options={}){
     if(mutate&&req.headers.origin)insist(req.headers.origin===origin,'Origine refusée.',403);
     if(mutate&&req.headers['sec-fetch-site'])insist(['same-origin','none'].includes(req.headers['sec-fetch-site']),'Site refusé.',403);
     if(route.startsWith('/api/branchements')&&await B.route(store,branchements,req,res,route,{json,body,user:()=>auth(req)}))return;
+    // Message WhatsApp reçu par Green API : réponse immédiate, puis Guardian répond au client en arrière-plan.
+    if(route==='/api/whatsapp/entrant'&&method==='POST'){insist(WB.allowed(bot,req.headers.authorization),'Accès refusé.',401);const d=await body(req,65536);json(res,{ok:true});
+     WB.handle(store,bot,d,{chat:journeyAction}).catch(e=>options.onError?options.onError(e):console.warn(e.message));return;}
     if(route==='/api/health'&&method==='GET')return json(res,{ok:true,storage:'sqlite',adminSecure:secure||local,origin,version:1,assistant:guardianAi.available()?'claude':'regles'});
     if(route==='/api/session'&&method==='GET'){const u=auth(req);return json(res,{user:u?{...u,role:workspace.sessionRole(store,u.id)}:null});}
     if(route==='/api/journey/otp/request'&&method==='POST')return json(res,await journey.requestOtp(store,await body(req,4096),ip(req)));
@@ -127,15 +142,7 @@ function createGuardianServer(options={}){
     if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}
     if(route==='/api/journey/start'&&method==='POST'){if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return json(res,{state:journey.snapshotFor(store,user.id,journey.get(store,user.id))});}
-    if(route==='/api/journey/action'&&method==='POST'){const d=await body(req,600000),started=Date.now(),log=message=>options.onError?options.onError(new Error(message)):console.warn(message);delete d.meaning;
-     // Nouchi, dioula : sens en français reconnu sur le serveur (packs de langue, puis Claude s'il est configuré).
-     if(d.type==='chat'&&typeof d.text==='string'){const local=langues.detect(d.text);if(local.lang!=='fr'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});d.meaning=ai&&ai.lang!=='fr'?ai:local;}
-      // Français familier que les règles ne reconnaissent pas (« la box fait n'importe quoi », « YouTube refuse de s'ouvrir ») : Claude en donne le sens, qui guide la réponse.
-      else if(journey.intent(d.text)==='inconnu'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});if(ai&&journey.intent(ai.french)!=='inconnu')d.meaning=ai.lang==='fr'?{lang:'fr',french:ai.french}:ai;}}
-     const state=journey.act(store,user.id,d);
-     // Guardian : le moteur à règles a répondu ; Claude reformule si la clé est configurée, sinon rien ne change.
-     if(d.type==='chat'&&guardianAi.available()){const [question,answer]=state.messages.slice(-2);const text=await guardianAi.rephrase({name:user.name,question:question?.text,draft:answer?.text,facts:answer?.facts,proof:answer?.proof,action:answer?.action,snapshot:state,history:state.messages.slice(0,-2),meaning:question?.lang?{lang:question.lang,french:question.meaning}:null},{store,uid:user.id,log,timeoutMs:Math.max(3000,Math.min(8000,10500-(Date.now()-started)))});if(text)return json(res,{state:journey.refine(store,user.id,answer.id,text)});}
-     return json(res,{state});}
+    if(route==='/api/journey/action'&&method==='POST')return json(res,{state:await journeyAction(user,await body(req,600000))});
     // « La photo qui parle » : lecture des voyants par Claude, sinon lecture faite sur le téléphone. La photo n'est pas conservée.
     if(route==='/api/journey/photo'&&method==='POST'){const d=await body(req,900000);store.rate('photo:'+user.id,12,600000);insist(Number.isInteger(d.version),'Version du parcours requise.');
      const image=typeof d.image==='string'&&d.image.length<=850000?d.image:null,log=message=>options.onError?options.onError(new Error(message)):console.warn(message);
