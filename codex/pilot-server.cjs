@@ -26,6 +26,7 @@ function createGuardianServer(options={}){
  const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
  // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
  const WB=require('./whatsapp-bot.cjs'),bot=WB.config(options.env||process.env);WB.migrate(store);
+ const VT=require('./vrai-test.cjs');VT.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -41,6 +42,8 @@ function createGuardianServer(options={}){
  function auth(req){return store.authenticate((req.headers.cookie||'').match(/(?:^|;\s*)guardian=([^;]+)/)?.[1]);}
  function participant(req){const secret=(req.headers.authorization||'').replace(/^Bearer /,'');insist(secret&&secret.length<100,'Accès participant requis.',401);const p=store.get('SELECT p.*,l.home,l.closed,l.expires FROM participants p JOIN labs l ON l.id=p.lab WHERE p.secret=?',hash(secret));insist(p&&!p.revoked&&!p.closed&&p.expires>Date.now(),'Session de test expirée ou révoquée.',401);return p;}
  function snapshot(user,hid){const home=store.home(user.id,hid),samples=store.all('SELECT * FROM samples WHERE home=? ORDER BY at DESC LIMIT 250',hid).map(s=>({...s,metrics:JSON.parse(s.metrics),diagnosis:diagnose(JSON.parse(s.metrics),s.source)}));return {home,samples,labs:store.all('SELECT id,name,code,created,expires,closed FROM labs WHERE home=? ORDER BY created DESC LIMIT 20',hid).map(l=>home.role==='owner'?l:{...l,code:null}),participants:store.all('SELECT p.id,p.lab,p.name,p.joined,p.last_seen,p.revoked,p.fault,p.fault_until FROM participants p JOIN labs l ON l.id=p.lab WHERE l.home=? ORDER BY p.joined DESC LIMIT 100',hid),records:store.all('SELECT id,name,created FROM records WHERE home=? ORDER BY created DESC',hid),devices:store.all('SELECT * FROM devices WHERE home=? ORDER BY seen DESC',hid),notifications:store.all('SELECT * FROM notifications WHERE home=? ORDER BY at DESC',hid),tickets:store.all('SELECT * FROM tickets WHERE home=? ORDER BY created DESC',hid),audit:store.all('SELECT at,action,detail FROM audit WHERE home=? ORDER BY at DESC LIMIT 100',hid),collector:store.get('SELECT last_at,sequence,capabilities FROM collectors WHERE home=?',hid)||null,members:store.all('SELECT u.id,u.name,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.home=?',hid)};}
+ // Photo de box reçue sur WhatsApp : même lecture que « Photo de ma box » dans l'application (Claude seulement, photo non conservée).
+ async function waPhoto(user,image){const log=message=>options.onError?options.onError(new Error(message)):console.warn(message),leds=await guardianAi.readLeds(image,{store,uid:user.id,log});if(!leds)return null;if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return journey.boxPhoto(store,user.id,{version:journey.get(store,user.id).version},{source:'claude',...leds});}
  // Une action du parcours client (dont une question à Guardian) : même chemin pour l'application et pour WhatsApp.
  async function journeyAction(user,d){const started=Date.now(),log=message=>options.onError?options.onError(new Error(message)):console.warn(message);delete d.meaning;
      // Nouchi, dioula : sens en français reconnu sur le serveur (packs de langue, puis Claude s'il est configuré).
@@ -64,7 +67,17 @@ function createGuardianServer(options={}){
     if(route.startsWith('/api/branchements')&&await B.route(store,branchements,req,res,route,{json,body,user:()=>auth(req)}))return;
     // Message WhatsApp reçu par Green API : réponse immédiate, puis Guardian répond au client en arrière-plan.
     if(route==='/api/whatsapp/entrant'&&method==='POST'){insist(WB.allowed(bot,req.headers.authorization),'Accès refusé.',401);const d=await body(req,65536);json(res,{ok:true});
-     WB.handle(store,bot,d,{chat:journeyAction}).catch(e=>options.onError?options.onError(e):console.warn(e.message));return;}
+     WB.handle(store,bot,d,{chat:journeyAction,photo:waPhoto,origin}).catch(e=>options.onError?options.onError(e):console.warn(e.message));return;}
+    // Vrai test de connexion (vrai-test.cjs) : lien personnel sans session, valable 30 minutes, mesuré sur l'appareil du client.
+    if(route.startsWith('/api/test/')&&route!=='/api/test/link'){
+     const row=VT.open(store,req.headers['x-test-token']),key=row.token_hash.slice(0,24);
+     if(route==='/api/test/info'&&method==='GET'){store.rate('vt-info:'+key,60,VT.LINK_MS);return json(res,VT.info(store,row));}
+     if(route==='/api/test/ping'&&method==='GET'){store.rate('vt-ping:'+key,80,VT.LINK_MS);return json(res,{at:Date.now()});}
+     if(route==='/api/test/download'&&method==='GET'){store.rate('vt-dl:'+key,30,VT.LINK_MS);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':VT.POOL.length});res.end(VT.POOL);return;}
+     if(route==='/api/test/result'&&method==='POST'){insist(row.tests<VT.MAX_TESTS,'Vous avez fait '+VT.MAX_TESTS+' tests avec ce lien. Demandez-en un nouveau à Guardian.',429);const r=VT.record(store,row,(await body(req,4096)).metrics),whatsapp=!!(row.phone&&bot);
+      if(whatsapp)WB.testResult(store,bot,row.phone,r).catch(e=>options.onError?options.onError(e):console.warn(e.message));return json(res,{...r,whatsapp});}
+     throw new Problem(404,'Action de test introuvable.');
+    }
     if(route==='/api/health'&&method==='GET')return json(res,{ok:true,storage:'sqlite',adminSecure:secure||local,origin,version:1,assistant:guardianAi.available()?'claude':'regles'});
     if(route==='/api/session'&&method==='GET'){const u=auth(req);return json(res,{user:u?{...u,role:workspace.sessionRole(store,u.id)}:null});}
     if(route==='/api/journey/otp/request'&&method==='POST')return json(res,await journey.requestOtp(store,await body(req,4096),ip(req)));
@@ -149,6 +162,7 @@ function createGuardianServer(options={}){
      const leds=image?await guardianAi.readLeds(image,{store,uid:user.id,log}):null,reading=leds?{source:'claude',...leds}:boxReading.localReading(d.local);
      insist(reading,'Je n’ai pas pu lire cette photo. Reprenez-la de face, voyants visibles, à environ 30 cm de la box.',422);
      return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
+    if(route==='/api/test/link'&&method==='POST'){store.rate('vt-link:'+user.id,10,600000);return json(res,VT.link(store,user.id,{origin}));}
     if(route==='/api/journey/reports'&&method==='GET')return json(res,journey.realReports(store,user));
     if(route==='/api/journey/reports'&&method==='POST')return json(res,journey.reportReal(store,user.id,await body(req,600000)),201);
     if(route==='/api/journey/reports/respond'&&method==='POST'){operator.requireOperator(store,user.id);insist(!store.get('SELECT paused FROM noc_settings WHERE id=1').paused,'Supervision suspendue : le traitement des signalements est arrêté.',409);return json(res,journey.respondReal(store,user,await body(req,4096)));}

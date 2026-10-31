@@ -9,7 +9,7 @@
 // Qui écrit ? Le numéro est cherché dans WHATSAPP_CLIENTS (« 2250701020304=awa.kone@demo.fibre-guardian.ci »),
 // sinon dans WHATSAPP_NUMEROS (« Yopougon=2250701020304 ») : c'est alors le premier client inscrit dans ce quartier.
 // Un numéro inconnu reçoit une réponse polie et rien d'autre : aucun compte n'est lu ni créé.
-const crypto = require('node:crypto'), W = require('./whatsapp.cjs'), journey = require('./journey-store.cjs');
+const crypto = require('node:crypto'), W = require('./whatsapp.cjs'), journey = require('./journey-store.cjs'), VT = require('./vrai-test.cjs');
 
 const FRESH = 10 * 60000; // Green API renvoie un message tant que le site dort : au-delà de 10 minutes, on ne répond plus.
 const plain = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9@.+-]+/g, '');
@@ -57,6 +57,11 @@ function incoming(d) {
     const url = String(m.fileMessageData?.downloadUrl || '');
     return /^https:\/\//.test(url) ? {...base, audio: {url, mime: String(m.fileMessageData?.mimeType || 'audio/ogg').split(';')[0]}} : null;
   }
+  // Photo de la box : même chose, l'image n'est téléchargée que pour être lue, jamais gardée.
+  if (m.typeMessage === 'imageMessage') {
+    const url = String(m.fileMessageData?.downloadUrl || ''), mime = String(m.fileMessageData?.mimeType || 'image/jpeg').split(';')[0];
+    return /^https:\/\//.test(url) ? {...base, image: {url, mime: /^image\/(jpeg|png|webp)$/.test(mime) ? mime : 'image/jpeg'}} : null;
+  }
   const text = m.typeMessage === 'textMessage' ? m.textMessageData?.textMessage : m.typeMessage === 'extendedTextMessage' ? m.extendedTextMessageData?.text : null;
   if (typeof text !== 'string' || !text.trim()) return null;
   return {...base, text: text.trim().slice(0, 1000)};
@@ -85,6 +90,8 @@ const CHOICES = {
   voyants: ['Voyant rouge sur la box', 'Un voyant de ma box est rouge'],
   forfait: ['Un forfait plus rapide', 'Je veux un forfait plus rapide'],
   prix: ['Mon forfait et son prix', 'Combien coûte mon forfait ?'],
+  test: ['Tester ma connexion', 'Je veux tester ma connexion'],
+  photo: ['Envoyer une photo', 'Je vous envoie une photo de ma box'],
   menu: ['Autre question', 'Bonjour'],
   merci: ['Merci', 'Merci']
 };
@@ -93,11 +100,14 @@ const MENUS = {
   accueil: ['lent', 'coupure', 'humain'],
   panne: ['suivi', 'humain', 'merci'],
   suivi: ['humain', 'menu', 'merci'],
-  lent: ['wifi', 'reboot', 'humain'],
-  wifi: ['reboot', 'humain', 'merci'],
-  coupure: ['reboot', 'voyants', 'humain'],
-  reboot: ['voyants', 'humain', 'merci'],
-  voyants: ['reboot', 'humain', 'merci'],
+  lent: ['test', 'wifi', 'humain'],
+  wifi: ['test', 'reboot', 'humain'],
+  coupure: ['reboot', 'photo', 'humain'],
+  reboot: ['test', 'photo', 'humain'],
+  voyants: ['photo', 'reboot', 'humain'],
+  test: ['reboot', 'humain', 'menu'],
+  photo: ['reboot', 'humain', 'menu'],
+  apresPhoto: ['reboot', 'test', 'humain'],
   humain: ['reboot', 'menu', 'merci'],
   humainPanne: ['suivi', 'menu', 'merci'],
   forfait: ['prix', 'humain', 'merci'],
@@ -119,6 +129,7 @@ function forWhatsApp(answer, origin) {
     .replace(/Appuyez sur le bouton ci-dessous pour/g, 'Ouvrez ' + app + ' pour')
     .replace(/avec le bouton ci-dessous/g, 'depuis ' + app)
     .replace(/le bouton ci-dessous/g, app)
+    .replace(/avec le bouton « Photo de ma box »/g, 'ici, dans cette conversation')
     .replace(/avec le bouton « Appeler Moov »/g, 'au 111')
     .replace(/le bouton « ([^»]+) »/g, '« $1 » dans ' + app);
 }
@@ -176,14 +187,47 @@ async function transcribe(cfg, audio, fetchImpl) {
   return String((await r.json()).text || '').trim().slice(0, 1000);
 }
 
+// Vrai test de connexion : un lien personnel, à ouvrir sur l'appareil branché au Wi-Fi de la box.
+const fold = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const wantsTest = text => /\b(tester|teste|test|speed ?test|mesurer)\b/.test(fold(text));
+function testLink(s, cfg, m, user, origin) {
+  const l = VT.link(s, user.id, {phone: m.phone, origin: cfg.origin || origin || ''});
+  return 'Voici votre lien de test, valable 30 minutes :\n' + l.url + '\n\nOuvrez-le sur le téléphone ou l’ordinateur connecté au Wi-Fi de votre box, puis touchez « Lancer le test ». En 15 secondes, je mesure votre connexion et je vous envoie le résultat ici.';
+}
+// Le résultat du test revient sur WhatsApp, avec les boutons qui vont avec.
+const AFTER_TEST = {bonne: ['wifi', 'test', 'merci'], lente: ['wifi', 'reboot', 'humain'], 'tres-lente': ['wifi', 'reboot', 'humain'], instable: ['wifi', 'test', 'humain'], coupe: ['reboot', 'photo', 'humain']};
+async function testResult(s, cfg, phone, r, fetchImpl = fetch) {
+  const lines = r.facts.filter(f => f.label !== 'Où').map(f => f.label + ' : ' + f.value).join('\n');
+  return answer(s, cfg, {phone}, 'Résultat de votre test de connexion :\n\n' + r.text + '\n\n' + lines, AFTER_TEST[r.level] || MENUS.accueil, fetchImpl);
+}
+const PHOTO_ASK = 'Prenez votre box en photo, de face, les voyants bien visibles, à environ 30 cm. Envoyez-la ici : je vous dis ce que veulent dire les voyants.';
+const PHOTO_LATER = 'Je n’arrive pas à lire cette photo pour le moment. Reprenez-la de face, les voyants bien visibles, à environ 30 cm, ou ouvrez « Photo de ma box » dans l’application Fibre Guardian.';
+const MAX_IMAGE = 3.5 * 1024 * 1024;
+async function readPhoto(m, user, photo, fetchImpl) {
+  if (!photo) return null;
+  try {
+    const file = await fetchImpl(m.image.url, {signal: AbortSignal.timeout(15000)});
+    if (!file.ok) return null;
+    const bytes = Buffer.from(await file.arrayBuffer());
+    if (!bytes.length || bytes.length > MAX_IMAGE) return null;
+    return await photo(user, 'data:' + m.image.mime + ';base64,' + bytes.toString('base64'));
+  } catch { return null; }
+}
+
 // Un message reçu : Guardian répond une seule fois, avec le même chemin que l'application (chat).
-async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now()} = {}) {
+async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchImpl = fetch, now = Date.now()} = {}) {
   const m = incoming(payload);
   if (!m || (m.at && now - m.at > FRESH)) return {status: 'ignored'};
   if (m.id && !s.run('INSERT OR IGNORE INTO wa_inbox VALUES(?,?,?)', m.id, m.phone, now).changes) return {status: 'duplicate'};
   try { s.rate('wa:' + m.phone, 20, 600000); } catch { return {status: 'limited'}; }
   const user = who(s, cfg, m.phone);
   if (!user) { await send(cfg, m.phone, UNKNOWN, fetchImpl); return {status: 'unknown'}; }
+  // Photo : Guardian lit les voyants, comme « Photo de ma box » dans l'application.
+  if (m.image) {
+    const state = await readPhoto(m, user, photo, fetchImpl), said = state?.messages?.filter(x => x.role === 'assistant').at(-1);
+    if (!said) return answer(s, cfg, m, PHOTO_LATER, MENUS.photo, fetchImpl);
+    return answer(s, cfg, m, forWhatsApp(said, cfg.origin), said.action === 'tracking' ? MENUS.panne : MENUS.apresPhoto, fetchImpl);
+  }
   // Note vocale : Guardian répète ce qu'il a compris, puis répond comme à un message écrit.
   let heard = '';
   if (m.audio) {
@@ -196,6 +240,8 @@ async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now(
   const echo = heard ? 'Vous avez dit : « ' + heard + ' »\n\n' : '';
   // « Bonjour » seul, ou « Autre question » : Guardian salue et propose les choix, sans tout déballer d'un coup.
   if (picked === 'menu' || (!picked && journey.intent(text) === 'salut' && text.length <= 40)) return answer(s, cfg, m, echo + greeting(user.name, picked ? '' : text), MENUS.accueil, fetchImpl);
+  if (picked === 'photo') return answer(s, cfg, m, PHOTO_ASK, MENUS.photo, fetchImpl);
+  if (picked === 'test' || (!picked && wantsTest(text))) return answer(s, cfg, m, echo + testLink(s, cfg, m, user, origin), MENUS.test, fetchImpl);
   if (!journey.get(s, user.id)) journey.put(s, user.id, journey.seed());
   const state = await chat(user, {type: 'chat', text, version: journey.get(s, user.id).version});
   const said = state.messages.filter(x => x.role === 'assistant').at(-1);
@@ -204,4 +250,4 @@ async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now(
   return answer(s, cfg, m, echo + human + forWhatsApp(said, cfg.origin), journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
 }
 
-module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, transcribe, menuFor, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};
+module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};
