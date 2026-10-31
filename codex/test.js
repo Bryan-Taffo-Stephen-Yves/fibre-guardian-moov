@@ -9,7 +9,7 @@
  const root=document.getElementById('vt'),store=(k,v)=>{try{return v===undefined?sessionStorage.getItem(k):sessionStorage.setItem(k,v);}catch{return null;}};
  // Le jeton quitte la barre d'adresse (il ne doit pas être recopié ni partagé) mais reste pour cet onglet, si la page est rechargée.
  const token=location.hash.slice(1)||store('fg-test')||'';if(token)store('fg-test',token);history.replaceState(null,'',location.pathname);
- let info=null,running=false,last=null,net=null,fault=null,guardianSays=null;
+ let info=null,running=false,last=null,net=null,fault=null,guardianSays=null,wifi=null,pcTimer=null,pcAsked=false,pcOps=[],pcAvail=[],pcOn=false,confirming=null;
  const live={on:false,timer:null,tick:0,hist:[],speed:null,busy:false};
  const keep=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v);}catch{return null;}};
  const NETS=[['wifi','Wi-Fi de la box','M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0M12 19.5h.01'],['ethernet','Câble de la box','M7 3h10v6H7zM9 9v4m6-4v4M6 13h12v8H6z'],['hotspot','Partage de connexion','M7 3h10v18H7zM11 18h2M12 7v4m-2.5-2.5a3.5 3.5 0 0 1 5 0'],['cellular','Données mobiles','M4 20v-3m5 3v-7m5 7V9m5 11V4']];
@@ -44,12 +44,14 @@
   const nets=el('div',{class:'vt-net-grid'});
   for(const [v,label,d] of NETS){const input=el('input',{type:'radio',name:'net',value:v});if(v===(detected||'wifi'))input.checked=true;nets.append(el('label',{},input,icon(d),el('span',{text:label})));}
   const go=el('button',{type:'button',class:'vt-go',id:'vt-go'},icon('M5 12h14m-6-6 6 6-6 6',22),el('span',{text:'Lancer le test'}));go.onclick=measure;
+  const windows=/Windows/.test(navigator.userAgent);
   const wifi=el('input',{id:'vt-wifi',type:'text',maxlength:'40',autocomplete:'off',spellcheck:'false',placeholder:'Exemple : MOOV-FIBRE-2A4F',value:keep('fg-wifi-name')||''});
   wifi.oninput=()=>keep('fg-wifi-name',wifi.value.trim());
   const card=el('section',{class:'vt-card vt-network','aria-labelledby':'vt-title'},
    el('span',{class:'vt-eyebrow'},el('i'),'VOTRE RÉSEAU, EN CE MOMENT'),el('h1',{id:'vt-title',text:hello}),
    el('p',{text:'Guardian mesure la connexion de cet appareil, là où vous êtes. Rien n’est installé.'}),
-   el('label',{class:'vt-wifi',for:'vt-wifi'},el('span',{text:'Nom du Wi-Fi'}),wifi,el('small',{text:'Votre téléphone ne laisse aucune page web lire ce nom : tapez-le une fois, il est gardé sur cet appareil.'})),
+   el('label',{class:'vt-wifi',for:'vt-wifi'},el('span',{},'Nom du Wi-Fi',el('em',{class:'vt-wifi-tag',id:'vt-wifi-tag',hidden:''},'Lu sur ce PC')),wifi,el('small',{id:'vt-wifi-help',text:windows?'Une page web ne peut pas lire ce nom elle-même. Tapez-le, ou branchez ce PC juste en dessous : Windows le donnera.':'Votre téléphone ne laisse aucune page web lire ce nom : tapez-le une fois, il est gardé sur cet appareil.'})),
+   windows?pcBlock():null,
    el('fieldset',{class:'vt-net'},el('legend',{text:'Cet appareil est connecté par :'}),nets,detected?el('p',{class:'vt-net-hint',text:'Choix proposé par votre appareil. Corrigez-le si besoin.'}):null),
    el('dl',{class:'vt-facts',id:'vt-facts'},...facts()));
   const full=el('section',{class:'vt-card vt-full','aria-labelledby':'vt-full-title'},
@@ -57,17 +59,78 @@
    gauge(),el('p',{class:'vt-stage',id:'vt-stage',text:'Prêt quand vous l’êtes.'}),el('ol',{class:'vt-steps','aria-hidden':'true'},el('li'),el('li'),el('li'),el('li'),el('li')),
    go,el('p',{class:'vt-data',text:'Le test utilise entre 3 et 11 Mo de données.'}));
   root.replaceChildren(head(true),card,liveCard(),demoCard(),full,result());
-  loadNetwork();
+  loadNetwork();if(windows)pollPc(true);
  }
 
  // Ce que l'appareil et le réseau disent d'eux-mêmes. L'opérateur vient de l'adresse IP publique, vue par le serveur.
  function device(){const u=navigator.userAgent,os=/iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':/Windows/.test(u)?'Windows':/Mac OS X/.test(u)?'Mac':/Linux/.test(u)?'Linux':'Appareil',nav=/Edg\//.test(u)?'Edge':/OPR\//.test(u)?'Opera':/SamsungBrowser/.test(u)?'Samsung Internet':/Firefox\//.test(u)?'Firefox':/CriOS|Chrome\//.test(u)?'Chrome':/Safari\//.test(u)?'Safari':'navigateur';return os+' · '+nav;}
  function facts(){
   const c=navigator.connection,rows=[['Opérateur du réseau',net?(net.operator||(net.local?'Réseau local':'Non trouvé')):'Recherche…'],['Adresse IP publique',net?(net.ip||'—'):'Recherche…'],['Lieu du réseau',net?([net.city,net.country].filter(Boolean).join(', ')||'—'):'Recherche…'],['Appareil',device()]];
+  if(wifi&&!wifi.error){const q=wifi.signal==null?'':wifi.signal>=80?' · très bon':wifi.signal>=60?' · bon':wifi.signal>=40?' · moyen':' · faible';
+   rows.unshift(...[['Signal Wi-Fi',wifi.signal==null?null:wifi.signal+' %'+q+' (≈ '+Math.round(wifi.signal/2-100)+' dBm)'],['Canal',[wifi.channel,wifi.band].filter(v=>v!=null).join(' · ')||null],['Norme Wi-Fi',wifi.radio],['Vitesse de liaison',wifi.rxMbps||wifi.txMbps?[wifi.rxMbps&&fr(wifi.rxMbps)+' Mbps en réception',wifi.txMbps&&fr(wifi.txMbps)+' Mbps en envoi'].filter(Boolean).join(' · '):null],['Sécurité',wifi.auth]].filter(r=>r[1]));}
   if(c&&(c.downlink||c.effectiveType))rows.push(['Estimation de l’appareil',[c.effectiveType&&c.effectiveType.toUpperCase(),c.downlink?fr(c.downlink,c.downlink<10?1:0)+' Mbps':null,c.rtt?fr(c.rtt)+' ms':null].filter(Boolean).join(' · ')]);
   return rows.map(([k,v])=>el('div',{},el('dt',{text:k}),el('dd',{text:v})));
  }
  async function loadNetwork(){try{net=await api('network',null,6000);}catch(e){net={ip:null,operator:null};}const dl=document.getElementById('vt-facts');if(dl)dl.replaceChildren(...facts());}
+
+ // ---------- Brancher ce PC (Windows) : un petit fichier lit le Wi-Fi auprès de Windows et l'envoie ici ----------
+ function pcBlock(){
+  const b=el('button',{type:'button',class:'vt-btn vt-pc-go',id:'vt-pc-go'},icon('M4 5h16v10H4zM9 19h6M12 15v4',18),'Brancher ce PC');b.onclick=plugPc;
+  return el('div',{class:'vt-pc',id:'vt-pc'},
+   el('div',{class:'vt-pc-text'},el('b',{text:'Lire le vrai Wi-Fi de ce PC'}),el('small',{text:'Un petit fichier demande à Windows le nom du Wi-Fi, la force du signal, le canal et la vitesse de liaison, puis les envoie ici toutes les 2 secondes. Rien à installer.'})),
+   b,el('ol',{class:'vt-pc-steps',id:'vt-pc-steps',hidden:''},
+    el('li',{text:'Ouvrez le fichier « Guardian-Wi-Fi.cmd » qui vient d’être téléchargé. Si Edge demande, choisissez « Conserver ».'}),
+    el('li',{text:'Si Windows affiche « Windows a protégé votre ordinateur » : touchez « Informations complémentaires », puis « Exécuter quand même ».'}),
+    el('li',{text:'Laissez la fenêtre noire ouverte : les chiffres apparaissent ici. Fermez-la pour arrêter.'})),
+   el('p',{class:'vt-pc-status',id:'vt-pc-status',role:'status',hidden:''}),
+   el('div',{class:'vt-ops',id:'vt-ops',hidden:''}));
+ }
+ // Opérations à distance : 4 actions fixes que le PC sait faire, lancées seulement quand le client les demande.
+ const OP_STATE={attente:'En attente',['en cours']:'En cours…'};
+ function opsView(){
+  const grid=el('div',{class:'vt-ops-grid'});
+  for(const o of pcAvail){
+   const busy=pcOps.some(x=>x.op===o.id&&x.state!=='fait');
+   if(confirming===o.id){const yes=el('button',{type:'button',class:'vt-btn primary'},'Oui, on y va'),no=el('button',{type:'button',class:'vt-btn'},'Annuler');yes.onclick=()=>{confirming=null;runOp(o.id);};no.onclick=()=>{confirming=null;paintPc();};setTimeout(()=>yes.focus(),0);grid.append(el('div',{class:'vt-op-confirm'},el('p',{text:o.confirm}),el('div',{class:'vt-op-confirm-actions'},yes,no)));continue;}
+   const b=el('button',{type:'button',class:'vt-op','data-op':o.id},el('b',{text:o.label}),el('small',{text:busy?'En cours…':o.hint}));if(busy)b.disabled=true;
+   b.onclick=()=>{if(o.confirm){confirming=o.id;paintPc();}else runOp(o.id);};grid.append(b);
+  }
+  const done=[...pcOps].reverse().slice(0,4).map(x=>el('li',{class:'vt-op-result '+(x.state!=='fait'?'wait':x.ok?'good':'bad')},
+   el('div',{class:'vt-op-result-head'},el('b',{text:x.label}),el('span',{text:x.state==='fait'?(x.ok?'Réussi':'À voir'):OP_STATE[x.state]||x.state})),
+   x.text?el('p',{text:x.text}):null));
+  return [el('h3',{text:'Opérations à distance sur ce PC'}),el('p',{class:'vt-ops-note',text:'Guardian ne fait que ces 4 actions, et seulement quand vous les demandez.'}),grid,done.length?el('ul',{class:'vt-op-results','aria-live':'polite'},...done):null].filter(Boolean);
+ }
+ async function runOp(op){try{await api('op',{op},8000);}catch(e){const st=document.getElementById('vt-pc-status');if(st){st.hidden=false;st.className='vt-pc-status warn';st.textContent=e.message;}}await pollPc(true);}
+ async function plugPc(){
+  const b=document.getElementById('vt-pc-go');if(b)b.disabled=true;
+  try{const r=await fetch('/api/test/agent',{cache:'no-store',headers:{'X-Test-Token':token},signal:AbortSignal.timeout(10000)});if(!r.ok)throw Object.assign(new Error(),{status:r.status});
+   const url=URL.createObjectURL(await r.blob()),a=el('a',{href:url,download:'Guardian-Wi-Fi.cmd'});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+   pcAsked=true;document.getElementById('vt-pc-steps').hidden=false;paintPc();pollPc();
+  }catch(e){if(e.status===404)return closed('Ce lien de test a expiré','Demandez-en un nouveau à Guardian, dans l’application ou sur WhatsApp. Chaque lien sert 30 minutes.');const st=document.getElementById('vt-pc-status');if(st){st.hidden=false;st.textContent='Le fichier n’a pas pu être téléchargé. Réessayez.';}}
+  finally{if(b)b.disabled=false;}
+ }
+ // Une lecture tout de suite (le PC est peut-être déjà branché), puis toutes les 2 secondes une fois le fichier lancé.
+ async function pollPc(once=false){
+  if(pcTimer&&!once)return;
+  const read=async()=>{try{const r=await api('wifi',null,5000);const was=!!wifi;wifi=r.wifi;pcOps=r.ops||[];pcAvail=r.available||[];pcOn=!!r.connected;if((wifi||pcOn)&&!pcTimer)pcTimer=setInterval(read,2000);paintPc(was!==!!wifi);}catch(e){if(e.status===404){clearInterval(pcTimer);pcTimer=null;}}};
+  await read();if(!once&&!pcTimer)pcTimer=setInterval(read,2000);
+ }
+ function paintPc(changed=true){
+  const st=document.getElementById('vt-pc-status'),input=document.getElementById('vt-wifi'),tag=document.getElementById('vt-wifi-tag'),dl=document.getElementById('vt-facts'),b=document.getElementById('vt-pc-go'),steps=document.getElementById('vt-pc-steps');
+  const ok=wifi&&!wifi.error&&wifi.ssid;
+  if(input){input.readOnly=!!ok;if(ok)input.value=wifi.ssid;}if(tag)tag.hidden=!ok;
+  if(st){st.hidden=!(pcAsked||wifi);st.className='vt-pc-status'+(ok?' on':wifi?.error?' warn':'');
+   st.textContent=ok?'PC branché · '+(wifi.computer?wifi.computer+' · ':'')+'mis à jour il y a '+Math.max(1,Math.round((wifi.age||0)/1000))+' s'
+    :wifi?.error==='location'?'Windows cache le nom du Wi-Fi. Ouvrez Paramètres > Confidentialité et sécurité > Localisation, activez « Services de localisation » et « Autoriser les applications de bureau ».'
+    :wifi?.error==='no-wifi'?'Ce PC n’est pas connecté en Wi-Fi en ce moment (câble ou aucun réseau).'
+    :wifi?.error?'Windows ne donne pas les informations Wi-Fi sur ce PC.'
+    :'En attente du PC… Lancez le fichier téléchargé.';}
+  if(ok&&steps)steps.hidden=true;if(b)b.hidden=!!ok;
+  // On ne redessine les opérations que si quelque chose a changé (le focus clavier reste en place).
+  const ops=document.getElementById('vt-ops'),sig=JSON.stringify([pcOn,pcOps,pcAvail,confirming]);if(ops){ops.hidden=!pcOn;if(pcOn&&sig!==ops.dataset.sig){ops.dataset.sig=sig;ops.replaceChildren(...opsView());}}
+  if(dl)dl.replaceChildren(...facts());
+  if(live.on||fault)paintLive();
+ }
 
  // ---------- En direct : une sonde toutes les 2 secondes, 512 Ko toutes les 10 secondes ----------
  const WINDOW=60000;
@@ -84,21 +147,22 @@
  function stats(){
   const recent=live.hist.filter(h=>Date.now()-h.t<30000),ok=recent.filter(h=>h.rtt!=null).map(h=>h.rtt),sorted=[...ok].sort((a,b)=>a-b);
   const latencyMs=sorted.length?sorted[Math.floor(sorted.length/2)]:null,jitterMs=ok.length>1?ok.slice(1).reduce((a,b,i)=>a+Math.abs(b-ok[i]),0)/(ok.length-1):null;
-  return {downloadMbps:live.speed,latencyMs,jitterMs,lossPct:recent.length?Math.round(100*(recent.length-ok.length)/recent.length):0,network:document.querySelector('input[name=net]:checked')?.value||null};
+  return {signal:wifi&&!wifi.error?wifi.signal:null,downloadMbps:live.speed,latencyMs,jitterMs,lossPct:recent.length?Math.round(100*(recent.length-ok.length)/recent.length):0,network:document.querySelector('input[name=net]:checked')?.value||null};
  }
  // Panne simulée : mêmes règles que le serveur (vrai-test.cjs), appliquées aux vraies mesures pour l'affichage.
- function simulate(m,f){if(!f)return m;if(f.cut)return {...m,downloadMbps:null,latencyMs:null,jitterMs:null,lossPct:100};return {...m,downloadMbps:m.downloadMbps==null?null:Math.round(m.downloadMbps*f.down*10)/10,latencyMs:m.latencyMs==null?null:Math.round(m.latencyMs+f.add),jitterMs:Math.round((m.jitterMs||0)+f.jitter),lossPct:Math.max(m.lossPct,f.loss)};}
+ function simulate(m,f){if(!f)return m;const signal=m.signal==null?null:Math.round(m.signal*(f.signal??1));if(f.cut)return {...m,signal,downloadMbps:null,latencyMs:null,jitterMs:null,lossPct:100};return {...m,downloadMbps:m.downloadMbps==null?null:Math.round(m.downloadMbps*f.down*10)/10,latencyMs:m.latencyMs==null?null:Math.round(m.latencyMs+f.add),jitterMs:Math.round((m.jitterMs||0)+f.jitter),lossPct:Math.max(m.lossPct,f.loss),signal};}
  function liveTiles(){
   const real=stats(),shown=simulate(real,fault),was=(v,unit,d=0)=>fault?el('em',{text:'réel : '+(v==null?'—':fr(v,d)+(unit?' '+unit:''))}):null;
   const stab=m=>live.hist.length?fr(100-m.lossPct)+' %':'—';
   return [
    el('div',{class:'vt-tile'},el('small',{text:'Réponse'}),el('strong',{text:shown.latencyMs==null?(live.hist.length?'aucune':'—'):fr(shown.latencyMs)}),el('span',{text:'ms'}),was(real.latencyMs,'ms')),
    el('div',{class:'vt-tile'},el('small',{text:'Débit'}),el('strong',{text:shown.downloadMbps==null?(fault?.cut&&live.hist.length?'0':'—'):mbps(shown.downloadMbps)}),el('span',{text:'Mbps'}),was(real.downloadMbps,'Mbps',real.downloadMbps<10?1:0)),
-   el('div',{class:'vt-tile'},el('small',{text:'Stabilité'}),el('strong',{text:stab(shown)}),el('span',{text:'réponses'}),fault?el('em',{text:'réel : '+stab(real)}):null)];
+   el('div',{class:'vt-tile'},el('small',{text:'Stabilité'}),el('strong',{text:stab(shown)}),el('span',{text:'réponses'}),fault?el('em',{text:'réel : '+stab(real)}):null),
+   real.signal!=null?el('div',{class:'vt-tile'},el('small',{text:'Signal Wi-Fi'}),el('strong',{text:shown.signal?shown.signal+' %':'—'}),el('span',{text:shown.signal?'de la box':'box éteinte'}),fault?el('em',{text:'réel : '+real.signal+' %'}):null):null].filter(Boolean);
  }
  // Courbe des 60 dernières secondes : temps de réponse réel, et pendant une panne simulée, ce qu'il deviendrait.
  function chart(){
-  const W=320,H=120,s=svg('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':'Temps de réponse sur la dernière minute'}),now=Date.now(),pts=live.hist.filter(h=>now-h.t<WINDOW);
+  const W=innerWidth>=900?460:320,H=120,s=svg('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':'Temps de réponse sur la dernière minute'}),now=Date.now(),pts=live.hist.filter(h=>now-h.t<WINDOW);
   const sim=pts.map(h=>({...h,rtt:fault?(fault.cut?null:h.rtt==null?null:h.rtt+fault.add):h.rtt}));
   const top=Math.max(200,...pts.map(h=>h.rtt||0),...sim.map(h=>h.rtt||0))*1.15,x=t=>W-(now-t)/WINDOW*W,y=v=>H-18-(v/top)*(H-30);
   for(const v of [0,.5,1]){const yy=H-18-v*(H-30);s.append(svg('line',{x1:0,x2:W,y1:yy,y2:yy,class:'vt-grid'}));}
@@ -123,6 +187,7 @@
    live.hist.push({t:Date.now(),rtt});live.hist=live.hist.filter(h=>Date.now()-h.t<WINDOW+4000);
    if(n%5===0&&rtt!=null){const s=performance.now();try{const r=await fetch('/api/test/sample',{cache:'no-store',headers:{'X-Test-Token':token},signal:AbortSignal.timeout(8000)});const b=await r.arrayBuffer();if(r.ok)live.speed=Math.round(b.byteLength*8/((performance.now()-s)/1000)/1e5)/10;}catch{}}
    paintLive();
+   if(fault&&(n%5===0||!guardianSays))askGuardian(fault);
   }finally{live.busy=false;}
  }
  function startLive(){if(live.on)return;live.on=true;liveTick();live.timer=setInterval(liveTick,2000);paintLive();}
@@ -140,12 +205,14 @@
    grid,stop);
  }
  function toggleDemo(open){const d=document.getElementById('vt-demo'),b=document.getElementById('vt-demo-badge');if(!d)return;const show=open??d.hidden;d.hidden=!show;b?.setAttribute('aria-expanded',String(show));if(show)d.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}
+ // Guardian juge la panne simulée à partir des vraies mesures du moment ; il refait son avis toutes les 10 secondes.
+ async function askGuardian(f){const m=stats();if(m.latencyMs==null&&live.hist.length<2&&!f.cut)return;try{const r=await api('preview',{scenario:f.id,metrics:m});if(fault===f){guardianSays=r;paintLive();}}catch{}}
  async function pickFault(f){
   fault=f;guardianSays=null;
   document.querySelectorAll('.vt-scenario').forEach(b=>b.setAttribute('aria-pressed',String(!!f&&b.dataset.id===f.id)));
   const stop=document.getElementById('vt-fault-stop');if(stop)stop.disabled=!f;
   if(f&&!live.on)startLive();paintLive();
-  if(f){try{const r=await api('preview',{scenario:f.id,metrics:stats()});if(fault===f){guardianSays=r;paintLive();}}catch{}}
+  if(f)await askGuardian(f);
   if(f&&innerWidth<900)document.querySelector('.vt-live')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
  }
  function result(){
