@@ -180,6 +180,13 @@ test('Brancher ce PC : le fichier ne contient que le site et le jeton, et ne sai
     assert.equal(file.split('#GUARDIAN-PS#').length, 2, 'un seul repère entre la partie cmd et la partie PowerShell');
     assert.doesNotMatch(file, /Invoke-Expression \$resp|iex \$|DownloadString|Start-Process|Remove-Item|Set-ItemProperty|reg add/i, 'aucune commande venue du serveur n’est exécutée');
     assert.deepEqual(Object.keys(VT.OPS), ['box', 'internet', 'dns', 'wifi']);
+    // Le tour du réseau local : une sonde par adresse, puis la liste des voisins de Windows (lecture seule).
+    assert.ok(file.includes('function Scan-Lan') && file.includes('Get-NetNeighbor') && file.includes('SendPingAsync'));
+    assert.ok(file.includes('NdisPhysicalMedium -eq 9'), 'le tour suit la carte Wi-Fi, pas seulement la route la moins chère');
+    assert.ok(file.includes("State -eq 'Reachable'") && file.includes("Result.Status -eq 'Success'"), 'seuls les appareils qui répondent comptent (pas de fantômes)');
+    assert.ok(file.includes('[Diagnostics.Stopwatch]::StartNew()') && file.includes('$resp = Send $body; $scan = $null'), 'un tour toutes les 20 s, gardé tant qu’il n’est pas envoyé');
+    assert.ok(file.includes('set "GFILE=%~f0"') && file.includes('-LiteralPath $env:GFILE') && !file.includes("'%~f0'"), 'une apostrophe dans le chemin ne casse pas le lancement');
+    assert.doesNotMatch(file, /Remove-NetNeighbor|New-NetNeighbor|Set-Net|netsh (?!wlan (show|disconnect|connect))/i, 'le tour du réseau ne change rien sur le PC');
     assert.throws(() => VT.agent('javascript:alert(1)', l.token), /invalide/);
     assert.equal((await t.page('agent', 'x'.repeat(24))).status, 404);
   } finally { t.close(); }

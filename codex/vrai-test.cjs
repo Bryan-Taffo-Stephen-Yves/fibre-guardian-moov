@@ -149,8 +149,119 @@ function pc(row) {
   for (const [k, v] of PC) if (now - v.at > LINK_MS) PC.delete(k);
   if (PC.size > 300) PC.clear();
   let p = PC.get(row.token_hash);
-  if (!p) { p = {at: 0, w: null, ops: []}; PC.set(row.token_hash, p); }
+  if (!p) { p = {at: 0, w: null, ops: [], devices: new Map(), events: [], scan: null, seen: {}}; PC.set(row.token_hash, p); }
   return p;
+}
+
+// Appareils connectés au Wi-Fi : toutes les 20 secondes, le fichier PC envoie une petite sonde à chaque adresse du réseau
+// local, puis lit la table des voisins de Windows (adresse locale + adresse MAC de chaque appareil qui a répondu).
+// Guardian ne garde ni le nom des appareils ni leur adresse MAC complète : un numéro anonyme, le type d'appareil,
+// l'adresse locale et les 2 derniers octets de l'adresse MAC. Un téléphone en veille peut disparaître quelques minutes.
+// Le numéro anonyme est signé avec une clé tirée au hasard au démarrage du serveur : on ne peut pas en retrouver l'adresse MAC.
+const GONE_MS = 50000, FORGET_MS = 10 * 60000, MAX_DEVICES = 64, MAX_KEPT = 128, SCAN_GAP_MS = 8000;
+const DEVICE_KEY = crypto.randomBytes(32);
+const deviceId = (row, mac) => crypto.createHmac('sha256', DEVICE_KEY).update(row.token_hash + '|' + mac).digest('hex').slice(0, 12);
+const lanIp = v => {
+  const t = String(v ?? '').trim(); if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) return null;
+  const o = t.split('.').map(Number); if (o.some(n => n > 255) || o[3] === 0 || o[3] === 255) return null;
+  return o[0] === 10 || o[0] === 192 && o[1] === 168 || o[0] === 172 && o[1] >= 16 && o[1] <= 31 ? t : null;
+};
+const macOf = v => { const t = String(v ?? '').trim().toLowerCase().replace(/-/g, ':'); return /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(t) ? t : null; };
+// Premier octet impair : adresse de groupe (diffusion), pas un appareil. Bit « local » : adresse privée tirée au hasard,
+// celle des téléphones et tablettes récents (iPhone, Android) pour ne pas être suivis d'un Wi-Fi à l'autre.
+const groupMac = m => (parseInt(m.slice(0, 2), 16) & 1) === 1 || m === '00:00:00:00:00:00';
+const privateMac = m => (parseInt(m.slice(0, 2), 16) & 2) === 2;
+// Le fabricant d'une carte Wi-Fi se lit dans les 3 premiers octets de son adresse MAC (registre public de l'IEEE).
+// Guardian ne demande que ces 3 octets au service gratuit macvendors.com, jamais l'adresse entière ; réponse gardée en mémoire.
+// Une seule file pour tous les clients : une question par seconde au plus (la règle du service gratuit), 50 en attente au plus.
+const VENDORS = new Map(), VENDOR_QUEUE = [];
+let vendorFetch = (...a) => fetch(...a), vendorBusy = false, vendorLast = 0;
+const VENDOR_NAMES = [[/apple/i, 'Apple'], [/samsung/i, 'Samsung'], [/huawei|honor/i, 'Huawei'], [/xiaomi|redmi/i, 'Xiaomi'], [/transsion|tecno|infinix|itel/i, 'Tecno'], [/oppo/i, 'Oppo'], [/vivo/i, 'Vivo'], [/oneplus/i, 'OnePlus'], [/\bzte\b/i, 'ZTE'], [/intel/i, 'Intel'], [/realtek/i, 'Realtek'], [/hewlett|\bhp\b/i, 'HP'], [/dell/i, 'Dell'], [/lenovo|lcfc/i, 'Lenovo'], [/asustek|\basus\b/i, 'Asus'], [/acer/i, 'Acer'], [/microsoft/i, 'Microsoft'], [/google/i, 'Google'], [/amazon/i, 'Amazon'], [/\blg\b|lg electronics/i, 'LG'], [/sony/i, 'Sony'], [/hisense/i, 'Hisense'], [/\btcl\b/i, 'TCL'], [/tp-?link/i, 'TP-Link'], [/tenda/i, 'Tenda'], [/d-link/i, 'D-Link'], [/netgear/i, 'Netgear'], [/nokia/i, 'Nokia'], [/sagemcom/i, 'Sagemcom'], [/motorola/i, 'Motorola'], [/raspberry/i, 'Raspberry Pi'], [/espressif/i, 'Espressif'], [/azurewave/i, 'AzureWave'], [/lite-?on/i, 'Lite-On'], [/cloud network technology|hon hai|foxconn/i, 'Foxconn']];
+function vendorName(raw) {
+  const t = String(raw || '').trim(); if (!t || /not found|error/i.test(t)) return null;
+  for (const [re, name] of VENDOR_NAMES) if (re.test(t)) return name;
+  const w = t.split(/[\s,.(]+/)[0].replace(/[^\p{L}\p{N}&+-]/gu, '').slice(0, 18);
+  return w.length >= 2 ? (w === w.toUpperCase() ? w[0] + w.slice(1).toLowerCase() : w) : null;
+}
+function askVendors(ouis) {
+  for (const oui of ouis) if (!VENDORS.has(oui) && !VENDOR_QUEUE.includes(oui) && VENDOR_QUEUE.length < 50) VENDOR_QUEUE.push(oui);
+  if (!vendorBusy && VENDOR_QUEUE.length) pumpVendors().catch(() => {});
+}
+async function pumpVendors() {
+  vendorBusy = true;
+  try {
+    while (VENDOR_QUEUE.length) {
+      const wait = vendorLast + 1100 - Date.now();
+      if (wait > 0) await new Promise(res => setTimeout(res, wait).unref?.());
+      const oui = VENDOR_QUEUE[0], ask = vendorFetch;
+      vendorLast = Date.now();
+      try {
+        const r = await ask('https://api.macvendors.com/' + oui.toUpperCase().replace(/:/g, '-'), {signal: AbortSignal.timeout(2500)});
+        if (ask === vendorFetch) { if (VENDORS.size >= 2000) VENDORS.clear(); if (r.ok) VENDORS.set(oui, vendorName(await r.text())); else if (r.status === 404) VENDORS.set(oui, null); }
+      } catch {} // pas de réponse : on redemandera au prochain tour du réseau
+      if (VENDOR_QUEUE[0] === oui) VENDOR_QUEUE.shift();
+    }
+  } finally { vendorBusy = false; }
+}
+const KIND_ORDER = {box: 0, partage: 0, pc: 1, mobile: 2, appareil: 3};
+function baseLabel(d) {
+  if (d.kind === 'box') return 'Box Wi-Fi';
+  if (d.kind === 'partage') return d.iphone ? 'iPhone qui partage la connexion' : 'Téléphone qui partage la connexion';
+  if (d.kind === 'pc') return 'Ce PC';
+  if (d.kind === 'mobile') return 'Téléphone ou tablette';
+  return d.vendor ? 'Appareil ' + d.vendor : 'Appareil';
+}
+function scanSave(row, p, scan, now = Date.now()) {
+  if (!scan || typeof scan !== 'object' || !Array.isArray(scan.devices)) return;
+  if (p.scan && now - p.scan.at < SCAN_GAP_MS) return; // un tour toutes les 20 secondes suffit : les envois plus rapprochés sont ignorés
+  const self = macOf(scan.mac), myIp = lanIp(scan.ip), gateway = lanIp(scan.gateway), prefix = int(scan.prefix, 8, 30);
+  const first = !p.scan, seen = new Set(), unknown = [];
+  for (const raw of scan.devices.slice(0, 120)) {
+    const ip = lanIp(raw?.ip), mac = macOf(raw?.mac);
+    if (!ip || !mac || groupMac(mac) || seen.size >= MAX_DEVICES) continue;
+    const id = deviceId(row, mac); if (seen.has(id)) continue; seen.add(id);
+    const oui = mac.slice(0, 8), random = privateMac(mac);
+    const kind = ip === gateway ? (ip.startsWith('172.20.10.') || random ? 'partage' : 'box') : mac === self || ip === myIp ? 'pc' : random ? 'mobile' : 'appareil';
+    if (kind === 'appareil' && !VENDORS.has(oui)) unknown.push(oui);
+    let d = p.devices.get(id);
+    if (!d) {
+      d = {id, first: now, initial: first, mac: '…:' + mac.slice(12).toUpperCase(), random};
+      p.devices.set(id, d);
+      if (!first && kind !== 'pc') p.events.push({at: now, type: 'arrive', id});
+    } else if (d.gone) { d.gone = false; p.events.push({at: now, type: 'arrive', id}); }
+    Object.assign(d, {ip, kind, iphone: ip.startsWith('172.20.10.'), vendor: random ? null : VENDORS.get(oui) || null, last: now});
+  }
+  // Le PC lui-même n'est pas toujours dans sa propre table : on l'ajoute.
+  const selfId = self && deviceId(row, self);
+  if (myIp && self && !seen.has(selfId)) {
+    p.devices.set(selfId, {...(p.devices.get(selfId) || {first: now, initial: first}), id: selfId, ip: myIp, kind: 'pc', mac: '…:' + self.slice(12).toUpperCase(), random: privateMac(self), vendor: null, last: now, gone: false});
+  }
+  for (const d of p.devices.values()) {
+    if (!d.gone && now - d.last > GONE_MS) { d.gone = true; d.left = now; p.events.push({at: now, type: 'parti', id: d.id}); }
+    if (d.gone && now - d.left > FORGET_MS) p.devices.delete(d.id);
+  }
+  // Plafond par lien : les appareils partis s'oublient d'abord, puis ceux vus il y a le plus longtemps.
+  if (p.devices.size > MAX_KEPT) {
+    const old = [...p.devices.values()].sort((a, b) => (b.gone ? 1 : 0) - (a.gone ? 1 : 0) || a.last - b.last);
+    for (const d of old.slice(0, p.devices.size - MAX_KEPT)) p.devices.delete(d.id);
+  }
+  p.events = p.events.slice(-12);
+  // Numéros stables : « Téléphone ou tablette 2 » garde son numéro tant qu'il est là.
+  const list = [...p.devices.values()].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.first - b.first);
+  for (const d of list) { const b = baseLabel(d); if (d.base !== b) { d.base = b; p.seen[b] = (p.seen[b] || 0) + 1; d.n = p.seen[b]; } }
+  const count = {}; for (const d of list) if (!d.gone) count[d.base] = (count[d.base] || 0) + 1;
+  for (const d of list) d.label = count[d.base] > 1 || d.n > 1 ? d.base + ' ' + d.n : d.base;
+  p.scan = {at: now, medium: scan.medium === 'cable' ? 'cable' : 'wifi', subnet: myIp && prefix ? myIp.split('.').slice(0, 3).join('.') + '.0/' + Math.max(24, prefix) : null};
+  if (unknown.length) askVendors([...new Set(unknown)]);
+}
+// Ce que la page affiche : les appareils là maintenant, ceux partis il y a peu, et les dernières arrivées et départs.
+function devicesView(p, now = Date.now()) {
+  if (!p?.scan) return {devices: [], gone: [], events: [], scan: null};
+  const show = d => ({id: d.id, kind: d.kind, label: d.label, vendor: d.vendor, ip: d.ip, mac: d.mac, random: d.random, since: d.initial ? null : now - d.first});
+  const all = [...p.devices.values()].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.first - b.first);
+  return {devices: all.filter(d => !d.gone).map(show), gone: all.filter(d => d.gone).slice(-5).map(d => ({...show(d), ago: now - d.left})),
+    events: p.events.slice(-6).reverse().map(e => ({type: e.type, ago: now - e.at, label: p.devices.get(e.id)?.label || 'Un appareil'})),
+    scan: {...p.scan, age: now - p.scan.at}};
 }
 // Ce que Guardian dit d'une opération, en mots simples, à partir de ce que le PC a mesuré.
 function opText(op, r, before = []) {
@@ -183,6 +294,7 @@ function wifiSave(row, d) {
   const error = ['location', 'no-wifi', 'netsh'].includes(d?.error) ? d.error : null;
   p.w = error ? {error} : {ssid: text(d?.ssid, 64), signal: int(d?.signal, 0, 100), channel: int(d?.channel, 0, 200), band: text(d?.band, 20), radio: text(d?.radio, 30), rxMbps: int(d?.rxMbps, 0, 100000), txMbps: int(d?.txMbps, 0, 100000), auth: text(d?.auth, 40), computer: text(d?.computer, 40)};
   p.at = now;
+  if (d?.scan) scanSave(row, p, d.scan, now);
   // Une opération en attente part avec la réponse ; le PC ne sait faire que celles de la liste.
   const next = p.ops.find(x => x.state === 'attente');
   if (next) { next.state = 'en cours'; next.sent = now; }
@@ -191,7 +303,7 @@ function wifiSave(row, d) {
 }
 function wifiRead(row) {
   const p = PC.get(row.token_hash), on = p && Date.now() - p.at < LIVE_MS;
-  return {wifi: on && p.w ? {...p.w, at: p.at, age: Date.now() - p.at} : null, connected: !!on,
+  return {wifi: on && p.w ? {...p.w, at: p.at, age: Date.now() - p.at} : null, connected: !!on, ...(on ? devicesView(p) : {devices: [], gone: [], events: [], scan: null}),
     ops: (p?.ops || []).map(({id, op, state, ok, text: t}) => ({id, op, label: OPS[op].label, state, ok: ok ?? null, text: t || null})),
     available: Object.entries(OPS).map(([id, o]) => ({id, label: o.label, hint: o.hint, confirm: o.confirm || null}))};
 }
@@ -217,23 +329,60 @@ function agent(origin, token) {
     "$url = '" + origin + "/api/test/wifi'; $token = '" + token + "'",
     "Write-Host ''",
     "Write-Host '  Guardian lit le Wi-Fi de ce PC et l''envoie à votre page de test.' -ForegroundColor Cyan",
+    "Write-Host '  Toutes les 20 secondes, il compte les appareils de ce Wi-Fi (sans leur nom, sans rien changer).'",
     "Write-Host '  Il ne fait que 4 opérations, quand vous les demandez sur la page :'",
     "Write-Host '  tester la box, tester Internet, réparer le DNS, reconnecter le Wi-Fi.'",
     "Write-Host '  Laissez cette fenêtre ouverte. Fermez-la pour arrêter.'",
     "Write-Host ''",
     "function Field($text, $pattern) { $m = [regex]::Match($text, '(?mi)^\\s*(' + $pattern + ')[^:\\r\\n]*:\\s*(.+?)\\s*$'); if ($m.Success) { $m.Groups[2].Value } else { $null } }",
-    "function Send($body) { $json = $body | ConvertTo-Json -Compress -Depth 4; Invoke-RestMethod -Uri $url -Method Post -Headers @{ 'X-Test-Token' = $token } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($json)) -TimeoutSec 10 -ErrorAction Stop }",
+    "function Send($body) { $json = $body | ConvertTo-Json -Compress -Depth 6; Invoke-RestMethod -Uri $url -Method Post -Headers @{ 'X-Test-Token' = $token } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($json)) -TimeoutSec 10 -ErrorAction Stop }",
     "function Ping-Host($target, $n) { $p = New-Object Net.NetworkInformation.Ping; $times = @(); $lost = 0; for ($i = 0; $i -lt $n; $i++) { try { $r = $p.Send($target, 1500); if ($r.Status -eq 'Success') { $times += $r.RoundtripTime } else { $lost++ } } catch { $lost++ }; Start-Sleep -Milliseconds 200 }; $avg = $null; if ($times.Count) { $avg = [math]::Round(($times | Measure-Object -Average).Average) }; @{ ms = $avg; lost = $lost } }",
     "function Resolve-Time($name) { try { $sw = [Diagnostics.Stopwatch]::StartNew(); [Net.Dns]::GetHostAddresses($name) | Out-Null; $sw.ElapsedMilliseconds } catch { $null } }",
+    // La carte réseau à suivre : la carte Wi-Fi branchée (type 9 = Wi-Fi pour Windows), sinon la route par défaut la moins chère.
+    "function Net-Info {",
+    "  $nic = $null; $gw = $null; $medium = 'wifi'",
+    "  try { $w = Get-NetAdapter -Physical -ErrorAction Stop | Where-Object { $_.Status -eq 'Up' -and ($_.NdisPhysicalMedium -eq 9 -or $_.NdisPhysicalMedium -eq 1) } | Select-Object -First 1",
+    "    if ($w) { $r = Get-NetRoute -InterfaceIndex $w.ifIndex -DestinationPrefix '0.0.0.0/0' -ErrorAction Stop | Where-Object { [string]$_.NextHop -ne '0.0.0.0' } | Sort-Object RouteMetric | Select-Object -First 1; if ($r) { $nic = $w.ifIndex; $gw = [string]$r.NextHop } } } catch {}",
+    "  if (-not $nic) { try { $r = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction Stop | Where-Object { [string]$_.NextHop -ne '0.0.0.0' } | Sort-Object { [int]$_.RouteMetric + [int]$_.InterfaceMetric } | Select-Object -First 1",
+    "    if ($r) { $nic = $r.InterfaceIndex; $gw = [string]$r.NextHop; $a = Get-NetAdapter -InterfaceIndex $nic -ErrorAction SilentlyContinue; if (-not $a -or ($a.NdisPhysicalMedium -ne 9 -and $a.NdisPhysicalMedium -ne 1)) { $medium = 'cable' } } } catch {} }",
+    "  if (-not $nic) { return $null }",
+    "  @{ nic = $nic; gateway = $gw; medium = $medium }",
+    "}",
     "function Run-Op($op) {",
-    "  if ($op -eq 'box') { $gw = $null; try { $gw = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction Stop | Sort-Object RouteMetric | Select-Object -First 1).NextHop } catch {}; if (-not $gw) { return @{ ok = $false; detail = 'no-gateway' } }; $r = Ping-Host $gw 4; return @{ ok = ($r.lost -lt 4); gateway = $gw; ms = $r.ms; lost = $r.lost } }",
+    "  if ($op -eq 'box') { $n = Net-Info; if (-not $n) { return @{ ok = $false; detail = 'no-gateway' } }; $gw = $n.gateway; $r = Ping-Host $gw 4; return @{ ok = ($r.lost -lt 4); gateway = $gw; ms = $r.ms; lost = $r.lost } }",
     "  if ($op -eq 'internet') { $r = Ping-Host '8.8.8.8' 4; return @{ ok = ($r.lost -lt 4); ms = $r.ms; lost = $r.lost; dnsMs = (Resolve-Time 'www.google.com') } }",
     "  if ($op -eq 'dns') { ipconfig /flushdns | Out-Null; $t = Resolve-Time 'www.moov-africa.ci'; return @{ ok = ($t -ne $null); dnsMs = $t } }",
     "  if ($op -eq 'wifi') { $name = Field ((netsh wlan show interfaces) | Out-String) 'Profile|Profil'; if (-not $name) { return @{ ok = $false; detail = 'no-profile' } }; netsh wlan disconnect | Out-Null; Start-Sleep -Seconds 3; netsh wlan connect \"name=$name\" | Out-Null; for ($i = 0; $i -lt 20; $i++) { Start-Sleep -Seconds 1; $s = Field ((netsh wlan show interfaces) | Out-String) 'SSID'; if ($s -and (Test-Connection -ComputerName 8.8.8.8 -Count 1 -Quiet)) { return @{ ok = $true; ssid = $s } } }; return @{ ok = $false; detail = 'timeout' } }",
     "  return $null",
     "}",
+    // Le tour du réseau : une sonde à chaque adresse, puis la table des voisins de Windows (lecture seule). Un appareil compte
+    // s'il a répondu à la sonde, si Windows vient de le joindre (Reachable), ou s'il était là au tour précédent ; les
+    // entrées anciennes (Stale) seules ne comptent pas, pour ne pas montrer d'appareils fantômes.
+    "$script:prev = @{}",
+    "function Scan-Lan {",
+    "  try {",
+    "    $n = Net-Info; if (-not $n) { return $null }",
+    "    $nic = $n.nic; $gw = $n.gateway",
+    "    $addr = Get-NetIPAddress -InterfaceIndex $nic -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $_.IPAddress -notlike '169.254.*' } | Select-Object -First 1",
+    "    if (-not $addr) { return $null }",
+    "    $ip = [string]$addr.IPAddress; $len = [int]$addr.PrefixLength; if ($len -lt 24) { $len = 24 }; if ($len -gt 30) { $len = 30 }",
+    "    $o = $ip.Split('.'); $base = $o[0] + '.' + $o[1] + '.' + $o[2]; $size = [int][math]::Pow(2, 32 - $len); $start = [int]$o[3] - ([int]$o[3] % $size)",
+    "    $tasks = New-Object 'System.Collections.Generic.List[System.Threading.Tasks.Task]'",
+    "    for ($k = $start + 1; $k -lt $start + $size - 1; $k++) { $t = $base + '.' + $k; if ($t -ne $ip) { try { $tasks.Add((New-Object Net.NetworkInformation.Ping).SendPingAsync($t, 500)) } catch {} } }",
+    "    try { [Threading.Tasks.Task]::WaitAll($tasks.ToArray(), 2500) | Out-Null } catch {}",
+    "    $ok = @{}; foreach ($t in $tasks) { try { if ($t.Status -eq 'RanToCompletion' -and $t.Result.Status -eq 'Success') { $ok[[string]$t.Result.Address] = $true } } catch {} }",
+    "    Start-Sleep -Milliseconds 1500",
+    "    $self = $null; try { $self = [string](Get-NetAdapter -InterfaceIndex $nic -ErrorAction Stop).MacAddress } catch {}",
+    "    $now = @{}; $list = @(Get-NetNeighbor -InterfaceIndex $nic -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $a = [string]$_.IPAddress; $a.StartsWith($base + '.') -and $_.LinkLayerAddress -and [string]$_.LinkLayerAddress -ne '00-00-00-00-00-00' -and ([string]$_.State -eq 'Reachable' -or $ok.ContainsKey($a) -or $script:prev.ContainsKey($a)) } | Select-Object -First 80 | ForEach-Object { if ([string]$_.State -eq 'Reachable' -or $ok.ContainsKey([string]$_.IPAddress)) { $now[[string]$_.IPAddress] = $true }; @{ ip = [string]$_.IPAddress; mac = [string]$_.LinkLayerAddress } })",
+    "    $script:prev = $now",
+    "    return @{ ip = $ip; prefix = $len; gateway = $gw; mac = $self; medium = $n.medium; devices = $list }",
+    "  } catch { return $null }",
+    "}",
     "$labels = @{ box = 'Tester la box'; internet = 'Tester Internet'; dns = 'Réparer le DNS'; wifi = 'Reconnecter le Wi-Fi' }",
+    // Un tour du réseau toutes les 20 secondes (chronomètre) ; s'il n'a pas pu partir, il repart avec l'envoi suivant.
+    "$clock = [Diagnostics.Stopwatch]::StartNew(); $nextScan = 0; $scan = $null",
     "while ($true) {",
+    "  if ($clock.ElapsedMilliseconds -ge $nextScan) { $nextScan = $clock.ElapsedMilliseconds + 20000; $fresh = Scan-Lan; if ($fresh) { $scan = $fresh; $where = 'ce Wi-Fi'; if ($fresh.medium -eq 'cable') { $where = 'ce réseau' }; Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + @($fresh.devices).Count + ' appareils vus sur ' + $where) } }",
     "  $out = (netsh wlan show interfaces) | Out-String",
     "  $ssid = Field $out 'SSID'",
     "  if ($ssid) {",
@@ -241,8 +390,9 @@ function agent(origin, token) {
     "  } elseif ($out -match 'location|localisation|emplacement') { $body = @{ error = 'location' } }",
     "  elseif ($out -match 'wlansvc|not running|pas en cours') { $body = @{ error = 'netsh' } }",
     "  else { $body = @{ error = 'no-wifi' } }",
+    "  if ($scan) { $body.scan = $scan }",
     "  try {",
-    "    $resp = Send $body",
+    "    $resp = Send $body; $scan = $null",
     "    if ($ssid) { Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + $ssid + '  signal ' + $body.signal + ' %') }",
     "    elseif ($body.error -eq 'location') { Write-Host '  Windows cache le nom du Wi-Fi : activez la Localisation (Paramètres > Confidentialité et sécurité > Localisation).' -ForegroundColor Yellow }",
     "    else { Write-Host '  Ce PC n''est pas connecté en Wi-Fi.' -ForegroundColor Yellow }",
@@ -262,9 +412,10 @@ function agent(origin, token) {
     "}"
   ].join('\r\n');
   // Partie 1 (cmd) : relance ce même fichier dans PowerShell, à partir de la ligne repère. Partie 2 : le script ci-dessus.
-  return ['@echo off', 'title Guardian - Wi-Fi de ce PC',
-    "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$t = Get-Content -LiteralPath '%~f0' -Raw -Encoding UTF8; $i = $t.IndexOf('#GUARDIAN' + '-PS#'); Invoke-Expression $t.Substring($i)\"",
-    'exit /b', '#GUARDIAN-PS#', ps, ''].join('\r\n');
+  // Le chemin du fichier passe par une variable : une apostrophe dans le nom d'un dossier ne casse plus le lancement.
+  return ['@echo off', 'title Guardian - Wi-Fi de ce PC', 'set "GFILE=%~f0"',
+    "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$t = Get-Content -LiteralPath $env:GFILE -Raw -Encoding UTF8; $i = $t.IndexOf('#GUARDIAN' + '-PS#'); Invoke-Expression $t.Substring($i)\"",
+    'if errorlevel 1 pause', 'exit /b', '#GUARDIAN-PS#', ps, ''].join('\r\n');
 }
 
 // Pour la page de test : le prénom du client et d'où vient le lien, rien d'autre.
@@ -275,4 +426,5 @@ function info(s, row) {
     scenarios: Object.entries(SCENARIOS).map(([id, f]) => ({id, label: f.label, hint: f.hint, down: f.down ?? 0, add: f.add ?? 0, jitter: f.jitter ?? 0, loss: f.loss ?? 100, cut: !!f.cut, signal: f.signal ?? 1}))};
 }
 
-module.exports = {migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};
+module.exports = {migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
+  setVendorFetch: f => { vendorFetch = f || ((...a) => fetch(...a)); VENDOR_QUEUE.length = 0; vendorLast = 0; }, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};

@@ -175,9 +175,81 @@
 .vt-scenario:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
 .vt-demo .vt-btn{width:100%}
 
+/* Appareils du Wi-Fi (vus par le PC branché) */
+.vt-devices{display:grid;gap:10px;margin-top:14px;padding:12px;border-radius:16px;background:var(--moov-surface);border:1px solid var(--moov-neutral-100)}
+.vt-devices-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.vt-devices-head h3,.vt-twin-devs h3{margin:0;font-size:16px;letter-spacing:-.01em}
+.vt-count{flex:none;white-space:nowrap;padding:3px 10px;border-radius:99px;background:var(--moov-primary-50);color:var(--moov-primary-700);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.vt-dev-event{margin:0!important;padding:8px 11px;border-radius:11px;font-size:13.5px;font-weight:600}
+.vt-dev-event.in{background:var(--moov-success-50);color:var(--moov-success-700)!important}
+.vt-dev-event.out{background:var(--moov-neutral-50);color:var(--moov-neutral-700)!important}
+.vt-dev-list{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.vt-dev{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;padding:7px 10px 7px 8px;border-radius:13px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100);animation:vt-in .35s var(--vt-ease) both}
+.vt-dev.added{border-style:dashed;border-color:var(--moov-accent-200);background:var(--moov-accent-25)}
+.vt-dev-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.vt-dev-icon.box,.vt-dev-icon.partage{background:var(--moov-primary);color:var(--moov-on-primary)}
+.vt-dev-icon.pc,.vt-dev-icon.self{background:var(--moov-accent-50);color:var(--moov-accent-text)}
+.vt-dev-text{display:grid;min-width:0;line-height:1.25}
+.vt-dev-text b{font-size:14.5px;overflow-wrap:anywhere}
+.vt-dev-text small{font-size:12.5px;color:var(--moov-text-muted);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.vt-dev-since{font-size:12px;font-weight:600;color:var(--moov-text-muted);white-space:nowrap}
+.vt-devices-note{font-size:12.5px}
+.vt-state{padding:4px 9px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
+.vt-state.good{background:var(--moov-success-50);color:var(--moov-success-700)}
+.vt-state.slow{background:var(--moov-warning-100);color:var(--moov-warning)}
+.vt-state.bad{background:var(--moov-danger-50);color:var(--moov-danger-700)}
+
+/* Copie du Wi-Fi */
+.vt-copy{display:grid;gap:12px;align-content:start}
+.vt-copy-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.vt-eyebrow.rec i{background:var(--moov-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-accent) 22%,transparent);animation:vt-pulse 1.2s ease-in-out infinite}
+.vt-copy-tag{padding:4px 10px;border-radius:99px;background:var(--moov-neutral-50);color:var(--moov-neutral-700);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.vt-copy h2{display:flex;align-items:center;gap:9px;margin:0;font-size:22px;overflow-wrap:anywhere}
+.vt-copy h2 svg{flex:none;color:var(--moov-primary)}
+.vt-copy .vt-tiles{margin:2px 0 0}
+.vt-copy-note{padding:9px 12px;border-radius:11px;background:var(--moov-primary-50);color:var(--moov-primary-700)!important;font-size:13.5px;font-weight:600}
+.vt-copy-bar{height:8px;border-radius:9px;background:var(--moov-neutral-100);overflow:hidden}
+.vt-copy-bar i{display:block;height:100%;border-radius:9px;background:var(--moov-accent);transition:width .6s linear}
+.vt-copy-time{margin-top:-4px!important;font-size:13px;font-weight:700;color:var(--moov-ink)!important;font-variant-numeric:tabular-nums}
+.vt-copy-steps{display:grid;gap:8px;margin:0;padding:0;list-style:none;font-size:14px;color:var(--moov-text-muted)}
+.vt-copy-steps li{display:flex;align-items:center;gap:9px}
+.vt-copy-steps i{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--moov-neutral-200)}
+.vt-copy-steps li.on{color:var(--moov-ink);font-weight:600}
+.vt-copy-steps li.on i{border-color:var(--moov-success);background:var(--moov-success) radial-gradient(circle,var(--moov-white) 0 2px,transparent 2.5px)}
+.vt-copy-devs{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.vt-copy-devs li{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:3px 10px 3px 3px;border-radius:99px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100);font-size:12.5px;font-weight:600}
+.vt-copy-devs li span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vt-copy-devs .vt-dev-icon{width:26px;height:26px;border-radius:50%}
+.vt-copy-devs .vt-dev-icon svg{width:14px;height:14px}
+.vt-copy-text,.vt-copy-hint{font-size:13.5px}
+.vt-copy-hint{padding:9px 12px;border-radius:11px;background:var(--moov-neutral-25);border:1px dashed var(--moov-neutral-200)}
+.vt-copy .vt-actions{margin-top:0}
+@media(prefers-reduced-motion:reduce){.vt-dev,.vt-eyebrow.rec i{animation:none}.vt-copy-bar i{transition:none}}
+
+/* Face-à-face : le vrai Wi-Fi, jamais touché, et la copie pendant la panne */
+.vt-twin{display:grid;gap:12px;margin-bottom:12px}
+.vt-twin-wait{padding:12px;border-radius:12px;background:var(--moov-accent-25);color:var(--moov-accent-text)!important;font-weight:600}
+div.vt-twin-wait{display:grid;gap:10px;justify-items:start}
+div.vt-twin-wait p{color:inherit!important}
+.vt-twin-note{padding:9px 12px;border-radius:11px;background:var(--moov-neutral-25);border:1px dashed var(--moov-neutral-200);font-size:13.5px}
+.vt-twin-head{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);align-items:stretch;gap:6px}
+.vt-twin-side{display:grid;gap:3px;align-content:start;padding:11px 12px;border-radius:14px;border:1.5px solid var(--moov-success-300);background:var(--moov-success-50)}
+.vt-twin-side.copy{border-color:var(--moov-accent-200);background:var(--moov-accent-25)}
+.vt-twin-side small{font-size:12px;font-weight:700;color:var(--moov-text-muted)}
+.vt-twin-side b{font-size:15px;line-height:1.25;overflow-wrap:anywhere}
+.vt-twin-arrow{display:grid;place-items:center;color:var(--moov-neutral-400)}
+.vt-twin-tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--moov-accent-text)}
+.vt-twin-tag i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--moov-accent)}
+.vt-twin-tag.ok{color:var(--moov-success-700)}
+.vt-twin-tag.ok i{background:var(--moov-success)}
+.vt-twin-tiles{margin:0}
+.vt-twin-devs{display:grid;gap:8px}
+.vt-twin .vt-chart{margin:0;align-self:start}
+.vt-twin-tiles>:last-child:nth-child(odd){grid-column:1/-1}
+
 /* Grand écran : le cadran à gauche, le résultat à droite */
 @media(min-width:900px){
-  .vt{max-width:1040px;padding-top:28px;grid-template-columns:1fr 1fr;align-items:start;column-gap:20px}
+  .vt{max-width:1040px;padding-top:28px;grid-template-columns:1fr 1fr;grid-auto-flow:row dense;align-items:start;column-gap:20px}
   .vt-head{grid-column:1/-1}
   .vt-card{padding:28px}
   .vt h1{font-size:34px}
@@ -186,6 +258,12 @@
   .vt-scenarios{grid-template-columns:repeat(3,1fr)}
   .vt-demo .vt-btn{width:auto;justify-self:start;padding:0 22px}
   .vt-tiles:has(>:nth-child(4)){grid-template-columns:repeat(4,1fr)}
+  .vt-copy .vt-tiles:has(>:nth-child(4)){grid-template-columns:repeat(2,1fr)}
+  .vt-twin{grid-template-columns:1fr 1fr;column-gap:16px}
+  .vt-twin-head,.vt-twin-tiles,.vt-twin-note,.vt-twin-wait,.vt-twin .vt-guardian{grid-column:1/-1}
+  .vt-twin .vt-twin-tiles{grid-template-columns:repeat(5,1fr)}
+  .vt-twin .vt-twin-tiles:not(:has(>:nth-child(5))){grid-template-columns:repeat(4,1fr)}
+  .vt-twin .vt-twin-tiles>:last-child:nth-child(odd){grid-column:auto}
 }
 .vt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .vt [hidden]{display:none!important}
