@@ -16,13 +16,7 @@ const plain = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLo
 const HEAD = 'Guardian · Moov Africa Fibre';
 const UNKNOWN = 'Bonjour ! Ce numéro n’est pas encore relié à un abonnement fibre. Ouvrez l’application Fibre Guardian pour relier votre ligne, ou appelez le 111.';
 
-function links(text) {
-  return String(text || '').split(/[,;\n]/).map(part => {
-    const m = part.match(/^\s*([+\d][\d\s.-]*)\s*[=:]\s*(\S+@\S+)\s*$/); if (!m) return null;
-    const phone = m[1].replace(/\D/g, '');
-    return /^\d{8,15}$/.test(phone) ? {phone, email: m[2].toLowerCase()} : null;
-  }).filter(Boolean);
-}
+const links = W.links;
 
 function config(env = process.env) {
   if (!env.GREENAPI_ID_INSTANCE || !env.GREENAPI_API_TOKEN) return null;
@@ -83,18 +77,39 @@ function who(s, cfg, phone) {
 // Un bouton envoie à Guardian la phrase complète ; si le téléphone n'affiche pas les boutons, « 1 », « 2 » ou « 3 » marchent aussi.
 const CHOICES = {
   lent: ['Internet est lent', 'Internet est lent'],
-  coupure: ['Je n’ai plus internet', 'Je n’ai plus internet'],
+  coupure: ['Je n’ai plus internet', 'Je n’ai plus d’internet'],
   wifi: ['Mon Wi-Fi capte mal', 'Mon Wi-Fi capte mal dans une pièce'],
   humain: ['Parler à un conseiller', 'Je veux parler à un conseiller'],
   suivi: ['Où en est la réparation', 'Où en est la réparation ?'],
+  reboot: ['Redémarrer ma box', 'Comment redémarrer ma box ?'],
+  voyants: ['Voyant rouge sur la box', 'Un voyant de ma box est rouge'],
+  forfait: ['Un forfait plus rapide', 'Je veux un forfait plus rapide'],
+  prix: ['Mon forfait et son prix', 'Combien coûte mon forfait ?'],
+  menu: ['Autre question', 'Bonjour'],
   merci: ['Merci', 'Merci']
 };
-const MENUS = {accueil: ['lent', 'coupure', 'humain'], panne: ['suivi', 'humain', 'merci'], lent: ['wifi', 'coupure', 'humain']};
+// Les boutons suivent la conversation : ce qu'on vient de demander, et la panne du quartier s'il y en a une.
+const MENUS = {
+  accueil: ['lent', 'coupure', 'humain'],
+  panne: ['suivi', 'humain', 'merci'],
+  suivi: ['humain', 'menu', 'merci'],
+  lent: ['wifi', 'reboot', 'humain'],
+  wifi: ['reboot', 'humain', 'merci'],
+  coupure: ['reboot', 'voyants', 'humain'],
+  reboot: ['voyants', 'humain', 'merci'],
+  voyants: ['reboot', 'humain', 'merci'],
+  humain: ['reboot', 'menu', 'merci'],
+  humainPanne: ['suivi', 'menu', 'merci'],
+  forfait: ['prix', 'humain', 'merci'],
+  prix: ['forfait', 'humain', 'merci']
+};
 const FOOT = 'Touchez un bouton, ou répondez 1, 2 ou 3.';
 
 function menuFor(answer, question) {
-  if (answer?.action === 'tracking') return MENUS.panne;
-  return ['lent', 'wifi'].includes(journey.intent(question)) ? MENUS.lent : MENUS.accueil;
+  const ask = journey.intent(question);
+  if (answer?.action === 'tracking') return ask === 'humain' ? MENUS.humainPanne : ask === 'suivi' ? MENUS.suivi : MENUS.panne;
+  const by = {lent: 'lent', usage: 'lent', wifi: 'wifi', coupure: 'coupure', reboot: 'reboot', voyants: 'voyants', humain: 'humain', upgrade: 'forfait', prix: 'prix', resiliation: 'humain', suivi: 'humain'};
+  return MENUS[by[ask]] || MENUS.accueil;
 }
 
 // Dans l'application, Guardian parle de boutons de l'écran ; sur WhatsApp, on renvoie vers l'application ou le 111.
@@ -143,6 +158,7 @@ async function answer(s, cfg, m, text, buttons, fetchImpl) {
   return {status: 'answered', reply: text, buttons};
 }
 
+const HUMAN = 'Un conseiller Moov vous répond au 111, à tout moment. Il voit le même dossier que moi :\n\n';
 const DEAF = 'Je ne peux pas encore écouter les notes vocales. Écrivez-moi en quelques mots ce qui se passe, ou touchez un bouton.';
 const UNHEARD = 'Je n’ai pas bien compris votre note vocale. Pouvez-vous la refaire dans un endroit calme, ou m’écrire en quelques mots ?';
 const MAX_AUDIO = 5 * 1024 * 1024; // environ 5 minutes de note vocale
@@ -178,12 +194,14 @@ async function handle(s, cfg, payload, {chat, fetchImpl = fetch, now = Date.now(
   }
   const picked = !heard && choice(s, m), text = picked ? CHOICES[picked][1] : m.text;
   const echo = heard ? 'Vous avez dit : « ' + heard + ' »\n\n' : '';
-  // « Bonjour » seul : Guardian salue et propose les choix, sans tout déballer d'un coup.
-  if (!picked && journey.intent(text) === 'salut' && text.length <= 40) return answer(s, cfg, m, echo + greeting(user.name, text), MENUS.accueil, fetchImpl);
+  // « Bonjour » seul, ou « Autre question » : Guardian salue et propose les choix, sans tout déballer d'un coup.
+  if (picked === 'menu' || (!picked && journey.intent(text) === 'salut' && text.length <= 40)) return answer(s, cfg, m, echo + greeting(user.name, picked ? '' : text), MENUS.accueil, fetchImpl);
   if (!journey.get(s, user.id)) journey.put(s, user.id, journey.seed());
   const state = await chat(user, {type: 'chat', text, version: journey.get(s, user.id).version});
   const said = state.messages.filter(x => x.role === 'assistant').at(-1);
-  return answer(s, cfg, m, echo + forWhatsApp(said, cfg.origin), journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
+  // Pendant une panne, l'application répond d'abord par l'état du quartier ; sur WhatsApp, on dit aussi comment joindre un conseiller.
+  const human = said?.action === 'tracking' && journey.intent(text) === 'humain' ? HUMAN : '';
+  return answer(s, cfg, m, echo + human + forWhatsApp(said, cfg.origin), journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
 }
 
-module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, transcribe, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};
+module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, transcribe, menuFor, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};

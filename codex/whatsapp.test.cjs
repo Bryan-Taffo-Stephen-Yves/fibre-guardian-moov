@@ -30,6 +30,24 @@ test('Réglages : Twilio ou Meta selon les clés présentes, numéros lus tels q
   assert.ok(W.livesIn('cocody', 'PAL-02') && W.livesIn('palmeraie', 'PAL-02') && W.livesIn('bas01', 'BAS-01') && !W.livesIn('palmeraie', 'COC-03'));
 });
 
+test('Green API d’abord : les alertes partent du numéro de Guardian, et un client relié par son compte reçoit les pannes de son quartier avec le lien de suivi', async () => {
+  const ROSE = '22501010101';
+  const t = await setup({GREENAPI_ID_INSTANCE: '7107000001', GREENAPI_API_TOKEN: 'jeton-de-test', GREENAPI_URL: 'https://7107.api.greenapi.com', WHATSAPP_NUMEROS: '', WHATSAPP_CLIENTS: ROSE + '=Rose@Example.test'});
+  try {
+    assert.equal(t.cfg.provider, 'greenapi', 'Green API passe avant Twilio quand les deux sont réglés');
+    assert.equal(W.status(t.s, t.cfg).phones, 1);
+    t.sim('ABO-01', 'fiber'); await t.tick(after(500));
+    assert.equal(t.calls.length, 0, 'une panne à Abobo ne concerne pas Rose');
+    t.sim('BAS-01', 'fiber'); await t.tick(after(500));
+    assert.equal(t.calls.length, 1); assert.equal(t.calls[0].url, 'https://7107.api.greenapi.com/waInstance7107000001/sendMessage/jeton-de-test');
+    assert.equal(t.calls[0].form.chatId, ROSE + '@c.us'); assert.match(t.calls[0].form.message, /^Moov Africa · Fibre Guardian\n\nUn câble de fibre est coupé dans votre quartier/);
+    t.calls.length = 0;
+    t.act('BAS-01', {type: 'approve', note: 'ok'}); t.act('BAS-01', {type: 'dispatch', technician: 'amina', safety: true}); t.act('BAS-01', {type: 'advance'});
+    await t.tick(Date.now() + 500);
+    assert.ok(t.calls.some(c => c.form.chatId === ROSE + '@c.us' && /Suivez son trajet en direct : https:\/\/fibre-guardian-moov\.onrender\.com\/codex\/\?suivi=/.test(c.form.message)), 'le lien de suivi du technicien arrive sur WhatsApp');
+  } finally { t.server.close(); }
+});
+
 test('Panne à Grand-Bassam : la cliente de Grand-Bassam, l’équipe et le technicien reçoivent, pas Abobo ; une seule fois', async () => {
   const t = await setup();
   try {
