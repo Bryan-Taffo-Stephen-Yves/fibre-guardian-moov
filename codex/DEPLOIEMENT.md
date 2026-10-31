@@ -123,6 +123,9 @@ Un numéro qui n’est pas relié reçoit une réponse polie, sans aucune donné
 - La mesure est réelle : l'appareil envoie 5 sondes au serveur, puis télécharge 2 Mo, et 6 Mo de plus si la ligne est rapide. Elle passe par le réseau de l'appareil (Wi-Fi de la box, partage de connexion ou données mobiles) jusqu'au serveur de Guardian.
 - Le serveur gratuit de Render est loin d'Abidjan : le débit affiché peut être plus bas que celui de la fibre.
 - Une photo de la box envoyée sur WhatsApp est lue par Guardian, comme « Photo de ma box » dans l'application. Il faut pour cela que ANTHROPIC_API_KEY soit réglée.
+- Copie du Wi-Fi : dès que la page s'ouvre, Guardian enregistre 20 secondes de mesures (temps de réponse, débit, stabilité). Avec un PC Windows branché (« Brancher ce PC »), la copie prend aussi le nom du Wi-Fi, son signal et les appareils vus sur le réseau local. Jamais de mot de passe, ni nom d'appareil, ni adresse MAC complète. 5 copies au plus par lien, gardées 7 jours (et effacées à chaque réveil du serveur gratuit).
+- Le bouton « Démo » de la page rejoue une panne sur la copie : le vrai Wi-Fi n'est jamais touché. L'équipe Moov retrouve les copies dans son espace, rubrique « Copies Wi-Fi » (`?portal=moov&section=copies`), et peut y rejouer une panne.
+- Le fichier PC fait le tour du réseau local toutes les 20 secondes : une petite sonde vers chaque adresse, puis la liste des voisins de Windows. Le fabricant d'un appareil est demandé au service gratuit macvendors.com avec les 3 premiers octets de son adresse seulement. Un téléphone en veille peut ne pas répondre quelques minutes.
 
 ## Étape 7 : l'application Android (fichier APK)
 

@@ -27,6 +27,8 @@ function createGuardianServer(options={}){
  // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
  const WB=require('./whatsapp-bot.cjs'),bot=WB.config(options.env||process.env);WB.migrate(store);
  const VT=require('./vrai-test.cjs');VT.migrate(store);
+ // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
+ const CW=require('./copie-wifi.cjs');CW.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -79,7 +81,10 @@ function createGuardianServer(options={}){
      if(route==='/api/test/upload'&&method==='POST'){store.rate('vt-up:'+key,30,VT.LINK_MS);let size=0;for await(const chunk of req){size+=chunk.length;if(size>VT.MAX_UPLOAD){res.setHeader('Connection','close');throw new Problem(413,'Envoi trop volumineux.');}}return json(res,{bytes:size});}
      // « Brancher ce PC » : le fichier à lancer, puis ses relevés Wi-Fi toutes les 2 secondes (gardés en mémoire seulement).
      if(route==='/api/test/agent'&&method==='GET'){store.rate('vt-agent:'+key,10,VT.LINK_MS);const file=VT.agent(origin,req.headers['x-test-token']);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="Guardian-Wi-Fi.cmd"','Content-Length':Buffer.byteLength(file)});res.end(file);return;}
-     if(route==='/api/test/wifi'&&method==='POST'){store.rate('vt-wifi-in:'+key,1200,VT.LINK_MS);return json(res,VT.wifiSave(row,await body(req,4096)));}
+     if(route==='/api/test/wifi'&&method==='POST'){store.rate('vt-wifi-in:'+key,1200,VT.LINK_MS);return json(res,VT.wifiSave(row,await body(req,16384)));}
+     if(route==='/api/test/copy'&&method==='GET'){store.rate('vt-copy:'+key,600,VT.LINK_MS);return json(res,CW.latest(store,row));}
+     if(route==='/api/test/copy'&&method==='POST'){store.rate('vt-copy-in:'+key,300,VT.LINK_MS);const d=await body(req,8192),net=await VT.network(ip(req));return json(res,d.new===true?CW.start(store,row,d,{net}):CW.update(store,row,d,{net}),d.new===true?201:200);}
+     if(route==='/api/test/copy/simulate'&&method==='POST'){store.rate('vt-copy-sim:'+key,300,VT.LINK_MS);return json(res,CW.simulate(store,row,await body(req,1024)));}
      if(route==='/api/test/wifi'&&method==='GET'){store.rate('vt-wifi:'+key,1200,VT.LINK_MS);return json(res,VT.wifiRead(row));}
      if(route==='/api/test/op'&&method==='POST'){store.rate('vt-op:'+key,40,VT.LINK_MS);return json(res,VT.queueOp(row,String((await body(req,1024)).op||'')),201);}
      if(route==='/api/test/preview'&&method==='POST'){store.rate('vt-preview:'+key,600,VT.LINK_MS);const d=await body(req,4096);return json(res,VT.preview(d.metrics,String(d.scenario||'')));}
@@ -146,6 +151,9 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/superviseur'&&method==='GET')return json(res,require('./superviseur.cjs').bilan(store,user.id,{whatsapp:WA.status(store,whatsapp.cfg)}));
     if(route==='/api/noc/superviseur/ask'&&method==='POST')return json(res,await require('./superviseur.cjs').ask(store,user.id,await body(req,2048),{whatsapp:WA.status(store,whatsapp.cfg),log:m=>options.onError?options.onError(new Error(m)):console.warn(m)}));
     if(route==='/api/noc/superviseur/signal'&&method==='POST')return json(res,require('./superviseur.cjs').signal(store,user.id,await body(req,1024),{whatsapp:WA.status(store,whatsapp.cfg)}));
+    // Copies Wi-Fi des clients : équipe Moov seulement (requireOperator dans copie-wifi.cjs).
+    if(route==='/api/noc/copies'&&method==='GET')return json(res,url.searchParams.get('id')?CW.detail(store,user.id,url.searchParams.get('id')):CW.list(store,user.id));
+    if(route==='/api/noc/copies/simulate'&&method==='POST')return json(res,CW.teamSimulate(store,user.id,await body(req,1024)));
     if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
