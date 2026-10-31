@@ -116,6 +116,14 @@ Numéros ivoiriens : beaucoup de comptes WhatsApp gardent l’ancien format à 8
 
 Un numéro qui n’est pas relié reçoit une réponse polie, sans aucune donnée. Un message resté plus de 10 minutes en attente (site endormi) ne reçoit pas de réponse. 
 
+## Tester une vraie connexion (aucun réglage)
+
+- Dans l'application client, le bouton « Tester ma connexion » ouvre `/codex/test.html` avec un lien personnel valable 30 minutes.
+- Sur WhatsApp, le bouton « Tester ma connexion » (ou le message « je veux tester ma connexion ») envoie le même lien. Le résultat revient dans la conversation WhatsApp.
+- La mesure est réelle : l'appareil envoie 5 sondes au serveur, puis télécharge 2 Mo, et 6 Mo de plus si la ligne est rapide. Elle passe par le réseau de l'appareil (Wi-Fi de la box, partage de connexion ou données mobiles) jusqu'au serveur de Guardian.
+- Le serveur gratuit de Render est loin d'Abidjan : le débit affiché peut être plus bas que celui de la fibre.
+- Une photo de la box envoyée sur WhatsApp est lue par Guardian, comme « Photo de ma box » dans l'application. Il faut pour cela que ANTHROPIC_API_KEY soit réglée.
+
 ## Étape 7 : l'application Android (fichier APK)
 
 Le concours demande une application qui fonctionne sur Android. Fibre Guardian en devient une grâce à PWABuilder, un service gratuit de Microsoft qui emballe le site en vraie application Android. Il faut que le site soit déjà en ligne (étapes 1 à 6).

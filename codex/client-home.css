@@ -42,6 +42,11 @@
 .ch-chip:hover{border-color:var(--moov-primary-200);color:var(--moov-primary)}
 .ch-chip.light{min-height:36px;border-color:transparent;background:var(--moov-primary-50);color:var(--moov-primary)}
 .ch-report-more .j-button{min-height:44px;width:100%;justify-content:center;border-radius:99px}
+/* Une étiquette ne déborde jamais : si deux boutons ne tiennent pas côte à côte, le second passe à la ligne. */
+.ch-report-more>.ch-chip{min-width:max-content}
+/* « Tester ma connexion » : vraie mesure sur l'appareil (test.html), sur sa propre ligne au téléphone */
+.ch-report-more .ch-chip-test{flex:1 1 100%;min-width:0;border-color:var(--moov-primary-200);background:var(--moov-primary-50);color:var(--moov-primary-700)}
+.ch-report-more .ch-chip-test:hover{border-color:var(--moov-primary);color:var(--moov-primary-700)}
 
 /* Compte */
 .ch-account{display:grid;gap:16px;max-width:640px;animation:ch-in .4s var(--fg-ease,ease) both}
@@ -80,4 +85,4 @@
 .ch-live-main em,.ch-live-foot b{color:var(--moov-primary)}
 .ch-live-main em small{color:var(--moov-neutral-500)}
 .ch-live-foot span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(min-width:761px){.ch-report-more{justify-content:center}.ch-report-more>*{flex:0 0 auto}.ch-report-more .ch-chip{min-height:52px}}
+@media(min-width:761px){.ch-report-more{justify-content:center}.ch-report-more>*,.ch-report-more .ch-chip-test{flex:0 0 auto}.ch-report-more .ch-chip{min-height:52px}}
