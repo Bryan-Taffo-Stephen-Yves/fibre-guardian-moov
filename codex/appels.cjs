@@ -69,7 +69,8 @@ const STAGE={proposed:'Une équipe Moov prépare l’intervention.',approved:'L�
 function where(zone){const [commune,area]=String(zone||'').split(' · ');if(!commune)return 'dans votre quartier';if(area==='toute la commune')return 'dans toute la commune de '+commune;return 'dans votre quartier ('+(area?area+', ':'')+commune+')';}
 function call(s,uid,d){
  insist(d&&['start','end'].includes(d.type),'Action inconnue.');s.rate('call:'+uid,40);
- const me=s.get('SELECT name FROM users WHERE id=?',uid),first=String(me?.name||'').split(' ')[0];
+ // Un membre du jury inscrit sans prénom s'appelle « Membre du jury N » : le serveur vocal dit alors seulement « Bonjour ».
+ const me=s.get('SELECT name FROM users WHERE id=?',uid),first=/^Membre du jury \d+$/.test(me?.name||'')?'':String(me?.name||'').split(' ')[0];
  const list=N().client(s,uid).incidents.filter(x=>x.mode==='demo'&&!x.terminal),item=list[0]||null;
  if(d.type==='start'){
   if(!item)return {known:false,lines:['Bonjour'+(first?' '+first:'')+', ici Moov.','Aucune panne n’est signalée dans votre quartier en ce moment.','Guardian peut vérifier votre box tout de suite, sans attendre.'],choices:['guardian','called']};

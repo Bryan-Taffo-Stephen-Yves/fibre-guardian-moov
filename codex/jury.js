@@ -73,9 +73,11 @@
  const TOASTS={dispatched:t=>t+' est affecté à votre quartier',en_route:t=>t+' est en route vers vous',on_site:t=>t+' est arrivé dans votre quartier',verifying:()=>'Réparation terminée, vérification en cours',resolved:()=>'Connexion rétablie et vérifiée'};
 
  function Certificate({c}){
-  const rows=[['Quartier',c.zone],['Coupure détectée',hm(c.detectedAt)],['Technicien sur place',c.arrivedAt?hm(c.arrivedAt)+(c.technician?' · '+c.technician:''):'—'],['Connexion rétablie',hm(c.restoredAt)],['Durée totale',c.durationMin+' min'],['Mesures du quartier',c.online!=null?c.online+' foyers sur '+c.total+' en ligne':'Vérifiées'],['Vérifié par',c.verifiedBy]];
+  // Coupure de courant : rien n'a été réparé et personne n'est venu, le courant est revenu.
+  const power=c.cause==='POWER_OUTAGE';
+  const rows=[['Quartier',c.zone],[power?'Coupure de courant détectée':'Coupure détectée',hm(c.detectedAt)],!power&&['Technicien sur place',c.arrivedAt?hm(c.arrivedAt)+(c.technician?' · '+c.technician:''):'—'],['Connexion rétablie',hm(c.restoredAt)],['Durée totale',c.durationMin+' min'],['Mesures du quartier',c.online!=null?c.online+' foyers sur '+c.total+' en ligne':'Vérifiées'],['Vérifié par',c.verifiedBy]].filter(Boolean);
   return h('section',{className:'jy-cert','aria-label':'Certificat de réparation'},
-   h('div',{className:'jy-cert-head'},h('span',{className:'jy-seal','aria-hidden':true},h('svg',{viewBox:'0 0 48 48'},h('circle',{cx:24,cy:24,r:20}),h('path',{d:'m15 24 6 6 12-12'}))),h('div',null,h('small',null,'CERTIFICAT DE RÉPARATION'),h('strong',null,'Votre fibre est réparée'),h('span',null,'Référence '+c.reference))),
+   h('div',{className:'jy-cert-head'},h('span',{className:'jy-seal','aria-hidden':true},h('svg',{viewBox:'0 0 48 48'},h('circle',{cx:24,cy:24,r:20}),h('path',{d:'m15 24 6 6 12-12'}))),h('div',null,h('small',null,power?'CERTIFICAT DE RETOUR DU SERVICE':'CERTIFICAT DE RÉPARATION'),h('strong',null,power?'Le courant et votre connexion sont revenus':'Votre fibre est réparée'),h('span',null,'Référence '+c.reference))),
    h('dl',{className:'jy-cert-rows'},rows.map(([k,v])=>h('div',{key:k},h('dt',null,k),h('dd',null,v)))),
    h('p',{className:'jy-cert-sign'},'Signé par Guardian, le '+DAY.format(c.restoredAt||Date.now())+'.'));
  }
@@ -269,7 +271,7 @@
         B(busy==='cut:power'?'En cours…':'Courant coupé',()=>run('cut','Courant coupé sur '+network+'. Guardian a repéré la panne : validez pour prévenir les inscrits.',{fault:'power'}),{className:'jy-choice-btn',disabled:!!busy})))));
      return h('li',{key:k},h('button',{type:'button',className:'jy-step'+(isNext?' is-next':'')+(done?' is-done':''),disabled:!isNext||!!busy,onClick:()=>run(k,message)},
       h('span',{className:'jy-step-n','aria-hidden':true},done?'✓':n+1),h('span',null,h('strong',null,busy===k?'En cours…':label),h('small',null,detail))));})),
-    room&&next==='repair'&&!scene?.hold&&h('div',{className:'jy-variant'},h('p',null,h('b',null,'Variante pour le jury : '),'la réparation principale est faite, mais 4 foyers restent coupés. Guardian doit refuser de clôturer.'),B(busy==='partial'?'En cours…':'Réparation partielle',()=>run('partial','Réparation partielle : 4 foyers restent coupés. Guardian garde le dossier ouvert.'),{className:'jy-secondary',disabled:!!busy})),
+    room&&next==='repair'&&!scene?.hold&&scene?.cause!=='POWER_OUTAGE'&&h('div',{className:'jy-variant'},h('p',null,h('b',null,'Variante pour le jury : '),'la réparation principale est faite, mais 4 foyers restent coupés. Guardian doit refuser de clôturer.'),B(busy==='partial'?'En cours…':'Réparation partielle',()=>run('partial','Réparation partielle : 4 foyers restent coupés. Guardian garde le dossier ouvert.'),{className:'jy-secondary',disabled:!!busy})),
     scene?.hold&&h('p',{className:'jy-hint',role:'status'},'Guardian refuse la clôture : '+scene.hold.remaining+' foyers encore coupés. Étape 4 : contrôle ciblé, puis vérification.'),
     !room&&h('p',{className:'jy-hint'},'Ouvrez d’abord la salle du jury.')),
    data?.report&&h('section',{className:'jy-card jy-report'},h('p',{className:'jy-kicker'},'RAPPORT DE PREUVES'),h('h2',null,data.report.verified?'Service rétabli et vérifié':'Scène en cours'),

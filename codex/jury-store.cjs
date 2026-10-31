@@ -13,7 +13,11 @@ const ROOM_MS=4*3600000,MAX_JURORS=60,DEFAULT_SSID='MOOV-FIBRE-DEMO',COPY_MS=12*
 const FAULTS={fiber:{scenario:'fiber',copy:'fibre-coupee',cause:'FIBER_CUT_DISTRIBUTION'},power:{scenario:'power',copy:'courant',cause:'POWER_OUTAGE'}};
 const faultOf=i=>i?.plan?.cause==='POWER_OUTAGE'?'power':'fiber';
 // Tant qu'un responsable n'a pas validé, les inscrits du réseau de démo ne voient rien : pas de fausse alerte.
-const HELD=['reported','proposed','rejected'];
+// On regarde la validation elle-même (événement « plan.approved »), pas l'état du dossier : un dossier refusé ou clôturé
+// sans validation reste invisible, et une nouvelle analyse après la validation ne cache pas une alerte déjà reçue.
+const validated=i=>!!(i&&(i.events||[]).some(e=>e.kind==='plan.approved'));
+// Lettres invisibles (remplissages coréens) : refusées, sinon un prénom vide s'afficherait sur le grand écran.
+const BLANK_LETTERS=/[\u115F\u1160\u3164\uFFA0]/u;
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans O/0 ni I/1, faciles à confondre à l'oral.
 
 function migrate(s){s.db.exec(`
@@ -24,26 +28,32 @@ function migrate(s){s.db.exec(`
  `);
  // Prénom facultatif, montré sur le grand écran de la régie (bases déjà créées : colonne ajoutée une fois).
  if(!s.all('PRAGMA table_info(jury_members)').some(c=>c.name==='first'))s.db.exec('ALTER TABLE jury_members ADD COLUMN first TEXT');
+ // Un numéro par inscrit dans une salle, même quand tout le monde scanne en même temps.
+ try{s.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS jury_member_number ON jury_members(room,number)');}catch(_){/* ancienne base avec des doublons : le numéro reste attribué dans la transaction */}
 }
 function requireAdmin(s,uid){insist(O.role(s,uid)==='admin','Régie réservée à l’administrateur.',403);}
 const openRoom=s=>s.get('SELECT * FROM jury_rooms WHERE closed=0 AND expires>? ORDER BY created DESC LIMIT 1',Date.now());
 const code=()=>Array.from({length:6},()=>ALPHABET[crypto.randomInt(ALPHABET.length)]).join('');
 const networkOf=(s,roomId)=>roomId?s.get('SELECT ssid FROM jury_networks WHERE room=?',roomId)?.ssid||null:null;
 // Nom du réseau : celui du partage de connexion (32 octets au plus, comme un vrai nom de Wi-Fi).
-function cleanSsid(v){const t=String(v??'').replace(/[\u0000-\u001f\u007f]/g,'').trim()||DEFAULT_SSID;insist(Buffer.byteLength(t)<=32,'Le nom du réseau doit faire 32 caractères au plus.');return t;}
-// Prénom : des lettres (accents compris), un espace, un tiret ou une apostrophe. Jamais de chiffres : pas de numéro caché.
+// Caractères de contrôle et caractères invisibles (sens d'écriture, espaces sans largeur) retirés.
+function cleanSsid(v){const t=String(v??'').replace(/[\p{Cc}\p{Cf}]/gu,'').trim()||DEFAULT_SSID;insist(Buffer.byteLength(t)<=32,'Le nom du réseau est trop long : 32 caractères au plus (un accent compte double).');return t;}
+// Prénom : des lettres (accents compris, deux au plus par lettre), un espace, un tiret ou une apostrophe.
+// Jamais de chiffres : pas de numéro caché. 30 caractères visibles au plus.
+const graphemes=t=>[...new Intl.Segmenter('fr',{granularity:'grapheme'}).segment(t)].length;
 function cleanFirst(v){if(v==null)return null;insist(typeof v==='string','Prénom invalide.');const t=v.normalize('NFC').replace(/\s+/g,' ').trim();if(!t)return null;
- insist(t.length<=30&&/^\p{L}[\p{L}\p{M}'’ -]*$/u.test(t),'Votre prénom : des lettres seulement, 30 au plus.');return t;}
+ insist(graphemes(t)<=30&&!BLANK_LETTERS.test(t)&&/^\p{L}\p{M}{0,2}(?:[\p{L}'’ -]\p{M}{0,2})*$/u.test(t),'Votre prénom : des lettres seulement, 30 au plus.');return t;}
 
-// La scène du jury : la dernière intervention de démonstration de Yopougon ouverte depuis la salle.
-function sceneId(s,room){return room?s.get("SELECT id FROM noc_incidents WHERE mode='demo' AND segment_id=? AND created>=? ORDER BY created DESC,rowid DESC LIMIT 1",SEGMENT,room.created)?.id||null:null;}
+// La scène du jury : la dernière intervention de démonstration de Yopougon ouverte depuis la salle,
+// ou une coupure encore en cours qui l'a précédée (salle rouverte pendant une panne : la régie la reprend).
+function sceneId(s,room){return room?s.get("SELECT id FROM noc_incidents WHERE mode='demo' AND segment_id=? AND (created>=? OR (source='telemetry' AND status NOT IN ('resolved','closed'))) ORDER BY created DESC,rowid DESC LIMIT 1",SEGMENT,room.created)?.id||null:null;}
 function at(events,kind){return (events||[]).filter(e=>e.kind===kind).map(e=>e.at).pop()||null;}
 // Certificat de réparation : uniquement quand la supervision a vérifié le retour des mesures du segment.
 function certificate(s,i){
  if(!i||i.status!=='resolved'||!i.restorationVerified)return null;
  const resolved=s.get("SELECT detail,at FROM noc_events WHERE incident_id=? AND kind='resolved' ORDER BY at DESC,rowid DESC LIMIT 1",i.id),detail=JSON.parse(resolved?.detail||'{}');
  const start=at(i.events,'detected')||i.created,end=resolved?.at||at(i.events,'resolved');
- return {reference:'FG-'+i.id.replace(/[^a-z0-9]/gi,'').slice(0,6).toUpperCase(),zone:ZONE,technician:i.technician?.name||null,team:i.technician?.team||null,
+ return {reference:'FG-'+i.id.replace(/[^a-z0-9]/gi,'').slice(0,6).toUpperCase(),zone:ZONE,cause:i.cause||null,technician:i.technician?.name||null,team:i.technician?.team||null,
   detectedAt:start,arrivedAt:at(i.events,'on_site'),repairedAt:at(i.events,'verifying'),restoredAt:end,durationMin:end&&start?Math.max(1,Math.round((end-start)/60000)):null,
   online:Number.isFinite(detail.online)?detail.online:null,total:Number.isFinite(detail.total)?detail.total:null,verifiedBy:'Supervision Moov'};
 }
@@ -73,9 +83,11 @@ function report(s,i,room=null){
 }
 // L'alerte sur les téléphones inscrits : reçue (la page l'a affichée), vue (la personne a touché « Suivre »),
 // et les appels au service client. Appel évité = prévenu qui n'a pas demandé de conseiller.
+// Une alerte compte seulement si elle est arrivée pendant la panne (jury_alerts n'est rempli que tant que le dossier est ouvert).
+// Le délai « validation → alerte » ne prend que les inscrits déjà là au moment de la validation : un retardataire ne l'allonge pas.
 function alertStats(s,room,i,from){
  const members=s.get('SELECT count(*) AS n FROM jury_members WHERE room=?',room.id).n;
- const a=s.get('SELECT count(*) AS delivered,count(a.seen) AS seen,max(a.delivered) AS last FROM jury_alerts a JOIN jury_members m ON m.user_id=a.user_id WHERE m.room=? AND a.incident_id=?',room.id,i.id);
+ const a=s.get('SELECT count(*) AS delivered,count(a.seen) AS seen,max(CASE WHEN m.joined<=? THEN a.delivered END) AS last FROM jury_alerts a JOIN jury_members m ON m.user_id=a.user_id WHERE m.room=? AND a.incident_id=?',from||0,room.id,i.id);
  const calls=s.get("SELECT count(CASE WHEN c.outcome='called' THEN 1 END) AS called,count(CASE WHEN c.outcome<>'called' THEN 1 END) AS reassured FROM noc_calls c JOIN jury_members m ON m.user_id=c.user_id WHERE m.room=? AND c.incident_id=?",room.id,i.id);
  return {members,delivered:a.delivered,seen:a.seen,seconds:a.last&&from&&a.last>=from?Math.round((a.last-from)/1000):null,called:calls.called,reassured:calls.reassured,avoided:Math.max(0,a.delivered-calls.called)};
 }
@@ -86,11 +98,16 @@ async function join(s,d,ip){
  const first=cleanFirst(d.firstName);
  const room=s.get('SELECT * FROM jury_rooms WHERE code=?',String(d.code||'').trim().toUpperCase().slice(0,12));
  insist(room&&!room.closed&&room.expires>Date.now(),'Ce code n’est plus valable. Demandez le nouveau code à l’équipe.',404);
- const count=s.get('SELECT count(*) AS n FROM jury_members WHERE room=?',room.id).n;insist(count<MAX_JURORS,'La salle du jury est complète.',409);
- // Compte anonyme d'abonné : aucun numéro, aucun rôle opérateur ; le prénom seulement si la personne l'a écrit.
- const number=count+1,{user}=await s.register({email:'jury-'+id()+'@guardian.invalid',name:first||'Membre du jury '+number,password:token()});
- s.transaction(()=>{s.run('INSERT INTO jury_members(user_id,room,number,joined,first) VALUES(?,?,?,?,?)',user.id,room.id,number,Date.now(),first);journey.put(s,user.id,journey.seed());noc.join(s,user.id,{segment:SEGMENT,consent:true});});
- return user;
+ const full=()=>insist(s.get('SELECT count(*) AS n FROM jury_members WHERE room=?',room.id).n<MAX_JURORS,'La salle du jury est complète.',409);full();
+ // Compte anonyme d'abonné : aucun numéro de téléphone, aucun rôle opérateur ; le prénom seulement si la personne l'a écrit.
+ // Le numéro d'inscrit est donné dans la transaction : plusieurs personnes qui scannent ensemble ont chacune le leur.
+ const {user}=await s.register({email:'jury-'+id()+'@guardian.invalid',name:first||'Membre du jury',password:token()});
+ let number;
+ try{s.transaction(()=>{full();number=s.get('SELECT COALESCE(max(number),0)+1 AS n FROM jury_members WHERE room=?',room.id).n;
+  if(!first)s.run('UPDATE users SET name=? WHERE id=?','Membre du jury '+number,user.id);
+  s.run('INSERT INTO jury_members(user_id,room,number,joined,first) VALUES(?,?,?,?,?)',user.id,room.id,number,Date.now(),first);journey.put(s,user.id,journey.seed());noc.join(s,user.id,{segment:SEGMENT,consent:true});});}
+ catch(e){s.run('DELETE FROM users WHERE id=?',user.id);throw e;}
+ return {...user,name:first||'Membre du jury '+number};
 }
 
 function me(s,uid){
@@ -99,9 +116,12 @@ function me(s,uid){
  let scene=sid?noc.client(s,uid).incidents.find(i=>i.id===sid)||null:null;
  const plan=sid?s.get('SELECT plan,created FROM noc_incidents WHERE id=?',sid):null;
  // Réseau de démo : la panne existe déjà pour Moov, mais l'abonné ne reçoit rien avant la validation d'un responsable.
- const held=!!(network&&scene&&HELD.includes(scene.status));if(held)scene=null;
- if(scene)s.run('INSERT OR IGNORE INTO jury_alerts(user_id,incident_id,delivered) VALUES(?,?,?)',uid,scene.id,Date.now());
- return {number:m.number,first:m.first||null,zone:ZONE,network,joined:m.joined,room:{open:!m.closed&&m.expires>Date.now()},segment:held?null:{online:seg.online,total:seg.total,alarm:seg.alarm},
+ if(network&&scene&&!validated(scene))scene=null;
+ // Alerte reçue : seulement pendant la panne (un certificat vu après coup n'est pas une alerte reçue).
+ if(scene&&!scene.terminal)s.run('INSERT OR IGNORE INTO jury_alerts(user_id,incident_id,delivered) VALUES(?,?,?)',uid,scene.id,Date.now());
+ // Sans alerte validée, les chiffres du quartier ne s'affichent que s'ils sont normaux : rien ne laisse deviner une panne non confirmée.
+ const calm=seg.alarm==='NONE'&&seg.online>=seg.total,showSegment=!network||!!scene||calm;
+ return {number:m.number,first:m.first||null,zone:ZONE,network,joined:m.joined,room:{open:!m.closed&&m.expires>Date.now()},segment:showSegment?{online:seg.online,total:seg.total,alarm:seg.alarm}:null,
   scene:scene?{...scene,created:plan.created,cause:plan.plan?JSON.parse(plan.plan).cause:null,certificate:certificate(s,scene)}:null};
 }
 // « Suivre l'intervention » : la personne a vu l'alerte. Ses notifications du quartier passent en lues.
@@ -114,11 +134,17 @@ function seen(s,uid,d){
  return {ok:true};
 }
 
-// La copie du réseau de démo : la plus récente faite depuis le compte de la régie, ou dont le Wi-Fi porte le nom du réseau.
+// La copie du réseau de démo : uniquement une copie faite depuis le compte de la régie (jamais celle d'un client, même si
+// son Wi-Fi porte le même nom), mesurée, pas en données mobiles, et soit faite depuis l'ouverture du réseau de démo,
+// soit dont le Wi-Fi porte son nom. La plus récente gagne (« Refaire la copie »).
 function copyFor(s,uid,room,ssid){
- const since=Date.now()-COPY_MS,want=ssid.trim().toLowerCase();
- const mine=new Set(s.all('SELECT id FROM wifi_copies WHERE user_id IN (?,?) AND created>=? ORDER BY created DESC LIMIT 20',room.created_by,uid,since).map(r=>r.id));
- return CW.list(s,uid).copies.find(c=>c.measured&&c.created>=since&&(mine.has(c.id)||String(c.label||'').trim().toLowerCase()===want))||null;
+ const want=ssid.trim().toLowerCase(),opened=s.get('SELECT created FROM jury_networks WHERE room=?',room.id)?.created||room.created;
+ for(const r of s.all('SELECT id,created FROM wifi_copies WHERE user_id IN (?,?) AND created>=? ORDER BY created DESC LIMIT 20',room.created_by,uid,Date.now()-COPY_MS)){
+  const c=CW.detail(s,uid,r.id).copy;
+  if(!c.measured||c.network==='cellular')continue;
+  if(r.created>=opened||String(c.wifi?.ssid||'').trim().toLowerCase()===want)return c;
+ }
+ return null;
 }
 const slim=d=>({id:d.id,kind:d.kind,label:d.label,state:d.state||null,stateLabel:d.stateLabel||null,played:!!d.played,added:!!d.added});
 const GATEWAY=d=>d.kind==='box'||d.kind==='partage';
@@ -128,8 +154,8 @@ function calm(copy){
  return list.map(d=>GATEWAY(d)?{...d,label:d.kind==='partage'?'Box Wi-Fi':d.label,played:d.kind==='partage'||!copy.devices.length,state:'box',stateLabel:CW.STATES.box}:{...d,state:'ok',stateLabel:CW.STATES.ok}).map(slim);
 }
 function networkView(s,uid,room,ssid,scene){
- const c=copyFor(s,uid,room,ssid);if(!c)return {ssid,copy:null,twin:null};
- const d=CW.detail(s,uid,c.id).copy,active=scene&&!['resolved','closed','rejected'].includes(scene.status);
+ const d=copyFor(s,uid,room,ssid);if(!d)return {ssid,copy:null,twin:null};
+ const c=d,active=scene&&!['resolved','closed','rejected'].includes(scene.status);
  const copy={id:d.id,label:d.label,created:d.created,network:d.networkLabel,pc:d.pc,downloadMbps:d.metrics.downloadMbps,latencyMs:d.metrics.latencyMs,connected:d.connected,devices:calm(d)};
  if(!active)return {ssid,copy,twin:null};
  const t=CW.teamSimulate(s,uid,{id:c.id,scenario:FAULTS[faultOf(scene)].copy});
@@ -204,6 +230,9 @@ function step(s,uid,d,origin){
   insist(i.plan?.dispatch!==false,'Pas de technicien à envoyer : les box repartiront au retour du courant.',409);
   if(i.status==='proposed'){refresh();}
   if(i.status==='proposed')i=act('approve',{note:'Validé depuis la régie : alarmes de coupure fibre confirmées sur Niangon.'});
+  // Validée depuis un moment (le jury lisait l'alerte) : plan ou mesures dépassés, Guardian réactualise et la régie confirme.
+  if(i.status==='approved'&&!i.technician){const sample=s.get('SELECT sample_at FROM noc_segments WHERE id=?',SEGMENT).sample_at;
+   if(!i.plan||i.plan.expiresAt<=Date.now()+60000||i.plan.segmentSample!==sample||Date.now()-sample>120000){refresh();if(i.status==='proposed')i=act('approve',{note:'Plan actualisé avant le départ de l’équipe : validation confirmée depuis la régie.'});}}
   if(i.status==='approved'){const free=noc.overview(s,uid).technicians.filter(t=>!t.busy),t=free.find(t=>t.id===TECH)||free.find(t=>t.zone==='Yopougon')||free[0];insist(t,'Toutes les équipes sont déjà en intervention.',409);i=act('dispatch',{technician:t.id,safety:true});}
   if(i.status==='dispatched')i=act('advance');
  }else if(d.type==='arrive'){
@@ -215,6 +244,7 @@ function step(s,uid,d,origin){
   noc.operate(s,uid,{type:'simulate',segment:SEGMENT,scenario:'normal'});
   act('verify');
  }else{
+  insist(!(d.type==='partial'&&i?.plan?.dispatch===false),'Pas de réparation partielle pour une coupure de courant : toutes les box repartent ensemble au retour du courant.',409);
   insist(i&&['on_site','verifying'].includes(i.status),'Le technicien doit être sur place avant la réparation.',409);
   // Les consignes de la checklist terrain sont cochées par l'administrateur, comme dans l'espace Moov.
   const repaired=()=>{const key='incident:'+i.id;for(const c of s.all('SELECT id FROM noc_checklist WHERE case_key=? AND done=0',key)){const w=workspace.overview(s,uid).queue.find(r=>r.key===key);workspace.action(s,uid,{key,type:'check',itemId:c.id,done:true,version:w.version,sourceVersion:w.sourceVersion});}return act('advance');};
@@ -248,9 +278,10 @@ async function reset(s,uid,options={}){
   jury_networks:room?rows('SELECT * FROM jury_networks WHERE room=?',room.id):[],
   wifi_copies:copy?rows('SELECT * FROM wifi_copies WHERE id=?',copy.id):[],
   jury_rooms:rows('SELECT * FROM jury_rooms WHERE closed=0 AND expires>?',Date.now()),
-  users:rows('SELECT u.* FROM users u JOIN jury_members m ON m.user_id=u.id').concat(keepSelf?[self]:[]),
-  sessions:rows('SELECT s.* FROM sessions s JOIN jury_members m ON m.user_id=s.user_id'),
-  jury_members:rows('SELECT * FROM jury_members'),
+  // Seuls les inscrits de la salle encore ouverte restent : ceux des salles fermées (et leur prénom) sont effacés.
+  users:rows('SELECT u.* FROM users u JOIN jury_members m ON m.user_id=u.id JOIN jury_rooms r ON r.id=m.room WHERE r.closed=0 AND r.expires>?',Date.now()).concat(keepSelf?[self]:[]),
+  sessions:rows('SELECT s.* FROM sessions s JOIN jury_members m ON m.user_id=s.user_id JOIN jury_rooms r ON r.id=m.room WHERE r.closed=0 AND r.expires>?',Date.now()),
+  jury_members:rows('SELECT m.* FROM jury_members m JOIN jury_rooms r ON r.id=m.room WHERE r.closed=0 AND r.expires>?',Date.now()),
   operator_grants:keepSelf?rows('SELECT * FROM operator_grants WHERE user_id=?',uid):[]
  };
  const result=await demo.resetDemo(s,options);
