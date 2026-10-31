@@ -11,6 +11,8 @@
 .ap-restore-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--moov-primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-primary) 18%,transparent);animation:ap-pulse 2s ease-in-out infinite}
 .ap-restore.is-late .ap-restore-dot{background:var(--moov-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-accent) 22%,transparent)}
 .ap-restore.is-pending .ap-restore-dot{background:var(--moov-neutral-300);box-shadow:none;animation:none}
+/* Le texte reste à côté du point, même sur un téléphone étroit. */
+.ap-restore.is-pending>span:last-child{flex:1 1 0;min-width:0}
 @keyframes ap-pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--moov-primary) 0%,transparent)}}
 
 /* ---------- Bouton « Appeler Moov » ---------- */
