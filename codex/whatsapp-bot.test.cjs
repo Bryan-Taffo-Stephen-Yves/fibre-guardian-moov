@@ -67,7 +67,7 @@ test('Un jour normal : Awa écrit « internet est lent », Guardian lui répond 
     await t.until(1);
     assert.equal(t.sent.length, 1);
     assert.equal(t.sent[0].url, 'https://api.green-api.com/waInstance7103000001/sendInteractiveButtonsReply/jeton-instance-de-test');
-    assert.deepEqual(t.sent[0].labels, ['Mon Wi-Fi capte mal', 'Je n’ai plus internet', 'Parler à un conseiller'], 'des boutons pour la suite, comme chez Wave');
+    assert.deepEqual(t.sent[0].labels, ['Mon Wi-Fi capte mal', 'Redémarrer ma box', 'Parler à un conseiller'], 'des boutons pour la suite, comme chez Wave');
     assert.equal(t.sent[0].chatId, AWA + '@c.us');
     assert.match(t.sent[0].message, /^Guardian · Moov Africa Fibre\n\n/);
     assert.match(t.sent[0].message, /Mbps/, 'Guardian donne la mesure réelle de la ligne');
@@ -112,7 +112,7 @@ test('Bouton touché, ou « 2 » tapé : Guardian reçoit la phrase complète ; 
     await t.post(message(AWA, '1')); await t.until(3);
     assert.match(t.sent[2].message, /technicien|équipe|intervention/i, '« 1 » = premier bouton du dernier menu (« Où en est la réparation »)');
     const app = require('./journey-store.cjs').get(t.s, t.awa.id).messages.filter(m => m.role === 'user').map(m => m.text);
-    assert.deepEqual(app.slice(-2), ['Je n’ai plus internet', 'Où en est la réparation ?']);
+    assert.deepEqual(app.slice(-2), ['Je n’ai plus d’internet', 'Où en est la réparation ?']);
   } finally { t.close(); }
   const old = await setup(ENV, {refuseButtons: true});
   try {
@@ -120,6 +120,32 @@ test('Bouton touché, ou « 2 » tapé : Guardian reçoit la phrase complète ; 
     assert.equal(old.sent[0].method, 'sendMessage');
     assert.match(old.sent[0].message, /1\. Internet est lent\n2\. Je n’ai plus internet\n3\. Parler à un conseiller\n\nRépondez 1, 2 ou 3\.$/);
   } finally { old.close(); }
+});
+
+test('Les boutons changent selon la situation : conseiller, box, forfait, panne en cours', async () => {
+  const t = await setup();
+  const tap = async (id, n) => { await t.post({...message(AWA, ''), messageData: {typeMessage: 'buttonsResponseMessage', buttonsResponseMessage: {selectedButtonId: id}}}); await t.until(n); return t.sent[n - 1]; };
+  try {
+    // Jour normal : chaque réponse propose une suite différente.
+    let r = await tap('coupure', 1);
+    assert.match(r.message, /Mbps|box/i); assert.deepEqual(r.labels, ['Redémarrer ma box', 'Voyant rouge sur la box', 'Parler à un conseiller'], 'pas d’internet sans panne : la box d’abord');
+    r = await tap('humain', 2);
+    assert.match(r.message, /111/); assert.deepEqual(r.labels, ['Redémarrer ma box', 'Autre question', 'Merci'], 'après le conseiller, plus le même menu');
+    r = await tap('menu', 3);
+    assert.equal(r.message, WB.HEAD + '\n\n' + WB.greeting('Awa Koné')); assert.deepEqual(r.labels, ['Internet est lent', 'Je n’ai plus internet', 'Parler à un conseiller'], '« Autre question » ramène au début');
+    r = await tap('reboot', 4);
+    assert.deepEqual(r.labels, ['Voyant rouge sur la box', 'Parler à un conseiller', 'Merci']);
+    await t.post(message(AWA, 'Je veux un forfait plus rapide')); await t.until(5);
+    assert.deepEqual(t.sent[4].labels, ['Mon forfait et son prix', 'Parler à un conseiller', 'Merci']);
+    // Panne à Niangon : conseiller et suivi gardent la réparation sous la main.
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    r = await tap('humain', 6);
+    assert.match(r.message, /111.*\n\nNous savons déjà/s, 'pendant une panne, Guardian dit comment joindre un conseiller, puis l’état du quartier');
+    assert.deepEqual(r.labels, ['Où en est la réparation', 'Autre question', 'Merci'], 'pendant une panne, le conseiller ne fait pas oublier la réparation');
+    r = await tap('suivi', 7);
+    assert.match(r.message, /technicien|équipe|intervention|Niangon/i); assert.deepEqual(r.labels, ['Parler à un conseiller', 'Autre question', 'Merci']);
+    for (const ids of Object.values(WB.MENUS)) { assert.ok(ids.length <= 3); for (const id of ids) assert.ok(WB.CHOICES[id][0].length <= 25, id); }
+  } finally { t.close(); }
 });
 
 test('Note vocale : Guardian la transcrit (Groq), répète ce qu’il a compris et répond ; sans clé Groq, il demande d’écrire', async () => {
