@@ -177,3 +177,65 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 /* Variante du jury : réparation partielle (Guardian refuse la clôture) */
 .jy-variant{margin-top:12px;padding:12px 14px;border-radius:14px;border:1px dashed var(--moov-warning-300);background:var(--moov-warning-100);display:grid;gap:8px}
 .jy-variant p{margin:0;font-size:14px;line-height:1.4}
+
+/* Réseau de démo : prénom à l'inscription, inscrits sur le grand écran, copie du Wi-Fi et panne jouée dessus */
+.jy-field{display:grid;gap:6px;font-size:14px;font-weight:600}
+.jy-field small{font-weight:400;color:var(--moov-text-muted);font-size:12px}
+.jy-field>span small{font-size:13px}
+.jy-field input{font:inherit;font-size:16px;font-weight:500;padding:13px 14px;border-radius:12px;border:1px solid var(--moov-line);background:var(--moov-surface);color:var(--moov-ink);min-height:48px}
+.jy-open{display:grid;gap:14px}
+.jy-open>p{margin:0;font-size:14px;color:var(--moov-neutral-700)}
+.jy-alert .jy-alert-net{display:inline-block;width:auto;max-width:100%;padding:6px 14px;border-radius:999px;background:color-mix(in srgb,var(--moov-white) 18%,transparent);font-size:14px;font-weight:700;letter-spacing:.04em}
+.jy-alert .jy-alert-eta{font-size:18px}
+.jy-alert .jy-alert-eta b{font-size:22px}
+.jy-call{gap:10px}
+.jy-call p{margin:0;font-size:14px;color:var(--moov-neutral-700)}
+.jy-call .ap-call-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.jy-net-chip{margin:0;justify-self:center;padding:6px 14px;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary);font-size:13px}
+.jy-members{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.jy-member{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--moov-neutral-50);border:1px solid var(--moov-line);font-size:14px;min-width:0;transition:background .3s ease,border-color .3s ease}
+.jy-member-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14ch}
+.jy-member small{font-size:11px;color:var(--moov-text-muted);white-space:nowrap}
+.jy-member-dot{flex:0 0 28px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--moov-primary-100);color:var(--moov-primary)}
+.jy-member-dot--1{background:var(--moov-accent-100);color:var(--moov-accent-text)}
+.jy-member-dot--2{background:var(--moov-success-100);color:var(--moov-success-700)}
+.jy-members.is-big .jy-member-dot{flex-basis:40px;width:40px;height:40px;font-size:17px}
+.jy-member.is-got{background:var(--moov-warning-100);border-color:var(--moov-warning-300)}
+.jy-member.is-got small{color:var(--moov-warning-700)}
+.jy-member.is-seen{background:var(--moov-success-100);border-color:var(--moov-success-300)}
+.jy-member.is-seen small{color:var(--moov-success-700);font-weight:600}
+.jy-members.is-big{justify-content:center;max-width:900px;gap:10px}
+/* Grand écran avec les inscrits : le code QR rapetisse et l'écran défile au besoin, rien n'est coupé. */
+.jy-project:has(.jy-members){justify-content:safe center;overflow-y:auto}
+.jy-project:has(.jy-members) .jy-qr{width:min(48vh,70vw);flex:0 0 auto}
+.jy-members.is-big .jy-member{font-size:18px;padding-right:16px}
+.jy-net h2{word-break:break-word}
+.jy-net-state{flex:0 0 auto;white-space:nowrap;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:var(--moov-neutral-100);color:var(--moov-text-muted)}
+.jy-net-state.is-up{background:var(--moov-success-100);color:var(--moov-success-700)}
+.jy-net-state.is-down{background:var(--moov-danger-100);color:var(--moov-danger-700)}
+.jy-net>p{margin:0;font-size:14px;color:var(--moov-neutral-700);line-height:1.45}
+.jy-net-facts{font-variant-numeric:tabular-nums}
+.jy-devs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.jy-dev{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;border:1px solid var(--moov-line);background:var(--moov-surface);min-width:0;transition:background .4s ease,border-color .4s ease}
+.jy-dev i{flex:0 0 10px;height:10px;margin-top:5px;border-radius:50%;background:var(--moov-success-500)}
+.jy-dev b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jy-dev small{display:block;font-size:12px;color:var(--moov-text-muted)}
+.jy-dev span{min-width:0}
+.jy-dev.is-warn{background:var(--moov-warning-100);border-color:var(--moov-warning-300)}
+.jy-dev.is-warn i{background:var(--moov-warning-700)}
+.jy-dev.is-down{background:var(--moov-danger-100);border-color:var(--moov-danger-300)}
+.jy-dev.is-down i{background:var(--moov-danger-500);animation:jy-blink 1s infinite}
+.jy-dev.is-added{border-style:dashed}
+.jy-net>p.jy-net-text{padding:12px 14px;border-radius:14px;background:var(--moov-danger-100);color:var(--moov-danger-700)}
+.jy-net-note{font-size:12px;color:var(--moov-text-muted)}
+.jy-net-link{display:grid;gap:10px;justify-items:center;text-align:center;padding:14px;border-radius:16px;border:1px dashed var(--moov-line)}
+.jy-net-link .jy-qr{width:min(200px,70vw);padding:8px;background:var(--moov-white);border-radius:12px}
+.jy-net-link p{margin:0;font-size:14px}
+.jy-net-link a{text-decoration:none;display:block;width:100%;box-sizing:border-box}
+.jy-net-link button{width:100%}
+.jy-step--choice{cursor:default;align-items:flex-start}
+.jy-choice{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.jy-choice-btn{appearance:none;flex:1 1 120px;min-height:46px;border:0;border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;background:var(--moov-white);color:var(--moov-primary)}
+.jy-choice-btn:hover:not(:disabled){background:var(--moov-accent);color:var(--moov-on-accent)}
+.jy-choice-btn:disabled{opacity:.6;cursor:wait}
+@media(prefers-reduced-motion:reduce){.jy-dev.is-down i{animation:none}.jy-member,.jy-dev{transition:none}}

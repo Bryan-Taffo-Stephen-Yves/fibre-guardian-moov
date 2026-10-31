@@ -137,6 +137,7 @@ function createGuardianServer(options={}){
     if(mutate){insist(req.headers['x-csrf-token']===user.csrf,'Session de formulaire expirée. Rechargez la page.',403);store.rate('write:'+user.id,80);}
     if(route==='/api/demo/reset'&&method==='POST'){insist(operator.role(store,user.id)==='admin','Réinitialisation réservée à l’administrateur.',403);const d=await body(req,1024);insist(d.confirm===true,'Confirmez la réinitialisation de la démo.');store.rate('demo-reset',3,600000);const r=await require('./seed-demo.cjs').resetDemo(store,{log:m=>console.log(m),credentialsFile:demoCredentials()});cookie(res,'',0);return json(res,{ok:true,seeded:r.seeded});}
     if(route==='/api/jury/me'&&method==='GET')return json(res,jury.me(store,user.id));
+    if(route==='/api/jury/seen'&&method==='POST')return json(res,jury.seen(store,user.id,await body(req,512)));
     // Régie : réservée à l'administrateur (vérifié dans jury-store), elle enchaîne les actions NOC habituelles.
     if(route==='/api/regie'&&method==='GET')return json(res,jury.status(store,user.id,origin));
     if(route==='/api/regie'&&method==='POST'){const d=await body(req,1024);
