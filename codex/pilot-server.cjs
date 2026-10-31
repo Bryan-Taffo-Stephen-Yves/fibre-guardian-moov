@@ -72,7 +72,12 @@ function createGuardianServer(options={}){
     if(route.startsWith('/api/test/')&&route!=='/api/test/link'){
      const row=VT.open(store,req.headers['x-test-token']),key=row.token_hash.slice(0,24);
      if(route==='/api/test/info'&&method==='GET'){store.rate('vt-info:'+key,60,VT.LINK_MS);return json(res,VT.info(store,row));}
-     if(route==='/api/test/ping'&&method==='GET'){store.rate('vt-ping:'+key,80,VT.LINK_MS);return json(res,{at:Date.now()});}
+     if(route==='/api/test/ping'&&method==='GET'){store.rate('vt-ping:'+key,1200,VT.LINK_MS);return json(res,{at:Date.now()});}
+     if(route==='/api/test/network'&&method==='GET'){store.rate('vt-net:'+key,30,VT.LINK_MS);return json(res,await VT.network(ip(req)));}
+     if(route==='/api/test/sample'&&method==='GET'){store.rate('vt-sample:'+key,300,VT.LINK_MS);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':VT.SAMPLE.length});res.end(VT.SAMPLE);return;}
+     // Débit d'envoi : l'appareil envoie jusqu'à 2 Mo, le serveur les compte puis les oublie.
+     if(route==='/api/test/upload'&&method==='POST'){store.rate('vt-up:'+key,30,VT.LINK_MS);let size=0;for await(const chunk of req){size+=chunk.length;if(size>VT.MAX_UPLOAD){res.setHeader('Connection','close');throw new Problem(413,'Envoi trop volumineux.');}}return json(res,{bytes:size});}
+     if(route==='/api/test/preview'&&method==='POST'){store.rate('vt-preview:'+key,600,VT.LINK_MS);const d=await body(req,4096);return json(res,VT.preview(d.metrics,String(d.scenario||'')));}
      if(route==='/api/test/download'&&method==='GET'){store.rate('vt-dl:'+key,30,VT.LINK_MS);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':VT.POOL.length});res.end(VT.POOL);return;}
      if(route==='/api/test/result'&&method==='POST'){insist(row.tests<VT.MAX_TESTS,'Vous avez fait '+VT.MAX_TESTS+' tests avec ce lien. Demandez-en un nouveau à Guardian.',429);const r=VT.record(store,row,(await body(req,4096)).metrics),whatsapp=!!(row.phone&&bot);
       if(whatsapp)WB.testResult(store,bot,row.phone,r).catch(e=>options.onError?options.onError(e):console.warn(e.message));return json(res,{...r,whatsapp});}

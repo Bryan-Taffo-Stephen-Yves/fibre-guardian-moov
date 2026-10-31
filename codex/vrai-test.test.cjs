@@ -34,7 +34,7 @@ test('Verdict : des règles simples, des chiffres réels, et l’honnêteté sur
   assert.match(good.text, /85 Mbps/); assert.match(good.text, /partage de connexion/, 'le client sait que le test n’est pas passé par la box');
   assert.ok(good.facts.some(f => f.label === 'Débit mesuré' && f.value === '85 Mbps'));
   assert.ok(good.facts.some(f => f.label === 'Où' && /serveur de Guardian/.test(f.value)), 'Guardian dit où le test a été fait');
-  assert.deepEqual(VT.clean({downloadMbps: -4, latencyMs: 'x', lossPct: 400, network: 'satellite'}), {downloadMbps: null, latencyMs: null, jitterMs: null, lossPct: 100, network: null}, 'valeurs absurdes écartées');
+  assert.deepEqual(VT.clean({downloadMbps: -4, latencyMs: 'x', lossPct: 400, network: 'satellite'}), {downloadMbps: null, uploadMbps: null, latencyMs: null, jitterMs: null, lossPct: 100, network: null}, 'valeurs absurdes écartées');
   assert.match(VT.verdict(VT.clean({downloadMbps: 50, latencyMs: 200}), {fault: {zone: 'Niangon'}}).text, /^Une panne est en cours/);
 });
 
@@ -123,5 +123,49 @@ test('Sur WhatsApp : une photo de la box est lue par Guardian ; s’il ne peut p
     assert.deepEqual(t.sent[1].labels, ['Redémarrer ma box', 'Tester ma connexion', 'Parler à un conseiller']);
     await t.post(t.msg({typeMessage: 'buttonsResponseMessage', buttonsResponseMessage: {selectedButtonId: 'photo'}})); await t.until(3);
     assert.equal(t.sent[2].message, WB.HEAD + '\n\n' + WB.PHOTO_ASK);
+  } finally { t.close(); }
+});
+
+test('Pannes simulées : on part des vraies mesures, on ne touche à rien, et Guardian dit ce qu’il ferait', async () => {
+  const real = {downloadMbps: 40, uploadMbps: 12, latencyMs: 120, jitterMs: 10, lossPct: 0, network: 'hotspot'};
+  const sat = VT.simulate(real, 'wifi-sature');
+  assert.equal(sat.downloadMbps, 6); assert.equal(sat.uploadMbps, 1.8); assert.equal(sat.latencyMs, 300); assert.equal(sat.network, 'hotspot');
+  assert.deepEqual(VT.simulate(real, 'inconnue'), VT.clean(real), 'panne inconnue : mesures inchangées');
+  assert.equal(VT.preview(real, 'fibre-coupee').level, 'coupe'); assert.match(VT.preview(real, 'fibre-coupee').text, /technicien/);
+  assert.equal(VT.preview(real, 'fibre-abimee').level, 'instable');
+  assert.equal(VT.preview(real, 'courant').level, 'coupe'); assert.match(VT.preview(real, 'courant').text, /courant/);
+  for (const id of Object.keys(VT.SCENARIOS)) assert.ok(VT.preview(real, id).text.length > 40, id);
+  const t = await setup();
+  try {
+    const l = VT.link(t.s, t.user.id), info = await (await t.page('info', l.token)).json();
+    assert.ok(info.scenarios.length >= 5 && info.scenarios.every(f => f.label && f.hint), 'la page reçoit la liste des pannes');
+    const r = await t.page('preview', l.token, {scenario: 'loin-box', metrics: real}), d = await r.json();
+    assert.equal(r.status, 200); assert.equal(d.metrics.downloadMbps, 12); assert.match(d.text, /répéteur|Rapprochez/);
+    const before = journey.get(t.s, t.user.id).messages.length;
+    assert.equal(journey.get(t.s, t.user.id).messages.length, before, 'une panne simulée n’entre pas dans la conversation');
+    assert.equal((await t.page('preview', l.token, {scenario: 'rien', metrics: real})).status, 404);
+  } finally { t.close(); }
+});
+
+test('En direct : petits échantillons, débit d’envoi compté puis oublié, et infos du réseau sans rien garder', async () => {
+  const t = await setup();
+  try {
+    const l = VT.link(t.s, t.user.id);
+    assert.equal((await (await t.page('sample', l.token)).arrayBuffer()).byteLength, 512 * 1024);
+    const up = await fetch(t.base + '/api/test/upload', {method: 'POST', headers: {'X-Test-Token': l.token, 'Content-Type': 'application/octet-stream'}, body: new Uint8Array(1024 * 1024)});
+    assert.equal(up.status, 200); assert.equal((await up.json()).bytes, 1024 * 1024);
+    const big = await fetch(t.base + '/api/test/upload', {method: 'POST', headers: {'X-Test-Token': l.token, 'Content-Type': 'application/octet-stream'}, body: new Uint8Array(3 * 1024 * 1024)}).catch(() => ({status: 413}));
+    assert.equal(big.status, 413, 'pas plus de 2 Mo par envoi');
+    for (let i = 0; i < 100; i++) assert.equal((await t.page('ping', l.token)).status, 200, 'le direct peut sonder toutes les 2 secondes');
+    const net = await (await t.page('network', l.token)).json();
+    assert.equal(net.local, true, 'adresse locale : aucun service extérieur appelé');
+    const calls = [], fake = async url => { calls.push(url); return {ok: true, json: async () => ({status: 'success', isp: 'Orange Cote d\'Ivoire', city: 'Abidjan', country: 'Côte d’Ivoire'})}; };
+    const o = await VT.network('::ffff:102.67.12.34', {fetchImpl: fake});
+    assert.deepEqual(o, {ip: '102.67.12.34', operator: 'Orange Cote d\'Ivoire', city: 'Abidjan', country: 'Côte d’Ivoire'});
+    await VT.network('102.67.12.34', {fetchImpl: fake}); assert.equal(calls.length, 1, 'réponse gardée une heure en mémoire');
+    const down = await VT.network('41.66.1.2', {fetchImpl: async () => { throw new Error('hors ligne'); }});
+    assert.equal(down.ip, '41.66.1.2'); assert.equal(down.operator, null, 'service indisponible : l’adresse seule');
+    const r = await t.page('result', l.token, {metrics: {downloadMbps: 30, uploadMbps: 8.4, latencyMs: 150, lossPct: 0}});
+    assert.ok((await r.json()).facts.some(f => f.label === 'Débit d’envoi' && f.value === '8,4 Mbps'));
   } finally { t.close(); }
 });

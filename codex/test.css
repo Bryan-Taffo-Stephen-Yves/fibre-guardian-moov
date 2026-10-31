@@ -87,6 +87,59 @@
 .vt-running .vt-read strong{animation:vt-pulse 1.2s ease-in-out infinite}
 @media(prefers-reduced-motion:reduce){.vt-card,.vt-running .vt-read strong{animation:none}.vt-arc,.vt-steps li{transition:none}}
 
+/* Badge « Démo » de l'en-tête : ouvre les pannes simulées */
+.vt-head .vt-demo-badge{margin-left:auto;min-height:36px;padding:0 14px;border:1px solid var(--moov-neutral-150);border-radius:99px;background:var(--moov-surface);color:var(--moov-ink);font:600 14px var(--vt-font);cursor:pointer}
+.vt-head .vt-demo-badge[aria-expanded=true]{border-color:var(--moov-accent);background:var(--moov-accent-50);color:var(--moov-accent-text)}
+.vt-head .vt-demo-badge:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+
+/* Votre réseau */
+.vt-wifi{display:grid;gap:6px;margin-top:18px}
+.vt-wifi span{font-size:14px;font-weight:600}
+.vt-wifi input{min-height:48px;padding:0 14px;border:1.5px solid var(--moov-neutral-150);border-radius:14px;background:var(--moov-surface);color:var(--moov-ink);font:600 16px var(--vt-font)}
+.vt-wifi input:focus{outline:none;border-color:var(--moov-primary);box-shadow:0 0 0 4px var(--moov-primary-50)}
+.vt-wifi small{font-size:12.5px;color:var(--moov-text-muted)}
+.vt-facts{display:grid;margin:18px 0 0;border-top:1px solid var(--moov-neutral-100)}
+.vt-facts div{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--moov-neutral-100)}
+.vt-facts dt{font-size:14px;color:var(--moov-text-muted)}
+.vt-facts dd{margin:0;font-size:14px;font-weight:600;text-align:right;overflow-wrap:anywhere}
+
+/* En direct */
+.vt-live-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.vt-live-head h2{margin:0}
+.vt-live-dot{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:99px;background:var(--moov-neutral-50);color:var(--moov-text-muted);font-size:13px;font-weight:700}
+.vt-live-dot i{width:8px;height:8px;border-radius:50%;background:var(--moov-neutral-400)}
+.vt-live-dot.on{background:var(--moov-success-50);color:var(--moov-success-700)}
+.vt-live-dot.on i{background:var(--moov-success);animation:vt-pulse 1.2s ease-in-out infinite}
+.vt-live-dot.sim{background:var(--moov-accent-50);color:var(--moov-accent-text)}
+.vt-live-dot.sim i{background:var(--moov-accent)}
+.vt-fault-ribbon{margin-top:12px!important;padding:10px 12px;border-radius:12px;background:var(--moov-accent-50);color:var(--moov-accent-text)!important;font-size:14px;font-weight:600}
+.vt-live-tiles{margin:14px 0 10px}
+.vt-tile em{font-style:normal;font-size:11.5px;color:var(--moov-text-muted)}
+.vt-tiles:has(>:nth-child(4)){grid-template-columns:repeat(2,1fr)}
+.vt-chart{border-radius:14px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100);padding:6px 4px 0}
+.vt-chart svg{display:block;width:100%;height:auto}
+.vt-grid{stroke:var(--moov-neutral-100);stroke-width:1}
+.vt-line{stroke:var(--moov-primary);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.vt-line-real{stroke:var(--moov-neutral-300);stroke-width:2;stroke-dasharray:4 4}
+.vt-line-sim{stroke:var(--moov-accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.vt-lost{fill:var(--moov-danger)}
+.vt-empty{fill:var(--moov-text-muted);font:600 13px var(--vt-font)}
+.vt-live .vt-guardian{margin-top:12px}
+.vt-live .vt-btn{margin-top:14px;width:100%}
+.vt-bubble .vt-verdict.small{display:inline-flex;margin:2px 0 6px;padding:3px 9px;font-size:12px}
+.vt-bubble span:last-child{display:block}
+.vt-btn svg{flex:none}
+
+/* Pannes simulées */
+.vt-demo{border-color:var(--moov-accent-200)}
+.vt-scenarios{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 12px}
+.vt-scenario{display:grid;gap:2px;min-height:62px;padding:10px 12px;border:1.5px solid var(--moov-neutral-150);border-radius:14px;background:var(--moov-surface);color:var(--moov-ink);text-align:left;font:inherit;cursor:pointer;transition:border-color .18s var(--vt-ease),background-color .18s var(--vt-ease)}
+.vt-scenario b{font-size:14.5px}
+.vt-scenario small{font-size:12.5px;color:var(--moov-text-muted)}
+.vt-scenario[aria-pressed=true]{border-color:var(--moov-accent);background:var(--moov-accent-50)}
+.vt-scenario:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+.vt-demo .vt-btn{width:100%}
+
 /* Grand écran : le cadran à gauche, le résultat à droite */
 @media(min-width:900px){
   .vt{max-width:1040px;padding-top:28px;grid-template-columns:1fr 1fr;align-items:start;column-gap:20px}
@@ -94,5 +147,10 @@
   .vt-card{padding:28px}
   .vt h1{font-size:34px}
   .vt-solo{grid-column:1/-1;max-width:560px;justify-self:center;width:100%}
+  .vt-demo{grid-column:1/-1}
+  .vt-scenarios{grid-template-columns:repeat(3,1fr)}
+  .vt-demo .vt-btn{width:auto;justify-self:start;padding:0 22px}
+  .vt-tiles:has(>:nth-child(4)){grid-template-columns:repeat(4,1fr)}
 }
 .vt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.vt [hidden]{display:none!important}
