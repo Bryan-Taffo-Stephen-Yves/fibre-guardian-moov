@@ -1,9 +1,11 @@
 'use strict';
-// Vrais messages WhatsApp pour la démo. Deux services possibles, gratuits et sans carte bancaire :
+// Vrais messages WhatsApp pour la démo. Trois services possibles, gratuits et sans carte bancaire :
+//   Green API (votre propre puce)  : GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN (Guardian y répond aussi : whatsapp-bot.cjs).
+//                                    Prioritaire : les alertes partent du même numéro que celui avec lequel le client discute.
 //   Twilio (bac à sable WhatsApp) : TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, et TWILIO_WHATSAPP_FROM si le numéro change
 //   Meta (numéro de test)          : WHATSAPP_TOKEN, WHATSAPP_PHONE_ID
-//   Green API (votre propre puce)  : GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN (Guardian y répond aussi : whatsapp-bot.cjs)
-// Dans les deux cas : WHATSAPP_NUMEROS = « Grand-Bassam=2250701020304, equipe=2250705060708, technicien=2250709101112 ».
+// Destinataires : WHATSAPP_NUMEROS = « Grand-Bassam=2250701020304, equipe=2250705060708, technicien=2250709101112 »,
+// et WHATSAPP_CLIENTS = « 2250701020304=awa.kone@demo.fibre-guardian.ci » (le client reçoit les pannes du quartier de son compte).
 // Ces réglages vivent dans les variables de l'hébergeur ou dans codex/.env, jamais dans git.
 // Sans réglage, rien ne part : les messages restent affichés dans le téléphone du simulateur.
 // Les textes sont ceux du simulateur (sim-flow.js) : ce que voit le jury à l'écran est ce qui arrive sur le téléphone.
@@ -70,11 +72,20 @@ const PROVIDERS = {
 };
 const failure = (code, status) => Object.assign(new Error(HINTS[code] || 'WhatsApp a refusé le message' + (code ? ' (code ' + code + ')' : '') + '.'), {code: code || status});
 
+// « 2250701020304=awa.kone@demo.fibre-guardian.ci » : ce numéro WhatsApp est celui de ce compte client.
+function links(text) {
+  return String(text || '').split(/[,;\n]/).map(part => {
+    const m = part.match(/^\s*([+\d][\d\s.-]*)\s*[=:]\s*(\S+@\S+)\s*$/); if (!m) return null;
+    const phone = m[1].replace(/\D/g, '');
+    return /^\d{8,15}$/.test(phone) ? {phone, email: m[2].toLowerCase()} : null;
+  }).filter(Boolean);
+}
+
 function config(env = process.env) {
-  const list = numbers(env.WHATSAPP_NUMEROS), origin = String(env.GUARDIAN_ORIGIN || '').replace(/\/$/, '');
-  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) return {provider: 'twilio', sid: env.TWILIO_ACCOUNT_SID.trim(), token: env.TWILIO_AUTH_TOKEN.trim(), from: env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', list, origin};
-  if (env.GREENAPI_ID_INSTANCE && env.GREENAPI_API_TOKEN) return {provider: 'greenapi', id: String(env.GREENAPI_ID_INSTANCE).replace(/\D/g, ''), token: String(env.GREENAPI_API_TOKEN).trim(), url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''), list, origin};
-  if (env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_ID) return {provider: 'meta', token: env.WHATSAPP_TOKEN.trim(), phoneId: String(env.WHATSAPP_PHONE_ID).replace(/\D/g, ''), version: env.WHATSAPP_API_VERSION || 'v23.0', list, origin};
+  const list = numbers(env.WHATSAPP_NUMEROS), clients = links(env.WHATSAPP_CLIENTS), origin = String(env.GUARDIAN_ORIGIN || '').replace(/\/$/, '');
+  if (env.GREENAPI_ID_INSTANCE && env.GREENAPI_API_TOKEN) return {provider: 'greenapi', clients, id: String(env.GREENAPI_ID_INSTANCE).replace(/\D/g, ''), token: String(env.GREENAPI_API_TOKEN).trim(), url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''), list, origin};
+  if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) return {provider: 'twilio', clients, sid: env.TWILIO_ACCOUNT_SID.trim(), token: env.TWILIO_AUTH_TOKEN.trim(), from: env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', list, origin};
+  if (env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_ID) return {provider: 'meta', clients, token: env.WHATSAPP_TOKEN.trim(), phoneId: String(env.WHATSAPP_PHONE_ID).replace(/\D/g, ''), version: env.WHATSAPP_API_VERSION || 'v23.0', list, origin};
   return null;
 }
 
@@ -92,14 +103,18 @@ function migrate(s) {
 // Messages à envoyer maintenant : ceux du simulateur, partis il y a moins de 2 minutes, vers les numéros concernés.
 // Un client ne reçoit que les pannes de son quartier (toute sa commune si l'équipement central tombe).
 function outbox(s, cfg, now = Date.now()) {
-  if (!cfg || !cfg.list.length) return [];
+  const clients = cfg ? (cfg.clients || []).map(c => ({...c, segment: s.get('SELECT m.segment_id AS id FROM noc_members m JOIN users u ON u.id=m.user_id WHERE u.email=?', c.email)?.id})).filter(c => c.segment) : [];
+  if (!cfg || (!cfg.list.length && !clients.length)) return [];
   const {segments, incidents, technicians} = N.activity(s, now - 15 * 60000), out = [];
   for (const i of incidents) {
     const seg = segments.find(g => g.id === i.segment_id); if (!seg) continue;
     const wide = F.reach(i, seg, segments).wide, reached = wide ? segments.filter(g => G.SEGMENTS[g.id]?.commune === G.SEGMENTS[seg.id]?.commune).map(g => g.id) : [seg.id];
     for (const m of F.messages(i, seg, technicians, now)) {
       if (m.channel !== 'whatsapp' || now - m.at > RECENT) continue;
-      for (const n of cfg.list.filter(n => n.role === m.to && (m.to !== 'client' || reached.some(id => livesIn(n.key, id)))))
+      const phones = cfg.list.filter(n => n.role === m.to && (m.to !== 'client' || reached.some(id => livesIn(n.key, id)))).map(n => n.phone);
+      // Un client relié par son compte reçoit les pannes du quartier de ce compte.
+      if (m.to === 'client') phones.push(...clients.filter(c => reached.includes(c.segment)).map(c => c.phone));
+      for (const n of [...new Set(phones)].map(phone => ({phone})))
         out.push({key: [i.id, m.to, m.at, n.phone, crypto.createHash('sha1').update(m.body).digest('hex').slice(0, 10)].join('|'), incidentId: i.id, segments: reached, role: m.to, phone: n.phone, text: m.body, at: m.at});
     }
   }
@@ -133,7 +148,7 @@ async function tick(s, cfg, {fetchImpl = fetch, now = Date.now(), wait = ms => n
 
 // Ce que l'équipe voit dans le simulateur : quels messages sont vraiment partis, sans jamais montrer les numéros ni la clé.
 function status(s, cfg) {
-  return {on: !!cfg, phones: cfg ? cfg.list.length : 0, sent: cfg ? s.all('SELECT incident_id AS incidentId,role AS "to",status,error,at FROM noc_whatsapp ORDER BY at DESC LIMIT 200') : []};
+  return {on: !!cfg, phones: cfg ? new Set([...cfg.list, ...(cfg.clients || [])].map(n => n.phone)).size : 0, sent: cfg ? s.all('SELECT incident_id AS incidentId,role AS "to",status,error,at FROM noc_whatsapp ORDER BY at DESC LIMIT 200') : []};
 }
 
 function start(s, {env = process.env, onError} = {}) {
@@ -145,4 +160,4 @@ function start(s, {env = process.env, onError} = {}) {
   return {cfg, stop: () => clearInterval(timer)};
 }
 
-module.exports = {numbers, config, livesIn, migrate, outbox, tick, status, start, PROVIDERS, RECENT};
+module.exports = {numbers, links, config, livesIn, migrate, outbox, tick, status, start, PROVIDERS, RECENT};

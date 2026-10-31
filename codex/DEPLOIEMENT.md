@@ -105,12 +105,16 @@ Green API pilote un vrai numéro WhatsApp : utilisez **une puce à part**, jamai
 1. Créez un compte sur **green-api.com**, puis une instance « Developer ».
 2. Sur le téléphone de la puce à part, WhatsApp > Appareils connectés > Connecter un appareil, puis scannez le QR code de l’instance.
 3. Dans les réglages de l’instance : **URL du webhook** = `https://<votre-adresse>/api/whatsapp/entrant`, **webhookUrlToken** = un secret de votre choix (16 caractères ou plus), et activez la réception des messages entrants (« incomingWebhook »).
-4. Sur Render (onglet **Environment**), ajoutez : `GREENAPI_ID_INSTANCE` (idInstance), `GREENAPI_API_TOKEN` (apiTokenInstance), `GREENAPI_WEBHOOK_TOKEN` (le même secret qu’à l’étape 3), et dans `WHATSAPP_NUMEROS` le numéro de chaque client qui écrira, avec son quartier (`Yopougon=2250701020304`). Pour relier un numéro à un compte précis : `WHATSAPP_CLIENTS` = `2250701020304=awa.kone@demo.fibre-guardian.ci`.
+4. Sur Render (onglet **Environment**), ajoutez : `GREENAPI_ID_INSTANCE` (idInstance), `GREENAPI_API_TOKEN` (apiTokenInstance, copié avec l’icône « copier »), `GREENAPI_URL` (apiUrl, par exemple `https://7107.api.greenapi.com`), `GREENAPI_WEBHOOK_TOKEN` (le même secret qu’à l’étape 3, **16 caractères au moins**, sinon la porte reste fermée), et dans `WHATSAPP_NUMEROS` le numéro de chaque client qui écrira, avec son quartier (`Yopougon=2250701020304`). Pour relier un numéro à un compte précis : `WHATSAPP_CLIENTS` = `2250701020304=awa.kone@demo.fibre-guardian.ci`.
 5. Écrivez « Bonjour » au numéro de la puce depuis le téléphone du client : Guardian répond en quelques secondes (une minute si le site dormait).
+
+Numéros ivoiriens : beaucoup de comptes WhatsApp gardent l’ancien format à 8 chiffres (`225` + 8 chiffres, sans le `07`, `05` ou `01`). Écrivez chaque numéro **comme WhatsApp le connaît** : on le lit dans **Chats** sur la page de l’instance Green API, après un premier message.
+
+**Alertes automatiques** : quand Green API est réglé, les alertes de panne (coupure, technicien en route avec le lien de suivi en direct, « c’est réparé ») partent du même numéro que Guardian, même si Twilio est aussi réglé. Un client relié par `WHATSAPP_CLIENTS` les reçoit pour le quartier de son compte ; l’équipe et le technicien les reçoivent par `WHATSAPP_NUMEROS` (`equipe=…`, `technicien=…`).
 
 **Notes vocales (facultatif)** : créez un compte gratuit sur **console.groq.com** (sans carte), puis une clé API, et ajoutez-la dans Render sous `GROQ_API_KEY`. Guardian transcrit alors chaque note vocale, répète ce qu’il a compris (« Vous avez dit : … ») et répond. Le son n’est jamais enregistré. Sans cette clé, Guardian demande gentiment d’écrire.
 
-Un numéro qui n’est pas relié reçoit une réponse polie, sans aucune donnée. Un message resté plus de 10 minutes en attente (site endormi) ne reçoit pas de réponse. Si Twilio est aussi réglé, les alertes de panne partent par Twilio ; Guardian répond toujours par Green API.
+Un numéro qui n’est pas relié reçoit une réponse polie, sans aucune donnée. Un message resté plus de 10 minutes en attente (site endormi) ne reçoit pas de réponse. 
 
 ## Étape 7 : l'application Android (fichier APK)
 
