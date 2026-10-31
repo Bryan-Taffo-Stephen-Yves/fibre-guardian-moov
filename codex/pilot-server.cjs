@@ -77,9 +77,14 @@ function createGuardianServer(options={}){
      if(route==='/api/test/sample'&&method==='GET'){store.rate('vt-sample:'+key,300,VT.LINK_MS);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':VT.SAMPLE.length});res.end(VT.SAMPLE);return;}
      // Débit d'envoi : l'appareil envoie jusqu'à 2 Mo, le serveur les compte puis les oublie.
      if(route==='/api/test/upload'&&method==='POST'){store.rate('vt-up:'+key,30,VT.LINK_MS);let size=0;for await(const chunk of req){size+=chunk.length;if(size>VT.MAX_UPLOAD){res.setHeader('Connection','close');throw new Problem(413,'Envoi trop volumineux.');}}return json(res,{bytes:size});}
+     // « Brancher ce PC » : le fichier à lancer, puis ses relevés Wi-Fi toutes les 2 secondes (gardés en mémoire seulement).
+     if(route==='/api/test/agent'&&method==='GET'){store.rate('vt-agent:'+key,10,VT.LINK_MS);const file=VT.agent(origin,req.headers['x-test-token']);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="Guardian-Wi-Fi.cmd"','Content-Length':Buffer.byteLength(file)});res.end(file);return;}
+     if(route==='/api/test/wifi'&&method==='POST'){store.rate('vt-wifi-in:'+key,1200,VT.LINK_MS);return json(res,VT.wifiSave(row,await body(req,4096)));}
+     if(route==='/api/test/wifi'&&method==='GET'){store.rate('vt-wifi:'+key,1200,VT.LINK_MS);return json(res,VT.wifiRead(row));}
+     if(route==='/api/test/op'&&method==='POST'){store.rate('vt-op:'+key,40,VT.LINK_MS);return json(res,VT.queueOp(row,String((await body(req,1024)).op||'')),201);}
      if(route==='/api/test/preview'&&method==='POST'){store.rate('vt-preview:'+key,600,VT.LINK_MS);const d=await body(req,4096);return json(res,VT.preview(d.metrics,String(d.scenario||'')));}
      if(route==='/api/test/download'&&method==='GET'){store.rate('vt-dl:'+key,30,VT.LINK_MS);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':VT.POOL.length});res.end(VT.POOL);return;}
-     if(route==='/api/test/result'&&method==='POST'){insist(row.tests<VT.MAX_TESTS,'Vous avez fait '+VT.MAX_TESTS+' tests avec ce lien. Demandez-en un nouveau à Guardian.',429);const r=VT.record(store,row,(await body(req,4096)).metrics),whatsapp=!!(row.phone&&bot);
+     if(route==='/api/test/result'&&method==='POST'){insist(row.tests<VT.MAX_TESTS,'Vous avez fait '+VT.MAX_TESTS+' tests avec ce lien. Demandez-en un nouveau à Guardian.',429);const w=VT.wifiRead(row).wifi,r=VT.record(store,row,(await body(req,4096)).metrics,{wifi:w&&!w.error?w:null}),whatsapp=!!(row.phone&&bot);
       if(whatsapp)WB.testResult(store,bot,row.phone,r).catch(e=>options.onError?options.onError(e):console.warn(e.message));return json(res,{...r,whatsapp});}
      throw new Problem(404,'Action de test introuvable.');
     }

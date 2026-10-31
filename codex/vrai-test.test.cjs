@@ -169,3 +169,52 @@ test('En direct : petits échantillons, débit d’envoi compté puis oublié, e
     assert.ok((await r.json()).facts.some(f => f.label === 'Débit d’envoi' && f.value === '8,4 Mbps'));
   } finally { t.close(); }
 });
+
+test('Brancher ce PC : le fichier ne contient que le site et le jeton, et ne sait faire que 4 opérations', async () => {
+  const t = await setup();
+  try {
+    const l = VT.link(t.s, t.user.id), r = await t.page('agent', l.token), file = await r.text();
+    assert.equal(r.status, 200); assert.match(r.headers.get('content-disposition'), /Guardian-Wi-Fi\.cmd/);
+    assert.ok(file.startsWith('@echo off\r\n'), 'fichier Windows (fins de ligne CRLF)');
+    assert.ok(file.includes("$token = '" + l.token + "'") && file.includes(t.base + '/api/test/wifi'));
+    assert.equal(file.split('#GUARDIAN-PS#').length, 2, 'un seul repère entre la partie cmd et la partie PowerShell');
+    assert.doesNotMatch(file, /Invoke-Expression \$resp|iex \$|DownloadString|Start-Process|Remove-Item|Set-ItemProperty|reg add/i, 'aucune commande venue du serveur n’est exécutée');
+    assert.deepEqual(Object.keys(VT.OPS), ['box', 'internet', 'dns', 'wifi']);
+    assert.throws(() => VT.agent('javascript:alert(1)', l.token), /invalide/);
+    assert.equal((await t.page('agent', 'x'.repeat(24))).status, 404);
+  } finally { t.close(); }
+});
+
+test('Brancher ce PC : relevés Wi-Fi en direct, opérations demandées sur la page, résultats expliqués par Guardian', async () => {
+  const t = await setup();
+  try {
+    const l = VT.link(t.s, t.user.id), get = async () => (await t.page('wifi', l.token)).json();
+    assert.equal((await get()).connected, false);
+    assert.equal((await t.page('op', l.token, {op: 'box'})).status, 409, 'pas d’opération sans PC branché');
+    // Le PC envoie ce que Windows lui donne.
+    let r = await (await t.page('wifi', l.token, {ssid: 'MOOV-FIBRE-2A4F', signal: '38', channel: '36', band: '5 GHz', radio: '802.11ax', rxMbps: '866.7', txMbps: '720', auth: 'WPA2-Personnel', computer: 'PC-SALON', extra: 'ignoré'})).json();
+    assert.equal(r.action, null);
+    let w = await get();
+    assert.equal(w.connected, true); assert.equal(w.wifi.ssid, 'MOOV-FIBRE-2A4F'); assert.equal(w.wifi.signal, 38); assert.equal(w.wifi.rxMbps, 867); assert.equal(w.wifi.extra, undefined);
+    assert.deepEqual(w.available.map(o => o.id), ['box', 'internet', 'dns', 'wifi']); assert.ok(w.available.find(o => o.id === 'wifi').confirm, 'reconnecter demande une confirmation');
+    // Le client demande « Tester la box » : l'opération part avec la prochaine réponse au PC.
+    assert.equal((await t.page('op', l.token, {op: 'formater'})).status, 404, 'seulement les 4 opérations prévues');
+    assert.equal((await t.page('op', l.token, {op: 'box'})).status, 201);
+    r = await (await t.page('wifi', l.token, {ssid: 'MOOV-FIBRE-2A4F', signal: '38'})).json();
+    assert.equal(r.action.op, 'box'); assert.equal((await get()).ops[0].state, 'en cours');
+    await t.page('wifi', l.token, {result: {id: r.action.id, op: 'box', ok: true, gateway: '192.168.1.1', ms: 4, lost: 0}});
+    w = await get();
+    assert.equal(w.ops[0].state, 'fait'); assert.equal(w.ops[0].ok, true); assert.match(w.ops[0].text, /joint la box \(192\.168\.1\.1\) en 4 ms, 4 réponses sur 4/);
+    // Box joignable mais Internet muet : Guardian conclut que c'est la fibre, pas le Wi-Fi.
+    await t.page('op', l.token, {op: 'internet'});
+    r = await (await t.page('wifi', l.token, {ssid: 'MOOV-FIBRE-2A4F', signal: '38'})).json();
+    await t.page('wifi', l.token, {result: {id: r.action.id, op: 'internet', ok: false, lost: 4}});
+    assert.match((await get()).ops[1].text, /c’est la fibre ou le réseau Moov, pas votre Wi-Fi/);
+    // Le signal faible du PC entre dans le verdict du test complet.
+    const d = await (await t.page('result', l.token, {metrics: {downloadMbps: 30, latencyMs: 150, lossPct: 0, network: 'wifi'}})).json();
+    assert.match(d.text, /signal Wi-Fi de ce PC est faible \(38 %\)/); assert.ok(d.facts.some(f => f.label === 'Wi-Fi lu sur le PC' && /MOOV-FIBRE-2A4F/.test(f.value)));
+    // Erreur de Windows (localisation coupée) : affichée telle quelle, sans faux nom.
+    await t.page('wifi', l.token, {error: 'location', ssid: 'faux'});
+    assert.deepEqual((await get()).wifi.error, 'location'); assert.equal((await get()).wifi.ssid, undefined);
+  } finally { t.close(); }
+});
