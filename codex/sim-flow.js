@@ -84,7 +84,8 @@
     const first = tech ? tech.name.split(' ')[0] : 'Le technicien', ready = d.at + THINK, out = [];
     const add = (t, to, channel, body, extra = {}) => t && out.push({id: to + channel + out.length, at: t, to, channel, body, ...extra});
     const head = (kind === 'olt' ? 'Panne dans toute la commune de ' + where.commune : 'Panne à ' + where.area + ' (' + where.commune + ')') + ' : ' + k.label + (d.offline ? ', ' + d.offline + ' clients sans internet' : '') + '. ';
-    add(ready, 'team', 'whatsapp', head + (kind === 'power' ? 'Ne pas envoyer de technicien.' : k.hold ? 'Équipe prévenue, départ dès que l’eau se retire.' : dispatch ? 'Plan prêt, votre validation est attendue.' : kind === 'olt' ? 'Redémarrage à distance proposé, votre validation est attendue.' : 'Ajout de capacité proposé, votre validation est attendue.'));
+    // ask : ce message attend la validation d'un responsable (sur WhatsApp, un compte responsable relié peut répondre « Valider »).
+    add(ready, 'team', 'whatsapp', head + (kind === 'power' ? 'Ne pas envoyer de technicien.' : k.hold ? 'Équipe prévenue, départ dès que l’eau se retire.' : dispatch ? 'Plan prêt, votre validation est attendue.' : kind === 'olt' ? 'Redémarrage à distance proposé, votre validation est attendue.' : 'Ajout de capacité proposé, votre validation est attendue.'), {ask: 'approve'});
     add(ready, 'team', 'mail', null, {subject: 'Recommandations de Guardian · ' + (kind === 'olt' ? where.commune : where.area), lines: [
       ['Cause probable', k.cause(where)],
       ['Clients touchés', kind === 'congestion' ? 'Tout le quartier, connexion lente' : d.offline + ' sur ' + d.total],

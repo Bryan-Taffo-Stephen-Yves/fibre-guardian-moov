@@ -73,6 +73,8 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-bubble p{margin:0;font-size:16px;line-height:1.5}
 .jy-tips{list-style:none;margin:0;padding:0;display:grid;gap:8px;color:var(--moov-text-muted);font-size:14px}
 .jy-tips li{padding:12px 14px;border-radius:14px;border:1px dashed var(--moov-line)}
+/* Numéro WhatsApp pas encore activé : la seule chose à faire, mise en avant sans alarmer. */
+.jy-tips .jy-tip-wa{border-style:solid;border-color:var(--moov-primary-100);background:var(--moov-primary-100);color:var(--moov-primary-700);font-weight:600}
 
 /* Étapes de l'intervention */
 .jy-stages{list-style:none;margin:0;padding:0;display:grid}
@@ -201,6 +203,8 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-member{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--moov-neutral-50);border:1px solid var(--moov-line);font-size:14px;min-width:0;transition:background .3s ease,border-color .3s ease}
 .jy-member-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14ch}
 .jy-member small{font-size:11px;color:var(--moov-text-muted);white-space:nowrap}
+.jy-member-wa{flex:0 0 auto;display:grid;place-items:center;color:var(--moov-success-700)}
+.jy-members.is-big .jy-member-wa svg{width:18px;height:18px}
 .jy-member-dot{flex:0 0 28px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--moov-primary-100);color:var(--moov-primary)}
 .jy-member-dot--1{background:var(--moov-accent-100);color:var(--moov-accent-text)}
 .jy-member-dot--2{background:var(--moov-success-100);color:var(--moov-success-700)}

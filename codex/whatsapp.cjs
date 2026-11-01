@@ -6,12 +6,18 @@
 //   Meta (numéro de test)          : WHATSAPP_TOKEN, WHATSAPP_PHONE_ID
 // Destinataires : WHATSAPP_NUMEROS = « Grand-Bassam=2250701020304, equipe=2250705060708, technicien=2250709101112 »,
 // et WHATSAPP_CLIENTS = « 2250701020304=awa.kone@demo.fibre-guardian.ci » (le client reçoit les pannes du quartier de son compte).
+// Un numéro relié au compte d'un responsable (« 2250701020304=direction@demo.fibre-guardian.ci ») reçoit les messages de l'équipe
+// et peut valider le plan en répondant « Valider » (whatsapp-bot.cjs). Un même numéro peut être relié à un client et à un responsable.
+// Membres du jury (Green API seulement) : quelques places pour ceux qui donnent leur numéro WhatsApp en s'inscrivant
+// (WHATSAPP_JURY_MAX, sinon les discussions gratuites qui restent sur les 3 de Green API). Ils reçoivent les messages
+// « client » de la panne de la salle, au même moment que l'alerte dans l'application (jury-store.cjs).
 // Ces réglages vivent dans les variables de l'hébergeur ou dans codex/.env, jamais dans git.
 // Sans réglage, rien ne part : les messages restent affichés dans le téléphone du simulateur.
 // Les textes sont ceux du simulateur (sim-flow.js) : ce que voit le jury à l'écran est ce qui arrive sur le téléphone.
-const crypto = require('node:crypto'), G = require('./abidjan-map.js'), F = require('./sim-flow.js'), N = require('./noc-store.cjs');
+const crypto = require('node:crypto'), G = require('./abidjan-map.js'), F = require('./sim-flow.js'), N = require('./noc-store.cjs'), O = require('./operator-store.cjs');
 
 const RECENT = 120000; // un message vieux de plus de 2 minutes ne part jamais (redémarrage, démo pré-remplie)
+const FREE_CHATS = 3; // offre gratuite « Developer » de Green API : 3 discussions
 const plain = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 const ROLES = {equipe: 'team', equipemoov: 'team', moov: 'team', technicien: 'tech', tech: 'tech'};
 const HEAD = {client: 'Moov Africa · Fibre Guardian', team: 'Fibre Guardian · Équipe Moov', tech: 'Fibre Guardian · Votre mission'};
@@ -48,7 +54,17 @@ const PROVIDERS = {
   },
   greenapi: {
     gap: 1000,
-    async send(cfg, phone, text, fetchImpl) {
+    async send(cfg, phone, text, fetchImpl, ask = null) {
+      // Plan à valider : un bouton « Valider le plan » propre à cette alerte (« valider:<ref> »), pour que le bouton touché
+      // valide ce plan-là et pas un autre. Boutons Green API encore en essai : s'ils sont refusés, le même texte part sans
+      // bouton, et il dit déjà de répondre « Valider ».
+      if (ask?.kind === 'approve') {
+        const b = await fetchImpl(cfg.url + '/waInstance' + cfg.id + '/sendInteractiveButtonsReply/' + encodeURIComponent(cfg.token), {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({chatId: phone + '@c.us', body: text, buttons: [{buttonId: 'valider:' + ask.ref, buttonText: 'Valider le plan'}]}), signal: AbortSignal.timeout(10000)
+        }).catch(() => null);
+        if (b?.ok) return;
+      }
       const r = await fetchImpl(cfg.url + '/waInstance' + cfg.id + '/sendMessage/' + encodeURIComponent(cfg.token), {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({chatId: phone + '@c.us', message: text}), signal: AbortSignal.timeout(10000)
@@ -83,7 +99,14 @@ function links(text) {
 
 function config(env = process.env) {
   const list = numbers(env.WHATSAPP_NUMEROS), clients = links(env.WHATSAPP_CLIENTS), origin = String(env.GUARDIAN_ORIGIN || '').replace(/\/$/, '');
-  if (env.GREENAPI_ID_INSTANCE && env.GREENAPI_API_TOKEN) return {provider: 'greenapi', clients, id: String(env.GREENAPI_ID_INSTANCE).replace(/\D/g, ''), token: String(env.GREENAPI_API_TOKEN).trim(), url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''), list, origin};
+  if (env.GREENAPI_ID_INSTANCE && env.GREENAPI_API_TOKEN) {
+    // Places WhatsApp pour le jury : celles qui restent sur les discussions gratuites, ou le nombre réglé (20 au plus).
+    const set = Number.parseInt(env.WHATSAPP_JURY_MAX, 10), used = new Set([...list, ...clients].map(n => n.phone)).size;
+    const jury = Number.isFinite(set) ? Math.min(20, Math.max(0, set)) : Math.max(0, FREE_CHATS - used);
+    // replies : Green API renvoie les réponses à Guardian (webhook réglé) ; sans lui, personne ne lirait « Valider ».
+    const replies = String(env.GREENAPI_WEBHOOK_TOKEN || '').trim().replace(/^(Bearer|Basic)\s+/i, '').length >= 16;
+    return {provider: 'greenapi', clients, id: String(env.GREENAPI_ID_INSTANCE).replace(/\D/g, ''), token: String(env.GREENAPI_API_TOKEN).trim(), url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''), list, origin, jury, replies};
+  }
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) return {provider: 'twilio', clients, sid: env.TWILIO_ACCOUNT_SID.trim(), token: env.TWILIO_AUTH_TOKEN.trim(), from: env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', list, origin};
   if (env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_ID) return {provider: 'meta', clients, token: env.WHATSAPP_TOKEN.trim(), phoneId: String(env.WHATSAPP_PHONE_ID).replace(/\D/g, ''), version: env.WHATSAPP_API_VERSION || 'v23.0', list, origin};
   return null;
@@ -98,24 +121,47 @@ function livesIn(key, segmentId) {
 
 function migrate(s) {
   s.db.exec('CREATE TABLE IF NOT EXISTS noc_whatsapp(key TEXT PRIMARY KEY,incident_id TEXT NOT NULL,phone TEXT NOT NULL,role TEXT NOT NULL,status TEXT NOT NULL,error TEXT,at INTEGER NOT NULL)');
+  // Alertes « plan à valider » vraiment remises à un responsable : le plan tel qu'il était (cause, déplacement) au moment de l'alerte.
+  s.db.exec('CREATE TABLE IF NOT EXISTS wa_asks(ref TEXT PRIMARY KEY,phone TEXT NOT NULL,incident_id TEXT NOT NULL,cause TEXT,dispatch INTEGER NOT NULL,at INTEGER NOT NULL)');
 }
+// Dans la clé d'un envoi, le numéro est remplacé par une empreinte : un numéro effacé ne reste pas dans les clés,
+// et la clé empêche toujours de renvoyer le même message au même téléphone.
+const tag = phone => crypto.createHash('sha256').update('fibre-guardian-wa|' + phone).digest('hex').slice(0, 16);
 
 // Messages à envoyer maintenant : ceux du simulateur, partis il y a moins de 2 minutes, vers les numéros concernés.
 // Un client ne reçoit que les pannes de son quartier (toute sa commune si l'équipement central tombe).
 function outbox(s, cfg, now = Date.now()) {
   const clients = cfg ? (cfg.clients || []).map(c => ({...c, segment: s.get('SELECT m.segment_id AS id FROM noc_members m JOIN users u ON u.id=m.user_id WHERE u.email=?', c.email)?.id})).filter(c => c.segment) : [];
-  if (!cfg || (!cfg.list.length && !clients.length)) return [];
-  const {segments, incidents, technicians} = N.activity(s, now - 15 * 60000), out = [];
+  const team = cfg ? managers(s, cfg) : [], jury = cfg?.jury ? juryAudience(s) : null;
+  if (!cfg || (!cfg.list.length && !clients.length && !team.length && !jury)) return [];
+  const {segments, incidents, technicians} = N.activity(s, now - 15 * 60000), out = [], keys = new Set();
+  // Le bouton « Valider » seulement avec Green API et son webhook (sinon la réponse ne reviendrait jamais à Guardian).
+  const asks = cfg?.provider === 'greenapi' && cfg.replies;
+  const push = (i, m, phone, reached, at, juror = false) => {
+    const key = [i.id, m.to, m.at, tag(phone), crypto.createHash('sha1').update(m.body).digest('hex').slice(0, 10)].join('|');
+    if (keys.has(key)) return; keys.add(key);
+    const ask = asks && m.ask && i.status === 'proposed' && team.some(c => c.phone === phone) ? m.ask : null;
+    out.push({key, incidentId: i.id, segments: reached, role: m.to, phone, text: m.body, at, ask, plan: ask ? {cause: i.plan?.cause || null, dispatch: i.plan?.dispatch !== false} : null, juror});
+  };
   for (const i of incidents) {
     const seg = segments.find(g => g.id === i.segment_id); if (!seg) continue;
     const wide = F.reach(i, seg, segments).wide, reached = wide ? segments.filter(g => G.SEGMENTS[g.id]?.commune === G.SEGMENTS[seg.id]?.commune).map(g => g.id) : [seg.id];
     for (const m of F.messages(i, seg, technicians, now)) {
-      if (m.channel !== 'whatsapp' || now - m.at > RECENT) continue;
-      const phones = cfg.list.filter(n => n.role === m.to && (m.to !== 'client' || reached.some(id => livesIn(n.key, id)))).map(n => n.phone);
-      // Un client relié par son compte reçoit les pannes du quartier de ce compte.
-      if (m.to === 'client') phones.push(...clients.filter(c => reached.includes(c.segment)).map(c => c.phone));
-      for (const n of [...new Set(phones)].map(phone => ({phone})))
-        out.push({key: [i.id, m.to, m.at, n.phone, crypto.createHash('sha1').update(m.body).digest('hex').slice(0, 10)].join('|'), incidentId: i.id, segments: reached, role: m.to, phone: n.phone, text: m.body, at: m.at});
+      if (m.channel !== 'whatsapp') continue;
+      if (now - m.at <= RECENT) {
+        const phones = cfg.list.filter(n => n.role === m.to && (m.to !== 'client' || reached.some(id => livesIn(n.key, id)))).map(n => n.phone);
+        // Un client relié par son compte reçoit les pannes du quartier de ce compte.
+        if (m.to === 'client') phones.push(...clients.filter(c => reached.includes(c.segment)).map(c => c.phone));
+        // Un responsable relié par son compte reçoit les messages de l'équipe, pour toutes les pannes.
+        if (m.to === 'team') phones.push(...team.map(c => c.phone));
+        for (const phone of new Set(phones)) push(i, m, phone, reached, m.at);
+      }
+      // Le jury inscrit avec son numéro : la panne de la salle seulement, pas avant que l'application la montre
+      // (réseau de démo : l'alerte d'il y a 12 s part au moment où le responsable valide).
+      if (jury && m.to === 'client' && i.id === jury.incident && jury.from !== null) {
+        const at = Math.max(m.at, jury.from);
+        if (now - at <= RECENT) for (const phone of jury.phones) push(i, m, phone, reached, at, true);
+      }
     }
   }
   // Le client d'abord : c'est son téléphone que le jury regarde (le bac à sable Twilio espace les envois de 3 s).
@@ -123,8 +169,48 @@ function outbox(s, cfg, now = Date.now()) {
   return out.sort((a, b) => a.at - b.at || order[a.role] - order[b.role]);
 }
 
+function juryAudience(s) {
+  try { return require('./jury-store.cjs').whatsappAudience(s); } catch { return null; } // base sans salle du jury
+}
+function enrolled(s, phone) {
+  try { return require('./jury-store.cjs').enrolled(s, phone); } catch { return false; }
+}
+
+// Numéros ivoiriens : beaucoup de comptes WhatsApp gardent l'ancien format à 8 chiffres (225 + 8 chiffres, sans 07, 05 ou 01).
+// Green API dit lequel existe (checkWhatsapp) ; sans réponse claire, on garde le format à 10 chiffres.
+// Appelé avant l'inscription : le numéro entre dans la salle déjà écrit comme WhatsApp le connaît.
+async function reachable(cfg, phone, fetchImpl = fetch) {
+  if (cfg?.provider !== 'greenapi' || !/^225\d{10}$/.test(phone)) return phone;
+  const exists = async p => {
+    try {
+      const r = await fetchImpl(cfg.url + '/waInstance' + cfg.id + '/checkWhatsapp/' + encodeURIComponent(cfg.token), {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phoneNumber: Number(p)}), signal: AbortSignal.timeout(5000)});
+      const j = r.ok ? await r.json() : null;
+      return typeof j?.existsWhatsapp === 'boolean' ? j.existsWhatsapp : null;
+    } catch { return null; }
+  };
+  if (await exists(phone) !== false) return phone;
+  const old = '225' + phone.slice(5);
+  return await exists(old) === true ? old : phone;
+}
+
+// Premier message au numéro donné par un membre du jury : rien d'autre ne part tant que le téléphone n'a pas répondu « OUI ».
+// Ainsi, un numéro tapé par erreur (ou celui de quelqu'un d'autre) ne reçoit qu'un seul message, sans prénom choisi par autrui.
+const WELCOME = 'Bonjour ! Je suis Guardian, l’assistant de Moov Africa Fibre. Ce numéro vient d’être inscrit à la démonstration Fibre Guardian.\n\nRépondez « OUI » pour recevoir ici les alertes de panne pendant la démonstration. Sans réponse, je ne vous écris plus. Votre numéro est effacé à la fin.';
+async function welcome(s, cfg, uid, fetchImpl = fetch) {
+  const wa = require('./jury-store.cjs').whatsappOf(s, uid); if (!wa) return;
+  await PROVIDERS[cfg.provider].send(cfg, wa.phone, HEAD.client + '\n\n' + WELCOME, fetchImpl);
+}
+
+// Numéros reliés au compte d'un responsable (agent, superviseur ou administrateur) : ils reçoivent les messages de l'équipe.
+function managers(s, cfg) {
+  return (cfg.clients || []).map(c => ({...c, user: s.get('SELECT id FROM users WHERE email=?', c.email)})).filter(c => c.user && O.role(s, c.user.id) !== 'subscriber');
+}
+const ASK = {approve: 'Répondez « Valider » pour valider ce plan. Vous pouvez aussi valider dans l’espace Moov.'};
+
 // Le client « en route » reçoit aussi le lien de suivi public du technicien (valable 6 h).
+// Le responsable relié par son compte peut valider le plan depuis WhatsApp : le message le lui dit.
 function withLink(s, cfg, m) {
+  if (m.ask && ASK[m.ask]) return m.text + '\n\n' + ASK[m.ask];
   if (m.role !== 'client' || !cfg.origin || !/est en route/.test(m.text)) return m.text;
   try {
     const member = s.get('SELECT user_id FROM noc_members WHERE segment_id IN (' + m.segments.map(() => '?').join(',') + ') LIMIT 1', ...m.segments);
@@ -138,10 +224,17 @@ async function tick(s, cfg, {fetchImpl = fetch, now = Date.now(), wait = ms => n
   if (!cfg || s.demoSeeding) return [];
   const provider = PROVIDERS[cfg.provider], done = [];
   for (const m of outbox(s, cfg, now)) {
+    // Membre du jury : on revérifie juste avant l'envoi (« Stop » ou salle fermée pendant les envois précédents).
+    if (m.juror && !enrolled(s, m.phone)) continue;
     if (!s.run('INSERT OR IGNORE INTO noc_whatsapp VALUES(?,?,?,?,?,?,?)', m.key, m.incidentId, m.phone, m.role, 'sending', null, now).changes) continue;
     if (done.length && provider.gap) await wait(provider.gap);
-    try { await provider.send(cfg, m.phone, HEAD[m.role] + '\n\n' + withLink(s, cfg, m), fetchImpl); s.run("UPDATE noc_whatsapp SET status='sent' WHERE key=?", m.key); done.push({...m, status: 'sent'}); }
-    catch (e) { s.run("UPDATE noc_whatsapp SET status='failed',error=? WHERE key=?", e.message, m.key); done.push({...m, status: 'failed'}); onError?.(e); }
+    const ask = m.ask ? {kind: m.ask, ref: crypto.randomBytes(4).toString('hex')} : null;
+    try {
+      await provider.send(cfg, m.phone, HEAD[m.role] + '\n\n' + withLink(s, cfg, m), fetchImpl, ask);
+      s.run("UPDATE noc_whatsapp SET status='sent' WHERE key=?", m.key); done.push({...m, status: 'sent'});
+      // Seule une alerte vraiment remise peut être validée par « Valider ».
+      if (ask) s.run('INSERT INTO wa_asks VALUES(?,?,?,?,?,?)', ask.ref, m.phone, m.incidentId, m.plan.cause, m.plan.dispatch ? 1 : 0, Date.now());
+    } catch (e) { s.run("UPDATE noc_whatsapp SET status='failed',error=? WHERE key=?", e.message, m.key); done.push({...m, status: 'failed'}); onError?.(e); }
   }
   return done;
 }
@@ -160,4 +253,4 @@ function start(s, {env = process.env, onError} = {}) {
   return {cfg, stop: () => clearInterval(timer)};
 }
 
-module.exports = {numbers, links, config, livesIn, migrate, outbox, tick, status, start, PROVIDERS, RECENT};
+module.exports = {numbers, links, config, livesIn, migrate, outbox, managers, reachable, welcome, WELCOME, tag, tick, status, start, PROVIDERS, RECENT, ASK, FREE_CHATS};
