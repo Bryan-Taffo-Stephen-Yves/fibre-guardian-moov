@@ -138,8 +138,9 @@
       h('input',{ref:firstRef,type:'text',value:first,onChange:e=>F(e.currentTarget.value),maxLength:30,autoComplete:'given-name',autoCapitalize:'words',enterKeyHint:'done',placeholder:'Par exemple : Awa','aria-invalid':firstError||undefined,'aria-describedby':firstError?'jy-first-error':undefined}),
       firstError?h('small',{id:'jy-first-error',className:'jy-field-error',role:'alert'},error):h('small',null,'Il s’affiche sur le grand écran de la démonstration.')),
      places>0&&h('label',{className:'jy-field'},h('span',null,'Votre numéro WhatsApp ',h('small',null,'(facultatif)')),
-      h('input',{ref:phoneRef,type:'tel',value:phone,onChange:e=>PH(e.currentTarget.value),maxLength:20,autoComplete:'tel-national',inputMode:'tel',enterKeyHint:'done',placeholder:'Par exemple : 07 07 12 34 56','aria-invalid':phoneError||undefined,'aria-describedby':phoneError?'jy-phone-error':'jy-phone-hint'}),
-      phoneError?h('small',{id:'jy-phone-error',className:'jy-field-error',role:'alert'},error):h('small',{id:'jy-phone-hint'},'Guardian vous prévient aussi sur WhatsApp. Numéro jamais affiché, effacé à la fin. '+(places>1?'Encore '+places+' places.':'Dernière place.'))),
+      // Comme le prénom : l'aide est déjà lue avec le champ (elle est dans le label) ; l'erreur seule est reliée en plus.
+      h('input',{ref:phoneRef,type:'tel',value:phone,onChange:e=>PH(e.currentTarget.value),maxLength:25,autoComplete:'tel-national',inputMode:'tel',enterKeyHint:'done',placeholder:'Par exemple : 07 07 12 34 56','aria-invalid':phoneError||undefined,'aria-describedby':phoneError?'jy-phone-error':undefined}),
+      phoneError?h('small',{id:'jy-phone-error',className:'jy-field-error',role:'alert'},error):h('small',null,'Guardian vous écrit sur WhatsApp : répondez « OUI » pour y recevoir l’alerte. Numéro jamais affiché, effacé à la fin. '+(places>1?'Encore '+places+' places.':'Dernière place.'))),
      h('label',{className:'jy-check'},h('input',{type:'checkbox',checked:consent,onChange:e=>C(e.currentTarget.checked)}),h('span',null,'J’accepte de recevoir les alertes de ce quartier pendant la démonstration.')),
      error&&!firstError&&!phoneError&&h('p',{ref:errorRef,className:'jy-error',role:'alert'},error),
      h('button',{type:'submit',className:'jy-primary',disabled:busy||!consent||!code},busy?'Un instant…':'Devenir abonné à Niangon'),
@@ -150,12 +151,12 @@
      h('h1',null,active?(power?'Votre quartier est privé de courant':'Votre quartier est privé de fibre'):'Votre fibre fonctionne'),
      h('p',null,where+' · Abonné n° '+me.number),
      seg&&h('div',{className:'jy-meter'},h('div',{className:'jy-meter-bar'},h('i',{style:{width:Math.round(seg.online/seg.total*100)+'%'}})),h('span',null,h('b',null,seg.online),' foyers sur '+seg.total+' connectés dans le quartier'))),
-     h(Bubble,{tone:active?'alert':['resolved','closed'].includes(scene?.status)?'ok':null},scene?guardianSays(scene,seg):net?'Je veille sur le réseau '+net+'. Dès qu’un responsable Moov confirme une panne, je vous préviens ici'+(me.whatsapp?' et sur WhatsApp.':'.'):'Je veille sur votre connexion. Si quelque chose arrive dans votre quartier, je vous préviens tout de suite'+(me.whatsapp?', ici et sur WhatsApp.':'.')),
+     h(Bubble,{tone:active?'alert':['resolved','closed'].includes(scene?.status)?'ok':null},scene?guardianSays(scene,seg):net?'Je veille sur le réseau '+net+'. Dès qu’un responsable Moov confirme une panne, je vous préviens ici'+(me.whatsapp==='on'?' et sur WhatsApp.':'.'):'Je veille sur votre connexion. Si quelque chose arrive dans votre quartier, je vous préviens tout de suite'+(me.whatsapp==='on'?', ici et sur WhatsApp.':'.')),
      // Plan déjà validé puis remis à jour : l'heure revient avec la nouvelle validation (pas « dès que l'équipe a validé »).
      active&&scene.restore?.pending&&(scene.events||[]).some(e=>e.kind==='plan.approved')?h('p',{className:'ap-restore is-pending'},h('span',{className:'ap-restore-dot','aria-hidden':true}),h('span',null,'Moov met le plan à jour : la nouvelle heure de retour arrive dans un instant.')):
      active&&window.FGAppel&&h(window.FGAppel.Restore,{restore:scene.restore}),
     !ready&&h('button',{type:'button',className:'jy-secondary',onClick:enable},'Activer le son et la vibration'),
-    !scene&&h('ul',{className:'jy-tips'},h('li',null,'Gardez cette page ouverte pendant la démonstration.'),h('li',null,'Votre téléphone vibrera si votre quartier est touché.'),me.whatsapp&&h('li',null,'Guardian vous écrit aussi sur WhatsApp. Répondez « Stop » pour arrêter.'))),
+    !scene&&h('ul',{className:'jy-tips'},h('li',null,'Gardez cette page ouverte pendant la démonstration.'),h('li',null,'Votre téléphone vibrera si votre quartier est touché.'),me.whatsapp==='on'&&h('li',null,'Guardian vous écrit aussi sur WhatsApp. Répondez « Stop » pour arrêter.'),me.whatsapp==='pending'&&h('li',{className:'jy-tip-wa'},'Répondez « OUI » au message de Guardian sur WhatsApp pour y recevoir l’alerte aussi.'))),
     scene&&h('div',{className:'jy-col'},scene.certificate&&h(Certificate,{c:scene.certificate}),
     scene.certificate&&window.FGNoc&&h('div',{className:'jy-rate'},h(window.FGNoc.Feedback,{api,incident:scene,onSaved:load})),
     h('section',{className:'jy-card jy-follow'},h('h2',null,'Votre intervention'),h(Stages,{scene}),
