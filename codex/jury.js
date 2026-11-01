@@ -97,11 +97,13 @@
 
  function Juror({code}){
   const {api}=useApi();
-  const [phase,P]=S('loading'),[me,M]=S(null),[error,X]=S(''),[busy,BZ]=S(false),[consent,C]=S(false),[first,F]=S(''),[ready,RD]=S(signal.ready),[about,AB]=S(false),[toast,T]=S(''),[alerting,AL]=S(null);
-  const last=R(null),failures=R(0),toastTimer=R(0),alertingRef=R(null),firstRef=R(null),errorRef=R(null);
-  // Une erreur sur le prénom s'affiche sous le champ ; les autres juste au-dessus du bouton, toujours à l'écran.
-  const firstError=phase==='join'&&!!error&&/prénom/i.test(error);
-  E(()=>{if(phase!=='join'||!error)return;requestAnimationFrame(()=>{if(firstError)firstRef.current?.focus();else errorRef.current?.scrollIntoView({block:'center'});});},[error,phase]);
+  const [phase,P]=S('loading'),[me,M]=S(null),[error,X]=S(''),[busy,BZ]=S(false),[consent,C]=S(false),[first,F]=S(''),[phone,PH]=S(''),[places,PL]=S(0),[ready,RD]=S(signal.ready),[about,AB]=S(false),[toast,T]=S(''),[alerting,AL]=S(null);
+  const last=R(null),failures=R(0),toastTimer=R(0),alertingRef=R(null),firstRef=R(null),phoneRef=R(null),errorRef=R(null);
+  // Une erreur sur le prénom ou le numéro s'affiche sous son champ ; les autres juste au-dessus du bouton, toujours à l'écran.
+  const firstError=phase==='join'&&!!error&&/prénom/i.test(error),phoneError=phase==='join'&&!!error&&!firstError&&places>0&&/WhatsApp/.test(error);
+  E(()=>{if(phase!=='join'||!error)return;requestAnimationFrame(()=>{if(firstError)firstRef.current?.focus();else if(phoneError)phoneRef.current?.focus();else errorRef.current?.scrollIntoView({block:'center'});});},[error,phase]);
+  // Places WhatsApp de la salle (0 : le champ n'apparaît pas, l'alerte arrive seulement sur cette page).
+  E(()=>{if(phase!=='join'||!code)return;let live=true;api('/jury/places').then(r=>{if(live)PL(r.whatsapp||0);}).catch(()=>{});return()=>{live=false;};},[phase]);
   const ackKey='fg-jury-vu';
   const acked=id=>{try{return sessionStorage.getItem(ackKey)===id;}catch(_){return false;}};
   async function load(){
@@ -117,7 +119,7 @@
   }
   E(()=>{let live=true;api('/session').then(r=>{if(!live)return;if(r.user)load();else P('join');}).catch(()=>{if(live){P('join');X('Service momentanément indisponible. Réessayez dans un instant.');}});return()=>{live=false;};},[]);
   E(()=>{if(phase!=='joined')return;const t=setInterval(load,2000);return()=>clearInterval(t);},[phase]);
-  async function join(e){e.preventDefault();if(busy||!consent)return;signal.unlock();RD(true);BZ(true);X('');try{await api('/jury/join','POST',{code,consent:true,...(first.trim()?{firstName:first.trim()}:{})});await load();}catch(err){X(err.message);}finally{BZ(false);}}
+  async function join(e){e.preventDefault();if(busy||!consent)return;signal.unlock();RD(true);BZ(true);X('');try{await api('/jury/join','POST',{code,consent:true,...(first.trim()?{firstName:first.trim()}:{}),...(places>0&&phone.trim()?{whatsapp:phone.trim()}:{})});await load();}catch(err){X(err.message);}finally{BZ(false);}}
   // « Suivre l'intervention » : la régie voit que cette personne a vu l'alerte (un nouvel essai au prochain affichage si le réseau coupe).
   function follow(){const id=alerting;try{sessionStorage.setItem(ackKey,id);}catch(_){}AL(null);api('/jury/seen','POST',{id}).catch(()=>{});requestAnimationFrame(()=>document.querySelector('.jy-follow')?.scrollIntoView({block:'start'}));}
   function enable(){signal.unlock();RD(true);signal.chime();}
@@ -130,13 +132,17 @@
     h('p',{className:'jy-kicker'},'MEMBRE DU JURY'),
     h('h1',null,'Vivez la panne',h('br'),'comme un abonné.'),
     h('p',null,'Pendant la démonstration, ce téléphone devient celui d’un abonné Moov Fibre à Yopougon, quartier Niangon.'),
-    h('ul',{className:'jy-promises'},h('li',null,'Un prénom si vous voulez, jamais de numéro de téléphone.'),h('li',null,'Guardian vous prévient s’il se passe quelque chose.'),h('li',null,'Tout s’efface à la fin de la démonstration.')),
+    h('ul',{className:'jy-promises'},h('li',null,places>0?'Un prénom et un numéro WhatsApp si vous voulez, rien d’autre.':'Un prénom si vous voulez, jamais de numéro de téléphone.'),h('li',null,'Guardian vous prévient s’il se passe quelque chose.'),h('li',null,'Tout s’efface à la fin de la démonstration.')),
     !code&&h('p',{className:'jy-error',role:'alert'},'Scannez le code QR affiché par l’équipe pour rejoindre le quartier.'),
      h('label',{className:'jy-field'},h('span',null,'Votre prénom ',h('small',null,'(facultatif)')),
       h('input',{ref:firstRef,type:'text',value:first,onChange:e=>F(e.currentTarget.value),maxLength:30,autoComplete:'given-name',autoCapitalize:'words',enterKeyHint:'done',placeholder:'Par exemple : Awa','aria-invalid':firstError||undefined,'aria-describedby':firstError?'jy-first-error':undefined}),
       firstError?h('small',{id:'jy-first-error',className:'jy-field-error',role:'alert'},error):h('small',null,'Il s’affiche sur le grand écran de la démonstration.')),
+     places>0&&h('label',{className:'jy-field'},h('span',null,'Votre numéro WhatsApp ',h('small',null,'(facultatif)')),
+      // Comme le prénom : l'aide est déjà lue avec le champ (elle est dans le label) ; l'erreur seule est reliée en plus.
+      h('input',{ref:phoneRef,type:'tel',value:phone,onChange:e=>PH(e.currentTarget.value),maxLength:25,autoComplete:'tel-national',inputMode:'tel',enterKeyHint:'done',placeholder:'Par exemple : 07 07 12 34 56','aria-invalid':phoneError||undefined,'aria-describedby':phoneError?'jy-phone-error':undefined}),
+      phoneError?h('small',{id:'jy-phone-error',className:'jy-field-error',role:'alert'},error):h('small',null,'Guardian vous écrit sur WhatsApp : répondez « OUI » pour y recevoir l’alerte. Numéro jamais affiché, effacé à la fin. '+(places>1?'Encore '+places+' places.':'Dernière place.'))),
      h('label',{className:'jy-check'},h('input',{type:'checkbox',checked:consent,onChange:e=>C(e.currentTarget.checked)}),h('span',null,'J’accepte de recevoir les alertes de ce quartier pendant la démonstration.')),
-     error&&!firstError&&h('p',{ref:errorRef,className:'jy-error',role:'alert'},error),
+     error&&!firstError&&!phoneError&&h('p',{ref:errorRef,className:'jy-error',role:'alert'},error),
      h('button',{type:'submit',className:'jy-primary',disabled:busy||!consent||!code},busy?'Un instant…':'Devenir abonné à Niangon'),
      h('small',{className:'jy-hint'},'Montez le son et gardez cette page ouverte.')):
    h('div',{className:'jy-layout'+(scene?' has-scene':'')},h('div',{className:'jy-col'},
@@ -145,12 +151,12 @@
      h('h1',null,active?(power?'Votre quartier est privé de courant':'Votre quartier est privé de fibre'):'Votre fibre fonctionne'),
      h('p',null,where+' · Abonné n° '+me.number),
      seg&&h('div',{className:'jy-meter'},h('div',{className:'jy-meter-bar'},h('i',{style:{width:Math.round(seg.online/seg.total*100)+'%'}})),h('span',null,h('b',null,seg.online),' foyers sur '+seg.total+' connectés dans le quartier'))),
-     h(Bubble,{tone:active?'alert':['resolved','closed'].includes(scene?.status)?'ok':null},scene?guardianSays(scene,seg):net?'Je veille sur le réseau '+net+'. Dès qu’un responsable Moov confirme une panne, je vous préviens ici.':'Je veille sur votre connexion. Si quelque chose arrive dans votre quartier, je vous préviens tout de suite.'),
+     h(Bubble,{tone:active?'alert':['resolved','closed'].includes(scene?.status)?'ok':null},scene?guardianSays(scene,seg):net?'Je veille sur le réseau '+net+'. Dès qu’un responsable Moov confirme une panne, je vous préviens ici'+(me.whatsapp==='on'?' et sur WhatsApp.':'.'):'Je veille sur votre connexion. Si quelque chose arrive dans votre quartier, je vous préviens tout de suite'+(me.whatsapp==='on'?', ici et sur WhatsApp.':'.')),
      // Plan déjà validé puis remis à jour : l'heure revient avec la nouvelle validation (pas « dès que l'équipe a validé »).
      active&&scene.restore?.pending&&(scene.events||[]).some(e=>e.kind==='plan.approved')?h('p',{className:'ap-restore is-pending'},h('span',{className:'ap-restore-dot','aria-hidden':true}),h('span',null,'Moov met le plan à jour : la nouvelle heure de retour arrive dans un instant.')):
      active&&window.FGAppel&&h(window.FGAppel.Restore,{restore:scene.restore}),
     !ready&&h('button',{type:'button',className:'jy-secondary',onClick:enable},'Activer le son et la vibration'),
-    !scene&&h('ul',{className:'jy-tips'},h('li',null,'Gardez cette page ouverte pendant la démonstration.'),h('li',null,'Votre téléphone vibrera si votre quartier est touché.'))),
+    !scene&&h('ul',{className:'jy-tips'},h('li',null,'Gardez cette page ouverte pendant la démonstration.'),h('li',null,'Votre téléphone vibrera si votre quartier est touché.'),me.whatsapp==='on'&&h('li',null,'Guardian vous écrit aussi sur WhatsApp. Répondez « Stop » pour arrêter.'),me.whatsapp==='pending'&&h('li',{className:'jy-tip-wa'},'Répondez « OUI » au message de Guardian sur WhatsApp pour y recevoir l’alerte aussi.'))),
     scene&&h('div',{className:'jy-col'},scene.certificate&&h(Certificate,{c:scene.certificate}),
     scene.certificate&&window.FGNoc&&h('div',{className:'jy-rate'},h(window.FGNoc.Feedback,{api,incident:scene,onSaved:load})),
     h('section',{className:'jy-card jy-follow'},h('h2',null,'Votre intervention'),h(Stages,{scene}),
@@ -209,7 +215,10 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
    return h('li',{key:m.number,className:'jy-member'+(st?' is-'+st:'')},
     // Initiale ou numéro, jamais un visage deviné d'après le prénom.
     h('span',{className:'jy-member-dot jy-member-dot--'+(m.number%3),'aria-hidden':true},m.name?[...m.name][0].toUpperCase():m.number),
-    h('span',{className:'jy-member-name'},name),st&&h('small',null,st==='seen'?'✓ a vu l’alerte':'alerte reçue'));}));
+    h('span',{className:'jy-member-name'},name),
+    // Numéro donné : un petit pictogramme, jamais le numéro.
+    m.whatsapp&&h('span',{className:'jy-member-wa',role:'img','aria-label':'aussi sur WhatsApp',title:'Alerte aussi sur WhatsApp'},h('svg',{viewBox:'0 0 24 24',width:14,height:14,'aria-hidden':true},h('path',{d:'M20 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20.5l1.4-4.4A8.5 8.5 0 1 1 20 11.5Z',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinejoin:'round'}))),
+    st&&h('small',null,st==='seen'?'✓ a vu l’alerte':'alerte reçue'));}));
  }
 
  // Le réseau de démo : sa copie Wi-Fi, et la panne jouée sur cette copie (le vrai Wi-Fi n'est jamais touché).
