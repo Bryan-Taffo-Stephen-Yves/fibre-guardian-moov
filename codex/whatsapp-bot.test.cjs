@@ -173,16 +173,20 @@ test('Note vocale : Guardian la transcrit (Groq), répète ce qu’il a compris 
   } finally { t.close(); }
 });
 
-test('Numéro inconnu : réponse polie, aucun compte lu ; même message reçu deux fois ou trop vieux : pas de seconde réponse', async () => {
+test('Numéro inconnu : aucune réponse, aucun compte lu ; même message reçu deux fois ou trop vieux : pas de seconde réponse', async () => {
   const t = await setup();
   try {
-    await t.post(message(OTHER, 'Bonjour')); await t.until(1);
-    assert.equal(t.sent[0].message, WB.HEAD + '\n\n' + WB.UNKNOWN); assert.equal(t.sent[0].chatId, OTHER + '@c.us');
+    // La puce de Guardian peut être un numéro personnel : ses contacts ne reçoivent rien, et chaque réponse
+    // prendrait une des 3 discussions gratuites du mois chez Green API.
+    assert.deepEqual(await WB.handle(t.s, WB.config(ENV), message(OTHER, 'Bonjour'), {chat: async () => { throw new Error('aucun compte pour un inconnu'); }}), {status: 'unknown'});
+    await t.post(message(OTHER, 'Bonjour')); await new Promise(r => setTimeout(r, 300));
+    assert.equal(t.sent.length, 0, 'un numéro inconnu ne reçoit aucun message');
     const twice = message(AWA, 'Bonjour');
-    await t.post(twice); await t.post(twice); await t.until(3); await new Promise(r => setTimeout(r, 200));
-    assert.equal(t.sent.length, 2, 'Green API qui renvoie le même message ne crée pas deux réponses');
+    await t.post(twice); await t.post(twice); await t.until(2); await new Promise(r => setTimeout(r, 200));
+    assert.equal(t.sent.length, 1, 'Green API qui renvoie le même message ne crée pas deux réponses');
+    assert.equal(t.sent[0].chatId, AWA + '@c.us');
     await t.post(message(AWA, 'Bonjour', {timestamp: Math.floor((Date.now() - WB.FRESH - 60000) / 1000)})); await new Promise(r => setTimeout(r, 300));
-    assert.equal(t.sent.length, 2, 'un message resté en attente pendant que le site dormait ne reçoit pas de réponse hors sujet');
+    assert.equal(t.sent.length, 1, 'un message resté en attente pendant que le site dormait ne reçoit pas de réponse hors sujet');
   } finally { t.close(); }
 });
 

@@ -10,13 +10,14 @@
 // sinon dans WHATSAPP_NUMEROS (« Yopougon=2250701020304 ») : c'est alors le premier client inscrit dans ce quartier.
 // Un membre du jury qui a donné son numéro en s'inscrivant le confirme en répondant « OUI » ; il parle ensuite avec le compte
 // de son inscription (salle ouverte seulement). « Stop » retire son numéro tout de suite.
-// Un numéro inconnu reçoit une réponse polie et rien d'autre : aucun compte n'est lu ni créé.
+// Un numéro inconnu ne reçoit aucune réponse : aucun compte n'est lu ni créé. Le numéro de Guardian peut être une puce
+// personnelle : ses contacts ne reçoivent jamais de message du robot, et les 3 discussions gratuites du mois de Green API
+// restent aux numéros de la démonstration (une réponse à un inconnu en prenait une).
 const crypto = require('node:crypto'), W = require('./whatsapp.cjs'), journey = require('./journey-store.cjs'), VT = require('./vrai-test.cjs'), N = require('./noc-store.cjs'), O = require('./operator-store.cjs');
 
 const FRESH = 10 * 60000; // Green API renvoie un message tant que le site dort : au-delà de 10 minutes, on ne répond plus.
 const plain = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9@.+-]+/g, '');
 const HEAD = 'Guardian · Moov Africa Fibre';
-const UNKNOWN = 'Bonjour ! Ce numéro n’est pas encore relié à un abonnement fibre. Ouvrez l’application Fibre Guardian pour relier votre ligne, ou appelez le 111.';
 
 const links = W.links;
 
@@ -164,7 +165,7 @@ function greeting(name, said = '') {
 const endpoint = (cfg, method) => cfg.url + '/waInstance' + cfg.id + '/' + method + '/' + encodeURIComponent(cfg.token);
 async function post(cfg, method, body, fetchImpl) {
   const r = await fetchImpl(endpoint(cfg, method), {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), signal: AbortSignal.timeout(10000)});
-  if (!r.ok) throw Object.assign(new Error('Green API a refusé le message (' + r.status + ').'), {code: r.status});
+  if (!r.ok) throw Object.assign(new Error(r.status === 466 ? W.QUOTA : 'Green API a refusé le message (' + r.status + ').'), {code: r.status});
 }
 
 // Un texte, avec ses boutons s'il en a. Les boutons de Green API sont encore en essai : s'ils sont refusés,
@@ -311,7 +312,7 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   const boss = manager(s, cfg, m.phone), tapped = /^valider(?::([0-9a-f]{8}))?$/.exec(m.button || '');
   if (boss && (tapped || (plainText && wantsValidate(m.text)))) return answer(s, cfg, m, validatePlan(s, boss, m.phone, cfg.origin || origin, {ref: tapped?.[1] || null, at: m.at || now}), null, fetchImpl);
   const user = who(s, cfg, m.phone);
-  if (!user) { await send(cfg, m.phone, UNKNOWN, fetchImpl); return {status: 'unknown'}; }
+  if (!user) return {status: 'unknown'};
   // Photo : Guardian lit les voyants, comme « Photo de ma box » dans l'application.
   if (m.image) {
     const state = await readPhoto(m, user, photo, fetchImpl), said = state?.messages?.filter(x => x.role === 'assistant').at(-1);
@@ -342,4 +343,4 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   return answer(s, cfg, m, echo + human + forWhatsApp(said, cfg.origin) + track, journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
 }
 
-module.exports = {config, migrate, allowed, incoming, who, manager, wantsValidate, wantsStop, wantsYes, validatePlan, NOTHING, STOPPED, PENDING, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, trackLine, de, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};
+module.exports = {config, migrate, allowed, incoming, who, manager, wantsValidate, wantsStop, wantsYes, validatePlan, NOTHING, STOPPED, PENDING, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, trackLine, de, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, FRESH, HEAD};
