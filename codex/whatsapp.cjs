@@ -18,6 +18,8 @@ const crypto = require('node:crypto'), G = require('./abidjan-map.js'), F = requ
 
 const RECENT = 120000; // un message vieux de plus de 2 minutes ne part jamais (redémarrage, démo pré-remplie)
 const FREE_CHATS = 3; // offre gratuite « Developer » de Green API : 3 discussions
+// Green API répond 466 quand les 3 discussions gratuites du mois sont prises : plus aucun nouveau numéro avant le 1er du mois.
+const QUOTA = 'L’offre gratuite de Green API est pleine ce mois-ci (3 discussions) : WhatsApp n’écrit plus à un nouveau numéro avant le 1er du mois prochain.';
 const plain = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 const ROLES = {equipe: 'team', equipemoov: 'team', moov: 'team', technicien: 'tech', tech: 'tech'};
 const HEAD = {client: 'Moov Africa · Fibre Guardian', team: 'Fibre Guardian · Équipe Moov', tech: 'Fibre Guardian · Votre mission'};
@@ -70,6 +72,7 @@ const PROVIDERS = {
         body: JSON.stringify({chatId: phone + '@c.us', message: text}), signal: AbortSignal.timeout(10000)
       });
       if (r.ok) return;
+      if (r.status === 466) throw Object.assign(new Error(QUOTA), {code: 466});
       throw failure(null, r.status);
     }
   },
@@ -123,6 +126,19 @@ function migrate(s) {
   s.db.exec('CREATE TABLE IF NOT EXISTS noc_whatsapp(key TEXT PRIMARY KEY,incident_id TEXT NOT NULL,phone TEXT NOT NULL,role TEXT NOT NULL,status TEXT NOT NULL,error TEXT,at INTEGER NOT NULL)');
   // Alertes « plan à valider » vraiment remises à un responsable : le plan tel qu'il était (cause, déplacement) au moment de l'alerte.
   s.db.exec('CREATE TABLE IF NOT EXISTS wa_asks(ref TEXT PRIMARY KEY,phone TEXT NOT NULL,incident_id TEXT NOT NULL,cause TEXT,dispatch INTEGER NOT NULL,at INTEGER NOT NULL)');
+  // Mois où l'offre gratuite de cette instance Green API est pleine (« 7103000001|2026-11 ») : rien d'autre que cette marque.
+  s.db.exec('CREATE TABLE IF NOT EXISTS wa_full(key TEXT PRIMARY KEY,at INTEGER NOT NULL)');
+}
+// Offre gratuite pleine (réponse 466 de Green API) : le formulaire du jury ne propose plus WhatsApp et la Régie le dit,
+// jusqu'au 1er du mois suivant, ou jusqu'à ce qu'une autre instance soit réglée (la marque porte le numéro d'instance).
+const fullKey = (cfg, now) => cfg.id + '|' + new Date(now).toISOString().slice(0, 7);
+function markFull(s, cfg, now = Date.now()) {
+  if (!cfg?.id) return; // Green API seulement (les réglages Twilio et Meta n'ont pas de numéro d'instance)
+  try { s.run('INSERT OR IGNORE INTO wa_full VALUES(?,?)', fullKey(cfg, now), now); } catch {}
+}
+function full(s, cfg, now = Date.now()) {
+  if (!cfg?.id) return false;
+  try { return !!s.get('SELECT 1 AS x FROM wa_full WHERE key=?', fullKey(cfg, now)); } catch { return false; }
 }
 // Dans la clé d'un envoi, le numéro est remplacé par une empreinte : un numéro effacé ne reste pas dans les clés,
 // et la clé empêche toujours de renvoyer le même message au même téléphone.
@@ -196,9 +212,11 @@ async function reachable(cfg, phone, fetchImpl = fetch) {
 // Premier message au numéro donné par un membre du jury : rien d'autre ne part tant que le téléphone n'a pas répondu « OUI ».
 // Ainsi, un numéro tapé par erreur (ou celui de quelqu'un d'autre) ne reçoit qu'un seul message, sans prénom choisi par autrui.
 const WELCOME = 'Bonjour ! Je suis Guardian, l’assistant de Moov Africa Fibre. Ce numéro vient d’être inscrit à la démonstration Fibre Guardian.\n\nRépondez « OUI » pour recevoir ici les alertes de panne pendant la démonstration. Sans réponse, je ne vous écris plus. Votre numéro est effacé à la fin.';
+// Offre gratuite pleine : le numéro n'est pas gardé (il ne recevra rien ce mois-ci) et le formulaire ne propose plus WhatsApp.
 async function welcome(s, cfg, uid, fetchImpl = fetch) {
-  const wa = require('./jury-store.cjs').whatsappOf(s, uid); if (!wa) return;
-  await PROVIDERS[cfg.provider].send(cfg, wa.phone, HEAD.client + '\n\n' + WELCOME, fetchImpl);
+  const J = require('./jury-store.cjs'), wa = J.whatsappOf(s, uid); if (!wa) return;
+  try { await PROVIDERS[cfg.provider].send(cfg, wa.phone, HEAD.client + '\n\n' + WELCOME, fetchImpl); }
+  catch (e) { if (e.code === 466) { markFull(s, cfg); J.stopWhatsapp(s, wa.phone); } throw e; }
 }
 
 // Numéros reliés au compte d'un responsable (agent, superviseur ou administrateur) : ils reçoivent les messages de l'équipe.
@@ -234,14 +252,20 @@ async function tick(s, cfg, {fetchImpl = fetch, now = Date.now(), wait = ms => n
       s.run("UPDATE noc_whatsapp SET status='sent' WHERE key=?", m.key); done.push({...m, status: 'sent'});
       // Seule une alerte vraiment remise peut être validée par « Valider ».
       if (ask) s.run('INSERT INTO wa_asks VALUES(?,?,?,?,?,?)', ask.ref, m.phone, m.incidentId, m.plan.cause, m.plan.dispatch ? 1 : 0, Date.now());
-    } catch (e) { s.run("UPDATE noc_whatsapp SET status='failed',error=? WHERE key=?", e.message, m.key); done.push({...m, status: 'failed'}); onError?.(e); }
+    } catch (e) {
+      s.run("UPDATE noc_whatsapp SET status='failed',error=? WHERE key=?", e.message, m.key); done.push({...m, status: 'failed'});
+      if (e.code === 466) markFull(s, cfg, now);
+      onError?.(e);
+    }
   }
   return done;
 }
 
 // Ce que l'équipe voit dans le simulateur : quels messages sont vraiment partis, sans jamais montrer les numéros ni la clé.
 function status(s, cfg) {
-  return {on: !!cfg, phones: cfg ? new Set([...cfg.list, ...(cfg.clients || [])].map(n => n.phone)).size : 0, sent: cfg ? s.all('SELECT incident_id AS incidentId,role AS "to",status,error,at FROM noc_whatsapp ORDER BY at DESC LIMIT 200') : []};
+  if (!cfg) return {on: false, phones: 0, sent: []};
+  // full : offre gratuite de Green API pleine ce mois-ci (carte « Messages WhatsApp » du Superviseur).
+  return {on: true, ...(full(s, cfg) ? {full: true} : {}), phones: new Set([...cfg.list, ...(cfg.clients || [])].map(n => n.phone)).size, sent: s.all('SELECT incident_id AS incidentId,role AS "to",status,error,at FROM noc_whatsapp ORDER BY at DESC LIMIT 200')};
 }
 
 function start(s, {env = process.env, onError} = {}) {
@@ -253,4 +277,4 @@ function start(s, {env = process.env, onError} = {}) {
   return {cfg, stop: () => clearInterval(timer)};
 }
 
-module.exports = {numbers, links, config, livesIn, migrate, outbox, managers, reachable, welcome, WELCOME, tag, tick, status, start, PROVIDERS, RECENT, ASK, FREE_CHATS};
+module.exports = {numbers, links, config, livesIn, migrate, outbox, managers, reachable, welcome, WELCOME, tag, tick, status, start, full, markFull, PROVIDERS, RECENT, ASK, FREE_CHATS, QUOTA};

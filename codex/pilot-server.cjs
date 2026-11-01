@@ -26,6 +26,10 @@ function createGuardianServer(options={}){
  const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
  // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
  const WB=require('./whatsapp-bot.cjs'),bot=WB.config(options.env||process.env);WB.migrate(store);
+ // Places WhatsApp du jury : Green API avec Guardian qui lit les réponses (« OUI »), tant que l'offre gratuite du mois n'est pas pleine.
+ const juryPlaces=()=>whatsapp.cfg?.jury&&bot&&!WA.full(store,whatsapp.cfg)?whatsapp.cfg.jury:0;
+ // Pour la Régie : WhatsApp branché (« on »), en pause jusqu'au 1er du mois (« full », offre gratuite pleine), ou absent.
+ const waState=()=>!whatsapp.cfg?null:WA.full(store,whatsapp.cfg)?'full':'on';
  const VT=require('./vrai-test.cjs');VT.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
  const CW=require('./copie-wifi.cjs');CW.migrate(store);
@@ -69,7 +73,7 @@ function createGuardianServer(options={}){
     if(route.startsWith('/api/branchements')&&await B.route(store,branchements,req,res,route,{json,body,user:()=>auth(req)}))return;
     // Message WhatsApp reçu par Green API : réponse immédiate, puis Guardian répond au client en arrière-plan.
     if(route==='/api/whatsapp/entrant'&&method==='POST'){insist(WB.allowed(bot,req.headers.authorization),'Accès refusé.',401);const d=await body(req,65536);json(res,{ok:true});
-     WB.handle(store,bot,d,{chat:journeyAction,photo:waPhoto,origin}).catch(e=>options.onError?options.onError(e):console.warn(e.message));return;}
+     WB.handle(store,bot,d,{chat:journeyAction,photo:waPhoto,origin}).catch(e=>{if(e.code===466)WA.markFull(store,bot);options.onError?options.onError(e):console.warn(e.message);});return;}
     // Vrai test de connexion (vrai-test.cjs) : lien personnel sans session, valable 30 minutes, mesuré sur l'appareil du client.
     if(route.startsWith('/api/test/')&&route!=='/api/test/link'){
      const row=VT.open(store,req.headers['x-test-token']),key=row.token_hash.slice(0,24);
@@ -113,8 +117,8 @@ function createGuardianServer(options={}){
     }
     // Salle du jury : le QR code crée un abonné anonyme de Yopougon (aucun rôle opérateur ; prénom et numéro WhatsApp facultatifs).
     // Places WhatsApp : seulement quand Guardian peut écrire à n'importe quel numéro (Green API), dans la limite réglée.
-    if(route==='/api/jury/places'&&method==='GET'){store.rate('jury-places:'+ip(req),120);return json(res,{whatsapp:whatsapp.cfg?.jury&&bot?jury.whatsappPlaces(store,whatsapp.cfg.jury):0});}
-    if(route==='/api/jury/join'&&method==='POST'){insist(secure||local,'Les comptes nécessitent HTTPS hors de cet ordinateur.',403);const u=await jury.join(store,await body(req,2048),ip(req),{whatsapp:whatsapp.cfg?.jury&&bot?whatsapp.cfg.jury:0,resolve:phone=>WA.reachable(whatsapp.cfg,phone)}),session=store.session(u);cookie(res,session.secret,8*3600);
+    if(route==='/api/jury/places'&&method==='GET'){store.rate('jury-places:'+ip(req),120);return json(res,{whatsapp:juryPlaces()?jury.whatsappPlaces(store,juryPlaces()):0});}
+    if(route==='/api/jury/join'&&method==='POST'){insist(secure||local,'Les comptes nécessitent HTTPS hors de cet ordinateur.',403);const u=await jury.join(store,await body(req,2048),ip(req),{whatsapp:juryPlaces(),resolve:phone=>WA.reachable(whatsapp.cfg,phone)}),session=store.session(u);cookie(res,session.secret,8*3600);
      // Numéro donné : un seul message, qui demande de répondre « OUI » ; rien d'autre ne part avant cette réponse.
      if(jury.whatsappOf(store,u.id))WA.welcome(store,whatsapp.cfg,u.id).catch(e=>options.onError?options.onError(e):console.warn('WhatsApp a refusé le message de bienvenue : '+e.message));
      return json(res,{user:{...u,csrf:session.csrf,role:workspace.sessionRole(store,u.id)}},201);}
@@ -144,11 +148,11 @@ function createGuardianServer(options={}){
     if(route==='/api/jury/me'&&method==='GET')return json(res,jury.me(store,user.id));
     if(route==='/api/jury/seen'&&method==='POST')return json(res,jury.seen(store,user.id,await body(req,512)));
     // Régie : réservée à l'administrateur (vérifié dans jury-store), elle enchaîne les actions NOC habituelles.
-    if(route==='/api/regie'&&method==='GET')return json(res,jury.status(store,user.id,origin));
+    if(route==='/api/regie'&&method==='GET')return json(res,{...jury.status(store,user.id,origin),whatsapp:waState()});
     if(route==='/api/regie'&&method==='POST'){const d=await body(req,1024);
-     if(d.type!=='reset')return json(res,jury.step(store,user.id,d,origin));
+     if(d.type!=='reset')return json(res,{...jury.step(store,user.id,d,origin),whatsapp:waState()});
      insist(d.confirm===true,'Confirmez la remise à zéro.');const r=await jury.reset(store,user.id,{log:m=>console.log(m),credentialsFile:demoCredentials()}),s=store.session(r.user);cookie(res,s.secret,8*3600);
-     return json(res,{...jury.status(store,r.user.id,origin),user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});}
+     return json(res,{...jury.status(store,r.user.id,origin),whatsapp:waState(),user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});}
     if(route==='/api/guardian/chat'&&method==='POST')return json(res,require('./guardian-copilot.cjs').reply(store,user,await body(req,4096)));
     if(route==='/api/noc/feedback'&&method==='POST')return json(res,noc.feedback(store,user.id,await body(req,4096)));
     if(route==='/api/noc/overview'&&method==='GET')return json(res,{...noc.overview(store,user.id),whatsapp:WA.status(store,whatsapp.cfg)});

@@ -46,7 +46,7 @@ async function setup(links, {refuseButtons = false, env: extra = {}, accounts = 
   const alerts = () => W.tick(s, W.config(env), {fetchImpl: fake, now: Date.now() + F.THINK + 500, wait: async () => {}});
   const find = (segment = 'YOP-07') => N.overview(s, chef.id).incidents.find(i => i.segment_id === segment && !i.terminal);
   const close = () => { globalThis.fetch = real; server.close(); };
-  return {server, s, chef, agent, awa, sent, to, post, get, join, wait, reply, tap, alerts, find, close};
+  return {server, s, base, chef, agent, awa, sent, to, post, get, join, wait, reply, tap, alerts, find, close};
 }
 
 test('Panne repérée : le responsable relié reçoit l’alerte de l’équipe avec un bouton « Valider le plan »', async () => {
@@ -286,7 +286,8 @@ test('Réseau de démo : le WhatsApp du jury part au moment de « Valider », pa
     assert.equal(t.s.get('SELECT count(*) AS n FROM jury_members WHERE whatsapp IS NOT NULL').n, 0, 'salle fermée : plus aucun numéro gardé');
     for (const [table, col] of [['noc_whatsapp', 'phone'], ['wa_menu', 'phone'], ['wa_inbox', 'phone'], ['speed_links', 'phone']])
       assert.equal(t.s.get('SELECT count(*) AS n FROM ' + table + ' WHERE ' + col + ' IN (?,?)', JURY, JURY2).n, 0, table);
-    assert.match((await t.reply(JURY, 'Bonjour')).text, /pas encore relié/, 'après la démonstration, le numéro redevient inconnu');
+    const after = t.to(JURY).length; await t.post(message(JURY, 'Bonjour')); await new Promise(r => setTimeout(r, 300));
+    assert.equal(t.to(JURY).length, after, 'après la démonstration, le numéro redevient inconnu : Guardian ne lui écrit plus');
   } finally { t.close(); }
 });
 
@@ -425,4 +426,75 @@ test('Ancien format ivoirien : le compte WhatsApp du juré est à 8 chiffres, Gu
   assert.equal(await W.reachable(cfg, JURY, answer({})), JURY, 'réponse incomplète : on garde le format à 10 chiffres');
   assert.equal(await W.reachable(cfg, JURY, async () => { throw new Error('réseau'); }), JURY);
   assert.equal(await W.reachable(cfg, '33612345678', answer({existsWhatsapp: false})), '33612345678', 'hors Côte d’Ivoire : rien à essayer');
+});
+
+// Offre gratuite « Developer » de Green API : 3 discussions par mois. Les places prises, Green API répond 466 à tout nouveau numéro.
+const login = async (t, email, password) => { const r = await fetch(t.base + '/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, password})}); assert.equal(r.status, 200); return r.headers.getSetCookie().map(c => c.split(';')[0]).join('; '); };
+const regie = async (t, cookie) => (await fetch(t.base + '/api/regie', {headers: {Cookie: cookie}})).json();
+
+test('Offre gratuite de Green API pleine (466) : l’alerte échoue avec une explication claire ; la Régie, le Superviseur et le formulaire du jury le disent', async () => {
+  const env = {...BASE, WHATSAPP_CLIENTS: BOSS + '=chef@example.test'}, cfg = W.config(env);
+  const t = await setup(BOSS + '=chef@example.test', {refuse: () => true});
+  try {
+    const cookie = await login(t, 'chef@example.test', 'chef-password-1234');
+    assert.equal((await regie(t, cookie)).whatsapp, 'on');
+    const {code} = await room(t);
+    assert.deepEqual(await (await t.get('/api/jury/places')).json(), {whatsapp: 2});
+    fiber(t, 'COC-03'); const done = await t.alerts();
+    assert.ok(done.length && done.every(m => m.status === 'failed'), 'Green API a tout refusé');
+    assert.equal(t.s.get("SELECT error FROM noc_whatsapp WHERE status='failed' LIMIT 1").error, W.QUOTA);
+    assert.match(W.QUOTA, /pleine ce mois-ci .* avant le 1er du mois prochain/);
+    assert.ok(W.full(t.s, cfg));
+    // Régie : « en pause » ; formulaire du jury : plus de place WhatsApp, un numéro envoyé quand même est ignoré.
+    assert.equal((await regie(t, cookie)).whatsapp, 'full');
+    assert.deepEqual(await (await t.get('/api/jury/places')).json(), {whatsapp: 0});
+    const before = t.sent.length, r = await t.join(code, {firstName: 'Koffi', whatsapp: '0707123456'});
+    assert.equal(r.status, 201, 'l’inscription marche toujours, sans WhatsApp');
+    assert.equal(jury.me(t.s, (await r.json()).user.id).whatsapp, null);
+    await new Promise(res => setTimeout(res, 200)); assert.equal(t.sent.length, before, 'aucun message de bienvenue');
+    // Superviseur : la carte « Messages WhatsApp » dit pourquoi.
+    const card = require('./superviseur.cjs').bilan(t.s, t.chef.id, {whatsapp: W.status(t.s, cfg)}).agents.find(a => a.key === 'whatsapp');
+    assert.equal(card.tone, 'warn'); assert.match(card.text, /^En pause ce mois-ci pour les nouveaux numéros/);
+    // Le 1er du mois suivant, ou avec une autre instance Green API, WhatsApp revient.
+    const next = new Date(); next.setUTCMonth(next.getUTCMonth() + 1, 1);
+    assert.ok(!W.full(t.s, cfg, next.getTime()), 'le mois suivant, les places reviennent');
+    assert.ok(!W.full(t.s, W.config({...env, GREENAPI_ID_INSTANCE: '7103000002'})), 'une nouvelle instance a ses propres places');
+    assert.ok(!t.s.all('SELECT key FROM wa_full').some(r => r.key.includes(BOSS)), 'la marque ne garde aucun numéro');
+  } finally { t.close(); }
+});
+
+test('Offre pleine découverte au message de bienvenue du jury : le numéro n’est pas gardé et le formulaire ne propose plus WhatsApp', async () => {
+  const t = await setup(BOSS + '=chef@example.test', {refuse: text => text.includes(W.WELCOME)});
+  try {
+    const {code} = await room(t);
+    const r = await t.join(code, {firstName: 'Koffi', whatsapp: '0707123456'}), id = (await r.json()).user.id;
+    assert.equal(r.status, 201);
+    for (let k = 0; k < 100 && jury.me(t.s, id).whatsapp; k++) await new Promise(res => setTimeout(res, 30));
+    assert.equal(jury.me(t.s, id).whatsapp, null, 'le numéro qui ne peut rien recevoir ce mois-ci est effacé');
+    assert.equal(t.s.get('SELECT count(*) AS n FROM jury_members WHERE whatsapp IS NOT NULL').n, 0);
+    assert.deepEqual(await (await t.get('/api/jury/places')).json(), {whatsapp: 0});
+  } finally { t.close(); }
+});
+
+test('Réponse de Guardian refusée par Green API (466) : l’offre est marquée pleine pour le reste du mois', async () => {
+  const t = await setup(AWA + '=awa@example.test', {refuse: () => true});
+  try {
+    const cfg = W.config({...BASE, WHATSAPP_CLIENTS: AWA + '=awa@example.test'});
+    assert.ok(!W.full(t.s, cfg));
+    await t.post(message(AWA, 'Bonjour'));
+    for (let k = 0; k < 100 && !W.full(t.s, cfg); k++) await new Promise(res => setTimeout(res, 30));
+    assert.ok(W.full(t.s, cfg));
+  } finally { t.close(); }
+});
+
+test('« Remettre la démo à zéro » garde la pause WhatsApp : Green API reste plein jusqu’au 1er du mois', async () => {
+  const {Store} = require('./pilot-store.cjs'), demo = require('./seed-demo.cjs'), store = new Store(':memory:');
+  const server = createGuardianServer({store, env: BASE, onError: () => {}}), cfg = W.config(BASE);
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  try {
+    await demo.seedDemo(store);
+    W.markFull(store, cfg); assert.ok(W.full(store, cfg));
+    assert.equal((await demo.resetDemo(store)).seeded, true);
+    assert.ok(W.full(store, cfg), 'la remise à zéro ne libère aucune place chez Green API : la Régie reste « en pause »');
+  } finally { server.close(); }
 });

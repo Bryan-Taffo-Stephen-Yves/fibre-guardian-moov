@@ -268,6 +268,8 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
   return h('div',{className:'jy jy--regie'},header,h('main',{id:'main',className:'jy-main jy-regie'},
    h('section',{className:'jy-card jy-room'},
     h('div',{className:'jy-row'},h('div',null,h('p',{className:'jy-kicker'},'1 · SALLE DU JURY'),h('h2',null,room?room.jurors+' membre'+(room.jurors>1?'s':'')+' du jury connecté'+(room.jurors>1?'s':''):'Salle fermée')),room&&h('span',{className:'jy-code','aria-label':'Code de la salle'},room.code)),
+    // Offre gratuite de Green API pleine ce mois-ci : WhatsApp en pause, l'alerte reste sur la page de chaque inscrit.
+    data?.whatsapp==='full'&&h('p',{className:'jy-wa-off',role:'status'},h('b',null,'WhatsApp en pause jusqu’au 1er du mois.'),' L’offre gratuite de Green API (3 discussions) est pleine. Les inscrits reçoivent l’alerte sur leur page, comme d’habitude.'),
     room?h(React.Fragment,null,
      network&&h('p',{className:'jy-net-chip'},'Réseau ',h('b',null,network)),
      h('button',{type:'button',className:'jy-qr-wrap',onClick:()=>SH(true),'aria-label':'Projeter le code QR en grand'},h(QR,{text:room.url,label:'Code QR pour rejoindre la démonstration'})),

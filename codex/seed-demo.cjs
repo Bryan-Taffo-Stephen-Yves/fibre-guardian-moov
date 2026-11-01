@@ -138,9 +138,10 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
  }finally{Date.now=realNow;store.demoSeeding=false;await new Promise(r=>server.close(r));}
 }
 
-// Remise à zéro : vide les tables (sauf les compteurs anti-abus) puis rejoue la démo. Réservé à l'administrateur (vérifié par la route).
+// Remise à zéro : vide les tables (sauf les compteurs anti-abus, et la marque « offre gratuite WhatsApp pleine » :
+// Green API reste plein jusqu'au 1er du mois, remise à zéro ou pas) puis rejoue la démo. Réservé à l'administrateur (vérifié par la route).
 async function resetDemo(store,options={}){
- const tables=store.all("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").map(r=>r.name).filter(t=>t!=='limits');
+ const tables=store.all("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").map(r=>r.name).filter(t=>t!=='limits'&&t!=='wa_full');
  store.db.exec('PRAGMA foreign_keys=OFF');
  try{store.transaction(()=>{for(const t of tables)store.run('DELETE FROM "'+t.replace(/"/g,'')+'"');});}
  finally{store.db.exec('PRAGMA foreign_keys=ON');}
