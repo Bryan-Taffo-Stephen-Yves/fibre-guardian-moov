@@ -196,3 +196,98 @@ test('Panne détectée : l’alerte du quartier part aussi par Green API vers le
     assert.ok(calls.every(c => c.url.endsWith('/waInstance7103000001/sendMessage/jeton-instance-de-test')));
   } finally { t.close(); }
 });
+
+// Le site en ligne a une adresse publique (GUARDIAN_ORIGIN) : c'est elle que portent les liens envoyés sur WhatsApp.
+const ORIGIN = 'https://fibre-guardian.example';
+const LINK = /\n\nSuivez (le trajet|l’intervention) (de Koffi|d’Awa|de Yao) en direct : https:\/\/fibre-guardian\.example\/codex\/\?suivi=([A-Za-z0-9_-]{20,40})$/;
+async function trip(env = {...ENV, GUARDIAN_ORIGIN: ORIGIN}) {
+  const t = await setup(env);
+  const find = (segment = 'YOP-07') => N.overview(t.s, t.chef.id).incidents.find(i => i.segment_id === segment && !i.terminal);
+  const op = (body, segment) => { const i = find(segment); return N.operate(t.s, t.chef.id, {id: i.id, version: i.version, ...body}); };
+  // Seules les réponses de Guardian comptent (les alertes automatiques partent aussi, avec un autre en-tête).
+  const replies = () => t.sent.filter(x => x.message.startsWith(WB.HEAD + '\n\n'));
+  const ask = async (text, phone = AWA) => {
+    const n = replies().length + 1; await t.post(message(phone, text));
+    for (let k = 0; k < 100 && replies().length < n; k++) await new Promise(r => setTimeout(r, 30));
+    assert.equal(replies().length, n, 'Guardian répond à « ' + text + ' »'); return replies()[n - 1].message;
+  };
+  const open = token => fetch('http://127.0.0.1:' + t.server.address().port + '/api/track/' + token);
+  return {...t, find, op, ask, open};
+}
+
+test('Technicien affecté, en route puis sur place : la réponse de Guardian se termine par le lien de suivi, qui s’ouvre sans compte', async () => {
+  const t = await trip();
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    let r = await t.ask('Qu’est-ce qui se passe sur mon réseau ?');
+    assert.match(r, /Niangon/); assert.doesNotMatch(r, /suivi=/, 'plan pas encore validé : aucun technicien, aucun lien');
+    t.op({type: 'approve', note: 'ok'}); t.op({type: 'dispatch', technician: 'koffi', safety: true});
+    r = await t.ask('Où en est la réparation ?');
+    assert.deepEqual(r.match(LINK)?.slice(1, 3), ['le trajet', 'de Koffi'], 'technicien affecté : le lien suit déjà la réponse');
+    t.op({type: 'advance'}); assert.equal(t.find().status, 'en_route');
+    r = await t.ask('Le technicien arrive quand ?');
+    assert.match(r, /en route.*\n\nSuivez le trajet de Koffi en direct : /s, 'la réponse d’abord, le lien à la fin');
+    // Le lien ouvre le suivi public : le trajet seulement, ni le nom du client, ni son adresse e-mail.
+    const res = await t.open(r.match(LINK)[3]), body = await res.text();
+    assert.equal(res.status, 200); const live = JSON.parse(body).incident;
+    assert.equal(live.id, t.find().id); assert.equal(live.status, 'en_route'); assert.match(live.technician.name, /^Koffi/); assert.ok(live.position);
+    assert.doesNotMatch(body, /Awa Koné|awa@example\.test/);
+    r = await t.ask('merci');
+    assert.match(r, /Avec plaisir/); assert.doesNotMatch(r, /suivi=/, 'après « merci », pas de lien de plus');
+    t.op({type: 'advance'}); assert.equal(t.find().status, 'on_site');
+    r = await t.ask('Il est où le technicien ?');
+    assert.deepEqual(r.match(LINK)?.slice(1, 3), ['l’intervention', 'de Koffi'], 'technicien sur place : on suit l’intervention');
+    t.op({type: 'advance'}); assert.equal(t.find().status, 'verifying');
+    r = await t.ask('Et maintenant ?');
+    assert.doesNotMatch(r, /suivi=/, 'réparation faite, vérification en cours : plus de lien');
+    assert.equal(WB.trackLine(t.s, t.awa, ORIGIN), '');
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'normal'}); t.op({type: 'verify'});
+    assert.equal(t.find(), undefined, 'panne réparée et vérifiée');
+    r = await t.ask('Internet est revenu ?');
+    assert.doesNotMatch(r, /suivi=/, 'intervention terminée : plus de lien');
+  } finally { t.close(); }
+});
+
+test('Deux pannes autour du client : Guardian parle de celle où le technicien arrive, et le lien suit la même', async () => {
+  const COCO = '2250788888888';
+  const t = await trip({...ENV, GUARDIAN_ORIGIN: ORIGIN, WHATSAPP_CLIENTS: COCO + '=coco@example.test'});
+  try {
+    const coco = (await t.s.register({email: 'coco@example.test', password: 'coco-password-1234', name: 'Aya Kouadio'})).user; N.join(t.s, coco.id, {segment: 'COC-03', consent: true});
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'COC-03', scenario: 'fiber'});
+    t.op({type: 'approve', note: 'ok'}, 'COC-03'); t.op({type: 'dispatch', technician: 'yao', safety: true}, 'COC-03'); t.op({type: 'advance'}, 'COC-03');
+    // Plus tard, un équipement central de Cocody tombe : panne plus récente, toute la commune, sans technicien.
+    await new Promise(r => setTimeout(r, 20));
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'PAL-02', scenario: 'olt'});
+    assert.ok(N.client(t.s, coco.id).incidents.filter(N.isOpen).length >= 2, 'Aya voit bien deux pannes ouvertes');
+    const r = await t.ask('Le technicien arrive quand ?', COCO);
+    assert.match(r, /en route/, 'Guardian parle de l’intervention en cours chez Aya');
+    assert.deepEqual(r.match(LINK)?.slice(1, 3), ['le trajet', 'de Yao'], 'élision seulement devant une voyelle : « de Yao »');
+    const live = (await (await t.open(r.match(LINK)[3])).json()).incident;
+    assert.equal(live.id, t.find('COC-03').id, 'le lien ouvre la panne dont parle la réponse');
+  } finally { t.close(); }
+});
+
+test('Pas de lien sans technicien (coupure de courant) ni sans adresse du site ; « d’Awa » devant une voyelle ; la photo de la box reçoit le lien', async () => {
+  assert.deepEqual(['Awa', 'Ibrahim', 'Amina', 'Koffi', 'Yao'].map(WB.de), ['d’Awa', 'd’Ibrahim', 'd’Amina', 'de Koffi', 'de Yao']);
+  const t = await trip();
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'power'});
+    t.op({type: 'approve', note: 'CIE.'});
+    const r = await t.ask('Qu’est-ce qui se passe ?');
+    assert.match(r, /courant/); assert.doesNotMatch(r, /suivi=/, 'coupure de courant : personne ne se déplace');
+  } finally { t.close(); }
+  const u = await trip(ENV);
+  try {
+    N.operate(u.s, u.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    u.op({type: 'approve', note: 'ok'}); u.op({type: 'dispatch', technician: 'awa', safety: true}); u.op({type: 'advance'});
+    const r = await u.ask('Le technicien arrive quand ?');
+    assert.match(r, /en route/); assert.doesNotMatch(r, /suivi=/, 'sans GUARDIAN_ORIGIN, un lien local serait inutilisable sur WhatsApp : pas de lien');
+    assert.match(WB.trackLine(u.s, u.awa, ORIGIN), LINK); assert.match(WB.trackLine(u.s, u.awa, ORIGIN), /Suivez le trajet d’Awa en direct/);
+    // Photo de la box pendant le trajet : la lecture des voyants est suivie du même lien.
+    const sent = [], photo = async () => ({messages: [{role: 'assistant', text: 'Votre box n’est pas en cause : le câble du quartier est coupé.', action: 'tracking'}]});
+    const fetchImpl = async (url, init) => { if (String(url).startsWith('https://media.example.test/')) return {ok: true, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer}; sent.push(JSON.parse(init.body)); return {ok: true}; };
+    const shot = {...message(AWA, ''), messageData: {typeMessage: 'imageMessage', fileMessageData: {downloadUrl: 'https://media.example.test/box.jpg', mimeType: 'image/jpeg'}}};
+    await WB.handle(u.s, WB.config({...ENV, GUARDIAN_ORIGIN: ORIGIN}), shot, {chat: async () => { throw new Error('pas de chat pour une photo'); }, photo, fetchImpl});
+    assert.match(sent[0].body, /câble du quartier est coupé\.\n\nSuivez le trajet d’Awa en direct : https:\/\/fibre-guardian\.example\/codex\/\?suivi=/);
+  } finally { u.close(); }
+});

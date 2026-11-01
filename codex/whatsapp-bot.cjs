@@ -262,6 +262,20 @@ async function testResult(s, cfg, phone, r, fetchImpl = fetch) {
   const lines = r.facts.filter(f => f.label !== 'Où').map(f => f.label + ' : ' + f.value).join('\n');
   return answer(s, cfg, {phone}, 'Résultat de votre test de connexion :\n\n' + r.text + '\n\n' + lines, AFTER_TEST[r.level] || MENUS.accueil, fetchImpl);
 }
+// Technicien affecté, en route ou sur place : la réponse de Guardian se termine par le lien de suivi en direct,
+// le même que celui de l'alerte « en route » (sans compte, valable 6 h, sans le nom du client).
+// Le lien suit la panne dont parle la réponse (journey.sharedFault), jamais une autre.
+// Il n'utilise que l'adresse publique du site (GUARDIAN_ORIGIN) : sans elle, pas de lien, comme pour l'alerte.
+const de = first => (/^[aeiouàâäéèêëîïôöùûü]/i.test(first) ? 'd’' : 'de ') + first; // « d’Awa », « d’Ibrahim », mais « de Yao »
+function trackLine(s, user, origin) {
+  if (!origin) return '';
+  try {
+    const i = journey.sharedFault(s, user.id);
+    if (!i || !i.technician || !journey.TRIP.includes(i.status)) return '';
+    const first = String(i.technician.name || '').split(' ')[0];
+    return '\n\n' + (i.status === 'on_site' ? 'Suivez l’intervention ' : 'Suivez le trajet ') + (first ? de(first) : 'du technicien') + ' en direct : ' + origin + N.trackLink(s, user.id, {id: i.id}).url;
+  } catch { return ''; }
+}
 const PHOTO_ASK = 'Prenez votre box en photo, de face, les voyants bien visibles, à environ 30 cm. Envoyez-la ici : je vous dis ce que veulent dire les voyants.';
 const PHOTO_LATER = 'Je n’arrive pas à lire cette photo pour le moment. Reprenez-la de face, les voyants bien visibles, à environ 30 cm, ou ouvrez « Photo de ma box » dans l’application Fibre Guardian.';
 const MAX_IMAGE = 3.5 * 1024 * 1024;
@@ -302,7 +316,7 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   if (m.image) {
     const state = await readPhoto(m, user, photo, fetchImpl), said = state?.messages?.filter(x => x.role === 'assistant').at(-1);
     if (!said) return answer(s, cfg, m, PHOTO_LATER, MENUS.photo, fetchImpl);
-    return answer(s, cfg, m, forWhatsApp(said, cfg.origin), said.action === 'tracking' ? MENUS.panne : MENUS.apresPhoto, fetchImpl);
+    return answer(s, cfg, m, forWhatsApp(said, cfg.origin) + (said.action === 'tracking' ? trackLine(s, user, cfg.origin) : ''), said.action === 'tracking' ? MENUS.panne : MENUS.apresPhoto, fetchImpl);
   }
   // Note vocale : Guardian répète ce qu'il a compris, puis répond comme à un message écrit.
   let heard = '';
@@ -323,7 +337,9 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   const said = state.messages.filter(x => x.role === 'assistant').at(-1);
   // Pendant une panne, l'application répond d'abord par l'état du quartier ; sur WhatsApp, on dit aussi comment joindre un conseiller.
   const human = said?.action === 'tracking' && journey.intent(text) === 'humain' ? HUMAN : '';
-  return answer(s, cfg, m, echo + human + forWhatsApp(said, cfg.origin), journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
+  // Pendant l'intervention, le lien de suivi suit la réponse (sauf après « merci », qui clôt la conversation).
+  const track = said?.action === 'tracking' && journey.intent(text) !== 'merci' ? trackLine(s, user, cfg.origin) : '';
+  return answer(s, cfg, m, echo + human + forWhatsApp(said, cfg.origin) + track, journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
 }
 
-module.exports = {config, migrate, allowed, incoming, who, manager, wantsValidate, wantsStop, wantsYes, validatePlan, NOTHING, STOPPED, PENDING, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};
+module.exports = {config, migrate, allowed, incoming, who, manager, wantsValidate, wantsStop, wantsYes, validatePlan, NOTHING, STOPPED, PENDING, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, trackLine, de, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};

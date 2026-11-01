@@ -290,6 +290,28 @@ test('Réseau de démo : le WhatsApp du jury part au moment de « Valider », pa
   } finally { t.close(); }
 });
 
+test('Réseau de démo : le juré qui écrit à Guardian n’apprend la panne qu’après « Valider », puis reçoit le lien de suivi du technicien', async () => {
+  const t = await setup(BOSS + '=chef@example.test', {env: {GUARDIAN_ORIGIN: 'https://fibre-guardian.example'}});
+  try {
+    const {origin, code} = await room(t);
+    await juror(t, code, 'Koffi', '0707123456', JURY);
+    jury.step(t.s, t.chef.id, {type: 'cut', fault: 'fiber'}, origin);
+    await t.alerts();
+    const before = (await t.reply(JURY, 'Le technicien arrive quand ?')).text;
+    assert.match(before, /Aucune intervention n’est en cours/, 'panne pas encore validée : Guardian n’en parle pas au juré');
+    assert.doesNotMatch(before, /suivi=/);
+    await t.tap(BOSS, button(t.to(BOSS).find(button)));
+    await t.alerts();
+    const validated = (await t.reply(JURY, 'Le technicien arrive quand ?')).text;
+    assert.match(validated, /un câble de fibre est coupé/); assert.doesNotMatch(validated, /suivi=/, 'pas encore de technicien : pas de lien');
+    jury.step(t.s, t.chef.id, {type: 'send'}, origin);
+    await t.alerts();
+    assert.match((await t.reply(JURY, 'Le technicien arrive quand ?')).text, /en route.*\n\nSuivez le trajet de \S+ en direct : https:\/\/fibre-guardian\.example\/codex\/\?suivi=[\w-]+$/s);
+    jury.step(t.s, t.chef.id, {type: 'arrive'}, origin);
+    assert.match((await t.reply(JURY, 'Qu’est-ce qui se passe ?')).text, /sur place.*\n\nSuivez l’intervention de \S+ en direct : https:\/\/fibre-guardian\.example\/codex\/\?suivi=/s);
+  } finally { t.close(); }
+});
+
 test('Salle sans réseau de démo : le jury reçoit l’alerte WhatsApp dès que Guardian a fini, comme dans l’application', async () => {
   const t = await setup('');
   try {
