@@ -32,7 +32,8 @@ test('Réseau de démo : prénom à l’inscription, rien avant la validation, p
   let me=(await t.call(awa,'/jury/me')).data;assert.equal(me.first,'Awa');assert.equal(me.network,'MOOV-FIBRE-DEMO');assert.equal(me.scene,null);
   let r=(await regie(t)).data;
   assert.deepEqual(r.members.map(m=>m.name),['Awa','Jean-Marc N’Guessan',null],'le grand écran montre les prénoms, rien d’autre');
-  assert.ok(r.members.every(m=>Object.keys(m).sort().join()==='delivered,name,number,seen'),'ni adresse e-mail ni identifiant sur le grand écran');
+  // « whatsapp » dit seulement si la personne a donné un numéro (vrai ou faux), jamais lequel.
+  assert.ok(r.members.every(m=>Object.keys(m).sort().join()==='delivered,name,number,seen,whatsapp'&&m.whatsapp===false),'ni adresse e-mail ni identifiant sur le grand écran');
   assert.equal(r.network.ssid,'MOOV-FIBRE-DEMO');assert.equal(r.network.copy,null,'pas encore de copie');
   // Panne : Guardian la repère et propose un plan, mais les inscrits ne voient encore rien.
   r=(await regie(t,{type:'cut',fault:'fiber'})).data;assert.equal(r.scene.status,'proposed');assert.equal(r.next,'validate');assert.equal(r.scene.cause,'FIBER_CUT_DISTRIBUTION');

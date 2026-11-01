@@ -112,6 +112,10 @@ Numéros ivoiriens : beaucoup de comptes WhatsApp gardent l’ancien format à 8
 
 **Alertes automatiques** : quand Green API est réglé, les alertes de panne (coupure, technicien en route avec le lien de suivi en direct, « c’est réparé ») partent du même numéro que Guardian, même si Twilio est aussi réglé. Un client relié par `WHATSAPP_CLIENTS` les reçoit pour le quartier de son compte ; l’équipe et le technicien les reçoivent par `WHATSAPP_NUMEROS` (`equipe=…`, `technicien=…`).
 
+**Valider depuis WhatsApp** : reliez aussi votre numéro au compte de la direction, par exemple `WHATSAPP_CLIENTS` = `2250701020304=awa.kone@demo.fibre-guardian.ci,2250701020304=direction@demo.fibre-guardian.ci`. Environ 12 secondes après la panne, ce numéro reçoit l’alerte de l’équipe avec un bouton « Valider le plan ». Répondre « Valider » fait la même chose que le bouton « Valider » de la Régie, avec les droits de ce compte : un compte « agent » reçoit l’alerte mais ne peut pas valider.
+
+**Le jury sur WhatsApp** : avec Green API, la page d’inscription du jury propose un numéro WhatsApp facultatif. Nombre de places : les discussions gratuites qui restent sur les 3 de Green API (chaque numéro réglé dans Render en prend une), ou le nombre écrit dans `WHATSAPP_JURY_MAX` (offre payante). Guardian dit bonjour tout de suite, puis envoie l’alerte au même moment que la page (réseau de démo : juste après « Valider »), « en route » avec le lien de suivi, et « c’est réparé ». Répondre « Stop » arrête tout. Les numéros ne s’affichent nulle part et sont effacés à la fermeture de la salle. Un numéro ivoirien enregistré dans WhatsApp à l’ancien format (8 chiffres) est reconnu tout seul.
+
 **Notes vocales (facultatif)** : créez un compte gratuit sur **console.groq.com** (sans carte), puis une clé API, et ajoutez-la dans Render sous `GROQ_API_KEY`. Guardian transcrit alors chaque note vocale, répète ce qu’il a compris (« Vous avez dit : … ») et répond. Le son n’est jamais enregistré. Sans cette clé, Guardian demande gentiment d’écrire.
 
 Un numéro qui n’est pas relié reçoit une réponse polie, sans aucune donnée. Un message resté plus de 10 minutes en attente (site endormi) ne reçoit pas de réponse. 
@@ -218,6 +222,8 @@ L'image `codex/Dockerfile` fonctionne chez tout hébergeur qui accepte Docker et
 | `TWILIO_WHATSAPP_FROM` | Numéro d'envoi Twilio | `whatsapp:+14155238886` |
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_API_VERSION` | Vrais WhatsApp par l'API WhatsApp Cloud de Meta (si Twilio n'est pas réglé) | aucun, `v23.0` |
 | `WHATSAPP_NUMEROS` | Destinataires : `commune, quartier ou code=numéro`, `equipe=numéro`, `technicien=numéro`, séparés par des virgules | aucun |
+| `WHATSAPP_CLIENTS` | Numéros reliés à un compte : `numéro=e-mail`. Un compte client reçoit les pannes de son quartier ; un compte de l’équipe Moov reçoit l’alerte de l’équipe et peut répondre « Valider » | aucun |
+| `WHATSAPP_JURY_MAX` | Places WhatsApp pour le jury (Green API seulement, 20 au plus) | les discussions gratuites restantes sur 3 |
 | `GUARDIAN_RESEAU_CLE`, `GUARDIAN_CLIENTS_CLE`, `GUARDIAN_USSD_CLE` | Clés (32 caractères ou plus) des prises vers le vrai réseau Moov : états des box, fichier clients, passerelle USSD. Voir [BRANCHEMENTS.md](BRANCHEMENTS.md) | aucune (prises fermées, simulateur) |
 | `GUARDIAN_SMS_URL`, `GUARDIAN_SMS_CLE`, `GUARDIAN_SMS_EXPEDITEUR` | Passerelle SMS de Moov (https) pour les SMS du menu USSD | aucune, `Moov` |
 | `GUARDIAN_ANDROID_PACKAGE` | Nom du paquet de l'application Android, publié dans `/.well-known/assetlinks.json` | aucun |

@@ -8,8 +8,10 @@
 //   GROQ_API_KEY (facultatif) : Guardian comprend aussi les notes vocales (transcription Whisper chez Groq, gratuite, sans carte).
 // Qui écrit ? Le numéro est cherché dans WHATSAPP_CLIENTS (« 2250701020304=awa.kone@demo.fibre-guardian.ci »),
 // sinon dans WHATSAPP_NUMEROS (« Yopougon=2250701020304 ») : c'est alors le premier client inscrit dans ce quartier.
+// Un membre du jury qui a donné son numéro en s'inscrivant parle avec le compte de son inscription (salle ouverte seulement) ;
+// « Stop » retire son numéro tout de suite.
 // Un numéro inconnu reçoit une réponse polie et rien d'autre : aucun compte n'est lu ni créé.
-const crypto = require('node:crypto'), W = require('./whatsapp.cjs'), journey = require('./journey-store.cjs'), VT = require('./vrai-test.cjs');
+const crypto = require('node:crypto'), W = require('./whatsapp.cjs'), journey = require('./journey-store.cjs'), VT = require('./vrai-test.cjs'), N = require('./noc-store.cjs'), O = require('./operator-store.cjs');
 
 const FRESH = 10 * 60000; // Green API renvoie un message tant que le site dort : au-delà de 10 minutes, on ne répond plus.
 const plain = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9@.+-]+/g, '');
@@ -68,15 +70,27 @@ function incoming(d) {
 }
 
 // Le client qui écrit : lien explicite d'abord, sinon le premier client inscrit dans le quartier de ce numéro.
+// Comptes reliés à ce numéro dans WHATSAPP_CLIENTS (un client, un responsable, ou les deux sur le même téléphone).
+function linked(s, cfg, phone) {
+  return cfg.clients.filter(c => c.phone === phone).map(c => s.get('SELECT id,name FROM users WHERE email=?', c.email)).filter(Boolean).map(u => ({...u, role: O.role(s, u.id)}));
+}
+// Le responsable relié à ce numéro (agent, superviseur ou administrateur), s'il y en a un.
+const manager = (s, cfg, phone) => linked(s, cfg, phone).find(u => u.role !== 'subscriber') || null;
 function who(s, cfg, phone) {
-  const link = cfg.clients.find(c => c.phone === phone);
-  if (link) return s.get('SELECT id,name FROM users WHERE email=?', link.email) || null;
+  const users = linked(s, cfg, phone);
+  if (users.length) { const u = users.find(v => v.role === 'subscriber') || users[0]; return {id: u.id, name: u.name}; }
+  const juror = jury(s, 'byWhatsapp', phone); if (juror) return juror;
+  if (cfg.clients.some(c => c.phone === phone)) return null;
   const keys = cfg.numbers.filter(n => n.phone === phone && n.role === 'client').map(n => n.key);
   if (!keys.length) return null;
   const segments = s.all('SELECT id FROM noc_segments').map(r => r.id).filter(id => keys.some(k => W.livesIn(k, id)));
   if (!segments.length) return null;
   return s.get('SELECT u.id,u.name FROM noc_members m JOIN users u ON u.id=m.user_id WHERE m.segment_id IN (' + segments.map(() => '?').join(',') + ') ORDER BY u.created LIMIT 1', ...segments) || null;
 }
+
+// Salle du jury (la table peut manquer sur une base sans salle du jury : rien n'est trouvé).
+function jury(s, fn, phone) { try { return require('./jury-store.cjs')[fn](s, phone); } catch { return null; } }
+const STOPPED = 'C’est noté : je ne vous écrirai plus sur WhatsApp, et votre numéro est effacé. L’alerte arrivera toujours sur la page du jury.';
 
 // Boutons cliquables, comme les assistants WhatsApp de Wave : 3 au plus, 25 caractères au plus.
 // Un bouton envoie à Guardian la phrase complète ; si le téléphone n'affiche pas les boutons, « 1 », « 2 » ou « 3 » marchent aussi.
@@ -93,7 +107,8 @@ const CHOICES = {
   test: ['Tester ma connexion', 'Je veux tester ma connexion'],
   photo: ['Envoyer une photo', 'Je vous envoie une photo de ma box'],
   menu: ['Autre question', 'Bonjour'],
-  merci: ['Merci', 'Merci']
+  merci: ['Merci', 'Merci'],
+  valider: ['Valider le plan', 'Je valide le plan']
 };
 // Les boutons suivent la conversation : ce qu'on vient de demander, et la panne du quartier s'il y en a une.
 const MENUS = {
@@ -169,6 +184,30 @@ async function answer(s, cfg, m, text, buttons, fetchImpl) {
   return {status: 'answered', reply: text, buttons};
 }
 
+// « Valider » d'un responsable sur WhatsApp : il valide le plan de la dernière alerte d'équipe reçue sur ce numéro,
+// jamais une autre panne, avec les droits de son propre compte (vérifiés par la Régie ou par le moteur d'incidents).
+const NOTHING = 'Aucun plan n’attend votre validation en ce moment. Je vous écris dès que Guardian en prépare un.';
+const wantsValidate = text => /^(ok |oui |d'accord |d’accord )?(je )?valid(e|er|ez|es)?\b/.test(fold(text).replace(/[!?.,;:]+/g, ' ').replace(/\s+/g, ' ').trim());
+function validatePlan(s, boss, phone, origin) {
+  const last = s.get("SELECT incident_id AS id FROM noc_whatsapp WHERE phone=? AND role='team' ORDER BY at DESC, rowid DESC LIMIT 1", phone);
+  let i = null;
+  try { i = last && N.overview(s, boss.id).incidents.find(x => x.id === last.id); } catch (e) { return e.message; }
+  if (!i || ['resolved', 'closed', 'rejected'].includes(i.status)) return NOTHING;
+  if (i.status !== 'proposed') return 'Ce plan est déjà validé. La suite se passe dans la Régie ou l’espace Moov.';
+  const [commune, area] = String(N.zoneName(s, i.segment_id) || '').split(' · '), zone = area ? area + ' (' + commune + ')' : commune; // « Niangon (Yopougon) », comme l'alerte
+  const cause = ({FIBER_CUT_DISTRIBUTION: 'coupure fibre', POWER_OUTAGE: 'coupure de courant'})[i.plan?.cause] || 'la panne « ' + (i.plan?.title || 'à vérifier') + ' »';
+  try {
+    // Réseau de démo ouvert dans la Régie : même validation que le bouton « Valider » de la Régie (administrateur seulement).
+    const jury = require('./jury-store.cjs');
+    let room = null; try { room = jury.status(s, boss.id, origin); } catch { room = null; }
+    if (room?.room?.network && room.scene?.id === i.id && room.next === 'validate') {
+      jury.step(s, boss.id, {type: 'validate'}, origin);
+      return 'C’est validé : ' + cause + ' confirmée sur le réseau ' + room.room.network + '. Les inscrits du jury sont prévenus sur leur téléphone. Prochaine étape : ' + (i.plan?.dispatch === false ? '« Réparer » dans la Régie, au retour du courant.' : '« Envoyer le technicien » dans la Régie.');
+    }
+    N.operate(s, boss.id, {type: 'approve', id: i.id, version: i.version, note: 'Validé sur WhatsApp par ' + boss.name + '.'});
+    return 'C’est validé : ' + cause + ' à ' + zone + '. Les clients du quartier sont prévenus. ' + (i.plan?.dispatch === false ? 'Personne ne se déplace.' : 'Prochaine étape : choisir l’équipe à envoyer dans l’espace Moov.');
+  } catch (e) { return e.message || 'La validation n’a pas abouti. Validez depuis la Régie.'; }
+}
 const HUMAN = 'Un conseiller Moov vous répond au 111, à tout moment. Il voit le même dossier que moi :\n\n';
 const DEAF = 'Je ne peux pas encore écouter les notes vocales. Écrivez-moi en quelques mots ce qui se passe, ou touchez un bouton.';
 const UNHEARD = 'Je n’ai pas bien compris votre note vocale. Pouvez-vous la refaire dans un endroit calme, ou m’écrire en quelques mots ?';
@@ -220,6 +259,11 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   if (!m || (m.at && now - m.at > FRESH)) return {status: 'ignored'};
   if (m.id && !s.run('INSERT OR IGNORE INTO wa_inbox VALUES(?,?,?)', m.id, m.phone, now).changes) return {status: 'duplicate'};
   try { s.rate('wa:' + m.phone, 20, 600000); } catch { return {status: 'limited'}; }
+  // Membre du jury qui répond « Stop » : plus aucun message sur ce numéro.
+  if (!m.image && !m.audio && /^(stop|arret|arreter|arretez|desinscrire|desinscription)$/.test(fold(m.text).replace(/[^a-z]/g, '')) && jury(s, 'stopWhatsapp', m.phone)) { await send(cfg, m.phone, STOPPED, fetchImpl); return {status: 'stopped'}; }
+  // Un responsable relié qui répond « Valider » (texte ou bouton) : le plan de sa dernière alerte d'équipe est validé.
+  const boss = manager(s, cfg, m.phone);
+  if (boss && !m.image && !m.audio && (choice(s, m) === 'valider' || wantsValidate(m.text))) return answer(s, cfg, m, validatePlan(s, boss, m.phone, cfg.origin || origin), null, fetchImpl);
   const user = who(s, cfg, m.phone);
   if (!user) { await send(cfg, m.phone, UNKNOWN, fetchImpl); return {status: 'unknown'}; }
   // Photo : Guardian lit les voyants, comme « Photo de ma box » dans l'application.
@@ -250,4 +294,4 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   return answer(s, cfg, m, echo + human + forWhatsApp(said, cfg.origin), journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
 }
 
-module.exports = {config, migrate, allowed, incoming, who, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};
+module.exports = {config, migrate, allowed, incoming, who, manager, wantsValidate, validatePlan, NOTHING, STOPPED, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, UNKNOWN, FRESH, HEAD};

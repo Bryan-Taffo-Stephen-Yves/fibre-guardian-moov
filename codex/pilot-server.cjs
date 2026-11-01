@@ -111,8 +111,13 @@ function createGuardianServer(options={}){
     if(route==='/api/participant/join'&&method==='POST'){
      store.rate('join:'+ip(req),20);const d=await body(req,4096);insist(d.consent===true,'Votre consentement est nécessaire.');const l=store.get('SELECT * FROM labs WHERE code=?',String(d.code||''));insist(l&&!l.closed&&l.expires>Date.now(),'Invitation expirée ou incorrecte.',404);insist(store.get('SELECT count(*) AS n FROM participants WHERE lab=? AND revoked=0',l.id).n<30,'Session limitée à 30 participants.',409);const pid=id(),secret=token(),name=word(d.name,'Nom de l’appareil',80);store.run('INSERT INTO participants(id,lab,name,secret,joined,last_seen) VALUES(?,?,?,?,?,?)',pid,l.id,name,hash(secret),Date.now(),Date.now());store.event(l.home,null,'participant.join',name);return json(res,{id:pid,secret,name,expires:l.expires});
     }
-    // Salle du jury : le QR code crée un abonné anonyme de Yopougon (aucun nom, aucun numéro, aucun rôle opérateur).
-    if(route==='/api/jury/join'&&method==='POST'){insist(secure||local,'Les comptes nécessitent HTTPS hors de cet ordinateur.',403);const u=await jury.join(store,await body(req,2048),ip(req)),session=store.session(u);cookie(res,session.secret,8*3600);return json(res,{user:{...u,csrf:session.csrf,role:workspace.sessionRole(store,u.id)}},201);}
+    // Salle du jury : le QR code crée un abonné anonyme de Yopougon (aucun rôle opérateur ; prénom et numéro WhatsApp facultatifs).
+    // Places WhatsApp : seulement quand Guardian peut écrire à n'importe quel numéro (Green API), dans la limite réglée.
+    if(route==='/api/jury/places'&&method==='GET'){store.rate('jury-places:'+ip(req),120);return json(res,{whatsapp:whatsapp.cfg?.jury&&bot?jury.whatsappPlaces(store,whatsapp.cfg.jury):0});}
+    if(route==='/api/jury/join'&&method==='POST'){insist(secure||local,'Les comptes nécessitent HTTPS hors de cet ordinateur.',403);const u=await jury.join(store,await body(req,2048),ip(req),{whatsapp:whatsapp.cfg?.jury&&bot?whatsapp.cfg.jury:0}),session=store.session(u);cookie(res,session.secret,8*3600);
+     // Numéro donné : Guardian dit bonjour sur WhatsApp tout de suite (la personne voit que ça marche avant la panne).
+     if(jury.whatsappOf(store,u.id))WA.welcome(store,whatsapp.cfg,u.id).catch(e=>options.onError?options.onError(e):console.warn('WhatsApp a refusé le message de bienvenue : '+e.message));
+     return json(res,{user:{...u,csrf:session.csrf,role:workspace.sessionRole(store,u.id)}},201);}
     if(route.startsWith('/api/participant/')){
      const p=participant(req);store.rate('participant:'+p.id,100);const fault=p.fault_until>Date.now()?p.fault:'none';
      if(route==='/api/participant/status'&&method==='GET')return json(res,{name:p.name,fault,faultUntil:p.fault_until,expires:p.expires});

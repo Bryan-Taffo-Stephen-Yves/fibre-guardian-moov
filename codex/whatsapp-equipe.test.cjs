@@ -1,0 +1,243 @@
+'use strict';
+// L'équipe Moov sur WhatsApp : dès qu'une panne est repérée, Guardian écrit au responsable relié par son compte,
+// avec un bouton « Valider le plan ». Répondre « Valider » valide le plan de cette alerte-là, avec les droits du compte :
+// la Régie et le moteur d'incidents vérifient tout, comme dans l'espace Moov.
+const {test} = require('node:test'), assert = require('node:assert/strict');
+const WB = require('./whatsapp-bot.cjs'), W = require('./whatsapp.cjs'), N = require('./noc-store.cjs'), O = require('./operator-store.cjs'), F = require('./sim-flow.js');
+const jury = require('./jury-store.cjs'), {createGuardianServer} = require('./pilot-server.cjs');
+
+const BOSS = '2250705050505', AWA = '2250701020304', AGENT = '2250706060606', SECRET = 'secret-green-api-de-test-1234';
+const BASE = {GREENAPI_ID_INSTANCE: '7103000001', GREENAPI_API_TOKEN: 'jeton-instance-de-test', GREENAPI_WEBHOOK_TOKEN: SECRET};
+const message = (phone, text, extra = {}) => ({typeWebhook: 'incomingMessageReceived', idMessage: 'MSG' + Math.random().toString(36).slice(2), timestamp: Math.floor(Date.now() / 1000), senderData: {chatId: phone + '@c.us'}, messageData: {typeMessage: 'textMessage', textMessageData: {textMessage: text}}, ...extra});
+
+async function setup(links, {refuseButtons = false, env: extra = {}, accounts = null} = {}) {
+  const env = {...BASE, WHATSAPP_CLIENTS: links, ...extra};
+  const server = createGuardianServer({db: ':memory:', env, onError: () => {}}), s = server.guardianStore;
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const base = 'http://127.0.0.1:' + server.address().port;
+  const chef = (await s.register({email: 'chef@example.test', password: 'chef-password-1234', name: 'Chef Moov'})).user; O.grant(s, 'chef@example.test', 'admin');
+  const agent = (await s.register({email: 'agent@example.test', password: 'agent-password-1234', name: 'Agent Support'})).user; O.grant(s, 'agent@example.test', 'agent');
+  const awa = (await s.register({email: 'awa@example.test', password: 'awa-password-1234', name: 'Awa Koné'})).user; N.join(s, awa.id, {segment: 'YOP-07', consent: true});
+  const sent = [], real = globalThis.fetch;
+  // Faux Green API : chaque message envoyé est noté (méthode, destinataire, texte, boutons).
+  const fake = async (url, init) => {
+    if (String(url).startsWith(base)) return real(url, init);
+    const d = JSON.parse(init.body), method = String(url).split('/')[4];
+    if (method === 'sendInteractiveButtonsReply' && refuseButtons) return {ok: false, status: 400, json: async () => ({})};
+    // « Ce numéro a-t-il WhatsApp ? » : oui pour tous, sauf si le test donne la liste des comptes.
+    if (method === 'checkWhatsapp') return {ok: true, status: 200, json: async () => ({existsWhatsapp: !accounts || accounts.includes(String(d.phoneNumber))})};
+    sent.push({method, chatId: d.chatId, text: d.message ?? ((d.header ? d.header + '\n\n' : '') + d.body), buttons: (d.buttons || []).map(b => b.buttonId)});
+    return {ok: true, status: 200, json: async () => ({idMessage: 'OUT'})};
+  };
+  globalThis.fetch = fake;
+  const post = d => real(base + '/api/whatsapp/entrant', {method: 'POST', headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + SECRET}, body: JSON.stringify(d)});
+  const get = route => real(base + route);
+  const join = (code, extra = {}) => real(base + '/api/jury/join', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code, consent: true, ...extra})});
+  const to = phone => sent.filter(m => m.chatId === phone + '@c.us');
+  const reply = async (phone, text) => { const n = to(phone).length + 1; await post(message(phone, text)); for (let k = 0; k < 100 && to(phone).length < n; k++) await new Promise(r => setTimeout(r, 30)); return to(phone)[n - 1]; };
+  // Les agents de Guardian ont fini leur travail : les messages prévus partent (sans attendre la minuterie de 3 s).
+  const alerts = () => W.tick(s, W.config(env), {fetchImpl: fake, now: Date.now() + F.THINK + 500, wait: async () => {}});
+  const find = () => N.overview(s, chef.id).incidents.find(i => i.segment_id === 'YOP-07' && !i.terminal);
+  const close = () => { globalThis.fetch = real; server.close(); };
+  return {server, s, chef, agent, awa, sent, to, post, get, join, reply, alerts, find, close};
+}
+
+test('Panne repérée : le responsable relié reçoit l’alerte de l’équipe avec un bouton « Valider le plan »', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.alerts();
+    const [m] = t.to(BOSS);
+    assert.ok(m, 'le responsable est prévenu dès que Guardian a fini son analyse');
+    assert.equal(m.method, 'sendInteractiveButtonsReply'); assert.deepEqual(m.buttons, ['valider']);
+    assert.match(m.text, /^Fibre Guardian · Équipe Moov\n\nPanne à Niangon \(Yopougon\) : fibre coupée.*Plan prêt, votre validation est attendue\.\n\nRépondez « Valider » pour valider ce plan\./s);
+    assert.equal(t.to(AWA).length, 0, 'aucun client relié : personne d’autre n’est écrit');
+  } finally { t.close(); }
+  const old = await setup(BOSS + '=chef@example.test', {refuseButtons: true});
+  try {
+    N.operate(old.s, old.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await old.alerts();
+    assert.equal(old.to(BOSS)[0].method, 'sendMessage', 'boutons refusés : le même texte part sans bouton');
+    assert.match(old.to(BOSS)[0].text, /Répondez « Valider »/);
+  } finally { old.close(); }
+});
+
+test('Le responsable répond « Valider » : le plan de cette alerte est validé avec ses droits, une seule fois', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    assert.match((await t.reply(BOSS, 'Valider')).text, /Aucun plan n’attend votre validation/, 'pas encore d’alerte reçue : rien à valider');
+    assert.equal(t.find().status, 'proposed');
+    await t.alerts();
+    const r = await t.reply(BOSS, 'Valider');
+    assert.match(r.text, /^Guardian · Moov Africa Fibre\n\nC’est validé : coupure fibre à Niangon/);
+    const i = t.find();
+    assert.equal(i.status, 'approved'); assert.equal(i.approved_by, t.chef.id);
+    assert.ok(i.events.some(e => e.kind === 'plan.approved'));
+    assert.match((await t.reply(BOSS, 'je valide')).text, /déjà validé/, 'une seconde réponse ne valide rien de plus');
+    await t.alerts();
+    assert.ok(t.to(BOSS).some(m => /Plan validé pour Niangon/.test(m.text)), 'la suite de l’alerte arrive comme avant');
+  } finally { t.close(); }
+});
+
+test('Seul un compte qui a le droit de valider le peut ; un client ou un numéro inconnu ne valide jamais rien', async () => {
+  const t = await setup([AGENT + '=agent@example.test', AWA + '=awa@example.test'].join(','));
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.alerts();
+    assert.ok(t.to(AGENT).some(m => m.buttons.includes('valider')), 'l’agent support reçoit l’alerte de l’équipe');
+    const r = await t.reply(AGENT, 'Valider');
+    assert.match(r.text, /Validation réservée au responsable technique/, 'le droit est vérifié par le moteur d’incidents');
+    assert.equal(t.find().status, 'proposed');
+    await t.reply(AWA, 'valider');
+    assert.equal(t.find().status, 'proposed', 'une cliente qui écrit « valider » parle à Guardian, elle ne valide rien');
+    await t.post(message('2250799999999', 'Valider')); await new Promise(r => setTimeout(r, 200));
+    assert.equal(t.find().status, 'proposed');
+  } finally { t.close(); }
+});
+
+test('Un même téléphone relié à Awa et au responsable : alerte client et alerte d’équipe, « Valider » valide, « Bonjour » reste la cliente', async () => {
+  const t = await setup([BOSS + '=awa@example.test', BOSS + '=chef@example.test'].join(','));
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.alerts();
+    const got = t.to(BOSS).map(m => m.text);
+    assert.ok(got.some(x => /^Moov Africa · Fibre Guardian\n\nUn câble de fibre est coupé/.test(x)), 'l’alerte client');
+    assert.ok(got.some(x => /^Fibre Guardian · Équipe Moov\n\n.*votre validation est attendue/s.test(x)), 'l’alerte de l’équipe');
+    assert.match((await t.reply(BOSS, 'Bonjour')).text, /Bonjour Awa !/);
+    assert.match((await t.reply(BOSS, 'Valider')).text, /C’est validé/);
+    assert.equal(t.find().status, 'approved');
+  } finally { t.close(); }
+});
+
+test('Réseau de démo dans la Régie : « Valider » sur WhatsApp fait la même chose que le bouton « Valider » de la Régie', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    const origin = 'http://127.0.0.1:' + t.server.address().port;
+    jury.step(t.s, t.chef.id, {type: 'open', ssid: 'MOOV-FIBRE-DEMO'}, origin);
+    const code = jury.status(t.s, t.chef.id, origin).room.code;
+    const member = await jury.join(t.s, {code, firstName: 'Koffi', consent: true}, '127.0.0.1');
+    jury.step(t.s, t.chef.id, {type: 'cut', fault: 'fiber'}, origin);
+    assert.equal(jury.status(t.s, t.chef.id, origin).next, 'validate');
+    assert.equal(jury.me(t.s, member.id).scene, null, 'avant la validation, le jury ne voit rien');
+    await t.alerts();
+    const r = await t.reply(BOSS, 'Valider');
+    assert.match(r.text, /C’est validé : coupure fibre confirmée sur le réseau MOOV-FIBRE-DEMO\. Les inscrits du jury sont prévenus.*« Envoyer le technicien » dans la Régie\./s);
+    assert.equal(jury.status(t.s, t.chef.id, origin).next, 'send', 'la Régie passe à l’étape suivante');
+    assert.ok(jury.me(t.s, member.id).scene, 'le téléphone du jury reçoit l’alerte');
+  } finally { t.close(); }
+});
+
+test('« Valider » est reconnu sous ses formes courantes, sans confondre « invalide »', () => {
+  for (const t of ['Valider', 'valider le plan', 'Je valide', 'OK valide !', 'Validé', 'oui, je valide']) assert.ok(WB.wantsValidate(t), t);
+  for (const t of ['invalide', 'Bonjour', 'Où en est la réparation ?', 'pas de validation']) assert.ok(!WB.wantsValidate(t), t);
+});
+
+// ——— Le jury reçoit l'alerte sur son propre WhatsApp ———
+const JURY = '2250707123456', JURY2 = '2250101020304';
+async function room(t, {network = true} = {}) {
+  const origin = 'http://127.0.0.1:' + t.server.address().port;
+  jury.step(t.s, t.chef.id, network ? {type: 'open', ssid: 'MOOV-FIBRE-DEMO'} : {type: 'open'}, origin);
+  return {origin, code: jury.status(t.s, t.chef.id, origin).room.code};
+}
+
+test('Inscription du jury : numéro WhatsApp facultatif, places limitées, bonjour de Guardian tout de suite', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    const {code} = await room(t);
+    // Un numéro relié dans l'hébergeur prend une des 3 discussions gratuites : il reste 2 places pour le jury.
+    assert.deepEqual(await (await t.get('/api/jury/places')).json(), {whatsapp: 2});
+    const a = await t.join(code, {firstName: 'Koffi', whatsapp: '07 07 12 34 56'});
+    assert.equal(a.status, 201);
+    for (let k = 0; k < 50 && !t.to(JURY).length; k++) await new Promise(r => setTimeout(r, 20));
+    assert.match(t.to(JURY)[0].text, /^Moov Africa · Fibre Guardian\n\nBonjour Koffi ! Je suis Guardian.*Répondez « Stop »/s, 'Guardian dit bonjour sur le numéro donné (format 225 + 10 chiffres)');
+    const body = await a.json();
+    assert.ok(!JSON.stringify(body).includes('12 34 56') && !JSON.stringify(body).includes(JURY), 'le numéro ne revient jamais dans les réponses');
+    assert.equal((await t.join(code, {whatsapp: '+225 0707123456'})).status, 409, 'un même numéro une seule fois');
+    assert.match((await (await t.join(code, {whatsapp: '12 34'})).json()).error, /10 chiffres/);
+    assert.equal((await t.join(code, {whatsapp: '0101020304'})).status, 201);
+    assert.deepEqual(await (await t.get('/api/jury/places')).json(), {whatsapp: 0});
+    const full = await t.join(code, {firstName: 'Awa', whatsapp: '0505050505'});
+    assert.equal(full.status, 409); assert.match((await full.json()).error, /places WhatsApp .* prises/);
+    assert.equal((await t.join(code, {firstName: 'Awa'})).status, 201, 'sans numéro, on s’inscrit toujours');
+    const st = jury.status(t.s, t.chef.id, '');
+    assert.deepEqual(st.members.map(m => m.whatsapp), [true, true, false]);
+    assert.ok(!JSON.stringify(st).includes(JURY), 'la régie voit qui a donné un numéro, jamais lequel');
+  } finally { t.close(); }
+});
+
+test('Réseau de démo : le WhatsApp du jury part au moment de « Valider », pas avant ; « Stop » l’arrête ; la fermeture efface les numéros', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    const {origin, code} = await room(t);
+    assert.equal((await t.join(code, {firstName: 'Koffi', whatsapp: '0707123456'})).status, 201);
+    assert.equal((await t.join(code, {whatsapp: '0101020304'})).status, 201);
+    await new Promise(r => setTimeout(r, 100));
+    const hello = t.sent.length;
+    jury.step(t.s, t.chef.id, {type: 'cut', fault: 'fiber'}, origin);
+    await t.alerts();
+    assert.equal(t.to(JURY).length + t.to(JURY2).length, 2, 'panne non validée : le jury ne reçoit que le bonjour, rien d’autre');
+    assert.ok(t.to(BOSS).some(m => m.buttons.includes('valider')), 'le responsable, lui, est prévenu tout de suite');
+    await t.reply(BOSS, 'Valider');
+    await t.alerts();
+    for (const p of [JURY, JURY2]) assert.match(t.to(p).at(-1).text, /^Moov Africa · Fibre Guardian\n\nUn câble de fibre est coupé dans votre quartier/, 'validé : le jury reçoit l’alerte');
+    assert.ok(t.sent.length > hello);
+    // Le jury parle à Guardian avec son compte d'inscription.
+    assert.match((await t.reply(JURY, 'Bonjour')).text, /Koffi/);
+    assert.match((await t.reply(JURY2, 'Stop')).text, /je ne vous écrirai plus sur WhatsApp/);
+    assert.equal(jury.status(t.s, t.chef.id, origin).members.filter(m => m.whatsapp).length, 1);
+    jury.step(t.s, t.chef.id, {type: 'close'}, origin);
+    assert.equal(t.s.get('SELECT count(*) AS n FROM jury_members WHERE whatsapp IS NOT NULL').n, 0, 'salle fermée : plus aucun numéro gardé');
+    assert.equal(t.s.get('SELECT count(*) AS n FROM noc_whatsapp WHERE phone=?', JURY).n, 0, 'ni dans le journal des envois');
+    assert.match((await t.reply(JURY, 'Bonjour')).text, /pas encore relié/, 'après la démonstration, le numéro redevient inconnu');
+  } finally { t.close(); }
+});
+
+test('Salle sans réseau de démo : le jury reçoit l’alerte WhatsApp dès que Guardian a fini, comme dans l’application', async () => {
+  const t = await setup('');
+  try {
+    const {origin, code} = await room(t, {network: false});
+    assert.deepEqual(await (await t.get('/api/jury/places')).json(), {whatsapp: 3});
+    assert.equal((await t.join(code, {whatsapp: '0707123456'})).status, 201);
+    jury.step(t.s, t.chef.id, {type: 'cut'}, origin);
+    await t.alerts();
+    assert.ok(t.to(JURY).some(m => /Un câble de fibre est coupé/.test(m.text)));
+  } finally { t.close(); }
+});
+
+test('Sans Green API (ou WHATSAPP_JURY_MAX=0), aucun champ WhatsApp : un numéro envoyé quand même est ignoré', async () => {
+  assert.equal(W.config({...BASE, WHATSAPP_JURY_MAX: '0'}).jury, 0);
+  assert.equal(W.config({...BASE, WHATSAPP_JURY_MAX: '50'}).jury, 20);
+  assert.equal(W.config({...BASE, WHATSAPP_CLIENTS: '2250701020304=a@b.c,2250701020305=d@e.f,2250701020306=g@h.i,2250701020307=j@k.l'}).jury, 0);
+  assert.equal(W.config({TWILIO_ACCOUNT_SID: 'AC', TWILIO_AUTH_TOKEN: 'x'}).jury, undefined, 'Twilio n’écrit qu’aux numéros du bac à sable');
+  const t = await setup(BOSS + '=chef@example.test', {env: {WHATSAPP_JURY_MAX: '0'}});
+  try {
+    const {code} = await room(t);
+    assert.deepEqual(await (await t.get('/api/jury/places')).json(), {whatsapp: 0});
+    assert.equal((await t.join(code, {whatsapp: '0707123456'})).status, 201);
+    assert.equal(t.s.get('SELECT count(*) AS n FROM jury_members WHERE whatsapp IS NOT NULL').n, 0);
+  } finally { t.close(); }
+  for (const [v, want] of [['07 07 12 34 56', '2250707123456'], ['+225 07-07-12-34-56', '2250707123456'], ['00225 0707123456', '2250707123456'], ['+33 6 12 34 56 78', '33612345678'], ['', null]]) assert.equal(jury.cleanWhatsapp(v), want, v);
+  for (const v of ['0707', '7071234567', '+0 123', 'abc']) assert.throws(() => jury.cleanWhatsapp(v), /10 chiffres/, v);
+});
+
+test('Ancien format ivoirien : le compte WhatsApp du juré est à 8 chiffres, Guardian l’écrit comme WhatsApp le connaît', async () => {
+  const OLD = '22507123456';
+  const t = await setup('', {accounts: [OLD]});
+  try {
+    const {origin, code} = await room(t, {network: false});
+    assert.equal((await t.join(code, {firstName: 'Aya', whatsapp: '07 07 12 34 56'})).status, 201);
+    for (let k = 0; k < 50 && !t.to(OLD).length; k++) await new Promise(r => setTimeout(r, 20));
+    assert.match(t.to(OLD)[0]?.text || '', /Bonjour Aya/, 'le bonjour part vers 225 + 8 chiffres');
+    assert.equal(t.to(JURY).length, 0, 'rien vers un numéro sans WhatsApp');
+    jury.step(t.s, t.chef.id, {type: 'cut'}, origin);
+    await t.alerts();
+    assert.ok(t.to(OLD).some(m => /Un câble de fibre est coupé/.test(m.text)), 'l’alerte aussi');
+    assert.match((await t.reply(OLD, 'Bonjour')).text, /Aya/, 'et Guardian la reconnaît quand elle répond');
+  } finally { t.close(); }
+  const cfg = {provider: 'greenapi', url: 'http://green.example', id: '1', token: 't'};
+  const answer = v => async () => ({ok: true, json: async () => v});
+  assert.equal(await W.reachable(cfg, JURY, answer({})), JURY, 'réponse incomplète : on garde le format à 10 chiffres');
+  assert.equal(await W.reachable(cfg, JURY, async () => { throw new Error('réseau'); }), JURY);
+  assert.equal(await W.reachable(cfg, '33612345678', answer({existsWhatsapp: false})), '33612345678', 'hors Côte d’Ivoire : rien à essayer');
+});

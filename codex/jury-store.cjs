@@ -1,6 +1,6 @@
 'use strict';
 // « Le jury vit la panne » : chaque membre du jury scanne un QR code et devient un abonné anonyme
-// de Yopougon (segment YOP-07), sans numéro (un prénom seulement, s'il le veut). La régie (administrateur uniquement)
+// de Yopougon (segment YOP-07), avec un prénom et un numéro WhatsApp seulement s'il le veut. La régie (administrateur uniquement)
 // déclenche les scènes avec les actions habituelles du NOC : mêmes validations, mêmes droits, rien n'est contourné.
 // Réseau de démo (salle ouverte avec un nom de réseau) : le partage de connexion de l'équipe joue la box du quartier.
 // La panne est jouée sur sa copie (copie-wifi.cjs), et les inscrits ne sont prévenus qu'après la validation d'un responsable.
@@ -38,6 +38,8 @@ function migrate(s){s.db.exec(`
  `);
  // Prénom facultatif, montré sur le grand écran de la régie (bases déjà créées : colonne ajoutée une fois).
  if(!s.all('PRAGMA table_info(jury_members)').some(c=>c.name==='first'))s.db.exec('ALTER TABLE jury_members ADD COLUMN first TEXT');
+ // Numéro WhatsApp facultatif (quelques places, voir whatsappPlaces) : jamais montré, effacé à la fermeture de la salle.
+ if(!s.all('PRAGMA table_info(jury_members)').some(c=>c.name==='whatsapp'))s.db.exec('ALTER TABLE jury_members ADD COLUMN whatsapp TEXT');
  // Un numéro par inscrit dans une salle, même quand tout le monde scanne en même temps.
  try{s.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS jury_member_number ON jury_members(room,number)');}catch(_){/* ancienne base avec des doublons : le numéro reste attribué dans la transaction */}
 }
@@ -53,6 +55,11 @@ function cleanSsid(v){const t=String(v??'').replace(/[\p{Cc}\p{Cf}]/gu,'').trim(
 const graphemes=t=>[...new Intl.Segmenter('fr',{granularity:'grapheme'}).segment(t)].length;
 function cleanFirst(v){if(v==null)return null;insist(typeof v==='string','Prénom invalide.');const t=v.normalize('NFC').replace(/\s+/g,' ').trim();if(!t)return null;
  insist(graphemes(t)<=30&&!BLANK_LETTERS.test(t)&&/^\p{L}\p{M}{0,2}(?:[\p{L}'’ -]\p{M}{0,2})*$/u.test(t),'Votre prénom : des lettres seulement, 30 au plus.');return t;}
+// Numéro WhatsApp : 10 chiffres en Côte d'Ivoire (07 07 12 34 56), ou un numéro international qui commence par + ou 00.
+// Gardé au format de WhatsApp (225 puis les 10 chiffres), jamais affiché nulle part.
+function cleanWhatsapp(v){if(v==null)return null;insist(typeof v==='string','Numéro WhatsApp invalide.');const t=v.replace(/[\s.()\-\u00a0]/g,'');if(!t)return null;
+ const n=/^0\d{9}$/.test(t)?'225'+t:/^(?:\+|00)?225\d{10}$/.test(t)?t.replace(/^(?:\+|00)/,''):/^(?:\+|00)[1-9]\d{7,14}$/.test(t)?t.replace(/^(?:\+|00)/,''):null;
+ insist(n,'Votre numéro WhatsApp : 10 chiffres, par exemple 07 07 12 34 56.');return n;}
 
 // La scène du jury : la dernière panne repérée par Guardian sur les mesures de Yopougon depuis l'ouverture de la salle,
 // ou une coupure encore en cours qui l'a précédée (salle rouverte pendant une panne : la régie la reprend).
@@ -110,15 +117,16 @@ function alertStats(s,room,i,from){
 }
 
 const RESTARTING='La démonstration redémarre. Réessayez dans quelques secondes.';
-async function join(s,d,ip){
+// whatsapp : nombre de places WhatsApp de la salle (0 si Guardian ne peut pas écrire sur WhatsApp : le champ est alors ignoré).
+async function join(s,d,ip,{whatsapp:places=0}={}){
  s.rate('jury-join:'+ip,40,600000);
  insist(!s.juryResetting,RESTARTING,409);
  insist(d.consent===true,'Votre accord est nécessaire pour recevoir les alertes du quartier.');
- const first=cleanFirst(d.firstName);
+ const first=cleanFirst(d.firstName),phone=places>0?cleanWhatsapp(d.whatsapp):null;
  const room=s.get('SELECT * FROM jury_rooms WHERE code=?',String(d.code||'').trim().toUpperCase().slice(0,12));
  insist(room&&!room.closed&&room.expires>Date.now(),'Ce code n’est plus valable. Demandez le nouveau code à l’équipe.',404);
  const full=()=>insist(s.get('SELECT count(*) AS n FROM jury_members WHERE room=?',room.id).n<MAX_JURORS,'La salle du jury est complète.',409);full();
- // Compte anonyme d'abonné : aucun numéro de téléphone, aucun rôle opérateur ; le prénom seulement si la personne l'a écrit.
+ // Compte anonyme d'abonné : aucun rôle opérateur ; le prénom et le numéro WhatsApp seulement si la personne les a écrits.
  // Le numéro d'inscrit est donné dans la transaction : plusieurs personnes qui scannent ensemble ont chacune le leur.
  const {user}=await s.register({email:'jury-'+id()+'@guardian.invalid',name:first||'Membre du jury',password:token()});
  let number;
@@ -127,8 +135,12 @@ async function join(s,d,ip){
   insist(!s.juryResetting,RESTARTING,409);
   insist(s.get('SELECT id FROM jury_rooms WHERE id=? AND closed=0 AND expires>?',room.id,Date.now()),'Ce code n’est plus valable. Demandez le nouveau code à l’équipe.',404);
   full();number=s.get('SELECT COALESCE(max(number),0)+1 AS n FROM jury_members WHERE room=?',room.id).n;
+  if(phone){
+   insist(!s.get('SELECT 1 AS x FROM jury_members WHERE room=? AND whatsapp=?',room.id,phone),'Ce numéro WhatsApp est déjà inscrit dans la salle.',409);
+   insist(s.get('SELECT count(*) AS n FROM jury_members WHERE room=? AND whatsapp IS NOT NULL',room.id).n<places,'Les places WhatsApp de la démonstration sont prises. Laissez ce champ vide : l’alerte arrivera sur cette page.',409);
+  }
   if(!first)s.run('UPDATE users SET name=? WHERE id=?','Membre du jury '+number,user.id);
-  s.run('INSERT INTO jury_members(user_id,room,number,joined,first) VALUES(?,?,?,?,?)',user.id,room.id,number,Date.now(),first);journey.put(s,user.id,journey.seed());noc.join(s,user.id,{segment:SEGMENT,consent:true});});}
+  s.run('INSERT INTO jury_members(user_id,room,number,joined,first,whatsapp) VALUES(?,?,?,?,?,?)',user.id,room.id,number,Date.now(),first,phone);journey.put(s,user.id,journey.seed());noc.join(s,user.id,{segment:SEGMENT,consent:true});});}
  catch(e){s.run('DELETE FROM users WHERE id=?',user.id);throw e;}
  return {...user,name:first||'Membre du jury '+number};
 }
@@ -145,7 +157,7 @@ function me(s,uid){
  if(scene&&!scene.terminal)s.run('INSERT OR IGNORE INTO jury_alerts(user_id,incident_id,delivered) VALUES(?,?,?)',uid,scene.id,Date.now());
  // Sans alerte validée, les chiffres du quartier ne s'affichent que s'ils sont normaux : rien ne laisse deviner une panne non confirmée.
  const calm=seg.alarm==='NONE'&&seg.online>=seg.total,showSegment=!network||!!scene||calm;
- return {number:m.number,first:m.first||null,zone:ZONE,network,joined:m.joined,room:{open:!m.closed&&m.expires>Date.now()},segment:showSegment?{online:seg.online,total:seg.total,alarm:seg.alarm}:null,
+ return {number:m.number,first:m.first||null,whatsapp:!!m.whatsapp,zone:ZONE,network,joined:m.joined,room:{open:!m.closed&&m.expires>Date.now()},segment:showSegment?{online:seg.online,total:seg.total,alarm:seg.alarm}:null,
   scene:scene?{...scene,created:plan.created,cause:plan.plan?JSON.parse(plan.plan).cause:null,certificate:certificate(s,scene)}:null};
 }
 // « Suivre l'intervention » : la personne a vu l'alerte. Ses notifications du quartier passent en lues.
@@ -210,8 +222,9 @@ function status(s,uid,origin){
  const st=scene?.status,step=nextOf(scene,network);
  const seg=s.get('SELECT online,total,alarm FROM noc_segments WHERE id=?',SEGMENT);
  // Les inscrits, pour le grand écran : prénom (ou numéro), alerte reçue, alerte vue. Jamais d'adresse ni de numéro de téléphone.
- const members=room?s.all('SELECT m.number,m.first,a.delivered,a.seen FROM jury_members m LEFT JOIN jury_alerts a ON a.user_id=m.user_id AND a.incident_id=? WHERE m.room=? ORDER BY m.number LIMIT ?',sid||'',room.id,MAX_JURORS)
-  .map(r=>({number:r.number,name:r.first||null,delivered:r.delivered||null,seen:r.seen||null})):[];
+ // « whatsapp » dit seulement si la personne a donné un numéro, jamais lequel.
+ const members=room?s.all('SELECT m.number,m.first,m.whatsapp IS NOT NULL AS wa,a.delivered,a.seen FROM jury_members m LEFT JOIN jury_alerts a ON a.user_id=m.user_id AND a.incident_id=? WHERE m.room=? ORDER BY m.number LIMIT ?',sid||'',room.id,MAX_JURORS)
+  .map(r=>({number:r.number,name:r.first||null,whatsapp:!!r.wa,delivered:r.delivered||null,seen:r.seen||null})):[];
  return {room:room?{code:room.code,url:origin+'/codex/?jury='+room.code,expires:room.expires,created:room.created,jurors,network}:null,
   members,network:network?networkView(s,uid,room,network,scene):null,
   report:scene?report(s,scene,{...room,network}):null,
@@ -226,10 +239,10 @@ function step(s,uid,d,origin){
  if(d.type==='open'){
   // Avec un nom de réseau (la régie l'envoie toujours) : réseau de démo, validation d'un responsable avant l'alerte.
   const ssid=typeof d.ssid==='string'?cleanSsid(d.ssid):null;
-  s.transaction(()=>{s.run('UPDATE jury_rooms SET closed=1 WHERE closed=0');const rid=id(),now=Date.now();s.run('INSERT INTO jury_rooms VALUES(?,?,?,?,?,0)',rid,code(),uid,now,now+ROOM_MS);if(ssid)s.run('INSERT INTO jury_networks VALUES(?,?,?)',rid,ssid,now);});
+  s.transaction(()=>{s.run('UPDATE jury_rooms SET closed=1 WHERE closed=0');const rid=id(),now=Date.now();s.run('INSERT INTO jury_rooms VALUES(?,?,?,?,?,0)',rid,code(),uid,now,now+ROOM_MS);if(ssid)s.run('INSERT INTO jury_networks VALUES(?,?,?)',rid,ssid,now);forget(s);});
   return status(s,uid,origin);}
  const room=openRoom(s);insist(room,'Ouvrez d’abord la salle du jury.',409);
- if(d.type==='close'){s.run('UPDATE jury_rooms SET closed=1 WHERE id=?',room.id);return status(s,uid,origin);}
+ if(d.type==='close'){s.transaction(()=>{s.run('UPDATE jury_rooms SET closed=1 WHERE id=?',room.id);forget(s);});return status(s,uid,origin);}
  const network=networkOf(s,room.id),where=network?'sur le réseau '+network:'à Niangon';
  const current=()=>{const sid=sceneId(s,room,network);return sid?noc.overview(s,uid).incidents.find(i=>i.id===sid):null;};
  // inTx : l'action fait partie d'une suite « tout ou rien » (validation, affectation, départ).
@@ -356,4 +369,39 @@ async function resetRoom(s,uid,options){
  return {seeded:result.seeded,user:admin};
 }
 
-module.exports={report,migrate,join,me,seen,hidden,status,step,reset,certificate,SEGMENT,ZONE,DEFAULT_SSID};
+// ——— WhatsApp du jury ———
+// L'offre gratuite de Green API n'écrit qu'à 3 discussions : les numéros déjà réglés dans l'hébergeur (WHATSAPP_CLIENTS,
+// WHATSAPP_NUMEROS) en prennent une chacun, le jury a le reste. WHATSAPP_JURY_MAX change ce nombre (offre payante).
+function whatsappPlaces(s,max){const room=openRoom(s);if(!room||!(max>0))return 0;return Math.max(0,max-s.get('SELECT count(*) AS n FROM jury_members WHERE room=? AND whatsapp IS NOT NULL',room.id).n);}
+// Numéros des salles fermées ou expirées : effacés, avec ce que le robot WhatsApp gardait sur eux (menus, messages reçus, envois).
+// Un numéro encore inscrit dans la salle ouverte garde son historique d'envois : sinon le dernier message repartirait.
+function forget(s){
+ const now=Date.now(),gone=s.all('SELECT DISTINCT m.whatsapp AS phone FROM jury_members m JOIN jury_rooms r ON r.id=m.room WHERE m.whatsapp IS NOT NULL AND (r.closed=1 OR r.expires<=?)',now).map(r=>r.phone);
+ if(!gone.length)return 0;
+ s.run('UPDATE jury_members SET whatsapp=NULL WHERE whatsapp IS NOT NULL AND room IN (SELECT id FROM jury_rooms WHERE closed=1 OR expires<=?)',now);
+ const kept=new Set(s.all('SELECT whatsapp AS phone FROM jury_members WHERE whatsapp IS NOT NULL').map(r=>r.phone));
+ wipe(s,gone.filter(p=>!kept.has(p)));return gone.length;
+}
+function wipe(s,list){
+ if(!list.length)return;const q=list.map(()=>'?').join(',');
+ for(const sql of ['DELETE FROM wa_menu WHERE phone IN ('+q+')','DELETE FROM wa_inbox WHERE phone IN ('+q+')',"DELETE FROM noc_whatsapp WHERE role='client' AND phone IN ("+q+')'])
+  try{s.run(sql,...list);}catch(_){/* robot WhatsApp pas installé sur cette base */}
+}
+// « Stop » envoyé sur WhatsApp : le numéro est retiré tout de suite (la personne reste inscrite, l'alerte arrive sur la page).
+function stopWhatsapp(s,phone){const n=s.run('UPDATE jury_members SET whatsapp=NULL WHERE whatsapp=?',phone).changes;if(n)wipe(s,[phone]);return n>0;}
+// Le membre du jury qui écrit depuis ce numéro (salle ouverte seulement).
+function byWhatsapp(s,phone){forget(s);return s.get('SELECT u.id,u.name FROM jury_members m JOIN users u ON u.id=m.user_id JOIN jury_rooms r ON r.id=m.room WHERE m.whatsapp=? AND r.closed=0 AND r.expires>? ORDER BY m.joined DESC LIMIT 1',phone,Date.now())||null;}
+const whatsappOf=(s,uid)=>{const r=s.get('SELECT whatsapp AS phone,first FROM jury_members WHERE user_id=?',uid);return r?.phone?r:null;};
+// Le numéro tel que WhatsApp le connaît (ancien format ivoirien à 8 chiffres), trouvé après l'inscription.
+const setWhatsapp=(s,uid,phone)=>s.run('UPDATE jury_members SET whatsapp=? WHERE user_id=? AND whatsapp IS NOT NULL',phone,uid).changes>0;
+// À qui écrire sur WhatsApp, et à partir de quand : la panne de la salle ouverte, avec la même règle que l'application.
+// Réseau de démo : rien avant la validation d'un responsable, et rien après un refus du plan (fausse alerte).
+function whatsappAudience(s){
+ forget(s);const room=openRoom(s);if(!room)return null;
+ const phones=s.all('SELECT whatsapp AS phone FROM jury_members WHERE room=? AND whatsapp IS NOT NULL ORDER BY number',room.id).map(r=>r.phone);if(!phones.length)return null;
+ const network=networkOf(s,room.id),sid=sceneId(s,room,network);if(!sid)return null;
+ const status=s.get('SELECT status FROM noc_incidents WHERE id=?',sid).status,approved=s.get("SELECT min(at) AS at FROM noc_events WHERE incident_id=? AND kind='plan.approved'",sid).at;
+ return {incident:sid,segment:SEGMENT,phones,from:!network?0:approved&&status!=='rejected'?approved:null};
+}
+
+module.exports={report,migrate,join,me,seen,hidden,status,step,reset,certificate,whatsappPlaces,whatsappAudience,byWhatsapp,stopWhatsapp,whatsappOf,setWhatsapp,cleanWhatsapp,SEGMENT,ZONE,DEFAULT_SSID};
