@@ -46,7 +46,7 @@ function agents(s,{settings,ports,incidents,pending,technicians,calls,whatsapp,f
   {key:'appels',name:'Serveur vocal 111',icon:'phone',tone:'ok',
    text:calls.reassured?calls.reassured+(calls.reassured>1?' clients rassurés':' client rassuré')+' par le message de panne en 24 h.':'Prêt à annoncer les pannes et l’heure de retour.'},
   {key:'whatsapp',name:'Messages WhatsApp',icon:'chat',tone:errors||whatsapp?.full?'warn':whatsapp?.on?'ok':'info',
-   text:whatsapp?.full?'Offre gratuite de Green API pleine ce mois-ci : WhatsApp n’écrit plus à un nouveau numéro avant le 1er.':errors?errors+(errors>1?' messages refusés':' message refusé')+' dans l’heure.':whatsapp?.on?'Branché sur '+whatsapp.phones+(whatsapp.phones>1?' téléphones':' téléphone')+'.':'Les messages s’affichent dans le téléphone de l’application.'},
+   text:whatsapp?.full?'En pause ce mois-ci pour les nouveaux numéros : les alertes restent dans l’application.':errors?errors+(errors>1?' messages refusés':' message refusé')+' dans l’heure.':whatsapp?.on?'Branché sur '+whatsapp.phones+(whatsapp.phones>1?' téléphones':' téléphone')+'.':'Les messages s’affichent dans le téléphone de l’application.'},
   {key:'prevision',name:'Prévisions',icon:'trend',tone:forecasts.length?'warn':'ok',
    text:forecasts.length?forecasts.length+(forecasts.length>1?' lignes perdent':' ligne perd')+' de la lumière : coupure à prévenir.':'Aucune ligne qui faiblit.'},
   {key:'clients',name:'Guardian des clients',icon:'spark',tone:'ok',text:'Répond aux clients en français, en nouchi et en dioula.'}

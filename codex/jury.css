@@ -198,8 +198,8 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-call{gap:10px}
 .jy-call p{margin:0;font-size:14px;color:var(--moov-neutral-700)}
 .jy-call .ap-call-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
-.jy-wa-off{margin:0;padding:10px 14px;border-radius:12px;background:var(--moov-warning-100);color:var(--moov-warning-700);font-size:13px;line-height:1.45}
-.jy-wa-off b{display:block}
+.jy-room>.jy-wa-off{margin:0;padding:10px 14px;border-radius:12px;background:var(--moov-warning-100);color:var(--moov-warning-700);font-size:13px;line-height:1.45}
+.jy-room>.jy-wa-off b{display:block;color:inherit}
 .jy-net-chip{margin:0;justify-self:center;padding:6px 14px;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary);font-size:13px}
 .jy-members{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .jy-member{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--moov-neutral-50);border:1px solid var(--moov-line);font-size:14px;min-width:0;transition:background .3s ease,border-color .3s ease}

@@ -454,7 +454,7 @@ test('Offre gratuite de Green API pleine (466) : l’alerte échoue avec une exp
     await new Promise(res => setTimeout(res, 200)); assert.equal(t.sent.length, before, 'aucun message de bienvenue');
     // Superviseur : la carte « Messages WhatsApp » dit pourquoi.
     const card = require('./superviseur.cjs').bilan(t.s, t.chef.id, {whatsapp: W.status(t.s, cfg)}).agents.find(a => a.key === 'whatsapp');
-    assert.equal(card.tone, 'warn'); assert.match(card.text, /^Offre gratuite de Green API pleine ce mois-ci/);
+    assert.equal(card.tone, 'warn'); assert.match(card.text, /^En pause ce mois-ci pour les nouveaux numéros/);
     // Le 1er du mois suivant, ou avec une autre instance Green API, WhatsApp revient.
     const next = new Date(); next.setUTCMonth(next.getUTCMonth() + 1, 1);
     assert.ok(!W.full(t.s, cfg, next.getTime()), 'le mois suivant, les places reviennent');
@@ -485,4 +485,16 @@ test('Réponse de Guardian refusée par Green API (466) : l’offre est marquée
     for (let k = 0; k < 100 && !W.full(t.s, cfg); k++) await new Promise(res => setTimeout(res, 30));
     assert.ok(W.full(t.s, cfg));
   } finally { t.close(); }
+});
+
+test('« Remettre la démo à zéro » garde la pause WhatsApp : Green API reste plein jusqu’au 1er du mois', async () => {
+  const {Store} = require('./pilot-store.cjs'), demo = require('./seed-demo.cjs'), store = new Store(':memory:');
+  const server = createGuardianServer({store, env: BASE, onError: () => {}}), cfg = W.config(BASE);
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  try {
+    await demo.seedDemo(store);
+    W.markFull(store, cfg); assert.ok(W.full(store, cfg));
+    assert.equal((await demo.resetDemo(store)).seeded, true);
+    assert.ok(W.full(store, cfg), 'la remise à zéro ne libère aucune place chez Green API : la Régie reste « en pause »');
+  } finally { server.close(); }
 });

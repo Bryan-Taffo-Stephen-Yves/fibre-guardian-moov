@@ -10,9 +10,9 @@
 // sinon dans WHATSAPP_NUMEROS (« Yopougon=2250701020304 ») : c'est alors le premier client inscrit dans ce quartier.
 // Un membre du jury qui a donné son numéro en s'inscrivant le confirme en répondant « OUI » ; il parle ensuite avec le compte
 // de son inscription (salle ouverte seulement). « Stop » retire son numéro tout de suite.
-// Un numéro inconnu ne reçoit aucune réponse : aucun compte n'est lu ni créé. Le numéro de Guardian peut être une puce
-// personnelle : ses contacts ne reçoivent jamais de message du robot, et les 3 discussions gratuites du mois de Green API
-// restent aux numéros de la démonstration (une réponse à un inconnu en prenait une).
+// Un numéro inconnu ne reçoit aucune réponse : aucun compte n'est lu ni créé. Une personne qui écrit par erreur au numéro
+// de Guardian ne reçoit jamais de message du robot, et les 3 discussions gratuites du mois de Green API restent aux numéros
+// de la démonstration (une réponse à un inconnu en prenait une).
 const crypto = require('node:crypto'), W = require('./whatsapp.cjs'), journey = require('./journey-store.cjs'), VT = require('./vrai-test.cjs'), N = require('./noc-store.cjs'), O = require('./operator-store.cjs');
 
 const FRESH = 10 * 60000; // Green API renvoie un message tant que le site dort : au-delà de 10 minutes, on ne répond plus.
