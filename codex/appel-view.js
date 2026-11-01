@@ -12,14 +12,14 @@
  // « Internet revient vers 19 h 45 ». En retard : la nouvelle heure, dite franchement.
  function Restore({restore,compact=false}){
   if(!restore||restore.power)return null;
-  if(restore.pending)return h('p',{className:'ap-restore is-pending'+(compact?' is-compact':'')},h('span',{className:'ap-restore-dot','aria-hidden':true}),'L’heure de retour arrive dès que l’équipe a validé l’intervention.');
+  if(restore.pending)return h('p',{className:'ap-restore is-pending'+(compact?' is-compact':'')},h('span',{className:'ap-restore-dot','aria-hidden':true}),h('span',null,'L’heure de retour arrive dès que l’équipe a validé l’intervention.'));
   return h('p',{className:'ap-restore'+(restore.late?' is-late':'')+(compact?' is-compact':''),role:'status'},
    h('span',{className:'ap-restore-dot','aria-hidden':true}),
    h('span',null,'Internet revient vers ',h('b',null,restore.label)),
    restore.late&&h('small',null,'Nouvelle heure'));
  }
 
- function CallSheet({api,onClose,onGuardian,onSupport}){
+ function CallSheet({api,onClose,onGuardian,onSupport,calledNote}){
   const [data,D]=S(null),[shown,SH]=S(0),[error,X]=S(''),[done,DONE]=S(null),[busy,BZ]=S(false),[seconds,SEC]=S(0),[voice,VOICE]=S(true),[ringing,RG]=S(true);
   const box=R(null),list=R(null),spoken=R(0),ring=R(null),hasVoice=typeof window!=='undefined'&&'speechSynthesis' in window,sound=window.FGSonnerie;
   E(()=>{let live=true;api('/noc/call','POST',{type:'start'}).then(r=>{if(live)D(r);}).catch(e=>{if(live)X(e.message||'L’appel n’a pas abouti. Réessayez.');});
@@ -30,7 +30,8 @@
    return()=>{live=false;clearTimeout(pick);ring.current?.();document.removeEventListener('keydown',key);if(hasVoice)speechSynthesis.cancel();sound?.mute(false);prev?.focus?.();};},[]);
   E(()=>{if(ringing)return;const t=setInterval(()=>SEC(v=>v+1),1000);return()=>clearInterval(t);},[ringing]);
   // Les phrases arrivent une à une, comme au téléphone ; la voix les lit si le téléphone sait le faire.
-  E(()=>{if(ringing||!data||shown>=data.lines.length)return;const t=setTimeout(()=>SH(v=>v+1),shown?1300:500);return()=>clearTimeout(t);},[data,shown]);
+  // « ringing » dans les dépendances : sans lui, les phrases ne partaient jamais après la sonnerie (réponse reçue pendant qu’elle sonnait).
+  E(()=>{if(ringing||!data||shown>=data.lines.length)return;const t=setTimeout(()=>SH(v=>v+1),shown?1300:500);return()=>clearTimeout(t);},[data,shown,ringing]);
   E(()=>{if(!voice||!hasVoice||!data)return;while(spoken.current<shown){const u=new SpeechSynthesisUtterance(data.lines[spoken.current++]);u.lang='fr-FR';u.rate=1.02;speechSynthesis.speak(u);}},[shown,voice,data]);
   E(()=>{sound?.mute(!voice);if(!voice&&hasVoice)speechSynthesis.cancel();},[voice]);
   E(()=>{const el=list.current;if(el)el.scrollTop=el.scrollHeight;},[shown]);
@@ -51,10 +52,10 @@
      data&&!ready&&!ringing&&h('li',{className:'ap-typing','aria-hidden':true},h('i'),h('i'),h('i'))),
     done&&h('div',{className:'ap-done',role:'status'},
      done==='reassured'?[h('strong',{key:'a'},'Merci, à tout à l’heure.'),h('p',{key:'b'},'Guardian vous prévient à chaque étape, jusqu’au retour d’internet.')]
-     :[h('strong',{key:'a'},'Votre demande est transmise.'),h('p',{key:'b'},'Un conseiller Moov vous répond ici, dans vos notifications.')]),
+     :[h('strong',{key:'a'},'Votre demande est transmise.'),h('p',{key:'b'},calledNote||'Un conseiller Moov vous répond ici, dans vos notifications.')]),
     error&&h('p',{className:'ap-error',role:'alert'},error),
     h('div',{className:'ap-actions'},
-     done?h('button',{type:'button',className:'ap-primary',onClick:()=>{close();if(done==='called')onSupport?.();}},done==='called'?'Voir mes notifications':'Fermer')
+     done?h('button',{type:'button',className:'ap-primary',onClick:()=>{close();if(done==='called')onSupport?.();}},done==='called'&&onSupport?'Voir mes notifications':'Fermer')
      :ready?[
       data.known?h('button',{key:'ok',type:'button',className:'ap-primary',disabled:busy,onClick:()=>finish('reassured')},'C’est bon, je raccroche')
        :h('button',{key:'ok',type:'button',className:'ap-primary',disabled:busy,onClick:()=>finish('guardian')},'Vérifier ma box avec Guardian'),
@@ -63,11 +64,11 @@
      !done&&hasVoice&&h('button',{type:'button',className:'ap-voice','aria-pressed':voice,onClick:()=>VOICE(v=>!v)},voice?'Couper le son':'Écouter')))),document.body);
  }
 
- function CallButton({api,onGuardian,onSupport,className='j-button',label='Appeler Moov'}){
+ function CallButton({api,onGuardian,onSupport,calledNote,className='j-button',label='Appeler Moov'}){
   const [open,O]=S(false);
   return h(React.Fragment,null,
    h('button',{type:'button',className:className+' ap-call-button',onClick:()=>{window.FGSonnerie?.unlock();O(true);}},icon(PHONE,17),h('span',null,label)),
-   open&&h(CallSheet,{api,onClose:()=>O(false),onGuardian,onSupport}));
+   open&&h(CallSheet,{api,onClose:()=>O(false),onGuardian,onSupport,calledNote}));
  }
 
  // Tableau de bord Moov : ce qui compte pour le service client.
