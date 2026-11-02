@@ -63,8 +63,12 @@ function tick(s,now=Date.now()){
 }
 
 // Ce que dit le serveur vocal quand le client appelle Moov depuis l'application.
-const CAUSE={FIBER_CUT_DISTRIBUTION:'un câble de fibre est coupé',ROADWORK_CUT:'un chantier a arraché un câble',CABINET_FLOOD:'une armoire de rue a pris l’eau',CABLE_THEFT:'un câble a été volé',OLT_FAILURE:'un équipement central est en panne',UPLINK_CONGESTION:'le réseau est très chargé',POWER_OUTAGE:'le courant est coupé (CIE)',DROP_CABLE:'un câble est tombé dans la rue',POLE_DAMAGE:'un poteau est endommagé',CABINET_OPEN:'un boîtier de rue est abîmé'};
+const CAUSE={FIBER_CUT_DISTRIBUTION:'un câble de fibre est coupé',ROADWORK_CUT:'un chantier a arraché un câble',CABINET_FLOOD:'une armoire de rue a pris l’eau',CABLE_THEFT:'un câble a été endommagé',OLT_FAILURE:'un équipement central est en panne',UPLINK_CONGESTION:'le réseau est très chargé',POWER_OUTAGE:'le courant est coupé (CIE)',DROP_CABLE:'un câble est tombé dans la rue',POLE_DAMAGE:'un poteau est endommagé',CABINET_OPEN:'un boîtier de rue est abîmé'};
 const STAGE={proposed:'Une équipe Moov prépare l’intervention.',approved:'L’intervention est validée.',dispatched:'Un technicien est affecté.',en_route:'Le technicien est en route.',on_site:'Le technicien est sur place.',verifying:'La réparation est faite, nous vérifions.'};
+// Réseau saturé : rien n'est coupé, internet est lent. Le serveur vocal et Guardian ne disent jamais « coupé » dans ce cas.
+const SLOW=cause=>cause==='UPLINK_CONGESTION';
+const known=(cause,zone)=>'Nous savons déjà qu’internet est '+(SLOW(cause)?'lent ':'coupé ')+where(zone)+' : '+(CAUSE[cause]||'une panne touche le quartier')+'.';
+const back=(cause,label)=>(SLOW(cause)?'Le débit devrait redevenir normal vers ':'Internet devrait revenir vers ')+label+'.';
 // « Grand-Bassam · Quartier France » se dit « dans votre quartier (Quartier France, Grand-Bassam) ».
 function where(zone){const [commune,area]=String(zone||'').split(' · ');if(!commune)return 'dans votre quartier';if(area==='toute la commune')return 'dans toute la commune de '+commune;return 'dans votre quartier ('+(area?area+', ':'')+commune+')';}
 function call(s,uid,d){
@@ -75,8 +79,8 @@ function call(s,uid,d){
  const list=N().client(s,uid).incidents.filter(x=>x.mode==='demo'&&!x.terminal&&!require('./jury-store.cjs').hidden(s,uid,x)),item=list[0]||null;
  if(d.type==='start'){
   if(!item)return {known:false,lines:['Bonjour'+(first?' '+first:'')+', ici Moov.','Aucune panne n’est signalée dans votre quartier en ce moment.','Guardian peut vérifier votre box tout de suite, sans attendre.'],choices:['guardian','called']};
-  const r=item.restore,cause=CAUSE[item.cause]||'une panne touche le quartier';
-  return {known:true,incident:item.id,zone:item.zone,restore:r||null,lines:['Bonjour'+(first?' '+first:'')+', ici Moov.','Nous savons déjà qu’internet est coupé '+where(item.zone)+' : '+cause+'.',STAGE[item.status]||'Une équipe Moov s’en occupe.',r?.power?'Votre box repartira toute seule au retour du courant.':r?.label?'Internet devrait revenir vers '+r.label+'.':'Vous aurez l’heure de retour dès que le plan est validé. Nous vous prévenons à chaque étape.','Vous n’avez rien à faire. Vous n’avez pas à vous inquiéter.'],choices:['reassured','called']};
+  const r=item.restore;
+  return {known:true,incident:item.id,zone:item.zone,restore:r||null,lines:['Bonjour'+(first?' '+first:'')+', ici Moov.',known(item.cause,item.zone),STAGE[item.status]||'Une équipe Moov s’en occupe.',r?.power?'Votre box repartira toute seule au retour du courant.':r?.label?back(item.cause,r.label):'Vous aurez l’heure de retour dès que le plan est validé. Nous vous prévenons à chaque étape.','Vous n’avez rien à faire. Vous n’avez pas à vous inquiéter.'],choices:['reassured','called']};
  }
  insist(['reassured','called','guardian'].includes(d.outcome),'Choix inconnu.');
  const id=item&&d.incident===item.id?item.id:null,key=id||'none:'+new Date().toISOString().slice(0,10);
@@ -102,4 +106,4 @@ function stats(s,now=Date.now()){
  return {since,incidents:rows.length,informed:sum('informed'),opened:sum('opened'),reassured:sum('reassured'),called:sum('called'),avoided:sum('avoided'),rows:rows.slice(0,5)};
 }
 
-module.exports={migrate,estimate,promise,decorate,tick,call,stats,clock,STEP,CAUSE,STAGE,where};
+module.exports={migrate,estimate,promise,decorate,tick,call,stats,clock,STEP,CAUSE,STAGE,where,known,back};

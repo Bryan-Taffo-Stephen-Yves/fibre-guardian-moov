@@ -4,7 +4,8 @@
    - Régie (?section=regie) : un téléphone de l'administrateur déclenche chaque scène et remet tout à zéro.
      Le serveur revérifie le rôle à chaque appel ; l'écran ne fait que proposer les boutons.
    - Réseau de démo : la salle porte le nom du partage de connexion de l'équipe, qui joue la box du quartier.
-     La panne (fibre ou courant) est jouée sur la copie de ce Wi-Fi ; les inscrits sont prévenus quand un responsable valide. */
+     La panne (fibre coupée, vol de câble, chantier, courant coupé ou réseau saturé) est jouée sur la copie de ce Wi-Fi ;
+     les inscrits sont prévenus quand un responsable valide. */
 (function(){
  'use strict';
  const h=React.createElement,{useState:S,useEffect:E,useRef:R}=React;
@@ -56,39 +57,75 @@
  const RANK={reported:0,proposed:0,rejected:0,approved:1,dispatched:2,en_route:3,on_site:4,verifying:4,resolved:5,closed:5};
  // Coupure de courant : personne à envoyer, les box repartent toutes seules au retour du courant.
  const POWER_STAGES=[['detected','Coupure de courant détectée'],['plan.approved','Confirmée par Moov'],['resolved','Courant et connexion revenus']];
- const POWER_RANK={reported:0,proposed:0,rejected:0,approved:1,verifying:1,resolved:2,closed:2};
+ // Réseau saturé : rien n'est coupé, les box restent en ligne ; Moov ajoute de la capacité à distance.
+ const SLOW_STAGES=[['detected','Ralentissement détecté'],['plan.approved','Moov ajoute de la capacité'],['resolved','Débit revenu à la normale']];
+ const REMOTE_RANK={reported:0,proposed:0,rejected:0,approved:1,verifying:1,resolved:2,closed:2};
  const isPower=scene=>scene?.cause==='POWER_OUTAGE';
+ const isSlow=scene=>scene?.cause==='UPLINK_CONGESTION';
+ const stagesOf=scene=>isPower(scene)?POWER_STAGES:isSlow(scene)?SLOW_STAGES:STAGES;
+ // Pannes de câble (un technicien se déplace) : les mots de l'abonné, comme dans les messages clients de Guardian (sim-flow.js).
+ const CABLE={
+  FIBER_CUT_DISTRIBUTION:{alert:'Coupure dans votre quartier',why:'Ce n’est pas votre box : le câble fibre de votre quartier est touché.',fix:'Il répare le câble'},
+  CABLE_THEFT:{alert:'Câble endommagé',why:'Ce n’est pas votre box : un câble a été endommagé dans votre quartier.',fix:'Il remplace le câble et sécurise le boîtier'},
+  ROADWORK_CUT:{alert:'Câble arraché par un chantier',why:'Ce n’est pas votre box : des travaux de route ont arraché un câble dans votre quartier.',fix:'Il remplace le câble arraché'}};
+ const cableOf=scene=>CABLE[scene?.cause]||CABLE.FIBER_CUT_DISTRIBUTION;
  function guardianSays(scene,segment){
   const tech=firstName(scene.technician?.name||scene.position?.technician),down=Math.max(0,(segment?.total||0)-(segment?.online||0));
   // Dossier clôturé sans réparation : tout est revenu à la normale (avant le départ, ou la mission s'est arrêtée).
-  if(scene.status==='closed')return scene.technician?'Tout est revenu à la normale : la mission de '+tech+' s’arrête. Votre connexion fonctionne, vous n’avez rien à faire.':'Tout est revenu à la normale avant même le départ d’un technicien. Votre connexion fonctionne, vous n’avez rien à faire.';
+  if(scene.status==='closed')return scene.technician?'Tout est revenu à la normale : la mission de '+tech+' s’arrête. Votre connexion fonctionne, vous n’avez rien à faire.':isPower(scene)||isSlow(scene)?'Tout est revenu à la normale. Votre connexion fonctionne, vous n’avez rien à faire.':'Tout est revenu à la normale avant même le départ d’un technicien. Votre connexion fonctionne, vous n’avez rien à faire.';
   if(isPower(scene)&&scene.status!=='resolved')return 'Le courant est coupé dans votre quartier : ce n’est pas votre box. Elle repartira toute seule au retour du courant. Vous n’avez rien à faire : je vous préviens dès que tout est revenu.';
-  const cause=scene.cause==='UPLINK_CONGESTION'?'Le réseau de votre quartier est très chargé : ce n’est pas votre box.':'Ce n’est pas votre box : le câble fibre de votre quartier est touché.';
+  // Réseau saturé : internet est lent, jamais « coupé ».
+  if(isSlow(scene))return scene.status==='resolved'?'Le débit est revenu à la normale : Moov a ajouté de la capacité, et je l’ai vérifié. Merci pour votre patience !':'Internet est plus lent dans votre quartier en ce moment : beaucoup de monde l’utilise en même temps. Ce n’est pas votre box : elle reste connectée. Moov ajoute de la capacité. Inutile de la redémarrer : je vous préviens dès que le débit revient.';
+  const k=cableOf(scene);
   return ({
    dispatched:tech+' est affecté à votre quartier. Il prépare son matériel et part tout de suite.',
    en_route:tech+' est en route. Suivez son arrivée sur la carte, minute par minute.',
-   on_site:tech+' est arrivé. Il répare le câble ; je surveille le retour du signal.',
+   on_site:tech+' est arrivé. '+k.fix+' ; je surveille le retour du signal.',
    verifying:'La réparation est faite. Je vérifie que la connexion revient chez tout le monde.',
    resolved:'Votre connexion est rétablie et vérifiée. Merci pour votre patience !'
-  })[scene.status]||cause+(down?' '+down+' foyers sont concernés.':'')+' Moov est déjà prévenu et prépare l’intervention. Vous n’avez pas à vous inquiéter : je vous préviens à chaque étape.';
+  })[scene.status]||k.why+(down?' '+down+' foyers sont concernés.':'')+' Moov est déjà prévenu et prépare l’intervention. Vous n’avez pas à vous inquiéter : je vous préviens à chaque étape.';
  }
- const TOASTS={dispatched:t=>t+' est affecté à votre quartier',en_route:t=>t+' est en route vers vous',on_site:t=>t+' est arrivé dans votre quartier',verifying:()=>'Réparation terminée, vérification en cours',resolved:()=>'Connexion rétablie et vérifiée'};
+ // Ce que montre la page de l'abonné : ton de l'écran, pastille, titre, titre de l'alerte, heure de retour et compteur du quartier.
+ // Réseau saturé : rien n'est coupé, l'écran passe à l'orange (lent) au lieu du rouge (coupé), et jamais « privé de fibre ».
+ function lookOf(scene,net){
+  const active=!!scene&&!scene.terminal,power=isPower(scene),slow=isSlow(scene),cable=scene?.cause!=='FIBER_CUT_DISTRIBUTION'&&CABLE[scene?.cause];
+  return {tone:active?(slow?'slow':'down'):'ok',
+   pill:active?(slow?'Internet ralenti':'Coupure en cours'):scene?.status==='resolved'?(slow?'Débit rétabli':'Connexion rétablie'):'Tout va bien',
+   title:active?(power?'Votre quartier est privé de courant':slow?'Internet est lent dans votre quartier':'Votre quartier est privé de fibre'):'Votre fibre fonctionne',
+   alert:power?'Coupure de courant':slow?'Internet ralenti':cable?cable.alert:net?'Coupure sur votre réseau':'Coupure dans votre quartier',
+   eta:slow?'Débit normal vers ':'Internet revient vers ',
+   meter:active&&slow?' connectés, mais ralentis':' connectés dans le quartier'};
+ }
+ // Heure de retour. Réseau saturé : c'est le débit qui redevient normal, internet n'a jamais été coupé.
+ function Back({scene}){
+  const r=scene.restore;
+  if(!isSlow(scene)||!r?.label)return window.FGAppel?h(window.FGAppel.Restore,{restore:r}):null;
+  return h('p',{className:'ap-restore'+(r.late?' is-late':''),role:'status'},h('span',{className:'ap-restore-dot','aria-hidden':true}),h('span',null,'Débit normal vers ',h('b',null,r.label)),r.late&&h('small',null,'Nouvelle heure'));
+ }
+ // Réseau saturé : rien n'était coupé, le signal de fin parle du débit, jamais d'une « connexion rétablie ».
+ const TOASTS={dispatched:t=>t+' est affecté à votre quartier',en_route:t=>t+' est en route vers vous',on_site:t=>t+' est arrivé dans votre quartier',verifying:(t,s)=>isSlow(s)?'Capacité ajoutée, vérification du débit en cours':'Réparation terminée, vérification en cours',resolved:(t,s)=>isSlow(s)?'Débit revenu à la normale et vérifié':'Connexion rétablie et vérifiée'};
+ const toastOf=scene=>TOASTS[scene?.status]?TOASTS[scene.status](firstName(scene.technician?.name||scene.position?.technician),scene):'';
 
+ // Le certificat, en mots. Coupure de courant : rien n'a été réparé et personne n'est venu, le courant est revenu.
+ // Réseau saturé : rien n'était coupé, le débit est revenu à la normale (pas de technicien non plus).
+ function certOf(c){
+  const power=c.cause==='POWER_OUTAGE',slow=c.cause==='UPLINK_CONGESTION',remote=power||slow;
+  return {kind:remote?'Certificat de retour du service':'Certificat de réparation',title:power?'Le courant et votre connexion sont revenus':slow?'Votre débit est revenu à la normale':'Votre fibre est réparée',
+   rows:[['Quartier',c.zone],[power?'Coupure de courant détectée':slow?'Ralentissement détecté':'Coupure détectée',hm(c.detectedAt)],!remote&&['Technicien sur place',c.arrivedAt?hm(c.arrivedAt)+(c.technician?' · '+c.technician:''):'—'],[slow?'Débit normal retrouvé':'Connexion rétablie',hm(c.restoredAt)],['Durée totale',c.durationMin+' min'],['Mesures du quartier',c.online!=null?c.online+' foyers sur '+c.total+' en ligne':'Vérifiées'],['Vérifié par',c.verifiedBy]].filter(Boolean)};
+ }
  function Certificate({c}){
-  // Coupure de courant : rien n'a été réparé et personne n'est venu, le courant est revenu.
-  const power=c.cause==='POWER_OUTAGE';
-  const rows=[['Quartier',c.zone],[power?'Coupure de courant détectée':'Coupure détectée',hm(c.detectedAt)],!power&&['Technicien sur place',c.arrivedAt?hm(c.arrivedAt)+(c.technician?' · '+c.technician:''):'—'],['Connexion rétablie',hm(c.restoredAt)],['Durée totale',c.durationMin+' min'],['Mesures du quartier',c.online!=null?c.online+' foyers sur '+c.total+' en ligne':'Vérifiées'],['Vérifié par',c.verifiedBy]].filter(Boolean);
-  return h('section',{className:'jy-cert','aria-label':'Certificat de réparation'},
-   h('div',{className:'jy-cert-head'},h('span',{className:'jy-seal','aria-hidden':true},h('svg',{viewBox:'0 0 48 48'},h('circle',{cx:24,cy:24,r:20}),h('path',{d:'m15 24 6 6 12-12'}))),h('div',null,h('small',null,power?'CERTIFICAT DE RETOUR DU SERVICE':'CERTIFICAT DE RÉPARATION'),h('strong',null,power?'Le courant et votre connexion sont revenus':'Votre fibre est réparée'),h('span',null,'Référence '+c.reference))),
+  const {kind,title,rows}=certOf(c);
+  return h('section',{className:'jy-cert','aria-label':kind},
+   h('div',{className:'jy-cert-head'},h('span',{className:'jy-seal','aria-hidden':true},h('svg',{viewBox:'0 0 48 48'},h('circle',{cx:24,cy:24,r:20}),h('path',{d:'m15 24 6 6 12-12'}))),h('div',null,h('small',null,kind.toUpperCase()),h('strong',null,title),h('span',null,'Référence '+c.reference))),
    h('dl',{className:'jy-cert-rows'},rows.map(([k,v])=>h('div',{key:k},h('dt',null,k),h('dd',null,v)))),
    h('p',{className:'jy-cert-sign'},'Signé par Guardian, le '+DAY.format(c.restoredAt||Date.now())+'.'));
  }
 
  function Stages({scene}){
   // Chaque étape garde l'heure où elle a eu lieu la première fois : une nouvelle analyse ne fait pas reculer la frise.
-  const power=isPower(scene),list=power?POWER_STAGES:STAGES,closed=scene.status==='closed',first=k=>(scene.events||[]).find(e=>e.kind===k)?.at||null;
+  const remote=isPower(scene)||isSlow(scene),list=stagesOf(scene),closed=scene.status==='closed',first=k=>(scene.events||[]).find(e=>e.kind===k)?.at||null;
   const when=k=>first(k)||(closed&&k==='resolved'?first('closed'):null);
-  const rank=Math.max((power?POWER_RANK:RANK)[scene.status]??0,first('plan.approved')?1:0);
+  const rank=Math.max((remote?REMOTE_RANK:RANK)[scene.status]??0,first('plan.approved')?1:0);
   return h('ol',{className:'jy-stages','aria-label':'Étapes de l’intervention'},list.map(([k,label],n)=>{
     // Dossier clôturé avant la fin : seules les étapes qui ont vraiment eu lieu sont cochées.
     const state=closed?(when(k)?'done':'skip'):n<rank||(n===rank&&scene.status==='resolved')?'done':n===rank?'now':'next';
@@ -115,7 +152,7 @@
    const s=m.scene,prev=last.current;last.current=s?{id:s.id,status:s.status}:null;
    if(!s)return;
    if(!s.terminal&&!acked(s.id)){if(alertingRef.current!==s.id){alertingRef.current=s.id;AL(s.id);signal.alarm();}return;}
-   if(prev&&prev.id===s.id&&prev.status!==s.status&&TOASTS[s.status]){signal.chime();clearTimeout(toastTimer.current);T(TOASTS[s.status](firstName(s.technician?.name||s.position?.technician)));toastTimer.current=setTimeout(()=>T(''),6000);}
+   if(prev&&prev.id===s.id&&prev.status!==s.status&&TOASTS[s.status]){signal.chime();clearTimeout(toastTimer.current);T(toastOf(s));toastTimer.current=setTimeout(()=>T(''),6000);}
   }
   E(()=>{let live=true;api('/session').then(r=>{if(!live)return;if(r.user)load();else P('join');}).catch(()=>{if(live){P('join');X('Service momentanément indisponible. Réessayez dans un instant.');}});return()=>{live=false;};},[]);
   E(()=>{if(phase!=='joined')return;const t=setInterval(load,2000);return()=>clearInterval(t);},[phase]);
@@ -123,7 +160,7 @@
   // « Suivre l'intervention » : la régie voit que cette personne a vu l'alerte (un nouvel essai au prochain affichage si le réseau coupe).
   function follow(){const id=alerting;try{sessionStorage.setItem(ackKey,id);}catch(_){}AL(null);api('/jury/seen','POST',{id}).catch(()=>{});requestAnimationFrame(()=>document.querySelector('.jy-follow')?.scrollIntoView({block:'start'}));}
   function enable(){signal.unlock();RD(true);signal.chime();}
-  const scene=me?.scene,active=scene&&!scene.terminal,seg=me?.segment,net=me?.network,power=isPower(scene);
+  const scene=me?.scene,active=scene&&!scene.terminal,seg=me?.segment,net=me?.network,slow=isSlow(scene),look=lookOf(scene,net);
   const where=net?'Réseau '+net+' · '+(me?.zone||''):me?.zone;
   const live=scene&&window.FGLiveTrip&&['dispatched','en_route','on_site'].includes(scene.status)&&scene.technician;
   const content=phase==='loading'?h('p',{className:'jy-loading',role:'status'},'Connexion à votre quartier…'):
@@ -146,15 +183,15 @@
      h('button',{type:'submit',className:'jy-primary',disabled:busy||!consent||!code},busy?'Un instant…':'Devenir abonné à Niangon'),
      h('small',{className:'jy-hint'},'Montez le son et gardez cette page ouverte.')):
    h('div',{className:'jy-layout'+(scene?' has-scene':'')},h('div',{className:'jy-col'},
-    h('section',{className:'jy-status jy-status--'+(active?'down':'ok'),'aria-live':'polite'},
-     h('span',{className:'jy-pill'},h('i',{'aria-hidden':true}),active?'Coupure en cours':scene?.status==='resolved'?'Connexion rétablie':'Tout va bien'),
-     h('h1',null,active?(power?'Votre quartier est privé de courant':'Votre quartier est privé de fibre'):'Votre fibre fonctionne'),
+    h('section',{className:'jy-status jy-status--'+look.tone,'aria-live':'polite'},
+     h('span',{className:'jy-pill'},h('i',{'aria-hidden':true}),look.pill),
+     h('h1',null,look.title),
      h('p',null,where+' · Abonné n° '+me.number),
-     seg&&h('div',{className:'jy-meter'},h('div',{className:'jy-meter-bar'},h('i',{style:{width:Math.round(seg.online/seg.total*100)+'%'}})),h('span',null,h('b',null,seg.online),' foyers sur '+seg.total+' connectés dans le quartier'))),
-     h(Bubble,{tone:active?'alert':['resolved','closed'].includes(scene?.status)?'ok':null},scene?guardianSays(scene,seg):net?'Je veille sur le réseau '+net+'. Dès qu’un responsable Moov confirme une panne, je vous préviens ici'+(me.whatsapp==='on'?' et sur WhatsApp.':'.'):'Je veille sur votre connexion. Si quelque chose arrive dans votre quartier, je vous préviens tout de suite'+(me.whatsapp==='on'?', ici et sur WhatsApp.':'.')),
+     seg&&h('div',{className:'jy-meter'},h('div',{className:'jy-meter-bar'},h('i',{style:{width:Math.round(seg.online/seg.total*100)+'%'}})),h('span',null,h('b',null,seg.online),' foyers sur '+seg.total+look.meter))),
+     h(Bubble,{tone:active?(slow?'warn':'alert'):['resolved','closed'].includes(scene?.status)?'ok':null},scene?guardianSays(scene,seg):net?'Je veille sur le réseau '+net+'. Dès qu’un responsable Moov confirme une panne, je vous préviens ici'+(me.whatsapp==='on'?' et sur WhatsApp.':'.'):'Je veille sur votre connexion. Si quelque chose arrive dans votre quartier, je vous préviens tout de suite'+(me.whatsapp==='on'?', ici et sur WhatsApp.':'.')),
      // Plan déjà validé puis remis à jour : l'heure revient avec la nouvelle validation (pas « dès que l'équipe a validé »).
      active&&scene.restore?.pending&&(scene.events||[]).some(e=>e.kind==='plan.approved')?h('p',{className:'ap-restore is-pending'},h('span',{className:'ap-restore-dot','aria-hidden':true}),h('span',null,'Moov met le plan à jour : la nouvelle heure de retour arrive dans un instant.')):
-     active&&window.FGAppel&&h(window.FGAppel.Restore,{restore:scene.restore}),
+     active&&h(Back,{scene}),
     !ready&&h('button',{type:'button',className:'jy-secondary',onClick:enable},'Activer le son et la vibration'),
     !scene&&h('ul',{className:'jy-tips'},h('li',null,'Gardez cette page ouverte pendant la démonstration.'),h('li',null,'Votre téléphone vibrera si votre quartier est touché.'),me.whatsapp==='on'&&h('li',null,'Guardian vous écrit aussi sur WhatsApp. Répondez « Stop » pour arrêter.'),me.whatsapp==='pending'&&h('li',{className:'jy-tip-wa'},'Répondez « OUI » au message de Guardian sur WhatsApp pour y recevoir l’alerte aussi.'))),
     scene&&h('div',{className:'jy-col'},scene.certificate&&h(Certificate,{c:scene.certificate}),
@@ -169,13 +206,13 @@
 h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.first?me.first.split(' ')[0]:'Jury n° '+me.number),onAbout:()=>AB(true)}),
    h('main',{id:'main',className:'jy-main',tabIndex:-1},content),
    toast&&h('div',{className:'jy-toast',role:'status'},h('i',{'aria-hidden':true}),toast),
-   alerting&&scene&&h('div',{className:'jy-alert',role:'alertdialog','aria-modal':true,'aria-labelledby':'jy-alert-title'},
+   alerting&&scene&&h('div',{className:'jy-alert'+(slow?' jy-alert--slow':''),role:'alertdialog','aria-modal':true,'aria-labelledby':'jy-alert-title'},
     h('div',{className:'jy-alert-pulse','aria-hidden':true},h('span'),h('span'),h('b',null,'!')),
     h('p',{className:'jy-kicker'},'ALERTE GUARDIAN · '+hm(scene.created||Date.now())),
-    h('h2',{id:'jy-alert-title'},power?'Coupure de courant':net?'Coupure sur votre réseau':'Coupure dans votre quartier'),
+    h('h2',{id:'jy-alert-title'},look.alert),
     net&&h('p',{className:'jy-alert-net'},net),
     h('p',null,guardianSays(scene,seg)),
-    scene.restore?.label&&h('p',{className:'jy-alert-eta'},'Internet revient vers ',h('b',null,scene.restore.label)),
+    scene.restore?.label&&h('p',{className:'jy-alert-eta'},look.eta,h('b',null,scene.restore.label)),
     h('button',{type:'button',className:'jy-primary jy-primary--light',onClick:follow,autoFocus:true},'Suivre l’intervention')),
    about&&window.FGDemo&&h(window.FGDemo.About,{user:null,onClose:()=>AB(false)}));
  }
@@ -196,17 +233,24 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
   if(!network)return STEPS;
   const cut=['cut','Simuler une panne sur '+network,'Guardian la repère en 5 secondes. Les inscrits ne voient encore rien.'];
   const validate=['validate','Valider et prévenir les inscrits','Un responsable confirme le diagnostic : tous les téléphones inscrits vibrent.'];
-  if(scene?.cause==='POWER_OUTAGE')return [cut,validate,['repair','Le courant revient','Les box repartent seules, Guardian vérifie, tout repasse au vert.']];
+  // Courant coupé ou réseau saturé : personne ne se déplace, la dernière étape dit ce qui revient.
+  if(scene?.dispatch===false)return [cut,validate,REMOTE_STEP[scene.cause]||STEPS[3]];
   return [cut,validate,['send','Envoyer le technicien','Koffi est affecté et part tout de suite.'],STEPS[2],STEPS[3]];
  }
+ const REMOTE_STEP={POWER_OUTAGE:['repair','Le courant revient','Les box repartent seules, Guardian vérifie, tout repasse au vert.'],UPLINK_CONGESTION:['repair','Le débit revient','Moov ajoute de la capacité, Guardian vérifie, tout repasse au vert.']};
  const STEP_DONE={cut:'Coupure envoyée : les téléphones du jury vibrent.',validate:'Panne validée : les téléphones inscrits vibrent.',send:'Koffi est en route. Le jury le voit arriver sur la carte.',arrive:'Koffi est sur place.',repair:'Connexion rétablie et vérifiée. Le jury reçoit son certificat.'};
+ const REPAIR_DONE={POWER_OUTAGE:'Le courant est revenu : tout repasse au vert.',UPLINK_CONGESTION:'Capacité ajoutée : le débit est revenu, tout repasse au vert.'};
+ // Réseau de démo : cinq pannes au choix, rangées selon qu'un technicien se déplace ou non. [panne, bouton]
+ const CHOICES=[['Avec technicien',[['fiber','Fibre coupée'],['theft','Vol de câble'],['works','Câble arraché par un chantier']]],
+  ['Sans technicien',[['power','Courant coupé'],['congestion','Réseau saturé']]]];
  const TONE={ok:'ok',box:'ok',lent:'warn',faible:'warn',instable:'warn','box-charge':'warn','box-clignote':'warn'};
  const mbps=v=>v==null?null:String(Math.round(v*10)/10).replace('.',',')+' Mb/s';
 
  // Ce que montre la copie pendant la panne, en une phrase faite de ses chiffres (pas le message prévu pour le client).
  function twinSays(t){
-  const box=t.devices.find(d=>d.kind==='box'),n=t.summary.devices,on=t.summary.online,cut=n-on;
-  return 'Sur la copie : '+(box?'box « '+box.stateLabel.toLowerCase()+' »':'box coupée')+', '+(cut?cut+' appareil'+(cut>1?'s':'')+' sur '+n+' sans Internet':'les appareils restent connectés')+'. Votre vrai partage de connexion marche toujours.';
+  const box=t.devices.find(d=>d.kind==='box'),n=t.summary.devices,on=t.summary.online,cut=n-on,slow=t.devices.filter(d=>d.kind!=='box'&&d.state==='lent').length;
+  // Réseau saturé : les appareils restent connectés, mais lents.
+  return 'Sur la copie : '+(box?'box « '+box.stateLabel.toLowerCase()+' »':'box coupée')+', '+(cut?cut+' appareil'+(cut>1?'s':'')+' sur '+n+' sans Internet':slow?slow+' appareil'+(slow>1?'s':'')+' connecté'+(slow>1?'s':'')+', mais lent'+(slow>1?'s':''):'les appareils restent connectés')+'. Votre vrai partage de connexion marche toujours.';
  }
  // Les inscrits, pour le grand écran : prénom (ou numéro), puis alerte reçue et alerte vue.
  function Members({members,big}){
@@ -229,12 +273,12 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
   const facts=copy?[copy.network,mbps(copy.downloadMbps),copy.latencyMs!=null?Math.round(copy.latencyMs)+' ms':null].filter(Boolean).join(' · '):'';
   return h('section',{className:'jy-card jy-net'},
    h('div',{className:'jy-row'},h('div',null,h('p',{className:'jy-kicker'},'VOTRE RÉSEAU DE DÉMO'),h('h2',null,net.ssid)),
-    h('span',{className:'jy-net-state'+(twin?' is-down':copy?' is-up':'')},twin?twin.label:copy?'En ligne':'Pas encore copié')),
+    h('span',{className:'jy-net-state'+(twin?(twin.fault==='congestion'?' is-slow':' is-down'):copy?' is-up':'')},twin?twin.label:copy?'En ligne':'Pas encore copié')),
    copy?h(React.Fragment,null,
     h('p',{className:'jy-net-facts'},'Copie faite à '+hm(copy.created)+(facts?' · '+facts:'')),
     h('ul',{className:'jy-devs','aria-label':'Appareils de la copie'},devices.map(d=>h('li',{key:d.id,className:'jy-dev is-'+(TONE[d.state]||'down')+(d.added?' is-added':'')},
      h('i',{'aria-hidden':true}),h('span',null,h('b',null,d.label),h('small',null,d.stateLabel+(d.played?' · votre partage de connexion':'')))))),
-    twin?h('p',{className:'jy-net-text',role:'status'},twinSays(twin)):h('small',{className:'jy-net-note'},'La panne est jouée sur cette copie : votre vrai partage de connexion n’est jamais coupé.'),
+    twin?h('p',{className:'jy-net-text'+(twin.fault==='congestion'?' is-slow':''),role:'status'},twinSays(twin)):h('small',{className:'jy-net-note'},'La panne est jouée sur cette copie : votre vrai partage de connexion n’est jamais coupé.'),
     !twin&&!link&&B(asking?'Un instant…':'Refaire la copie',ask,{className:'jy-ghost',disabled:asking||busy})):
     h('p',null,'Donnez ce nom à votre partage de connexion. Sur un téléphone ou un PC branché dessus, ouvrez le test de connexion : Guardian copie ce réseau en 20 secondes.'),
    link?h('div',{className:'jy-net-link'},h(QR,{text:link.url,label:'Code QR du test de connexion'}),
@@ -283,24 +327,28 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
       h('button',{type:'submit',className:'jy-primary',disabled:!!busy||!ssid.trim()},busy==='open'?'Ouverture…':'Ouvrir la salle du jury'))),
    data?.network&&h(Network,{net:data.network,api,busy:!!busy}),
    h('section',{className:'jy-card'},
-    h('div',{className:'jy-row'},h('div',null,h('p',{className:'jy-kicker'},'2 · LA SCÈNE'),h('h2',null,scene?(network&&NET_STATUS[scene.status])||STATUS[scene.status]||scene.status:'Le réseau va bien')),scene&&!['resolved','closed'].includes(scene.status)&&h('span',{className:'jy-timer'},since(scene.created,now))),
+    h('div',{className:'jy-row'},h('div',null,h('p',{className:'jy-kicker'},'2 · LA SCÈNE'),h('h2',null,scene?(scene.status==='resolved'&&scene.cause==='UPLINK_CONGESTION'?'Débit normal rétabli et vérifié':(network&&NET_STATUS[scene.status])||STATUS[scene.status]||scene.status):'Le réseau va bien')),scene&&!['resolved','closed'].includes(scene.status)&&h('span',{className:'jy-timer'},since(scene.created,now))),
     h('ol',{className:'jy-steps'},steps.map(([k,label,detail],n)=>{const isNext=room&&next===k,done=n<doneUpTo&&!isNext;if(k==='cut'&&isNext&&scene?.status==='resolved')label=network?'Rejouer : nouvelle panne sur '+network:'Rejouer : couper la fibre';if(k==='repair'&&scene?.hold){label='Contrôle ciblé et vérification';detail='Le technicien rétablit les derniers foyers, les mesures confirment le retour.';}
-     const message=k==='repair'&&scene?.cause==='POWER_OUTAGE'?'Le courant est revenu : tout repasse au vert.':STEP_DONE[k];
-     // Réseau de démo : deux pannes au choix, chacune jouée sur la copie du Wi-Fi.
+     const message=k==='repair'&&REPAIR_DONE[scene?.cause]||STEP_DONE[k];
+     // Réseau de démo : cinq pannes au choix, chacune jouée sur la copie du Wi-Fi.
      if(k==='cut'&&network&&isNext)return h('li',{key:k},h('div',{className:'jy-step is-next jy-step--choice'},
-      h('span',{className:'jy-step-n','aria-hidden':true},n+1),h('span',null,h('strong',null,label),h('small',null,detail),
-       h('span',{className:'jy-choice'},
-        B(busy==='cut:fiber'?'En cours…':'Fibre coupée',()=>run('cut','Fibre coupée sur '+network+'. Guardian a repéré la panne : validez pour prévenir les inscrits.',{fault:'fiber'}),{className:'jy-choice-btn',disabled:!!busy}),
-        B(busy==='cut:power'?'En cours…':'Courant coupé',()=>run('cut','Courant coupé sur '+network+'. Guardian a repéré la panne : validez pour prévenir les inscrits.',{fault:'power'}),{className:'jy-choice-btn',disabled:!!busy})))));
+      h('span',{className:'jy-step-n','aria-hidden':true},n+1),h('span',null,h('strong',null,label),h('small',null,detail)),
+      h('div',{className:'jy-choice'},CHOICES.map(([group,items])=>h('div',{key:group,className:'jy-choice-group',role:'group','aria-label':group},
+       h('p',{className:'jy-choice-cap','aria-hidden':true},group),
+       items.map(([fault,text])=>B(busy==='cut:'+fault?'En cours…':text,()=>run('cut',text+' sur '+network+'. Guardian a repéré la panne : validez pour prévenir les inscrits.',{fault}),{key:fault,className:'jy-choice-btn',disabled:!!busy})))))));
      return h('li',{key:k},h('button',{type:'button',className:'jy-step'+(isNext?' is-next':'')+(done?' is-done':''),disabled:!isNext||!!busy,onClick:()=>run(k,message)},
       h('span',{className:'jy-step-n','aria-hidden':true},done?'✓':n+1),h('span',null,h('strong',null,busy===k?'En cours…':label),h('small',null,detail))));})),
-    room&&next==='repair'&&!scene?.hold&&scene?.cause!=='POWER_OUTAGE'&&h('div',{className:'jy-variant'},h('p',null,h('b',null,'Variante pour le jury : '),'la réparation principale est faite, mais 4 foyers restent coupés. Guardian doit refuser de clôturer.'),B(busy==='partial'?'En cours…':'Réparation partielle',()=>run('partial','Réparation partielle : 4 foyers restent coupés. Guardian garde le dossier ouvert.'),{className:'jy-secondary',disabled:!!busy})),
+    room&&next==='repair'&&!scene?.hold&&scene?.dispatch!==false&&h('div',{className:'jy-variant'},h('p',null,h('b',null,'Variante pour le jury : '),'la réparation principale est faite, mais 4 foyers restent coupés. Guardian doit refuser de clôturer.'),B(busy==='partial'?'En cours…':'Réparation partielle',()=>run('partial','Réparation partielle : 4 foyers restent coupés. Guardian garde le dossier ouvert.'),{className:'jy-secondary',disabled:!!busy})),
     scene?.hold&&h('p',{className:'jy-hint',role:'status'},'Guardian refuse la clôture : '+scene.hold.remaining+' foyers encore coupés. Étape 4 : contrôle ciblé, puis vérification.'),
     !room&&h('p',{className:'jy-hint'},'Ouvrez d’abord la salle du jury.')),
    data?.report&&h('section',{className:'jy-card jy-report'},h('p',{className:'jy-kicker'},'RAPPORT DE PREUVES'),h('h2',null,data.report.verified?'Service rétabli et vérifié':'Scène en cours'),
     h('dl',null,data.report.rows.map(r=>h('div',{key:r.key},h('dt',null,r.label),h('dd',null,r.seconds==null?'—':dur(r.seconds)))),
-     h('div',null,h('dt',null,'Box coupées à la détection'),h('dd',null,data.report.offline==null?'—':data.report.offline+' sur '+data.report.total)),
-     h('div',null,h('dt',null,'Abonnés rétablis, mesurés'),h('dd',null,data.report.restored==null?'—':String(data.report.restored))),
+     // Réseau saturé : rien n'est coupé, on montre les box en ligne (mais lentes) à la détection, puis à la vérification.
+     data.report.slow?[
+      h('div',{key:'s1'},h('dt',null,'Box en ligne, mais ralenties'),h('dd',null,data.report.online==null?'—':data.report.online+' sur '+data.report.total)),
+      h('div',{key:'s2'},h('dt',null,'Box en ligne à la vérification'),h('dd',null,data.report.onlineAfter==null?'—':data.report.onlineAfter+' sur '+data.report.totalAfter))]:[
+      h('div',{key:'c1'},h('dt',null,'Box coupées à la détection'),h('dd',null,data.report.offline==null?'—':data.report.offline+' sur '+data.report.total)),
+      h('div',{key:'c2'},h('dt',null,'Abonnés rétablis, mesurés'),h('dd',null,data.report.restored==null?'—':String(data.report.restored)))],
      network&&alert?[
       h('div',{key:'a'},h('dt',null,'Validation → alerte sur les téléphones'),h('dd',null,alert.delivered+' sur '+alert.members+(alert.seconds!=null?' · '+dur(alert.seconds):''))),
       h('div',{key:'b'},h('dt',null,'Ont vu l’alerte'),h('dd',null,alert.seen+' sur '+alert.delivered)),
@@ -324,5 +372,6 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
  }
 
  function route(href=location.href){const q=new URL(href).searchParams;return q.has('jury')?'jury':q.get('section')==='regie'?'regie':null;}
- window.FGJury={Juror,Regie,route,code:()=>new URLSearchParams(location.search).get('jury')||''};
+ // lookOf, guardianSays, stagesOf, certOf, stepsFor et toastOf : les mots de chaque panne, vérifiés par les tests (reseau-demo.test.cjs).
+ window.FGJury={Juror,Regie,route,code:()=>new URLSearchParams(location.search).get('jury')||'',lookOf,guardianSays,stagesOf,certOf,stepsFor,toastOf};
 })();

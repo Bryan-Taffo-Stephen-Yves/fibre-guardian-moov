@@ -97,7 +97,8 @@
     if (dispatch) add(ready, 'tech', 'whatsapp', 'Préparez-vous : ' + k.label + ' à ' + where.area + '. ' + (k.hold ? 'Attendez le feu vert : personne ne part tant que l’eau n’est pas retirée.' : 'Départ dès que Moov valide.'));
     add(ready, 'client', 'whatsapp', k.client);
     const approved = at(incident, 'plan.approved'), dispatched = at(incident, 'dispatched'), enRoute = at(incident, 'en_route'), onSite = at(incident, 'on_site'), resolved = at(incident, 'resolved'), closed = !resolved && at(incident, 'closed');
-    if (approved) add(approved, 'team', 'whatsapp', dispatch ? 'Plan validé pour ' + where.area + '. Choisissez l’équipe à envoyer.' : ({congestion: 'Ajout de capacité validé pour ' + where.area + '.', olt: 'Redémarrage à distance validé pour ' + where.commune + '.', power: 'Coupure CIE à ' + where.area + ' : clients prévenus, aucun déplacement.'})[kind]);
+    // step : le responsable qui vient de valider sur WhatsApp a déjà eu la réponse de Guardian ; whatsapp.cjs ne lui renvoie pas ce message.
+    if (approved) add(approved, 'team', 'whatsapp', dispatch ? 'Plan validé pour ' + where.area + '. Prochaine étape : envoyer le technicien.' : ({congestion: 'Ajout de capacité validé pour ' + where.area + '.', olt: 'Redémarrage à distance validé pour ' + where.commune + '.', power: 'Coupure CIE à ' + where.area + ' : clients prévenus, aucun déplacement.'})[kind], {step: 'approved'});
     if (dispatched) {
       add(dispatched, 'tech', 'whatsapp', (k.hold ? 'Feu vert : l’eau s’est retirée. ' : '') + 'Mission confirmée : ' + k.label + ' à ' + where.area + '. Matériel : ' + k.kit + '. ' + k.safety);
       add(dispatched, 'team', 'whatsapp', first + ' est affecté' + feminine(first) + ' à la panne de ' + where.area + (kind === 'works' ? ', avec l’équipe génie civil.' : '.'));

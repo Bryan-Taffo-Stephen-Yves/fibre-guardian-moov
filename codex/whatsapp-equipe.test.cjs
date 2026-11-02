@@ -78,12 +78,38 @@ test('Le responsable répond « Valider » : le plan de cette alerte est validé
     await t.alerts();
     const r = await t.reply(BOSS, 'Valider');
     assert.match(r.text, /^Guardian · Moov Africa Fibre\n\nC’est validé : coupure fibre à Niangon/);
+    assert.match(r.text, /Prochaine étape : choisir l’équipe à envoyer dans le dossier de la panne, dans l’espace Moov\./, 'hors Régie : l’endroit exact où choisir l’équipe');
     const i = t.find();
     assert.equal(i.status, 'approved'); assert.equal(i.approved_by, t.chef.id);
     assert.ok(i.events.some(e => e.kind === 'plan.approved'));
     assert.match((await t.reply(BOSS, 'je valide')).text, /déjà validé/, 'une seconde réponse ne valide rien de plus');
     await t.alerts();
-    assert.ok(t.to(BOSS).some(m => /Plan validé pour Niangon/.test(m.text)), 'la suite de l’alerte arrive comme avant');
+    assert.ok(!t.to(BOSS).some(m => /Plan validé pour Niangon/.test(m.text)), 'pas de second message « Plan validé » : la réponse de Guardian a déjà dit la prochaine étape');
+  } finally { t.close(); }
+});
+
+test('« Plan validé » d’équipe : seulement à ceux qui n’ont pas validé sur WhatsApp, avec la prochaine étape', async () => {
+  const t = await setup(BOSS + '=chef@example.test,' + AGENT + '=agent@example.test');
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.alerts();
+    assert.match((await t.reply(BOSS, 'Valider')).text, /C’est validé : coupure fibre à Niangon/);
+    await t.alerts();
+    assert.ok(t.to(AGENT).some(m => /Plan validé pour Niangon\. Prochaine étape : envoyer le technicien\./.test(m.text)), 'l’autre membre de l’équipe est prévenu');
+    assert.ok(!t.to(BOSS).some(m => /Plan validé pour/.test(m.text)), 'celui qui a validé n’a pas de doublon');
+    assert.ok(!t.sent.some(m => /Choisissez l’équipe/.test(m.text)), 'plus de consigne vague');
+  } finally { t.close(); }
+});
+
+test('Plan validé dans l’espace Moov : l’équipe reçoit « Plan validé » sur WhatsApp, comme avant', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.alerts();
+    const i = t.find();
+    N.operate(t.s, t.chef.id, {type: 'approve', id: i.id, version: i.version, note: 'Validé dans l’espace Moov.'});
+    await t.alerts();
+    assert.ok(t.to(BOSS).some(m => /Plan validé pour Niangon.*Prochaine étape : envoyer le technicien\./.test(m.text)));
   } finally { t.close(); }
 });
 
@@ -132,7 +158,40 @@ test('Réseau de démo dans la Régie : « Valider » sur WhatsApp fait la même
     assert.match(r.text, /C’est validé : coupure fibre confirmée sur le réseau MOOV-FIBRE-DEMO\. Les inscrits du jury sont prévenus.*« Envoyer le technicien » dans la Régie\./s);
     assert.equal(jury.status(t.s, t.chef.id, origin).next, 'send', 'la Régie passe à l’étape suivante');
     assert.ok(jury.me(t.s, member.id).scene, 'le téléphone du jury reçoit l’alerte');
+    await t.alerts();
+    assert.ok(!t.to(BOSS).some(m => /Plan validé pour/.test(m.text)), 'pas de « Plan validé » après la réponse de Guardian');
   } finally { t.close(); }
+});
+
+test('Salle sans réseau de démo : « Valider » sur WhatsApp renvoie vers « Envoyer le technicien » dans la Régie', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    const {origin} = await room(t, {network: false});
+    jury.step(t.s, t.chef.id, {type: 'cut'}, origin);
+    await t.alerts();
+    const r = await t.reply(BOSS, 'Valider');
+    assert.match(r.text, /C’est validé : coupure fibre à Niangon \(Yopougon\)\. Les clients du quartier sont prévenus\. Prochaine étape : « Envoyer le technicien » dans la Régie\./);
+    assert.doesNotMatch(r.text, /espace Moov/, 'pas de détour par un autre écran');
+    assert.equal(jury.status(t.s, t.chef.id, origin).next, 'send', 'la Régie propose bien ce bouton');
+    jury.step(t.s, t.chef.id, {type: 'send'}, origin);
+    assert.equal(jury.status(t.s, t.chef.id, origin).next, 'arrive', 'et il marche après la validation sur WhatsApp');
+  } finally { t.close(); }
+});
+
+test('Réseau de démo : « Valider » sur WhatsApp pour un vol de câble ou un réseau saturé dit la vraie cause et le bon bouton suivant', async () => {
+  for (const [fault, said, next] of [['theft', 'coupure par vol de câble', '« Envoyer le technicien »'], ['congestion', 'saturation du réseau', '« Le débit revient »']]) {
+    const t = await setup(BOSS + '=chef@example.test');
+    try {
+      const origin = 'http://127.0.0.1:' + t.server.address().port;
+      jury.step(t.s, t.chef.id, {type: 'open', ssid: 'MOOV-FIBRE-DEMO'}, origin);
+      jury.step(t.s, t.chef.id, {type: 'cut', fault}, origin);
+      await t.alerts();
+      const r = await t.reply(BOSS, 'Valider');
+      assert.match(r.text, new RegExp('C’est validé : ' + said + ' confirmée sur le réseau MOOV-FIBRE-DEMO\\..*' + next + ' dans la Régie\\.', 's'));
+      assert.doesNotMatch(r.text, /courant/, fault + ' : pas un mot du courant');
+      assert.equal(jury.status(t.s, t.chef.id, origin).next, fault === 'congestion' ? 'repair' : 'send');
+    } finally { t.close(); }
+  }
 });
 
 test('« Valider » : seulement la commande entière, jamais une question, un refus ou une phrase', () => {

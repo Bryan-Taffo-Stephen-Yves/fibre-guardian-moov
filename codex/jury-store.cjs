@@ -3,29 +3,42 @@
 // de Yopougon (segment YOP-07), avec un prénom et un numéro WhatsApp seulement s'il le veut. La régie (administrateur uniquement)
 // déclenche les scènes avec les actions habituelles du NOC : mêmes validations, mêmes droits, rien n'est contourné.
 // Réseau de démo (salle ouverte avec un nom de réseau) : le partage de connexion de l'équipe joue la box du quartier.
-// La panne est jouée sur sa copie (copie-wifi.cjs), et les inscrits ne sont prévenus qu'après la validation d'un responsable.
+// Cinq pannes au choix (fibre coupée, vol de câble, chantier, courant coupé, réseau saturé), jouées sur sa copie
+// (copie-wifi.cjs), et les inscrits ne sont prévenus qu'après la validation d'un responsable.
 const crypto=require('node:crypto');
 const {id,token,insist}=require('./pilot-model.cjs');
 const O=require('./operator-store.cjs'),noc=require('./noc-store.cjs'),journey=require('./journey-store.cjs'),workspace=require('./noc-workspace.cjs'),CW=require('./copie-wifi.cjs');
 const SEGMENT='YOP-07',ZONE='Yopougon · Niangon',TECH='koffi';
 const ROOM_MS=4*3600000,MAX_JURORS=60,DEFAULT_SSID='MOOV-FIBRE-DEMO',COPY_MS=12*3600000;
 // Pannes du réseau de démo : le scénario du NOC et la même panne rejouée sur la copie du Wi-Fi.
-const FAULTS={fiber:{scenario:'fiber',copy:'fibre-coupee',cause:'FIBER_CUT_DISTRIBUTION'},power:{scenario:'power',copy:'courant',cause:'POWER_OUTAGE'}};
-const faultOf=i=>i?.plan?.cause==='POWER_OUTAGE'?'power':'fiber';
+// Vol de câble et chantier coupent la fibre (une équipe part) ; courant coupé et réseau saturé se règlent sans déplacement.
+// Réseau saturé : rien n'est coupé, les box restent en ligne mais tout le quartier est lent.
+const FAULTS={
+ fiber:{scenario:'fiber',copy:'fibre-coupee',cause:'FIBER_CUT_DISTRIBUTION'},
+ theft:{scenario:'theft',copy:'fibre-coupee',cause:'CABLE_THEFT'},
+ works:{scenario:'works',copy:'fibre-coupee',cause:'ROADWORK_CUT'},
+ power:{scenario:'power',copy:'courant',cause:'POWER_OUTAGE'},
+ congestion:{scenario:'congestion',copy:'quartier-charge',cause:'UPLINK_CONGESTION'}};
+const faultOf=i=>Object.keys(FAULTS).find(k=>FAULTS[k].cause===i?.plan?.cause)||'fiber';
 // Tant qu'un responsable n'a pas validé, les inscrits du réseau de démo ne voient rien : pas de fausse alerte.
 // On regarde la validation elle-même (événement « plan.approved »), pas l'état du dossier : un dossier refusé ou clôturé
 // sans validation reste invisible, et une nouvelle analyse après la validation ne cache pas une alerte déjà reçue.
 const validated=i=>!!(i&&(i.events||[]).some(e=>e.kind==='plan.approved'));
 // Inscrit d'un réseau de démo : rien avant la validation, et plus rien si le plan est refusé ensuite (fausse alerte levée).
 const muted=(network,i)=>!!network&&(!validated(i)||i.status==='rejected');
-// Les pannes que la régie sait jouer : la salle n'adopte jamais une autre panne (inondation, saturation) suivie par l'équipe Moov.
-const DRIVABLE=network=>network?['FIBER_CUT_DISTRIBUTION','POWER_OUTAGE']:['FIBER_CUT_DISTRIBUTION'];
-// Ce qui est confirmé, dit d'après la vraie cause du plan (jamais « coupure fibre » par défaut).
-const CAUSE_LABEL={FIBER_CUT_DISTRIBUTION:'coupure fibre',POWER_OUTAGE:'coupure de courant'};
+// Les pannes que la régie sait jouer : la salle n'adopte jamais une autre panne (inondation, équipement central) suivie par l'équipe Moov.
+// Salle classique : la coupure fibre seulement.
+const DRIVABLE=network=>network?Object.values(FAULTS).map(f=>f.cause):['FIBER_CUT_DISTRIBUTION'];
+// Ce qui est confirmé, dit d'après la vraie cause du plan (jamais « coupure fibre » par défaut). Toujours au féminin : « … confirmée ».
+const CAUSE_LABEL={FIBER_CUT_DISTRIBUTION:'coupure fibre',CABLE_THEFT:'coupure par vol de câble',ROADWORK_CUT:'coupure par un chantier',POWER_OUTAGE:'coupure de courant',UPLINK_CONGESTION:'saturation du réseau'};
 const what=i=>CAUSE_LABEL[i?.plan?.cause]||'panne « '+(i?.plan?.title||'à vérifier')+' »';
 // Même diagnostic : même cause et même décision d'envoyer (ou non) une équipe.
 const sameFault=(a,b)=>!!(a&&b)&&a.cause===b.cause&&(a.dispatch!==false)===(b.dispatch!==false);
-const NO_TECH='Pas de technicien à envoyer : les box repartiront au retour du courant.';
+// Pannes réglées sans déplacement : pourquoi personne ne part, et pourquoi il n'y a pas de réparation partielle.
+const NO_TECH={POWER_OUTAGE:'Pas de technicien à envoyer : les box repartiront au retour du courant.',UPLINK_CONGESTION:'Pas de technicien à envoyer : rien n’est coupé, Moov ajoute de la capacité à distance.'};
+const noTech=i=>NO_TECH[i?.plan?.cause]||'Pas de technicien à envoyer pour cette panne : Moov la règle à distance.';
+const NO_PARTIAL={POWER_OUTAGE:'Pas de réparation partielle pour une coupure de courant : toutes les box repartent ensemble au retour du courant.',UPLINK_CONGESTION:'Pas de réparation partielle pour un réseau saturé : rien n’est coupé, le débit revient pour tout le quartier en même temps.'};
+const noPartial=i=>NO_PARTIAL[i?.plan?.cause]||'Pas de réparation partielle pour cette panne : personne ne se déplace.';
 // Lettres invisibles (remplissages coréens) : refusées, sinon un prénom vide s'afficherait sur le grand écran.
 const BLANK_LETTERS=/[\u115F\u1160\u3164\uFFA0]/u;
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans O/0 ni I/1, faciles à confondre à l'oral.
@@ -70,7 +83,7 @@ function cleanWhatsapp(v){if(v==null)return null;insist(typeof v==='string','Num
 // La scène du jury : la dernière panne repérée par Guardian sur les mesures de Yopougon depuis l'ouverture de la salle,
 // ou une coupure encore en cours qui l'a précédée (salle rouverte pendant une panne : la régie la reprend).
 // Jamais le signalement d'un client. Une panne d'avant la salle n'est reprise que si la régie sait la jouer
-// (fibre ; courant en réseau de démo) : une inondation suivie par l'équipe Moov reste à l'équipe Moov.
+// (fibre ; les cinq pannes du choix en réseau de démo) : une inondation suivie par l'équipe Moov reste à l'équipe Moov.
 function sceneId(s,room,network){
  if(!room)return null;const causes=DRIVABLE(network);
  return s.get("SELECT id FROM noc_incidents WHERE mode='demo' AND source='telemetry' AND segment_id=? AND (created>=? OR (status NOT IN ('resolved','closed') AND (plan IS NULL OR json_extract(plan,'$.cause') IN ("+causes.map(()=>'?').join(',')+")))) ORDER BY created DESC,rowid DESC LIMIT 1",SEGMENT,room.created,...causes)?.id||null;
@@ -96,16 +109,20 @@ function report(s,i,room=null){
  const sec=(a,b)=>a&&b&&b>=a?Math.round((b-a)/1000):null;
  const before=detail('detected'),after=detail('resolved');
  const notified=s.get("SELECT count(DISTINCT n.user_id) AS n,count(DISTINCT CASE WHEN n.read_at IS NOT NULL THEN n.user_id END) AS read FROM noc_notifications n JOIN noc_events e ON e.id=n.event_id WHERE e.incident_id=?",i.id);
+ // Réseau saturé : rien n'est coupé, les box restent en ligne mais lentes.
+ const slow=i.plan?.cause==='UPLINK_CONGESTION';
  const rows=[
-  {key:'detection',label:'Coupure → détection par Guardian',seconds:sec(cut,detected)},
+  {key:'detection',label:(slow?'Saturation':'Coupure')+' → détection par Guardian',seconds:sec(cut,detected)},
   {key:'decision',label:'Détection → plan validé par un responsable',seconds:sec(detected,approved)},
   {key:'trajet',label:'Départ → arrivée du technicien',seconds:sec(departed,arrived)},
   {key:'intervention',label:'Arrivée → réparation déclarée',seconds:sec(arrived,repaired)},
-  {key:'total',label:'Détection → retour du service vérifié',seconds:sec(detected,restored)}]
-  // Coupure de courant : personne n'est envoyé, pas de trajet ni de réparation à chronométrer.
+  {key:'total',label:'Détection → '+(slow?'débit normal vérifié':'retour du service vérifié'),seconds:sec(detected,restored)}]
+  // Coupure de courant ou réseau saturé : personne n'est envoyé, pas de trajet ni de réparation à chronométrer.
   .filter(r=>i.plan?.dispatch!==false||!['trajet','intervention'].includes(r.key));
  const restoredBoxes=Number.isFinite(after.online)&&Number.isFinite(before.online)?after.online-before.online:null;
- return {at:Date.now(),rows,offline:Number.isFinite(before.online)?before.total-before.online:null,total:before.total??null,restored:restoredBoxes,
+ return {at:Date.now(),rows,slow,offline:Number.isFinite(before.online)?before.total-before.online:null,total:before.total??null,restored:restoredBoxes,
+  // Box en ligne mesurées à la détection et à la vérification (ce que montre la régie pour un réseau saturé).
+  online:Number.isFinite(before.online)?before.online:null,onlineAfter:Number.isFinite(after.online)?after.online:null,totalAfter:Number.isFinite(after.total)?after.total:null,
   notified:notified.n,read:notified.read,partial:ev.some(e=>e.kind==='guardian.hold'),verified:i.status==='resolved'&&!!i.restorationVerified,
   // Réseau de démo : l'alerte part à la validation ; sinon dès la détection.
   alert:room?alertStats(s,room,i,room.network?approved:detected):null,
@@ -215,7 +232,7 @@ function networkView(s,uid,room,ssid,scene){
  const t=CW.teamSimulate(s,uid,{id:c.id,scenario:FAULTS[faultOf(scene)].copy});
  return {ssid,copy,twin:{fault:faultOf(scene),label:t.label,text:t.text,note:t.note,devices:t.devices.map(slim),summary:t.summary}};
 }
-// L'étape suivante de la régie. Réseau de démo : un responsable valide avant toute alerte ; coupure de courant : pas de technicien.
+// L'étape suivante de la régie. Réseau de démo : un responsable valide avant toute alerte ; courant coupé ou réseau saturé : pas de technicien.
 function nextOf(i,network){
  const st=i?.status;
  if(!i||['resolved','closed','rejected'].includes(st))return 'cut';
@@ -271,8 +288,9 @@ function step(s,uid,d,origin){
  // Guardian a changé d'avis pendant la nouvelle analyse : la régie ne valide pas à l'aveugle un autre diagnostic.
  const changed=again=>'Guardian a revu son diagnostic : '+what(i)+'. '+again;
  if(d.type==='cut'){
-  // Réseau de démo : fibre coupée ou courant coupé. Salle classique : la coupure fibre habituelle.
-  const fault=network&&d.fault==='power'?'power':'fiber';
+  // Réseau de démo : l'une des cinq pannes du choix. Salle classique : la coupure fibre habituelle.
+  insist(d.fault==null||(typeof d.fault==='string'&&Object.hasOwn(FAULTS,d.fault)),'Panne inconnue.');
+  const fault=network&&d.fault?d.fault:'fiber';
   insist(!i||i.terminal||i.status==='rejected','Une coupure est déjà en cours '+where+'.',409);
   // Plan refusé par un responsable (fausse alerte) : le quartier revient à la normale et le dossier est clôturé sans déplacement.
   if(i?.status==='rejected')noc.operate(s,uid,{type:'simulate',segment:SEGMENT,scenario:'normal'});
@@ -289,14 +307,14 @@ function step(s,uid,d,origin){
  }else if(d.type==='send'){
   insist(i&&['proposed','approved','dispatched'].includes(i.status),'Aucune coupure à traiter pour le moment.',409);
   insist(!network||i.status!=='proposed','Un responsable doit d’abord valider la panne.',409);
-  insist(i.plan?.dispatch!==false,NO_TECH,409);
+  insist(i.plan?.dispatch!==false,noTech(i),409);
   // Validée depuis un moment (le jury lisait l'alerte) : plan ou mesures dépassés, Guardian réactualise d'abord.
   const before=i.status==='approved'&&!i.technician?i.plan:null;
   if(i.status==='proposed'||(before&&outdated(i)))refresh();
   if(i.status==='proposed'){
    // Diagnostic différent de celui qui a été validé : un responsable doit relire le nouveau plan.
    insist(!before||sameFault(before,i.plan),changed(network?'Validez ce nouveau plan avant le départ de l’équipe.':'Relisez le nouveau plan, puis touchez de nouveau « Envoyer le technicien ».'),409);
-   insist(i.plan?.dispatch!==false,NO_TECH,409);
+   insist(i.plan?.dispatch!==false,noTech(i),409);
   }
   // Validation, affectation et départ : tout ou rien. Si une étape est refusée, rien n'est enregistré.
   s.transaction(()=>{
@@ -309,11 +327,12 @@ function step(s,uid,d,origin){
   if(i&&['on_site','verifying'].includes(i.status))return status(s,uid,origin);
   insist(i&&i.status==='en_route','Le technicien n’est pas en route.',409);act('advance');
  }else if(d.type==='repair'&&i&&i.status==='approved'&&i.plan?.dispatch===false){
-  // Coupure de courant validée : le courant revient, les box se reconnectent seules, la supervision vérifie avant de clôturer.
+  // Courant coupé validé : le courant revient, les box se reconnectent seules. Réseau saturé validé : Moov ajoute de la capacité,
+  // le débit revient. Dans les deux cas, les mesures redeviennent normales et la supervision vérifie avant de clôturer.
   noc.operate(s,uid,{type:'simulate',segment:SEGMENT,scenario:'normal'});
   act('verify');
  }else{
-  insist(!(d.type==='partial'&&i?.plan?.dispatch===false),'Pas de réparation partielle pour une coupure de courant : toutes les box repartent ensemble au retour du courant.',409);
+  insist(!(d.type==='partial'&&i?.plan?.dispatch===false),noPartial(i),409);
   insist(i&&['on_site','verifying'].includes(i.status),'Le technicien doit être sur place avant la réparation.',409);
   // Les consignes de la checklist terrain sont cochées par l'administrateur, comme dans l'espace Moov.
   const repaired=()=>{const key='incident:'+i.id;for(const c of s.all('SELECT id FROM noc_checklist WHERE case_key=? AND done=0',key)){const w=workspace.overview(s,uid).queue.find(r=>r.key===key);workspace.action(s,uid,{key,type:'check',itemId:c.id,done:true,version:w.version,sourceVersion:w.sourceVersion});}return act('advance');};
