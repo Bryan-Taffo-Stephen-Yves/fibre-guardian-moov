@@ -11,6 +11,8 @@
 // Membres du jury (Green API seulement) : quelques places pour ceux qui donnent leur numéro WhatsApp en s'inscrivant
 // (WHATSAPP_JURY_MAX, sinon les discussions gratuites qui restent sur les 3 de Green API). Ils reçoivent les messages
 // « client » de la panne de la salle, au même moment que l'alerte dans l'application (jury-store.cjs).
+// Clients qui relient eux-mêmes leur WhatsApp dans « Mon compte » (Green API seulement, en envoyant leur code : whatsapp-compte.cjs) :
+// ils reçoivent les pannes du quartier de leur compte, sur les mêmes places WhatsApp que le jury.
 // Ces réglages vivent dans les variables de l'hébergeur ou dans codex/.env, jamais dans git.
 // Sans réglage, rien ne part : les messages restent affichés dans le téléphone du simulateur.
 // Les textes sont ceux du simulateur (sim-flow.js) : ce que voit le jury à l'écran est ce qui arrive sur le téléphone.
@@ -108,7 +110,10 @@ function config(env = process.env) {
     const jury = Number.isFinite(set) ? Math.min(20, Math.max(0, set)) : Math.max(0, FREE_CHATS - used);
     // replies : Green API renvoie les réponses à Guardian (webhook réglé) ; sans lui, personne ne lirait « Valider ».
     const replies = String(env.GREENAPI_WEBHOOK_TOKEN || '').trim().replace(/^(Bearer|Basic)\s+/i, '').length >= 16;
-    return {provider: 'greenapi', clients, id: String(env.GREENAPI_ID_INSTANCE).replace(/\D/g, ''), token: String(env.GREENAPI_API_TOKEN).trim(), url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''), list, origin, jury, replies};
+    // Nouveaux numéros que les clients peuvent relier eux-mêmes dans « Mon compte » (whatsapp-compte.cjs), pris sur ces
+    // mêmes places : aucun par défaut, pour garder les discussions gratuites au jury.
+    const own = Number.parseInt(env.WHATSAPP_COMPTE_MAX, 10), compte = Number.isFinite(own) ? Math.min(20, Math.max(0, own)) : 0;
+    return {provider: 'greenapi', clients, id: String(env.GREENAPI_ID_INSTANCE).replace(/\D/g, ''), token: String(env.GREENAPI_API_TOKEN).trim(), url: String(env.GREENAPI_URL || 'https://api.green-api.com').replace(/\/$/, ''), list, origin, jury, compte, replies};
   }
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) return {provider: 'twilio', clients, sid: env.TWILIO_ACCOUNT_SID.trim(), token: env.TWILIO_AUTH_TOKEN.trim(), from: env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', list, origin};
   if (env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_ID) return {provider: 'meta', clients, token: env.WHATSAPP_TOKEN.trim(), phoneId: String(env.WHATSAPP_PHONE_ID).replace(/\D/g, ''), version: env.WHATSAPP_API_VERSION || 'v23.0', list, origin};
@@ -147,7 +152,10 @@ const tag = phone => crypto.createHash('sha256').update('fibre-guardian-wa|' + p
 // Messages à envoyer maintenant : ceux du simulateur, partis il y a moins de 2 minutes, vers les numéros concernés.
 // Un client ne reçoit que les pannes de son quartier (toute sa commune si l'équipement central tombe).
 function outbox(s, cfg, now = Date.now()) {
-  const clients = cfg ? (cfg.clients || []).map(c => ({...c, segment: s.get('SELECT m.segment_id AS id FROM noc_members m JOIN users u ON u.id=m.user_id WHERE u.email=?', c.email)?.id})).filter(c => c.segment) : [];
+  // Un numéro relié par le client lui-même dans l'application remplace celui de l'hébergeur : il suit le quartier de son compte.
+  // Un numéro de l'hébergeur dont le client a dit « Stop » ne reçoit plus les alertes client (whatsapp-compte.cjs).
+  const own = ownClients(s, cfg), C = require('./whatsapp-compte.cjs'), off = phone => cfg?.provider === 'greenapi' && C.muted(s, phone);
+  const clients = cfg ? (cfg.clients || []).filter(c => !own.some(o => C.same(o.phone, c.phone)) && !off(c.phone)).map(c => ({...c, segment: s.get('SELECT m.segment_id AS id FROM noc_members m JOIN users u ON u.id=m.user_id WHERE u.email=?', c.email)?.id})).filter(c => c.segment).concat(own) : [];
   const team = cfg ? managers(s, cfg) : [], jury = cfg?.jury ? juryAudience(s) : null;
   if (!cfg || (!cfg.list.length && !clients.length && !team.length && !jury)) return [];
   const {segments, incidents, technicians} = N.activity(s, now - 15 * 60000), out = [], keys = new Set();
@@ -165,7 +173,7 @@ function outbox(s, cfg, now = Date.now()) {
     for (const m of F.messages(i, seg, technicians, now)) {
       if (m.channel !== 'whatsapp') continue;
       if (now - m.at <= RECENT) {
-        const phones = cfg.list.filter(n => n.role === m.to && (m.to !== 'client' || reached.some(id => livesIn(n.key, id)))).map(n => n.phone);
+        const phones = cfg.list.filter(n => n.role === m.to && (m.to !== 'client' || (reached.some(id => livesIn(n.key, id)) && !off(n.phone)))).map(n => n.phone);
         // Un client relié par son compte reçoit les pannes du quartier de ce compte.
         if (m.to === 'client') phones.push(...clients.filter(c => reached.includes(c.segment)).map(c => c.phone));
         // Un responsable relié par son compte reçoit les messages de l'équipe, pour toutes les pannes.
@@ -185,6 +193,11 @@ function outbox(s, cfg, now = Date.now()) {
   return out.sort((a, b) => a.at - b.at || order[a.role] - order[b.role]);
 }
 
+// Clients reliés depuis l'application : seulement avec Green API, le service qui a reçu leur code.
+function ownClients(s, cfg) {
+  if (cfg?.provider !== 'greenapi') return [];
+  try { return require('./whatsapp-compte.cjs').audience(s); } catch { return []; }
+}
 function juryAudience(s) {
   try { return require('./jury-store.cjs').whatsappAudience(s); } catch { return null; } // base sans salle du jury
 }
@@ -264,8 +277,11 @@ async function tick(s, cfg, {fetchImpl = fetch, now = Date.now(), wait = ms => n
 // Ce que l'équipe voit dans le simulateur : quels messages sont vraiment partis, sans jamais montrer les numéros ni la clé.
 function status(s, cfg) {
   if (!cfg) return {on: false, phones: 0, sent: []};
+  // Un téléphone compte une fois, même relié dans l'hébergeur et dans l'application sous ses deux formes ivoiriennes.
+  const set = [...cfg.list, ...(cfg.clients || [])], same = require('./whatsapp-compte.cjs').same;
+  const own = ownClients(s, cfg).filter(o => !set.some(n => same(n.phone, o.phone)));
   // full : offre gratuite de Green API pleine ce mois-ci (carte « Messages WhatsApp » du Superviseur).
-  return {on: true, ...(full(s, cfg) ? {full: true} : {}), phones: new Set([...cfg.list, ...(cfg.clients || [])].map(n => n.phone)).size, sent: s.all('SELECT incident_id AS incidentId,role AS "to",status,error,at FROM noc_whatsapp ORDER BY at DESC LIMIT 200')};
+  return {on: true, ...(full(s, cfg) ? {full: true} : {}), phones: new Set([...set, ...own].map(n => n.phone)).size, sent: s.all('SELECT incident_id AS incidentId,role AS "to",status,error,at FROM noc_whatsapp ORDER BY at DESC LIMIT 200')};
 }
 
 function start(s, {env = process.env, onError} = {}) {

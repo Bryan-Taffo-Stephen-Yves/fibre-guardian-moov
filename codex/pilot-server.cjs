@@ -22,10 +22,14 @@ function createGuardianServer(options={}){
  jury.migrate(store);
  // Vrais WhatsApp seulement si WHATSAPP_TOKEN et WHATSAPP_PHONE_ID sont réglés ; sinon rien ne part.
  const WA=require('./whatsapp.cjs'),whatsapp=WA.start(store,{env:options.env||process.env,onError:e=>options.onError?.(e)});
+ // Réglages des alertes, lus aussi par whatsapp-compte.cjs (places WhatsApp partagées, numéros de l'hébergeur).
+ store.whatsappAlerts=whatsapp.cfg;
  // Prises vers le vrai réseau Moov : chacune reste fermée tant que sa clé n'est pas réglée (BRANCHEMENTS.md).
  const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
  // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
  const WB=require('./whatsapp-bot.cjs'),bot=WB.config(options.env||process.env);WB.migrate(store);
+ // Le client relie lui-même son WhatsApp à son compte (« Mon compte ») : un code envoyé depuis son téléphone, mêmes places que le jury.
+ const WC=require('./whatsapp-compte.cjs');WC.migrate(store);
  // Places WhatsApp du jury : Green API avec Guardian qui lit les réponses (« OUI »), tant que l'offre gratuite du mois n'est pas pleine.
  const juryPlaces=()=>whatsapp.cfg?.jury&&bot&&!WA.full(store,whatsapp.cfg)?whatsapp.cfg.jury:0;
  // Pour la Régie : WhatsApp branché (« on »), en pause jusqu'au 1er du mois (« full », offre gratuite pleine), ou absent.
@@ -191,6 +195,18 @@ function createGuardianServer(options={}){
      insist(reading,'Je n’ai pas pu lire cette photo. Reprenez-la de face, voyants visibles, à environ 30 cm de la box.',422);
      return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
     if(route==='/api/test/link'&&method==='POST'){store.rate('vt-link:'+user.id,10,600000);return json(res,VT.link(store,user.id,{origin}));}
+    // « Mon compte » : le client relie son WhatsApp (un code, envoyé à Guardian depuis son téléphone, puis le numéro confirmé
+    // ici), ou arrête. Clients seulement (vérifié dans whatsapp-compte.cjs).
+    if(route==='/api/whatsapp/compte'||route==='/api/whatsapp/compte/confirmer'){
+     const waCtx=async()=>({bot,full:!!whatsapp.cfg&&WA.full(store,whatsapp.cfg),number:whatsapp.cfg?.replies&&bot?await WC.guardianNumber(whatsapp.cfg):null}),ctx=await waCtx();
+     if(route==='/api/whatsapp/compte/confirmer'&&method==='POST'){
+      const got=WC.confirm(store,user.id,ctx);if(got.full)return json(res,got.state);
+      // Le premier message de Guardian sur ce WhatsApp ; refusé faute de place (466) : rien n'est relié, le mois est en pause.
+      try{await WB.send(bot,got.phone,WC.linked(got));}catch(e){if(e.code===466){WC.undo(store,got);WA.markFull(store,whatsapp.cfg);}options.onError?.(e);}
+      return json(res,WC.state(store,user.id,await waCtx()));}
+     if(route==='/api/whatsapp/compte'&&method==='GET')return json(res,WC.state(store,user.id,ctx));
+     if(route==='/api/whatsapp/compte'&&method==='POST')return json(res,WC.begin(store,user.id,ctx));
+     if(route==='/api/whatsapp/compte'&&method==='DELETE')return json(res,WC.stop(store,user.id,ctx));}
     if(route==='/api/journey/reports'&&method==='GET')return json(res,journey.realReports(store,user));
     if(route==='/api/journey/reports'&&method==='POST')return json(res,journey.reportReal(store,user.id,await body(req,600000)),201);
     if(route==='/api/journey/reports/respond'&&method==='POST'){operator.requireOperator(store,user.id);insist(!store.get('SELECT paused FROM noc_settings WHERE id=1').paused,'Supervision suspendue : le traitement des signalements est arrêté.',409);return json(res,journey.respondReal(store,user,await body(req,4096)));}

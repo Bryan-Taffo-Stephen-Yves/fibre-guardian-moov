@@ -398,7 +398,9 @@ function forget(s){
  if(!gone.length)return 0;
  s.run('UPDATE jury_members SET whatsapp=NULL,wa_ok=NULL WHERE whatsapp IS NOT NULL AND room IN (SELECT id FROM jury_rooms WHERE closed=1 OR expires<=?)',now);
  const kept=new Set(s.all('SELECT whatsapp AS phone FROM jury_members WHERE whatsapp IS NOT NULL').map(r=>r.phone));
- wipe(s,gone.filter(p=>!kept.has(p)));return gone.length;
+ // Un numéro qu'un client a aussi relié à son compte (whatsapp-compte.cjs) garde ce que le site sait de lui.
+ const C=require('./whatsapp-compte.cjs'),own=C.phones(s);
+ wipe(s,gone.filter(p=>!kept.has(p)&&!own.some(o=>C.same(o,p))));return gone.length;
 }
 // Les envois gardent leur ligne (sans le numéro) : un numéro aussi réglé dans l'hébergeur ne reçoit pas deux fois le même message.
 function wipe(s,list){
@@ -419,6 +421,10 @@ function pendingWhatsapp(s,phone){forget(s);return s.get('SELECT m.user_id,m.fir
 // « OUI » : le numéro est gardé tel que WhatsApp l'écrit, et les alertes peuvent partir.
 function confirmWhatsapp(s,phone){const p=pendingWhatsapp(s,phone);if(!p)return null;s.run('UPDATE jury_members SET whatsapp=?,wa_ok=? WHERE user_id=?',phone,Date.now(),p.user_id);s.run('INSERT OR IGNORE INTO jury_wa_used VALUES(?,?)',waHash(phone),Date.now());return {first:p.first||null};}
 // Toujours inscrit et confirmé dans la salle ouverte (vérifié juste avant chaque envoi).
+// Places partagées avec les clients qui relient leur WhatsApp dans « Mon compte » (whatsapp-compte.cjs) : même compte des discussions.
+const whatsappUsed=(s,phone)=>!!s.get('SELECT 1 AS x FROM jury_wa_used WHERE hash=?',waHash(phone));
+const whatsappCount=s=>s.get('SELECT count(*) AS n FROM jury_wa_used').n;
+const useWhatsapp=(s,phone)=>{s.run('INSERT OR IGNORE INTO jury_wa_used VALUES(?,?)',waHash(phone),Date.now());};
 const enrolled=(s,phone)=>!!s.get('SELECT 1 AS x FROM jury_members m '+OPEN_ROOM+' WHERE m.wa_ok IS NOT NULL AND m.whatsapp=?',Date.now(),phone);
 const whatsappOf=(s,uid)=>{const r=s.get('SELECT whatsapp AS phone,first FROM jury_members WHERE user_id=?',uid);return r?.phone?r:null;};
 // À qui écrire sur WhatsApp, et à partir de quand : la panne de la salle ouverte, avec la même règle que l'application.
@@ -431,4 +437,4 @@ function whatsappAudience(s){
  return {incident:sid,segment:SEGMENT,phones,from:!network?0:approved&&status!=='rejected'?approved:null};
 }
 
-module.exports={report,migrate,join,me,seen,hidden,status,step,reset,certificate,whatsappPlaces,whatsappAudience,byWhatsapp,pendingWhatsapp,confirmWhatsapp,stopWhatsapp,enrolled,whatsappOf,cleanWhatsapp,forgetWhatsapp:forget,SEGMENT,ZONE,DEFAULT_SSID};
+module.exports={report,migrate,join,me,seen,hidden,status,step,reset,certificate,whatsappPlaces,whatsappAudience,byWhatsapp,pendingWhatsapp,confirmWhatsapp,stopWhatsapp,enrolled,whatsappOf,cleanWhatsapp,forgetWhatsapp:forget,wipeWhatsapp:wipe,whatsappUsed,whatsappCount,useWhatsapp,SEGMENT,ZONE,DEFAULT_SSID};
