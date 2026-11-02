@@ -1,0 +1,28 @@
+/* L’essentiel sur téléphone (avis du 1er novembre) : espace Moov sans débordement à 390 px,
+   copilote réduit à sa boule, accueil client plus léger. Chargé en dernier pour passer après refonte.css. */
+.journey .j-header .j-bell{position:relative}
+.journey .j-bell-count.j-bell-dot{top:6px;right:7px;min-width:0;width:10px;height:10px;padding:0;border:2px solid var(--moov-surface);border-radius:50%;background:var(--moov-accent);box-sizing:content-box}
+.oc-more{display:none}
+/* Grand écran : la page s’arrête au-dessus de la bulle Guardian, qui ne cache plus la dernière carte */
+@media(min-width:761px){.journey:has(.j-dock) .j-main{padding-bottom:96px}}
+
+@media(max-width:760px){
+ /* Espace Moov */
+ .noc .n-menu-toggle{max-width:none;padding:6px 18px}
+ .noc .n-main{padding-bottom:96px}
+ .noc .n-copilot-launch{gap:0;padding:5px!important;right:16px;bottom:calc(16px + env(safe-area-inset-bottom))}
+ .noc .n-copilot-launch .n-copilot-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ .noc .oc-welcome-actions>.oc-live,.noc .oc-welcome-actions>.oc-to-client{display:none}
+ .noc .oc-welcome-actions{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;width:100%}
+ .noc .oc-welcome-actions>:first-child{flex:1;min-width:0}
+ .noc .oc-metric .oc-delta{max-width:100%;white-space:normal}
+ .noc .oc-ai .oc-section-title{flex-wrap:wrap;gap:8px}
+ .noc .oc-header-tools{width:100%}
+ .noc .oc-header-tools>.oc-button{flex:1;justify-content:center}
+ .noc .oc-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin:4px 0 8px;border-radius:999px}
+
+ /* Accueil client : Guardian est déjà dans la barre d’onglets, la boule flottante ne cache plus rien */
+ .journey .j-dock{display:none}
+ .journey .ch-report-more{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ .journey .ch-report-more>*,.journey .ch-report-more .ch-chip,.journey .ch-report-more .j-button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:76px;padding:10px 6px;border-radius:18px;font-size:13px;line-height:1.2;text-align:center;white-space:normal}
+}
