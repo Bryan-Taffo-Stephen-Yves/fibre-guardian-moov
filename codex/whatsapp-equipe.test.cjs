@@ -78,6 +78,7 @@ test('Le responsable répond « Valider » : le plan de cette alerte est validé
     await t.alerts();
     const r = await t.reply(BOSS, 'Valider');
     assert.match(r.text, /^Guardian · Moov Africa Fibre\n\nC’est validé : coupure fibre à Niangon/);
+    assert.match(r.text, /Prochaine étape : choisir l’équipe à envoyer dans le dossier de la panne, dans l’espace Moov\./, 'hors Régie : l’endroit exact où choisir l’équipe');
     const i = t.find();
     assert.equal(i.status, 'approved'); assert.equal(i.approved_by, t.chef.id);
     assert.ok(i.events.some(e => e.kind === 'plan.approved'));
@@ -132,6 +133,21 @@ test('Réseau de démo dans la Régie : « Valider » sur WhatsApp fait la même
     assert.match(r.text, /C’est validé : coupure fibre confirmée sur le réseau MOOV-FIBRE-DEMO\. Les inscrits du jury sont prévenus.*« Envoyer le technicien » dans la Régie\./s);
     assert.equal(jury.status(t.s, t.chef.id, origin).next, 'send', 'la Régie passe à l’étape suivante');
     assert.ok(jury.me(t.s, member.id).scene, 'le téléphone du jury reçoit l’alerte');
+  } finally { t.close(); }
+});
+
+test('Salle sans réseau de démo : « Valider » sur WhatsApp renvoie vers « Envoyer le technicien » dans la Régie', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    const {origin} = await room(t, {network: false});
+    jury.step(t.s, t.chef.id, {type: 'cut'}, origin);
+    await t.alerts();
+    const r = await t.reply(BOSS, 'Valider');
+    assert.match(r.text, /C’est validé : coupure fibre à Niangon \(Yopougon\)\. Les clients du quartier sont prévenus\. Prochaine étape : « Envoyer le technicien » dans la Régie\./);
+    assert.doesNotMatch(r.text, /espace Moov/, 'pas de détour par un autre écran');
+    assert.equal(jury.status(t.s, t.chef.id, origin).next, 'send', 'la Régie propose bien ce bouton');
+    jury.step(t.s, t.chef.id, {type: 'send'}, origin);
+    assert.equal(jury.status(t.s, t.chef.id, origin).next, 'arrive', 'et il marche après la validation sur WhatsApp');
   } finally { t.close(); }
 });
 
