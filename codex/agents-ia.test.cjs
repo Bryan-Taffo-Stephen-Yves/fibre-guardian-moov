@@ -113,7 +113,7 @@ test('Pendant une panne : Guardian dit la même chose que le serveur vocal, avec
 });
 
 test('Les huit pannes du simulateur : le client reçoit une explication juste, sans code ni jargon',async()=>{
- const want={fiber:/câble de fibre est coupé/,pole:/câble de fibre est coupé|une panne touche/,works:/chantier a arraché un câble/,flood:/armoire de rue a pris l’eau/,theft:/câble a été volé/,olt:/toute la commune de Grand-Bassam : un équipement central est en panne/,power:/le courant est coupé \(CIE\)/,congestion:/réseau est très chargé/};
+ const want={fiber:/câble de fibre est coupé/,pole:/câble de fibre est coupé|une panne touche/,works:/chantier a arraché un câble/,flood:/armoire de rue a pris l’eau/,theft:/câble a été endommagé/,olt:/toute la commune de Grand-Bassam : un équipement central est en panne/,power:/le courant est coupé \(CIE\)/,congestion:/réseau est très chargé/};
  for(const [scenario,re] of Object.entries(want)){
   const t=await seeded();
   try{

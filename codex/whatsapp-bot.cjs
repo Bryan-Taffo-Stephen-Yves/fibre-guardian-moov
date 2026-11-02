@@ -200,7 +200,10 @@ const words = text => fold(text).replace(/[^a-z0-9?]+/g, ' ').trim();
 // Seulement la commande entière : « Valider », « Je valide », « OK valide », « Valider le plan »… Jamais une question
 // ni une phrase (« Je valide pas », « Valider plus tard », « Validez-vous les paiements ? »).
 const wantsValidate = text => /^(ok |oui |d accord )?(je )?valid(e|er|ez)( le plan)?$/.test(words(text));
-const CAUSE = {FIBER_CUT_DISTRIBUTION: 'coupure fibre', POWER_OUTAGE: 'coupure de courant'};
+// Mêmes mots que la Régie (jury-store.cjs), toujours au féminin : « … confirmée ».
+const CAUSE = {FIBER_CUT_DISTRIBUTION: 'coupure fibre', CABLE_THEFT: 'coupure par vol de câble', ROADWORK_CUT: 'coupure par un chantier', POWER_OUTAGE: 'coupure de courant', UPLINK_CONGESTION: 'saturation du réseau'};
+// Pannes réglées sans déplacement : le nom du bouton suivant dans la Régie.
+const REGIE_NEXT = {POWER_OUTAGE: '« Le courant revient » dans la Régie.', UPLINK_CONGESTION: '« Le débit revient » dans la Régie.'};
 const causeOf = plan => CAUSE[plan?.cause] || 'la panne « ' + (plan?.title || 'à vérifier') + ' »';
 // « Niangon (Yopougon) », comme dans l'alerte.
 const zoneOf = (s, i) => { const [commune, area] = String(N.zoneName(s, i.segment_id) || '').split(' · '); return area ? area + ' (' + commune + ')' : commune; };
@@ -226,7 +229,7 @@ function validatePlan(s, boss, phone, origin, {ref = null, at = Date.now()} = {}
     let room = null; try { room = jury.status(s, boss.id, origin); } catch { room = null; }
     if (room?.room?.network && room.scene?.id === i.id && room.next === 'validate') {
       jury.step(s, boss.id, {type: 'validate'}, origin);
-      return 'C’est validé : ' + cause + ' confirmée sur le réseau ' + room.room.network + '. Les inscrits du jury sont prévenus sur leur téléphone. Prochaine étape : ' + (i.plan?.dispatch === false ? '« Réparer » dans la Régie, au retour du courant.' : '« Envoyer le technicien » dans la Régie.');
+      return 'C’est validé : ' + cause + ' confirmée sur le réseau ' + room.room.network + '. Les inscrits du jury sont prévenus sur leur téléphone. Prochaine étape : ' + (i.plan?.dispatch === false ? REGIE_NEXT[i.plan?.cause] || '« Réparer » dans la Régie.' : '« Envoyer le technicien » dans la Régie.');
     }
     N.operate(s, boss.id, {type: 'approve', id: i.id, version: i.version, note: 'Validé sur WhatsApp par ' + boss.name + '.'});
     return 'C’est validé : ' + cause + ' à ' + zone + '. Les clients du quartier sont prévenus. ' + (i.plan?.dispatch === false ? 'Personne ne se déplace.' : 'Prochaine étape : choisir l’équipe à envoyer dans l’espace Moov.');

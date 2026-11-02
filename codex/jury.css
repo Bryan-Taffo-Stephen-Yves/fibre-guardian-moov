@@ -58,6 +58,9 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-pill{justify-self:start;display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:color-mix(in srgb,var(--moov-white) 18%,transparent);font-size:12px;font-weight:600}
 .jy-pill i{width:8px;height:8px;border-radius:50%;background:var(--moov-success-300);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-success-300) 30%,transparent)}
 .jy-status--down .jy-pill i{background:var(--moov-white);animation:jy-blink 1s infinite}
+/* Réseau saturé : rien n'est coupé, internet est lent. Orange de la marque plutôt que le rouge d'une coupure. */
+.jy-status--slow{background:linear-gradient(145deg,var(--moov-accent-700),var(--moov-accent-800));box-shadow:0 18px 40px color-mix(in srgb,var(--moov-accent-700) 28%,transparent)}
+.jy-status--slow .jy-pill i{background:var(--moov-white);box-shadow:0 0 0 4px color-mix(in srgb,var(--moov-white) 25%,transparent)}
 .jy-meter{margin-top:6px;display:grid;gap:8px;font-size:13px}
 .jy-meter-bar{height:8px;border-radius:999px;background:color-mix(in srgb,var(--moov-white) 22%,transparent);overflow:hidden}
 .jy-meter-bar i{display:block;height:100%;border-radius:inherit;background:var(--moov-white);transition:width .8s ease}
@@ -66,6 +69,7 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-bubble{display:grid;gap:8px;padding:16px;border-radius:20px;background:var(--moov-surface);border:1px solid var(--moov-line)}
 .jy-bubble--alert{border-color:var(--moov-danger-300);background:var(--moov-danger-100)}
 .jy-bubble--ok{border-color:var(--moov-success-300);background:var(--moov-success-100)}
+.jy-bubble--warn{border-color:var(--moov-warning-300);background:var(--moov-warning-100)}
 .jy-bubble-who{display:flex;align-items:center;gap:10px;font-size:13px}
 .jy-mark--round{border-radius:50%;width:38px;height:38px;flex:0 0 38px}
 .jy-bubble-who b{display:block;font-size:14px}
@@ -123,6 +127,8 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-alert-pulse b{position:relative;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:34px;background:var(--moov-white);color:var(--moov-danger-700)}
 .jy-alert-pulse span{position:absolute;inset:0;border-radius:50%;border:2px solid var(--moov-white);animation:jy-ring 1.6s infinite ease-out}
 .jy-alert-pulse span+span{animation-delay:.8s}
+.jy-alert--slow{background:radial-gradient(circle at 50% 30%,var(--moov-accent-700),var(--moov-accent-800) 75%)}
+.jy-alert--slow .jy-alert-pulse b,.jy-alert--slow .jy-primary--light{color:var(--moov-accent-800)}
 .jy-toast{position:fixed;left:16px;right:16px;bottom:20px;z-index:40;max-width:520px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:16px;background:var(--moov-ink);color:var(--moov-white);font-weight:600;box-shadow:0 16px 36px color-mix(in srgb,var(--moov-ink) 30%,transparent);animation:jy-in .3s ease}
 .jy-toast i{width:10px;height:10px;border-radius:50%;background:var(--moov-accent)}
 @keyframes jy-ring{from{transform:scale(.7);opacity:.9}to{transform:scale(1.6);opacity:0}}
@@ -235,6 +241,7 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-net-state{flex:0 0 auto;white-space:nowrap;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:var(--moov-neutral-100);color:var(--moov-text-muted)}
 .jy-net-state.is-up{background:var(--moov-success-100);color:var(--moov-success-700)}
 .jy-net-state.is-down{background:var(--moov-danger-100);color:var(--moov-danger-700)}
+.jy-net-state.is-slow{background:var(--moov-warning-100);color:var(--moov-warning-700)}
 .jy-net>p{margin:0;font-size:14px;color:var(--moov-neutral-700);line-height:1.45}
 .jy-net-facts{font-variant-numeric:tabular-nums}
 .jy-devs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
@@ -249,15 +256,21 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-dev.is-down i{background:var(--moov-danger-500);animation:jy-blink 1s infinite}
 .jy-dev.is-added{border-style:dashed}
 .jy-net>p.jy-net-text{padding:12px 14px;border-radius:14px;background:var(--moov-danger-100);color:var(--moov-danger-700)}
+.jy-net>p.jy-net-text.is-slow{background:var(--moov-warning-100);color:var(--moov-warning-700)}
 .jy-net-note{font-size:12px;color:var(--moov-text-muted)}
 .jy-net-link{display:grid;gap:10px;justify-items:center;text-align:center;padding:14px;border-radius:16px;border:1px dashed var(--moov-line)}
 .jy-net-link .jy-qr{width:min(200px,70vw);padding:8px;background:var(--moov-white);border-radius:12px}
 .jy-net-link p{margin:0;font-size:14px}
 .jy-net-link a{text-decoration:none;display:block;width:100%;box-sizing:border-box}
 .jy-net-link button{width:100%}
-.jy-step--choice{cursor:default;align-items:flex-start}
-.jy-choice{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.jy-choice-btn{appearance:none;flex:1 1 120px;min-height:46px;border:0;border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;background:var(--moov-white);color:var(--moov-primary)}
+/* Choix de la panne : deux groupes (avec ou sans technicien), deux boutons par ligne, sous toute la largeur de l'étape.
+   Un bouton seul sur sa ligne prend toute la largeur. Pas de défilement horizontal, de 320 px au grand écran. */
+.jy-step--choice{cursor:default;display:grid;grid-template-columns:36px minmax(0,1fr);column-gap:14px;row-gap:14px;align-items:center}
+.jy-choice{grid-column:1/-1;display:grid;gap:12px;min-width:0}
+.jy-choice-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+.jy-choice-cap{grid-column:1/-1;margin:0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--moov-on-primary);opacity:.85}
+.jy-choice-btn{appearance:none;min-width:0;min-height:48px;border:0;border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;font-weight:700;line-height:1.25;cursor:pointer;background:var(--moov-white);color:var(--moov-primary);overflow-wrap:anywhere}
+.jy-choice-btn:last-child:nth-child(even){grid-column:1/-1}
 .jy-choice-btn:hover:not(:disabled){background:var(--moov-accent);color:var(--moov-on-accent)}
 .jy-choice-btn:disabled{opacity:.6;cursor:wait}
 @media(prefers-reduced-motion:reduce){.jy-dev.is-down i{animation:none}.jy-member,.jy-dev{transition:none}}

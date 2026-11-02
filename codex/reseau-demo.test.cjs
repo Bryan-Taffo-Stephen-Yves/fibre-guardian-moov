@@ -1,8 +1,14 @@
 'use strict';
-// Réseau de démo : le partage de connexion de l'équipe joue la box du quartier. Une panne (fibre ou courant) est jouée
-// sur la copie de ce Wi-Fi ; les téléphones inscrits par QR code ne sont prévenus qu'après la validation d'un responsable.
+// Réseau de démo : le partage de connexion de l'équipe joue la box du quartier. Une panne (fibre coupée, vol de câble, chantier,
+// courant coupé ou réseau saturé) est jouée sur la copie de ce Wi-Fi ; les téléphones inscrits par QR code ne sont prévenus
+// qu'après la validation d'un responsable.
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {createGuardianServer}=require('./pilot-server.cjs'),O=require('./operator-store.cjs');
+const {createGuardianServer}=require('./pilot-server.cjs'),O=require('./operator-store.cjs'),F=require('./sim-flow.js');
+const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+// Les mots de la page du jury et de la régie (jury.js), chargés sans navigateur.
+function view(){const ctx={window:{},React:{createElement(){}},document:{addEventListener(){}},navigator:{},location:{search:''},URLSearchParams};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'jury.js'),'utf8'),ctx);
+ // Résultats recopiés hors du bac à sable : les comparaisons d'assert portent sur les valeurs.
+ const J=ctx.window.FGJury,out={};for(const k of ['lookOf','guardianSays','stagesOf','certOf','stepsFor','toastOf'])out[k]=(...a)=>JSON.parse(JSON.stringify(J[k](...a)));return out;}
 
 async function setup(){
  const server=createGuardianServer({db:':memory:',onError:()=>{}});
@@ -365,5 +371,118 @@ test('Rapport de la coupure de courant : ni trajet ni intervention de technicien
   assert.deepEqual(rows,['detection','decision','total']);
   await regie(t,{type:'cut',fault:'fiber'});
   assert.deepEqual((await regie(t)).data.report.rows.map(r=>r.key),['detection','decision','trajet','intervention','total'],'coupure fibre : toutes les lignes');
+ }finally{t.server.close();}
+});
+
+// Copie du réseau de démo faite depuis la régie (partage de connexion mesuré) : la panne s'y rejoue.
+async function copy(t){const link=(await t.call(t.admin,'/test/link',{})).data;return (await t.page('copy',link.token,{new:true,network:'hotspot',metrics:{downloadMbps:31.4,latencyMs:42},points:[{t:500,rtt:40,mbps:30},{t:1500,rtt:44,mbps:32}]})).data.copy;}
+
+for(const [fault,name,cause,client] of [['theft','Vol de câble','CABLE_THEFT',/un câble a été endommagé dans votre quartier/i],['works','Chantier','ROADWORK_CUT',/des travaux de route ont arraché un câble dans votre quartier/i]])
+ test(name+' sur le réseau de démo : rien avant la validation, puis un technicien part et le certificat de réparation arrive',async()=>{
+  const t=await setup(),V=view();
+  try{
+   const room=(await regie(t,{type:'open',ssid:'MOOV-FIBRE-DEMO'})).data.room,j=await t.juror(room.code,{firstName:'Awa'});await copy(t);
+   let r=(await regie(t,{type:'cut',fault})).data;
+   assert.equal(r.scene.cause,cause);assert.equal(r.scene.status,'proposed');assert.equal(r.scene.dispatch,true,'une équipe part');assert.equal(r.next,'validate');
+   // La copie du Wi-Fi joue une fibre coupée : box au voyant rouge, appareil sans Internet.
+   assert.equal(r.network.twin.fault,fault);assert.equal(r.network.twin.label,'Fibre coupée');assert.deepEqual(r.network.twin.devices.map(d=>d.state),['box-los','sans-internet']);
+   // Avant la validation : rien sur le téléphone, ni chiffres, ni serveur vocal, ni technicien.
+   let me=(await t.call(j,'/jury/me')).data;assert.equal(me.scene,null);assert.equal(me.segment,null);
+   assert.equal((await t.call(j,'/noc/call',{type:'start'})).data.known,false);
+   const early=await regie(t,{type:'send'});assert.equal(early.status,409);assert.match(early.data.error,/responsable/);
+   assert.equal(t.store.get('SELECT count(*) AS n FROM jury_alerts').n,0);
+   r=(await regie(t,{type:'validate'})).data;assert.equal(r.scene.status,'approved');assert.equal(r.next,'send','étape suivante : envoyer le technicien');
+   const note=JSON.parse(t.store.get("SELECT detail FROM noc_events WHERE kind='plan.approved' AND incident_id=?",r.scene.id).detail).note;
+   assert.match(note,fault==='theft'?/coupure par vol de câble confirmée sur le réseau MOOV-FIBRE-DEMO/:/coupure par un chantier confirmée sur le réseau MOOV-FIBRE-DEMO/);
+   // Après la validation : l'alerte, avec la vraie cause, le quartier coupé et l'heure de retour.
+   me=(await t.call(j,'/jury/me')).data;assert.equal(me.scene.cause,cause);assert.equal(me.scene.status,'approved');assert.ok(me.segment.online<me.segment.total);assert.match(me.scene.restore.label,/^\d{2} h \d{2}$/);
+   // Les mots de l'abonné : ceux du message client de Guardian (sim-flow.js), jamais « vol ».
+   const look=V.lookOf(me.scene,me.network),says=V.guardianSays(me.scene,me.segment);
+   assert.equal(look.tone,'down');assert.equal(look.title,'Votre quartier est privé de fibre');assert.equal(look.alert,fault==='theft'?'Câble endommagé':'Câble arraché par un chantier');
+   assert.match(says,client);assert.match(F.KIND[fault].client,client,'même phrase que l’alerte WhatsApp du client');assert.doesNotMatch(says+look.alert,/\bvol/i);
+   assert.deepEqual(V.stepsFor(r.room.network,r.scene).map(s=>s[0]),['cut','validate','send','arrive','repair']);
+   // « Appeler Moov » sur la même page : le serveur vocal dit la même cause que Guardian, jamais « vol ».
+   const ivr=(await t.call(j,'/noc/call',{type:'start'})).data;assert.equal(ivr.known,true);
+   assert.match(ivr.lines.join(' '),fault==='theft'?/un câble a été endommagé/:/un chantier a arraché un câble/);assert.doesNotMatch(ivr.lines.join(' '),/\bvol/i);
+   r=(await regie(t,{type:'send'})).data;assert.equal(r.scene.status,'en_route');assert.equal(r.scene.technician,'koffi');assert.equal(r.next,'arrive');
+   r=(await regie(t,{type:'arrive'})).data;assert.equal(r.scene.status,'on_site');assert.equal(r.next,'repair');
+   assert.match(V.guardianSays({...me.scene,status:'on_site',technician:{name:'Koffi N’Guessan'}},me.segment),fault==='theft'?/^Koffi est arrivé\. Il remplace le câble et sécurise le boîtier/:/^Koffi est arrivé\. Il remplace le câble arraché/);
+   // La variante du jury (réparation partielle) existe pour les pannes où un technicien répare.
+   if(fault==='theft'){r=(await regie(t,{type:'partial'})).data;assert.equal(r.scene.hold.remaining,4);assert.equal(r.report.partial,true);}
+   r=(await regie(t,{type:'repair'})).data;assert.equal(r.scene.status,'resolved');assert.equal(r.next,'cut');assert.equal(r.network.twin,null,'fin de scène : la copie revient au calme');
+   assert.deepEqual(r.report.rows.map(x=>x.key),['detection','decision','trajet','intervention','total']);assert.equal(r.report.slow,false);
+   me=(await t.call(j,'/jury/me')).data;const c=me.scene.certificate;
+   assert.equal(c.cause,cause);assert.equal(c.technician,'Koffi N’Guessan');assert.equal(c.online,c.total);
+   const cert=V.certOf(c);assert.equal(cert.title,'Votre fibre est réparée');assert.ok(cert.rows.some(([k])=>k==='Technicien sur place'));
+   assert.equal(V.toastOf(me.scene),'Connexion rétablie et vérifiée');
+  }finally{t.server.close();}
+ });
+
+test('Réseau saturé sur le réseau de démo : rien n’est coupé, pas de technicien, le débit revient et tout repasse au vert',async()=>{
+ const t=await setup(),V=view();
+ try{
+  const room=(await regie(t,{type:'open',ssid:'MOOV-FIBRE-DEMO'})).data.room,j=await t.juror(room.code,{firstName:'Aya'});await copy(t);
+  let r=(await regie(t,{type:'cut',fault:'congestion'})).data;
+  assert.equal(r.scene.cause,'UPLINK_CONGESTION');assert.equal(r.scene.status,'proposed');assert.equal(r.scene.dispatch,false);assert.equal(r.next,'validate');
+  assert.equal(r.segment.online,r.segment.total,'les box restent en ligne');assert.equal(r.segment.alarm,'UPLINK_HIGH');
+  // La copie du Wi-Fi joue un quartier chargé : box allumée, appareils connectés mais lents.
+  assert.equal(r.network.twin.fault,'congestion');assert.equal(r.network.twin.label,'Quartier chargé');assert.deepEqual(r.network.twin.devices.map(d=>d.state),['box','lent']);assert.equal(r.network.twin.summary.online,r.network.twin.summary.devices);
+  // Avant la validation : rien sur le téléphone (le quartier n'est pas calme, ses chiffres restent cachés).
+  let me=(await t.call(j,'/jury/me')).data;assert.equal(me.scene,null);assert.equal(me.segment,null);
+  assert.equal((await t.call(j,'/noc/call',{type:'start'})).data.known,false);
+  assert.equal(t.store.get('SELECT count(*) AS n FROM jury_alerts').n,0);
+  r=(await regie(t,{type:'validate'})).data;assert.equal(r.scene.status,'approved');assert.equal(r.next,'repair','personne à envoyer');
+  const note=JSON.parse(t.store.get("SELECT detail FROM noc_events WHERE kind='plan.approved' AND incident_id=?",r.scene.id).detail).note;
+  assert.match(note,/saturation du réseau confirmée sur le réseau MOOV-FIBRE-DEMO/);
+  // Pas de technicien, pas de réparation partielle : des refus propres à un réseau saturé (pas ceux du courant).
+  const send=await regie(t,{type:'send'});assert.equal(send.status,409);assert.match(send.data.error,/rien n’est coupé, Moov ajoute de la capacité/);assert.doesNotMatch(send.data.error,/courant/);
+  const partial=await regie(t,{type:'partial'});assert.equal(partial.status,409);assert.match(partial.data.error,/réseau saturé/);
+  assert.equal((await regie(t,{type:'arrive'})).status,409);
+  // Après la validation : l'alerte, avec les box toujours en ligne et l'heure où le débit redevient normal.
+  me=(await t.call(j,'/jury/me')).data;assert.equal(me.scene.cause,'UPLINK_CONGESTION');assert.equal(me.scene.status,'approved');assert.equal(me.segment.online,me.segment.total);assert.match(me.scene.restore.label,/^\d{2} h \d{2}$/);
+  // Les mots de l'abonné : internet est lent, jamais coupé ni « privé de fibre ».
+  const look=V.lookOf(me.scene,me.network),says=V.guardianSays(me.scene,me.segment),stages=V.stagesOf(me.scene).map(s=>s[1]);
+  assert.deepEqual([look.tone,look.pill,look.title,look.alert,look.eta],['slow','Internet ralenti','Internet est lent dans votre quartier','Internet ralenti','Débit normal vers ']);
+  assert.match(says,/^Internet est plus lent dans votre quartier en ce moment/);assert.match(says,/Moov ajoute de la capacité/);assert.match(F.KIND.congestion.client,/^Internet est plus lent dans votre quartier en ce moment\. Moov ajoute de la capacité\./,'même phrase que l’alerte WhatsApp du client');
+  assert.deepEqual(stages,['Ralentissement détecté','Moov ajoute de la capacité','Débit revenu à la normale']);
+  const ivr=(await t.call(j,'/noc/call',{type:'start'})).data;assert.equal(ivr.known,true);assert.match(ivr.lines.join(' '),/internet est lent dans votre quartier/);assert.match(ivr.lines.join(' '),/Le débit devrait redevenir normal vers/);
+  for(const text of [says,look.pill,look.title,look.alert,look.meter,...stages,...ivr.lines])assert.doesNotMatch(text,/fibre|coupé|coupure|privé/i,'rien n’est coupé : '+text);
+  const steps=V.stepsFor(r.room.network,r.scene);assert.deepEqual(steps.map(s=>s[0]),['cut','validate','repair']);assert.equal(steps[2][1],'Le débit revient');
+  // Le débit revient : mesures normales, la supervision vérifie, la scène se termine.
+  r=(await regie(t,{type:'repair'})).data;assert.equal(r.scene.status,'resolved');assert.equal(r.next,'cut');assert.equal(r.segment.alarm,'NONE');assert.equal(r.network.twin,null);
+  assert.deepEqual(r.report.rows.map(x=>x.key),['detection','decision','total']);assert.match(r.report.rows[0].label,/^Saturation/);
+  assert.equal(r.report.slow,true);assert.equal(r.report.offline,0,'aucune box coupée');assert.equal(r.report.online,r.report.total);assert.equal(r.report.onlineAfter,r.report.totalAfter);
+  me=(await t.call(j,'/jury/me')).data;assert.equal(me.scene.status,'resolved');assert.equal(me.segment.online,me.segment.total);
+  const c=me.scene.certificate;assert.equal(c.cause,'UPLINK_CONGESTION');assert.equal(c.technician,null);
+  // Le certificat dit le retour du débit normal, sans ligne « technicien ».
+  const cert=V.certOf(c);assert.equal(cert.kind,'Certificat de retour du service');assert.equal(cert.title,'Votre débit est revenu à la normale');
+  assert.ok(!cert.rows.some(([k])=>/Technicien/.test(k)));assert.ok(cert.rows.some(([k])=>k==='Débit normal retrouvé'));
+  assert.equal(V.lookOf(me.scene,me.network).pill,'Débit rétabli');assert.match(V.guardianSays(me.scene,me.segment),/^Le débit est revenu à la normale/);
+  // Le signal de fin parle du débit : internet n'a jamais été coupé, pas de « connexion rétablie ».
+  assert.equal(V.toastOf(me.scene),'Débit revenu à la normale et vérifié');assert.match(V.toastOf({...me.scene,status:'verifying'}),/débit/);
+  for(const st of ['verifying','resolved'])assert.doesNotMatch(V.toastOf({...me.scene,status:st}),/connexion|coupé|coupure|réparation/i,st);
+  assert.equal(t.store.get("SELECT actor FROM noc_events WHERE kind='resolved' AND incident_id=?",me.scene.id).actor,t.admin.id);
+ }finally{t.server.close();}
+});
+
+test('Salle classique : seule la coupure fibre se joue, quelle que soit la panne demandée ; une panne inconnue est refusée',async()=>{
+ const t=await setup(),V=view();
+ try{
+  // Un réseau saturé suivi par l'équipe Moov avant l'ouverture : la salle classique ne le reprend pas.
+  assert.equal((await t.call(t.admin,'/noc/action',{type:'simulate',segment:'YOP-07',scenario:'congestion'})).status,200);
+  await regie(t,{type:'open'});
+  let r=(await regie(t)).data;assert.equal(r.room.network,null);assert.equal(r.scene,null);assert.equal(r.next,'cut');
+  await t.call(t.admin,'/noc/action',{type:'simulate',segment:'YOP-07',scenario:'normal',close:true});
+  for(const i of t.store.all("SELECT id FROM noc_incidents WHERE status NOT IN ('resolved','closed')"))t.store.run("UPDATE noc_incidents SET status='closed' WHERE id=?",i.id);
+  assert.equal((await regie(t,{type:'cut',fault:'olt'})).status,400,'panne inconnue');
+  assert.equal((await regie(t,{type:'cut',fault:'__proto__'})).status,400);
+  for(const fault of ['theft','works','congestion']){
+   r=(await regie(t,{type:'cut',fault})).data;assert.equal(r.scene.cause,'FIBER_CUT_DISTRIBUTION','salle classique : la coupure fibre habituelle ('+fault+')');assert.equal(r.next,'send');
+   assert.deepEqual(V.stepsFor(null,r.scene).map(s=>s[0]),['cut','send','arrive','repair']);
+   await t.call(t.admin,'/noc/action',{type:'simulate',segment:'YOP-07',scenario:'normal',close:true});
+  }
+  // Réseau de démo : la même panne d'avant l'ouverture est reprise par la régie (elle sait la jouer).
+  assert.equal((await t.call(t.admin,'/noc/action',{type:'simulate',segment:'YOP-07',scenario:'congestion'})).status,200);
+  r=(await regie(t,{type:'open',ssid:'MOOV-FIBRE-DEMO'})).data;assert.equal(r.scene.cause,'UPLINK_CONGESTION');assert.equal(r.next,'validate');
  }finally{t.server.close();}
 });

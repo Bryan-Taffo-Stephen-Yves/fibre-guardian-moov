@@ -135,6 +135,22 @@ test('Réseau de démo dans la Régie : « Valider » sur WhatsApp fait la même
   } finally { t.close(); }
 });
 
+test('Réseau de démo : « Valider » sur WhatsApp pour un vol de câble ou un réseau saturé dit la vraie cause et le bon bouton suivant', async () => {
+  for (const [fault, said, next] of [['theft', 'coupure par vol de câble', '« Envoyer le technicien »'], ['congestion', 'saturation du réseau', '« Le débit revient »']]) {
+    const t = await setup(BOSS + '=chef@example.test');
+    try {
+      const origin = 'http://127.0.0.1:' + t.server.address().port;
+      jury.step(t.s, t.chef.id, {type: 'open', ssid: 'MOOV-FIBRE-DEMO'}, origin);
+      jury.step(t.s, t.chef.id, {type: 'cut', fault}, origin);
+      await t.alerts();
+      const r = await t.reply(BOSS, 'Valider');
+      assert.match(r.text, new RegExp('C’est validé : ' + said + ' confirmée sur le réseau MOOV-FIBRE-DEMO\\..*' + next + ' dans la Régie\\.', 's'));
+      assert.doesNotMatch(r.text, /courant/, fault + ' : pas un mot du courant');
+      assert.equal(jury.status(t.s, t.chef.id, origin).next, fault === 'congestion' ? 'repair' : 'send');
+    } finally { t.close(); }
+  }
+});
+
 test('« Valider » : seulement la commande entière, jamais une question, un refus ou une phrase', () => {
   for (const t of ['Valider', 'valider le plan', 'Je valide', 'OK valide !', 'Validé', 'oui, je valide', 'D’accord, je valide.']) assert.ok(WB.wantsValidate(t), t);
   for (const t of ['invalide', 'Bonjour', 'Où en est la réparation ?', 'pas de validation', 'Je valide pas', 'je valide pas ce plan', 'Valider ou pas ?', 'Validé ?', 'Valide ?', 'valider plus tard', 'Valider ? non attends', 'Validez-vous les paiements Wave ?', 'Valide jusqu’à quand mon forfait ?'])
