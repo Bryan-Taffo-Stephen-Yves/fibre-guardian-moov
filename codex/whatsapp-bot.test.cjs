@@ -77,14 +77,14 @@ test('Journal du serveur : chaque message reçu y laisse une ligne qui explique 
     await t.post({typeWebhook: 'stateInstanceChanged', stateInstance: 'notAuthorized'}); await t.untilLog(5);
     assert.equal(t.logs[4], 'WhatsApp : l’instance Green API est maintenant « notAuthorized ».', 'les accusés de réception n’encombrent pas le journal');
     assert.equal((await t.post(message(AWA, 'Bonjour'), 'Bearer mauvais-secret')).status, 401);
-    assert.equal(t.logs[5], 'WhatsApp : message refusé, le mot secret envoyé par Green API (« Webhook URL token ») n’est pas celui de GREENAPI_WEBHOOK_TOKEN (14 caractères reçus, ' + SECRET.length + ' attendus).');
+    assert.equal(t.logs[5], 'WhatsApp : message refusé, le mot secret envoyé par Green API (« Webhook authorization header ») n’est pas celui de GREENAPI_WEBHOOK_TOKEN (14 caractères reçus, ' + SECRET.length + ' attendus).');
     assert.equal((await t.post(message(AWA, 'Bonjour'), null)).status, 401);
     assert.equal(t.logs.length, 6, 'un refus n’est écrit qu’une fois par minute');
     const all = t.logs.join('\n');
     for (const phone of [AWA, OTHER, '22571020304']) assert.ok(!all.includes(phone.slice(-6)), 'jamais le numéro en entier');
   } finally { t.close(); }
   const cfg = WB.config(ENV);
-  assert.match(WB.refused(cfg, ''), /Green API n’envoie aucun mot secret\. Remplissez « Webhook URL token »/);
+  assert.match(WB.refused(cfg, ''), /Green API n’envoie aucun mot secret\. Remplissez « Webhook authorization header »/);
   assert.match(WB.refused(WB.config({...ENV, GREENAPI_WEBHOOK_TOKEN: 'court'}), 'Bearer court'), /GREENAPI_WEBHOOK_TOKEN est vide ou trop court/);
   assert.match(WB.refused(null, 'x'), /n’est pas branché/);
 });

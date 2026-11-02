@@ -376,8 +376,8 @@ function refused(cfg, header) {
   if (!cfg) return 'WhatsApp : message refusé, Guardian sur WhatsApp n’est pas branché (GREENAPI_ID_INSTANCE ou GREENAPI_API_TOKEN manque).';
   if (cfg.secret.length < 16) return 'WhatsApp : message refusé, GREENAPI_WEBHOOK_TOKEN est vide ou trop court (16 caractères au moins).';
   const got = String(header || '').replace(/^(Bearer|Basic)\s+/i, '');
-  if (!got) return 'WhatsApp : message refusé, Green API n’envoie aucun mot secret. Remplissez « Webhook URL token » dans les réglages de l’instance, avec le même mot que GREENAPI_WEBHOOK_TOKEN.';
-  return 'WhatsApp : message refusé, le mot secret envoyé par Green API (« Webhook URL token ») n’est pas celui de GREENAPI_WEBHOOK_TOKEN (' + got.length + ' caractères reçus, ' + cfg.secret.length + ' attendus).';
+  if (!got) return 'WhatsApp : message refusé, Green API n’envoie aucun mot secret. Remplissez « Webhook authorization header » dans les réglages de l’instance, avec le même mot que GREENAPI_WEBHOOK_TOKEN.';
+  return 'WhatsApp : message refusé, le mot secret envoyé par Green API (« Webhook authorization header ») n’est pas celui de GREENAPI_WEBHOOK_TOKEN (' + got.length + ' caractères reçus, ' + cfg.secret.length + ' attendus).';
 }
 
 module.exports = {config, migrate, allowed, journal, refused, incoming, who, manager, wantsValidate, wantsStop, wantsYes, validatePlan, NOTHING, STOPPED, PENDING, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, trackLine, de, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, FRESH, HEAD};

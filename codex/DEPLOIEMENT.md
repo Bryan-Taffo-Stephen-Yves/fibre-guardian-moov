@@ -124,9 +124,9 @@ Un numéro qui n’est pas relié ne reçoit aucune réponse : une personne qui 
 
 - « Guardian a répondu » : tout marche, la réponse est partie vers Green API.
 - « ce numéro n’est relié à aucun compte » : la ligne donne aussi les numéros reliés dans `WHATSAPP_CLIENTS`. Si le nombre de chiffres diffère (11 pour l’ancien format 225 + 8 chiffres, 13 pour le nouveau 225 + 10 chiffres), écrivez le numéro comme Green API.
-- « message refusé, le mot secret… » : le « Webhook URL token » de l’instance Green API n’est pas le même que `GREENAPI_WEBHOOK_TOKEN`.
+- « message refusé, le mot secret… » : le « Webhook authorization header » de l’instance Green API n’est pas le même que `GREENAPI_WEBHOOK_TOKEN`.
 - « plus de 10 minutes après son envoi » : le site dormait, écrivez de nouveau.
-- Aucune ligne « WhatsApp : » après votre message : Green API n’appelle pas le site. Vérifiez « Webhook URL » (`…/api/whatsapp/entrant`) et « Receive webhooks on incoming messages » dans les réglages de l’instance.
+- Aucune ligne « WhatsApp : » après votre message : Green API n’appelle pas le site. Vérifiez « Webhook URL » (`…/api/whatsapp/entrant`) et « Receive webhooks on incoming messages and files » dans les réglages de l’instance.
 
 **Rien n’arrive sur WhatsApp ?** L’offre gratuite « Developer » de Green API permet d’écrire à **3 discussions par mois** ; elle repart à zéro le 1er de chaque mois, et les 3 premiers numéros du mois prennent les places. Quand elles sont prises, Green API refuse les autres numéros (erreur 466, « The tariff quota has been exceeded » si vous essayez « Send text » dans la console). La Régie affiche alors « WhatsApp en pause jusqu’au 1er du mois », la carte « Messages WhatsApp » de la page Superviseur le dit, et le formulaire du jury ne propose plus de numéro. Pour garder les places à la démonstration : une puce réservée à Guardian (jamais un numéro personnel, sans contacts ni groupes), et, dès le 1er du mois ou dès qu’une nouvelle instance est reliée, écrivez « Bonjour » à Guardian depuis votre téléphone relié dans `WHATSAPP_CLIENTS` : sa réponse prend la première place. « Remettre la démo à zéro » garde l’état « en pause » ; sur Render gratuit, la base repart de zéro à chaque réveil, et la pause réapparaît au premier message refusé. 
 
