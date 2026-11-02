@@ -343,4 +343,41 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   return answer(s, cfg, m, echo + human + forWhatsApp(said, cfg.origin) + track, journey.intent(text) === 'merci' ? null : menuFor(said, text), fetchImpl);
 }
 
-module.exports = {config, migrate, allowed, incoming, who, manager, wantsValidate, wantsStop, wantsYes, validatePlan, NOTHING, STOPPED, PENDING, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, trackLine, de, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, FRESH, HEAD};
+// Journal du serveur (Render, onglet « Logs ») : ce que Guardian a fait d'un message reçu, pour comprendre un silence.
+// Le numéro n'y est jamais écrit en entier : ses deux derniers chiffres et son nombre de chiffres, de quoi voir un numéro
+// écrit à l'ancien format (225 + 8 chiffres) d'un côté et au nouveau (225 + 10 chiffres) de l'autre.
+const masked = phone => '…' + String(phone).slice(-2) + ' (' + String(phone).length + ' chiffres)';
+function journal(cfg, payload, result, now = Date.now()) {
+  const kind = String(payload?.typeWebhook || '');
+  if (kind === 'stateInstanceChanged') return 'WhatsApp : l’instance Green API est maintenant « ' + String(payload.stateInstance || '?').replace(/[^\w -]/g, '').slice(0, 40) + ' ».';
+  if (kind !== 'incomingMessageReceived') return null;
+  const chat = String(payload.senderData?.chatId || ''), phone = /^\d{8,15}@c\.us$/.test(chat) ? chat.split('@')[0] : '';
+  const from = phone ? 'du numéro ' + masked(phone) : /@g\.us$/.test(chat) ? 'd’un groupe' : 'd’une adresse inconnue';
+  const at = Number(payload.timestamp) * 1000 || 0, type = String(payload.messageData?.typeMessage || '?').replace(/\W/g, '').slice(0, 40);
+  switch (result?.status) {
+    case 'answered': return 'WhatsApp : message reçu ' + from + ', Guardian a répondu.';
+    case 'unknown': {
+      const known = [...new Set((cfg?.clients || []).map(c => c.phone))].map(masked);
+      return 'WhatsApp : message reçu ' + from + ', mais ce numéro n’est relié à aucun compte : Guardian ne répond pas. '
+        + (known.length ? 'Numéros reliés dans WHATSAPP_CLIENTS : ' + known.join(', ') + '. Écrivez-y le numéro exactement comme Green API (même nombre de chiffres).' : 'WHATSAPP_CLIENTS est vide.');
+    }
+    case 'ignored':
+      if (phone && at && now - at > FRESH) return 'WhatsApp : message reçu ' + from + ' plus de 10 minutes après son envoi (le site dormait) : ignoré. Écrivez de nouveau.';
+      return 'WhatsApp : message reçu ' + from + ', ignoré (groupe, ou message « ' + type + ' » que Guardian ne lit pas).';
+    case 'limited': return 'WhatsApp : trop de messages ' + from + ' en 10 minutes, Guardian fait une pause.';
+    case 'stopped': return 'WhatsApp : un membre du jury (' + masked(phone) + ') a répondu « Stop », son numéro est effacé.';
+    case 'confirmed': return 'WhatsApp : un membre du jury (' + masked(phone) + ') a confirmé par « OUI ».';
+    case 'pending': return 'WhatsApp : message d’un membre du jury (' + masked(phone) + ') : Guardian attend son « OUI ».';
+    default: return null; // doublon : Green API renvoie un message déjà traité
+  }
+}
+// Pourquoi la porte refuse un envoi de Green API (message pour le journal, jamais pour celui qui envoie).
+function refused(cfg, header) {
+  if (!cfg) return 'WhatsApp : message refusé, Guardian sur WhatsApp n’est pas branché (GREENAPI_ID_INSTANCE ou GREENAPI_API_TOKEN manque).';
+  if (cfg.secret.length < 16) return 'WhatsApp : message refusé, GREENAPI_WEBHOOK_TOKEN est vide ou trop court (16 caractères au moins).';
+  const got = String(header || '').replace(/^(Bearer|Basic)\s+/i, '');
+  if (!got) return 'WhatsApp : message refusé, Green API n’envoie aucun mot secret. Remplissez « Webhook URL token » dans les réglages de l’instance, avec le même mot que GREENAPI_WEBHOOK_TOKEN.';
+  return 'WhatsApp : message refusé, le mot secret envoyé par Green API (« Webhook URL token ») n’est pas celui de GREENAPI_WEBHOOK_TOKEN (' + got.length + ' caractères reçus, ' + cfg.secret.length + ' attendus).';
+}
+
+module.exports = {config, migrate, allowed, journal, refused, incoming, who, manager, wantsValidate, wantsStop, wantsYes, validatePlan, NOTHING, STOPPED, PENDING, forWhatsApp, greeting, send, handle, transcribe, menuFor, testResult, wantsTest, trackLine, de, PHOTO_ASK, PHOTO_LATER, DEAF, UNHEARD, links, CHOICES, MENUS, FRESH, HEAD};

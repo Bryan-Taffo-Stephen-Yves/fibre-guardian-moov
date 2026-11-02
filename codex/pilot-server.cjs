@@ -30,6 +30,9 @@ function createGuardianServer(options={}){
  const juryPlaces=()=>whatsapp.cfg?.jury&&bot&&!WA.full(store,whatsapp.cfg)?whatsapp.cfg.jury:0;
  // Pour la Régie : WhatsApp branché (« on »), en pause jusqu'au 1er du mois (« full », offre gratuite pleine), ou absent.
  const waState=()=>!whatsapp.cfg?null:WA.full(store,whatsapp.cfg)?'full':'on';
+ // Journal du serveur (options.log, la console sur Render) ; un refus de la porte WhatsApp n'y est écrit qu'une fois par minute.
+ const info=m=>options.log?.(m);let refusedAt=0;
+ const waRefused=m=>{const t=Date.now();if(t-refusedAt<60000)return;refusedAt=t;info(m);};
  const VT=require('./vrai-test.cjs');VT.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
  const CW=require('./copie-wifi.cjs');CW.migrate(store);
@@ -72,8 +75,9 @@ function createGuardianServer(options={}){
     if(mutate&&req.headers['sec-fetch-site'])insist(['same-origin','none'].includes(req.headers['sec-fetch-site']),'Site refusé.',403);
     if(route.startsWith('/api/branchements')&&await B.route(store,branchements,req,res,route,{json,body,user:()=>auth(req)}))return;
     // Message WhatsApp reçu par Green API : réponse immédiate, puis Guardian répond au client en arrière-plan.
-    if(route==='/api/whatsapp/entrant'&&method==='POST'){insist(WB.allowed(bot,req.headers.authorization),'Accès refusé.',401);const d=await body(req,65536);json(res,{ok:true});
-     WB.handle(store,bot,d,{chat:journeyAction,photo:waPhoto,origin}).catch(e=>{if(e.code===466)WA.markFull(store,bot);options.onError?options.onError(e):console.warn(e.message);});return;}
+    // Chaque message reçu laisse une ligne dans le journal du serveur (numéro masqué) : un silence de Guardian s'y explique.
+    if(route==='/api/whatsapp/entrant'&&method==='POST'){if(!WB.allowed(bot,req.headers.authorization))waRefused(WB.refused(bot,req.headers.authorization));insist(WB.allowed(bot,req.headers.authorization),'Accès refusé.',401);const d=await body(req,65536);json(res,{ok:true});
+     WB.handle(store,bot,d,{chat:journeyAction,photo:waPhoto,origin}).then(r=>{const line=WB.journal(bot,d,r);if(line)info(line);}).catch(e=>{if(e.code===466)WA.markFull(store,bot);options.onError?options.onError(e):console.warn(e.message);});return;}
     // Vrai test de connexion (vrai-test.cjs) : lien personnel sans session, valable 30 minutes, mesuré sur l'appareil du client.
     if(route.startsWith('/api/test/')&&route!=='/api/test/link'){
      const row=VT.open(store,req.headers['x-test-token']),key=row.token_hash.slice(0,24);

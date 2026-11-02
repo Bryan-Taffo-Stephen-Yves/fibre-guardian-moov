@@ -9,7 +9,7 @@ const ENV = {GREENAPI_ID_INSTANCE: '7103000001', GREENAPI_API_TOKEN: 'jeton-inst
 const message = (phone, text, extra = {}) => ({typeWebhook: 'incomingMessageReceived', idMessage: 'MSG' + Math.random().toString(36).slice(2), timestamp: Math.floor(Date.now() / 1000), senderData: {chatId: phone + '@c.us', senderName: 'Client'}, messageData: {typeMessage: 'textMessage', textMessageData: {textMessage: text}}, ...extra});
 
 async function setup(env = ENV, {refuseButtons = false} = {}) {
-  const server = createGuardianServer({db: ':memory:', env, onError: () => {}}), s = server.guardianStore;
+  const logs = [], server = createGuardianServer({db: ':memory:', env, onError: () => {}, log: m => logs.push(m)}), s = server.guardianStore;
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + server.address().port;
   const chef = (await s.register({email: 'chef@example.test', password: 'chef-password-1234', name: 'Chef'})).user; O.grant(s, 'chef@example.test', 'admin');
@@ -27,7 +27,8 @@ async function setup(env = ENV, {refuseButtons = false} = {}) {
   const post = (d, token = 'Bearer ' + SECRET) => real(base + '/api/whatsapp/entrant', {method: 'POST', headers: {'Content-Type': 'application/json', ...(token ? {Authorization: token} : {})}, body: JSON.stringify(d)});
   const until = async n => { for (let i = 0; i < 100 && sent.length < n; i++) await new Promise(r => setTimeout(r, 30)); };
   const close = () => { globalThis.fetch = real; server.close(); };
-  return {server, s, chef, awa, later, sent, heard, transcript, post, until, close};
+  const untilLog = async n => { for (let i = 0; i < 100 && logs.length < n; i++) await new Promise(r => setTimeout(r, 30)); };
+  return {server, s, chef, awa, later, sent, heard, transcript, post, until, close, logs, untilLog};
 }
 
 test('Réglages : Green API seulement avec l’instance et son jeton ; la porte exige le secret', () => {
@@ -58,6 +59,34 @@ test('Sans le bon secret, Green API (ou n’importe qui) est refusé et rien ne 
   } finally { t.close(); }
   const closed = await setup({...ENV, GREENAPI_WEBHOOK_TOKEN: ''});
   try { assert.equal((await closed.post(message(AWA, 'bonjour'))).status, 401, 'sans secret réglé, la porte reste fermée'); } finally { closed.close(); }
+});
+
+test('Journal du serveur : chaque message reçu y laisse une ligne qui explique la réponse ou le silence, numéro masqué', async () => {
+  const t = await setup({...ENV, WHATSAPP_CLIENTS: '22571020304=awa@example.test'});
+  try {
+    await t.post(message(AWA, 'Bonjour')); await t.untilLog(1);
+    assert.equal(t.logs[0], 'WhatsApp : message reçu du numéro …04 (13 chiffres), Guardian a répondu.');
+    await t.post(message(OTHER, 'Bonjour')); await t.untilLog(2);
+    assert.match(t.logs[1], /^WhatsApp : message reçu du numéro …99 \(13 chiffres\), mais ce numéro n’est relié à aucun compte : Guardian ne répond pas\. /);
+    assert.match(t.logs[1], /Numéros reliés dans WHATSAPP_CLIENTS : …04 \(11 chiffres\)\./, 'on voit l’écart de format sans voir les numéros');
+    await t.post(message(AWA, 'Bonjour', {timestamp: Math.floor(Date.now() / 1000) - 11 * 60})); await t.untilLog(3);
+    assert.match(t.logs[2], /plus de 10 minutes après son envoi \(le site dormait\) : ignoré/);
+    await t.post({...message(AWA, 'x'), senderData: {chatId: '120363000000@g.us'}}); await t.untilLog(4);
+    assert.match(t.logs[3], /^WhatsApp : message reçu d’un groupe, ignoré/);
+    await t.post({typeWebhook: 'outgoingMessageStatus', status: 'delivered'});
+    await t.post({typeWebhook: 'stateInstanceChanged', stateInstance: 'notAuthorized'}); await t.untilLog(5);
+    assert.equal(t.logs[4], 'WhatsApp : l’instance Green API est maintenant « notAuthorized ».', 'les accusés de réception n’encombrent pas le journal');
+    assert.equal((await t.post(message(AWA, 'Bonjour'), 'Bearer mauvais-secret')).status, 401);
+    assert.equal(t.logs[5], 'WhatsApp : message refusé, le mot secret envoyé par Green API (« Webhook URL token ») n’est pas celui de GREENAPI_WEBHOOK_TOKEN (14 caractères reçus, ' + SECRET.length + ' attendus).');
+    assert.equal((await t.post(message(AWA, 'Bonjour'), null)).status, 401);
+    assert.equal(t.logs.length, 6, 'un refus n’est écrit qu’une fois par minute');
+    const all = t.logs.join('\n');
+    for (const phone of [AWA, OTHER, '22571020304']) assert.ok(!all.includes(phone.slice(-6)), 'jamais le numéro en entier');
+  } finally { t.close(); }
+  const cfg = WB.config(ENV);
+  assert.match(WB.refused(cfg, ''), /Green API n’envoie aucun mot secret\. Remplissez « Webhook URL token »/);
+  assert.match(WB.refused(WB.config({...ENV, GREENAPI_WEBHOOK_TOKEN: 'court'}), 'Bearer court'), /GREENAPI_WEBHOOK_TOKEN est vide ou trop court/);
+  assert.match(WB.refused(null, 'x'), /n’est pas branché/);
 });
 
 test('Un jour normal : Awa écrit « internet est lent », Guardian lui répond sur WhatsApp comme dans l’application', async () => {

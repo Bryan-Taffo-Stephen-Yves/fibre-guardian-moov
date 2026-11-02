@@ -120,6 +120,14 @@ Numéros ivoiriens : beaucoup de comptes WhatsApp gardent l’ancien format à 8
 
 Un numéro qui n’est pas relié ne reçoit aucune réponse : une personne qui écrit par erreur au numéro de Guardian ne reçoit jamais de message du robot, et ne prend pas de place gratuite. Si Guardian ne répond pas à « Bonjour » depuis votre téléphone, c’est que ce numéro n’est pas reconnu : vérifiez qu’il est dans `WHATSAPP_CLIENTS` (ou sous un quartier dans `WHATSAPP_NUMEROS`), écrit comme dans **Chats** sur la page de l’instance Green API. Un message resté plus de 10 minutes en attente (site endormi) ne reçoit pas de réponse.
 
+**Le journal du serveur explique chaque silence.** Sur Render, onglet **Logs**, chaque message reçu laisse une ligne qui commence par « WhatsApp : » (le numéro n’y est jamais écrit en entier : ses deux derniers chiffres et son nombre de chiffres) :
+
+- « Guardian a répondu » : tout marche, la réponse est partie vers Green API.
+- « ce numéro n’est relié à aucun compte » : la ligne donne aussi les numéros reliés dans `WHATSAPP_CLIENTS`. Si le nombre de chiffres diffère (11 pour l’ancien format 225 + 8 chiffres, 13 pour le nouveau 225 + 10 chiffres), écrivez le numéro comme Green API.
+- « message refusé, le mot secret… » : le « Webhook URL token » de l’instance Green API n’est pas le même que `GREENAPI_WEBHOOK_TOKEN`.
+- « plus de 10 minutes après son envoi » : le site dormait, écrivez de nouveau.
+- Aucune ligne « WhatsApp : » après votre message : Green API n’appelle pas le site. Vérifiez « Webhook URL » (`…/api/whatsapp/entrant`) et « Receive webhooks on incoming messages » dans les réglages de l’instance.
+
 **Rien n’arrive sur WhatsApp ?** L’offre gratuite « Developer » de Green API permet d’écrire à **3 discussions par mois** ; elle repart à zéro le 1er de chaque mois, et les 3 premiers numéros du mois prennent les places. Quand elles sont prises, Green API refuse les autres numéros (erreur 466, « The tariff quota has been exceeded » si vous essayez « Send text » dans la console). La Régie affiche alors « WhatsApp en pause jusqu’au 1er du mois », la carte « Messages WhatsApp » de la page Superviseur le dit, et le formulaire du jury ne propose plus de numéro. Pour garder les places à la démonstration : une puce réservée à Guardian (jamais un numéro personnel, sans contacts ni groupes), et, dès le 1er du mois ou dès qu’une nouvelle instance est reliée, écrivez « Bonjour » à Guardian depuis votre téléphone relié dans `WHATSAPP_CLIENTS` : sa réponse prend la première place. « Remettre la démo à zéro » garde l’état « en pause » ; sur Render gratuit, la base repart de zéro à chaque réveil, et la pause réapparaît au premier message refusé. 
 
 ## Tester une vraie connexion (aucun réglage)
