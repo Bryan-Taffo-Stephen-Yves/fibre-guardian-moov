@@ -84,7 +84,32 @@ test('Le responsable répond « Valider » : le plan de cette alerte est validé
     assert.ok(i.events.some(e => e.kind === 'plan.approved'));
     assert.match((await t.reply(BOSS, 'je valide')).text, /déjà validé/, 'une seconde réponse ne valide rien de plus');
     await t.alerts();
-    assert.ok(t.to(BOSS).some(m => /Plan validé pour Niangon/.test(m.text)), 'la suite de l’alerte arrive comme avant');
+    assert.ok(!t.to(BOSS).some(m => /Plan validé pour Niangon/.test(m.text)), 'pas de second message « Plan validé » : la réponse de Guardian a déjà dit la prochaine étape');
+  } finally { t.close(); }
+});
+
+test('« Plan validé » d’équipe : seulement à ceux qui n’ont pas validé sur WhatsApp, avec la prochaine étape', async () => {
+  const t = await setup(BOSS + '=chef@example.test,' + AGENT + '=agent@example.test');
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.alerts();
+    assert.match((await t.reply(BOSS, 'Valider')).text, /C’est validé : coupure fibre à Niangon/);
+    await t.alerts();
+    assert.ok(t.to(AGENT).some(m => /Plan validé pour Niangon\. Prochaine étape : envoyer le technicien\./.test(m.text)), 'l’autre membre de l’équipe est prévenu');
+    assert.ok(!t.to(BOSS).some(m => /Plan validé pour/.test(m.text)), 'celui qui a validé n’a pas de doublon');
+    assert.ok(!t.sent.some(m => /Choisissez l’équipe/.test(m.text)), 'plus de consigne vague');
+  } finally { t.close(); }
+});
+
+test('Plan validé dans l’espace Moov : l’équipe reçoit « Plan validé » sur WhatsApp, comme avant', async () => {
+  const t = await setup(BOSS + '=chef@example.test');
+  try {
+    N.operate(t.s, t.chef.id, {type: 'simulate', segment: 'YOP-07', scenario: 'fiber'});
+    await t.alerts();
+    const i = t.find();
+    N.operate(t.s, t.chef.id, {type: 'approve', id: i.id, version: i.version, note: 'Validé dans l’espace Moov.'});
+    await t.alerts();
+    assert.ok(t.to(BOSS).some(m => /Plan validé pour Niangon.*Prochaine étape : envoyer le technicien\./.test(m.text)));
   } finally { t.close(); }
 });
 
@@ -133,6 +158,8 @@ test('Réseau de démo dans la Régie : « Valider » sur WhatsApp fait la même
     assert.match(r.text, /C’est validé : coupure fibre confirmée sur le réseau MOOV-FIBRE-DEMO\. Les inscrits du jury sont prévenus.*« Envoyer le technicien » dans la Régie\./s);
     assert.equal(jury.status(t.s, t.chef.id, origin).next, 'send', 'la Régie passe à l’étape suivante');
     assert.ok(jury.me(t.s, member.id).scene, 'le téléphone du jury reçoit l’alerte');
+    await t.alerts();
+    assert.ok(!t.to(BOSS).some(m => /Plan validé pour/.test(m.text)), 'pas de « Plan validé » après la réponse de Guardian');
   } finally { t.close(); }
 });
 

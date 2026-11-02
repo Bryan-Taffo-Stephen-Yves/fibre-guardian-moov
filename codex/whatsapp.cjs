@@ -128,7 +128,11 @@ function migrate(s) {
   s.db.exec('CREATE TABLE IF NOT EXISTS wa_asks(ref TEXT PRIMARY KEY,phone TEXT NOT NULL,incident_id TEXT NOT NULL,cause TEXT,dispatch INTEGER NOT NULL,at INTEGER NOT NULL)');
   // Mois où l'offre gratuite de cette instance Green API est pleine (« 7103000001|2026-11 ») : rien d'autre que cette marque.
   s.db.exec('CREATE TABLE IF NOT EXISTS wa_full(key TEXT PRIMARY KEY,at INTEGER NOT NULL)');
+  // Plans validés depuis WhatsApp, par ce numéro : Guardian lui a déjà répondu « C’est validé… Prochaine étape… ».
+  s.db.exec('CREATE TABLE IF NOT EXISTS wa_validated(incident_id TEXT NOT NULL,phone TEXT NOT NULL,at INTEGER NOT NULL,PRIMARY KEY(incident_id,phone))');
 }
+// Validation faite sur WhatsApp par ce numéro (whatsapp-bot.cjs) : le message d’équipe « Plan validé » ne lui est pas renvoyé.
+const validated = (s, incidentId, phone) => s.run('INSERT OR IGNORE INTO wa_validated(incident_id,phone,at) VALUES(?,?,?)', incidentId, phone, Date.now());
 // Offre gratuite pleine (réponse 466 de Green API) : le formulaire du jury ne propose plus WhatsApp et la Régie le dit,
 // jusqu'au 1er du mois suivant, ou jusqu'à ce qu'une autre instance soit réglée (la marque porte le numéro d'instance).
 const fullKey = (cfg, now) => cfg.id + '|' + new Date(now).toISOString().slice(0, 7);
@@ -170,7 +174,11 @@ function outbox(s, cfg, now = Date.now()) {
         if (m.to === 'client') phones.push(...clients.filter(c => reached.includes(c.segment)).map(c => c.phone));
         // Un responsable relié par son compte reçoit les messages de l'équipe, pour toutes les pannes.
         if (m.to === 'team') phones.push(...team.map(c => c.phone));
-        for (const phone of new Set(phones)) push(i, m, phone, reached, m.at);
+        for (const phone of new Set(phones)) {
+          // Le responsable qui a validé sur WhatsApp a déjà la réponse de Guardian, avec la prochaine étape : pas de doublon.
+          if (m.step === 'approved' && s.get('SELECT 1 AS x FROM wa_validated WHERE incident_id=? AND phone=?', i.id, phone)) continue;
+          push(i, m, phone, reached, m.at);
+        }
       }
       // Le jury inscrit avec son numéro : la panne de la salle seulement, pas avant que l'application la montre
       // (réseau de démo : l'alerte d'il y a 12 s part au moment où le responsable valide).
@@ -277,4 +285,4 @@ function start(s, {env = process.env, onError} = {}) {
   return {cfg, stop: () => clearInterval(timer)};
 }
 
-module.exports = {numbers, links, config, livesIn, migrate, outbox, managers, reachable, welcome, WELCOME, tag, tick, status, start, full, markFull, PROVIDERS, RECENT, ASK, FREE_CHATS, QUOTA};
+module.exports = {numbers, links, config, livesIn, migrate, outbox, validated, managers, reachable, welcome, WELCOME, tag, tick, status, start, full, markFull, PROVIDERS, RECENT, ASK, FREE_CHATS, QUOTA};

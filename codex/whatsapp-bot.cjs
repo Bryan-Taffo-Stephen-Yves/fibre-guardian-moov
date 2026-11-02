@@ -230,9 +230,11 @@ function validatePlan(s, boss, phone, origin, {ref = null, at = Date.now()} = {}
     let room = null; try { room = jury.status(s, boss.id, origin); } catch { room = null; }
     if (room?.room?.network && room.scene?.id === i.id && room.next === 'validate') {
       jury.step(s, boss.id, {type: 'validate'}, origin);
+      W.validated(s, i.id, phone);
       return 'C’est validé : ' + cause + ' confirmée sur le réseau ' + room.room.network + '. Les inscrits du jury sont prévenus sur leur téléphone. Prochaine étape : ' + regieNext(i);
     }
     N.operate(s, boss.id, {type: 'approve', id: i.id, version: i.version, note: 'Validé sur WhatsApp par ' + boss.name + '.'});
+    W.validated(s, i.id, phone);
     // Panne jouée dans la Régie (salle sans réseau de démo) : le bouton suivant est dans la Régie, pas ailleurs.
     const regie = room?.scene?.id === i.id;
     return 'C’est validé : ' + cause + ' à ' + zone + '. Les clients du quartier sont prévenus. ' + (i.plan?.dispatch === false
