@@ -8,11 +8,14 @@
 //   GROQ_API_KEY (facultatif) : Guardian comprend aussi les notes vocales (transcription Whisper chez Groq, gratuite, sans carte).
 // Qui écrit ? Le numéro est cherché dans WHATSAPP_CLIENTS (« 2250701020304=awa.kone@demo.fibre-guardian.ci »),
 // sinon dans WHATSAPP_NUMEROS (« Yopougon=2250701020304 ») : c'est alors le premier client inscrit dans ce quartier.
+// Un client qui relie son WhatsApp dans « Mon compte » envoie à Guardian le message tout prêt, avec son code, puis confirme
+// ce numéro dans l'application : Guardian lui répond ensuite avec ce compte (whatsapp-compte.cjs). « Stop » défait le lien.
 // Un membre du jury qui a donné son numéro en s'inscrivant le confirme en répondant « OUI » ; il parle ensuite avec le compte
 // de son inscription (salle ouverte seulement). « Stop » retire son numéro tout de suite.
 // Un numéro inconnu ne reçoit aucune réponse : aucun compte n'est lu ni créé. Une personne qui écrit par erreur au numéro
 // de Guardian ne reçoit jamais de message du robot, et les 3 discussions gratuites du mois de Green API restent aux numéros
 // de la démonstration (une réponse à un inconnu en prenait une).
+const C = require('./whatsapp-compte.cjs');
 const crypto = require('node:crypto'), W = require('./whatsapp.cjs'), journey = require('./journey-store.cjs'), VT = require('./vrai-test.cjs'), N = require('./noc-store.cjs'), O = require('./operator-store.cjs');
 
 const FRESH = 10 * 60000; // Green API renvoie un message tant que le site dort : au-delà de 10 minutes, on ne répond plus.
@@ -78,6 +81,8 @@ function linked(s, cfg, phone) {
 // Le responsable relié à ce numéro (agent, superviseur ou administrateur), s'il y en a un.
 const manager = (s, cfg, phone) => linked(s, cfg, phone).find(u => u.role !== 'subscriber') || null;
 function who(s, cfg, phone) {
+  // Le client a relié ce WhatsApp à son compte dans l'application (ce téléphone a envoyé son code) : c'est lui qui écrit.
+  const own = C.byPhone(s, phone); if (own) return own;
   const users = linked(s, cfg, phone);
   // Un numéro relié seulement à un compte de l'équipe Moov, et inscrit au jury : il parle comme membre du jury.
   const juror = jury(s, 'byWhatsapp', phone);
@@ -311,12 +316,21 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   // Limite par numéro, gardée sous forme d'empreinte (jamais le numéro lui-même).
   try { s.rate('wa:' + crypto.createHash('sha256').update(m.phone).digest('hex').slice(0, 24), 20, 600000); } catch { return {status: 'limited'}; }
   const plainText = !m.image && !m.audio && !m.button;
-  // Membre du jury qui répond « Stop » : plus aucun message sur ce numéro.
-  if (plainText && wantsStop(m.text) && jury(s, 'stopWhatsapp', m.phone)) { await send(cfg, m.phone, STOPPED + (manager(s, cfg, m.phone) ? ' Les alertes de l’équipe Moov continuent sur ce numéro.' : ''), fetchImpl); return {status: 'stopped'}; }
+  // « Stop » d'un membre du jury ou d'un client relié dans l'application : plus aucun message sur ce numéro.
+  if (plainText && wantsStop(m.text)) {
+    const juror = jury(s, 'stopWhatsapp', m.phone), own = C.stopPhone(s, m.phone);
+    if (juror || own) { await send(cfg, m.phone, (own ? C.STOPPED : STOPPED) + (manager(s, cfg, m.phone) ? ' Les alertes de l’équipe Moov continuent sur ce numéro.' : ''), fetchImpl); return {status: 'stopped'}; }
+  }
+  // Message tout prêt de « Relier mon WhatsApp » (code de 6 chiffres donné par l'application) : le client confirme ce numéro
+  // dans l'application, et c'est seulement alors que Guardian lui écrit. Rien ne part vers ce téléphone ici.
+  const claim = plainText ? C.claim(s, m.phone, m.text, now) : null;
+  if (claim === 'claimed') return {status: 'claimed'};
+  // Ce WhatsApp est déjà relié à un autre compte (il a donc déjà sa discussion) : Guardian le dit, rien ne change.
+  if (claim === 'taken') { await send(cfg, m.phone, C.TAKEN, fetchImpl); return {status: 'taken'}; }
   // Numéro donné par un membre du jury : « OUI » l'active ; tant qu'il n'est pas activé, ses messages ne vont à personne.
   if (jury(s, 'pendingWhatsapp', m.phone)) {
     if (plainText && wantsYes(m.text)) { const ok = jury(s, 'confirmWhatsapp', m.phone); await send(cfg, m.phone, confirmed(ok?.first), fetchImpl); return {status: 'confirmed'}; }
-    if (!linked(s, cfg, m.phone).length) { await send(cfg, m.phone, PENDING, fetchImpl); return {status: 'pending'}; }
+    if (!linked(s, cfg, m.phone).length && !C.byPhone(s, m.phone)) { await send(cfg, m.phone, PENDING, fetchImpl); return {status: 'pending'}; }
   }
   // Un responsable relié qui répond « Valider » (bouton de l'alerte, ou la commande écrite) : le plan de cette alerte est validé.
   const boss = manager(s, cfg, m.phone), tapped = /^valider(?::([0-9a-f]{8}))?$/.exec(m.button || '');

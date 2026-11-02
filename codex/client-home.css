@@ -86,3 +86,57 @@
 .ch-live-main em small{color:var(--moov-neutral-500)}
 .ch-live-foot span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(min-width:761px){.ch-report-more{justify-content:center}.ch-report-more>*,.ch-report-more .ch-chip-test{flex:0 0 auto}.ch-report-more .ch-chip{min-height:52px}}
+
+/* Vos alertes sur WhatsApp (page Compte) : un code, un message tout prêt envoyé depuis le téléphone, et c'est relié. */
+@keyframes ch-wa-blink{0%,100%{opacity:1}50%{opacity:.35}}
+.ch-wa{display:grid;gap:14px;padding:18px;border-radius:24px;background:var(--moov-surface);box-shadow:0 10px 26px color-mix(in srgb,var(--moov-ink) 5%,transparent);border:1px solid var(--moov-primary-100)}
+.ch-wa[data-state="on"]{border-color:var(--moov-success-100)}
+.ch-wa-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
+.ch-wa-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary,var(--moov-white))}
+.ch-wa[data-state="on"] .ch-wa-icon{background:var(--moov-success-700);color:var(--moov-white)}
+.ch-wa-head h2{margin:0;font-size:17px;letter-spacing:-.01em;color:var(--moov-ink)}
+.ch-wa-head h2:focus{outline:none}
+.ch-wa-head h2:focus-visible{outline:3px solid var(--moov-primary-200);outline-offset:3px;border-radius:6px}
+.ch-wa-head p{margin:2px 0 0;font-size:13.5px;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.ch-wa-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.ch-wa-tag.on{background:var(--moov-success-50);color:var(--moov-success-700)}
+.ch-wa-tag.wait{background:var(--moov-warning-100);color:var(--moov-warning-700)}
+.ch-wa-tag.wait i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:ch-wa-blink 1.6s ease-in-out infinite}
+.ch-wa-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.ch-wa-text{margin:0;font-size:15px;line-height:1.5;color:var(--moov-ink)}
+.ch-wa-code{display:inline-block;padding:1px 8px;border-radius:8px;background:var(--moov-primary-50);color:var(--moov-primary-700);font-variant-numeric:tabular-nums;letter-spacing:.06em;white-space:nowrap}
+.ch-wa-hint{font-size:13px;line-height:1.45;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.ch-wa-note{margin:0;padding:10px 12px;border-radius:14px;background:var(--moov-neutral-25);color:var(--moov-neutral-700);font-size:14px}
+.ch-wa .ch-wa-go{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;padding:0 18px;border:0;border-radius:16px;background:var(--moov-primary);color:var(--moov-on-primary,var(--moov-white));font:600 16px var(--fg-font,inherit);text-decoration:none;cursor:pointer}
+.ch-wa .ch-wa-go:hover:not(:disabled){background:var(--moov-primary-hover)}
+.ch-wa .ch-wa-go:disabled{opacity:.55;cursor:default}
+.ch-wa .ch-wa-go:focus-visible,.ch-wa .ch-wa-link:focus-visible{outline:3px solid var(--moov-primary-200);outline-offset:2px}
+.ch-wa .ch-wa-link{justify-self:start;min-height:44px;padding:0 4px;border:0;background:none;color:var(--moov-primary);font:600 14.5px var(--fg-font,inherit);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ch-wa[data-state="on"] .ch-wa-link{color:var(--moov-neutral-600)}
+.ch-wa-num{white-space:nowrap;font-weight:600}
+.ch-wa-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.ch-wa-actions .ch-chip.strong{border-color:transparent;background:var(--moov-primary);color:var(--moov-on-primary,var(--moov-white))}
+.ch-wa-confirm{display:grid;gap:8px;padding:12px;border-radius:16px;background:var(--moov-neutral-25)}
+.ch-wa-confirm p{margin:0;font-size:14.5px;color:var(--moov-ink)}
+.ch-wa-open{display:grid;gap:12px}
+.ch-wa-scan{display:none}
+.ch-wa-qr{width:132px;height:132px;flex:none;border-radius:12px;background:var(--moov-white)}
+.ch-wa-qr rect{fill:var(--moov-white)}
+.ch-wa-qr path{fill:var(--moov-ink)}
+.ch-wa-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
+.ch-wa-steps li{display:grid;justify-items:center;gap:6px;padding:10px 4px;border-radius:14px;background:var(--moov-neutral-25);font-size:12.5px;line-height:1.3;text-align:center;color:var(--moov-neutral-500)}
+.ch-wa-steps i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--moov-neutral-150);color:var(--moov-neutral-600);font:700 12px var(--fg-font,inherit);font-style:normal}
+.ch-wa-steps li.done{color:var(--moov-success-700)}
+.ch-wa-steps li.done i{background:var(--moov-success-700);color:var(--moov-white)}
+.ch-wa-steps li.now{background:var(--moov-primary-50);color:var(--moov-primary-700);font-weight:600}
+.ch-wa-steps li.now i{background:var(--moov-primary);color:var(--moov-on-primary,var(--moov-white))}
+.ch-wa-done{display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;border-radius:14px;background:var(--moov-success-50);color:var(--moov-success-700);font-weight:600;font-size:14.5px;animation:ch-in .35s var(--fg-ease,ease) both}
+.ch-wa-error{margin:0;padding:10px 12px;border-radius:14px;background:var(--moov-danger-50);color:var(--moov-danger-700);font-size:14px}
+@media(min-width:761px){
+ .ch-wa{padding:22px 24px}
+ .ch-wa .ch-wa-go{width:auto;justify-self:start}
+ .ch-wa-open{grid-template-columns:auto 1fr;align-items:center;gap:20px}
+ .ch-wa-scan{display:flex;align-items:center;gap:14px}
+ .ch-wa-scan small{max-width:220px;font-size:13px;line-height:1.45;color:var(--moov-text-muted,var(--moov-neutral-600))}
+}
+@media(prefers-reduced-motion:reduce){.ch-wa-tag.wait i,.ch-wa-done{animation:none}}
