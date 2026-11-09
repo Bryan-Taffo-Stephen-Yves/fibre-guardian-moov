@@ -160,7 +160,7 @@
     return h('div', {className: 'gs'},
       h(Bulletin, {b, error, onAsk: askAbout}), h(Retention, {api}),
       h('div', {className: 'gs-grid'},
-        h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate})),
+        h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate}), root.FGWelcome && h(root.FGWelcome.Block, {api})),
         h('div', {className: 'gs-side'}, h(Agents, {b}), h(Parrainage, {b}), h(Journal, {b}))));
   }
 

@@ -9,6 +9,8 @@
     script.onerror = function () { document.getElementById('root').textContent = 'Fibre Guardian n’a pas pu se charger complètement. Rechargez la page.'; console.error('Fichier manquant : ' + path); };
     document.head.appendChild(script);
   }
+  // Fibre Welcome (welcome-view.js) se charge juste avant le Superviseur, qui affiche son bloc « Nouveaux abonnés ».
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'welcome-view.js');
   next();
   // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
