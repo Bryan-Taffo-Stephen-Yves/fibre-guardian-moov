@@ -39,10 +39,10 @@ function createGuardianServer(options={}){
  const info=m=>options.log?.(m);let refusedAt=0;
  const waRefused=m=>{const t=Date.now();if(t-refusedAt<60000)return;refusedAt=t;info(m);};
  const VT=require('./vrai-test.cjs');VT.migrate(store);
- // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
- const CW=require('./copie-wifi.cjs');CW.migrate(store);
  // Fibre Welcome (thème 1) : commande, dossier, rendez-vous et installation d'un nouvel abonné (welcome.cjs).
  const WEL=require('./welcome.cjs');WEL.migrate(store);
+ // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
+ const CW=require('./copie-wifi.cjs');CW.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
