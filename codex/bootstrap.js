@@ -25,6 +25,8 @@
   files.splice(files.indexOf('superviseur-view.js'), 0, 'welcome-view.js');
   // Fibre Voice (fibre-voice-view.js) : la page « Parler à Guardian » et son bloc dans le Superviseur.
   files.splice(files.indexOf('superviseur-view.js'), 0, 'fibre-voice-view.js');
+  // Barre des rôles de la démo (role-bar.js) : chargée avant app.js, visible seulement là où la direction l’a activée.
+  files.splice(files.indexOf('app.js'), 0, 'role-bar.js');
   next();
   // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

@@ -19,6 +19,10 @@ const NEIGHBOURS=[
 // Chaque technicien du simulateur a son compte terrain : quand Moov envoie Yao, Amina, Koffi ou Awa Kouamé,
 // la mission apparaît dans son application. Même mot de passe que le technicien Ibrahim.
 const CREW=require('./noc-store.cjs').TECHS.filter(t=>t.id!=='ibrahim').map(t=>({technicianId:t.id,name:t.name,email:t.name.normalize('NFD').replace(/[\u0300-\u036f’']/g,'').toLowerCase().replace(/ /g,'.')+'@demo.fibre-guardian.ci'}));
+// L'équipe Moov de la barre des rôles : un conseiller support et une responsable de supervision.
+// Mot de passe tiré au hasard et jamais affiché : on y entre seulement par la barre des rôles (role-bar.cjs),
+// elle-même ouverte sur un appareil par la direction connectée avec son mot de passe.
+const STAFF=[{email:'kader.diallo@demo.fibre-guardian.ci',name:'Kader Diallo',role:'agent'},{email:'fatou.bamba@demo.fibre-guardian.ci',name:'Fatou Bamba',role:'supervisor'}];
 const MIN=60000,HOUR=3600000;
 
 function isSeeded(store){return !!store.get('SELECT id FROM users WHERE email=?',DEMO.admin.email);}
@@ -65,6 +69,7 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   await auth('register',DEMO.technician);
   await request(direction,'/noc/workspace/action',{type:'field-account',email:DEMO.technician.email,technicianId:'ibrahim',enabled:true,confirm:true});
   for(const c of CREW){await store.register({email:c.email,name:c.name,password:passwords[DEMO.technician.email]});await request(direction,'/noc/workspace/action',{type:'field-account',email:c.email,technicianId:c.technicianId,enabled:true,confirm:true});}
+  for(const m of STAFF){await store.register({email:m.email,name:m.name,password:crypto.randomBytes(18).toString('base64url')});O.grant(store,m.email,m.role);}
   // Les voisins sont créés par les fonctions du serveur (même validation) : 11 inscriptions de suite dépasseraient la limite anti-abus.
   const noc=require('./noc-store.cjs');
   // Leur espace est déjà ouvert (comme pour le jury) : à la première connexion, l'accueil montre tout de suite la panne de leur quartier.
@@ -142,7 +147,7 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
 // Green API reste plein jusqu'au 1er du mois, remise à zéro ou pas, et les « Stop » des numéros WhatsApp réglés
 // dans l'hébergeur : un client qui a dit « Stop » ne reçoit plus d'alerte) puis rejoue la démo. Réservé à l'administrateur (vérifié par la route).
 async function resetDemo(store,options={}){
- const tables=store.all("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").map(r=>r.name).filter(t=>t!=='limits'&&t!=='wa_full'&&t!=='wa_optout');
+ const tables=store.all("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").map(r=>r.name).filter(t=>t!=='limits'&&t!=='wa_full'&&t!=='wa_optout'&&t!=='demo_passes');
  store.db.exec('PRAGMA foreign_keys=OFF');
  try{store.transaction(()=>{for(const t of tables)store.run('DELETE FROM "'+t.replace(/"/g,'')+'"');});}
  finally{store.db.exec('PRAGMA foreign_keys=ON');}
@@ -151,7 +156,7 @@ async function resetDemo(store,options={}){
  return seedDemo(store,options);
 }
 
-module.exports={seedDemo,resetDemo,isSeeded,isComplete,isEmpty,DEMO,NEIGHBOURS,CREW};
+module.exports={seedDemo,resetDemo,isSeeded,isComplete,isEmpty,DEMO,NEIGHBOURS,CREW,STAFF};
 
 if(require.main===module){
  const {Store}=require('./pilot-store.cjs');

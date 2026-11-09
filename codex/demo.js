@@ -55,6 +55,7 @@
     scenarios&&h('div',{className:'fg-demo-block'},h('h3',null,'Choisir une situation à montrer'),h('p',null,'Changez la situation de la box pour présenter un cas.'),
      h('div',{className:'fg-demo-choices'},Object.entries(scenarios).map(([value,label])=>h('button',{type:'button',key:value,className:'fg-demo-choice'+(scenario===value?' is-active':''),'aria-pressed':scenario===value,disabled:busy,onClick:()=>onScenario(value)},label)))),
     children,
+    window.FGRoleBar&&h(FGRoleBar.Activator,{user}),
     user?.role==='admin'&&h(Reset,{user})));
  }
  window.FGDemo={Badge,About,SIMULATED};
