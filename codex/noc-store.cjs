@@ -16,7 +16,7 @@ function nextStep(i){const t=first(TECHS.find(v=>v.id===i.technician)?.name)||'L
 const techCard=t=>t?{name:t.name,team:t.team,phone:t.phone,rating:t.rating,missions:t.missions,vehicle:t.vehicle}:null;
 const OPEN="status NOT IN ('resolved','closed')";
 // Événements internes à l'équipe Moov : jamais montrés ni notifiés aux clients.
-const INTERNAL="e.kind NOT IN ('superviseur.signal')";
+const INTERNAL="e.kind NOT IN ('superviseur.signal','fairdeal.validated','fairdeal.refused')"; // décisions internes : jamais dans le fil du client
 const isOpen=i=>!['resolved','closed'].includes(i.status);
 function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS noc_segments(id TEXT PRIMARY KEY,zone TEXT NOT NULL,total INTEGER NOT NULL,online INTEGER NOT NULL,latency REAL NOT NULL,alarm TEXT NOT NULL DEFAULT 'NONE',sample_at INTEGER NOT NULL);
