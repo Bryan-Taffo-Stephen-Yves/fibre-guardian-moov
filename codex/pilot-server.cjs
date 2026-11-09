@@ -41,6 +41,7 @@ function createGuardianServer(options={}){
  const VT=require('./vrai-test.cjs');VT.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
  const CW=require('./copie-wifi.cjs');CW.migrate(store);
+ const FD=require('./fair-deal.cjs');FD.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -188,6 +189,9 @@ function createGuardianServer(options={}){
     if(route==='/api/ussd'&&method==='POST')return json(res,require('./ussd.cjs').respond(store,user.id,await body(req,1024)));
     // Bandeaux en direct d'une mission (client, technicien, équipe Moov), voir mission-feed.cjs.
     if(route==='/api/noc/pings'&&method==='GET')return json(res,require('./mission-feed.cjs').pings(store,user.id,url.searchParams.get('since')));
+    // Fair Deal (thème 4) : gestes calculés après une coupure réparée, validés ou refusés par un responsable (fair-deal.cjs).
+    if(route==='/api/noc/fairdeal'&&method==='GET')return json(res,FD.list(store,user.id));
+    if(route==='/api/noc/fairdeal'&&method==='POST')return json(res,FD.decide(store,user.id,await body(req,1024)));
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
     // Bouton « Appeler Moov » : le serveur vocal dit d'abord ce que Moov sait du quartier (appels.cjs).

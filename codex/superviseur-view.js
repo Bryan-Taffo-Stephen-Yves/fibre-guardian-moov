@@ -89,12 +89,14 @@
       catch (e) { setError(e.message || 'Transmission impossible.'); }
       finally { setBusy(false); }
     }
-    return h('section', {className: 'gs-block', 'aria-labelledby': 'gs-f-title'},
+    // Les gestes Fair Deal (fair-deal-view.js) suivent ce que Guardian a repéré : il propose, un responsable décide.
+    return h(React.Fragment, null, h('section', {className: 'gs-block', 'aria-labelledby': 'gs-f-title'},
       h('div', {className: 'gs-block-head'}, h('h3', {id: 'gs-f-title'}, 'Ce que j’ai repéré'), h('span', {className: 'gs-count'}, list.length)),
       h('p', {className: 'gs-note'}, 'Classé du plus urgent au moins urgent. Je propose, un responsable décide.'),
       error && h('p', {className: 'gs-error', role: 'alert'}, error),
       list.length ? h('ul', {className: 'gs-findings'}, list.map(f => h(Finding, {key: f.key, f, open: isOpen(f), busy, onToggle: () => setOpened(isOpen(f) ? '' : f.key), onGo: f => onNavigate(f.go.page, f.go.incidentId), onSignal: signal})))
-        : h('p', {className: 'gs-empty'}, 'Rien à signaler : toutes les box ont une bonne lumière et aucun dossier n’est ouvert.'));
+        : h('p', {className: 'gs-empty'}, 'Rien à signaler : toutes les box ont une bonne lumière et aucun dossier n’est ouvert.')),
+      root.FGFairDeal && h(root.FGFairDeal.Block, {api}));
   }
 
   // Retention Score (thème 6) : les clients qui risquent de partir, pourquoi, et quoi faire. Un conseiller agit, jamais Guardian seul.
