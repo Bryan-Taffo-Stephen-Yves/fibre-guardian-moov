@@ -63,9 +63,26 @@
  }
  const FORM={uses:[],people:2,rooms:2,budget:0,commune:''};
 
- function View({state,user,busy,onUpgrade,onDowngrade,onKeep,onBack}){
+ // « Votre forfait est-il toujours le bon ? » : bilan des 7 derniers jours mesurés (forfait-bilan.cjs), dans les deux sens.
+ function Bilan({api,lab,plans,onPick,onVerdict}){
+  const [b,B]=S(null),[err,X]=S(''),[busy,U]=S(false),alive=R(true);
+  const load=(path='/journey/bilan',method,body)=>{U(true);return api(path,method,body).then(r=>{if(alive.current){B(r);X('');onVerdict&&onVerdict(r.verdict);}}).catch(e=>alive.current&&X(e.message||'Le bilan n’a pas pu être calculé.')).finally(()=>alive.current&&U(false));};
+  E(()=>{alive.current=true;if(api)load();return()=>{alive.current=false;};},[]);
+  if(!api||(!b&&!err))return null;
+  const to=b&&b.to&&plans.find(p=>p.id===b.to.id),tone=b?{monter:'up',baisser:'down',ok:'ok',tot:'wait',incident:'wait'}[b.verdict]:'wait';
+  return h('section',{className:'pv-bilan is-'+tone,'aria-labelledby':'pv-bilan-title'},
+   h('small',{className:'pv-bilan-kicker'},'Votre forfait est-il toujours le bon ?'),
+   err?h('p',{role:'alert'},err):h(React.Fragment,null,
+    h('h2',{id:'pv-bilan-title'},b.title),h('p',null,b.body),
+    b.minutes>=15&&h('dl',{className:'pv-bilan-facts'},[['Observé',b.days>1?b.days+' jours':Math.round(b.minutes/60)>=1?Math.round(b.minutes/60)+' h':b.minutes+' min'],['Au plus fort',String(b.peak).replace('.',',')+' Mb/s'],['Votre ligne',b.capacity+' Mb/s'],['Ligne à fond',b.share+' % du temps']].map(([k,v])=>h('div',{key:k},h('dt',null,k),h('dd',null,v)))),
+    to&&h('button',{type:'button',className:'pv-cta'+(b.verdict==='baisser'?' soft':''),onClick:()=>onPick(to)},b.verdict==='baisser'?'Passer à '+to.mbps+' Mb/s et économiser '+F(b.saving)+' par mois':'Passer à '+to.mbps+' Mb/s (+ '+F(b.extra)+' par mois)')),
+   lab&&h('div',{className:'pv-bilan-lab'},h('small',null,'Laboratoire : remplir 7 jours d’usage du simulateur'),
+    h('div',null,[['soir','Soirées saturées'],['calme','Maison calme']].map(([k,l])=>h('button',{key:k,type:'button',disabled:busy,onClick:()=>load('/journey/bilan/demo','POST',{profile:k})},l)))));
+ }
+
+ function View({api,lab,state,user,busy,onUpgrade,onDowngrade,onKeep,onBack}){
   const plans=state.plans||[],current=state.plan||plans[1]||{},next=state.nextPlan,tip=advice(state,plans);
-  const [pick,P]=S(null),[form,FM]=S(FORM),smart=window.FGSmartOffer?FGSmartOffer.recommend({...form,plans}):null,tipId=smart?smart.plan.id:tip?.plan.id,review=R(null),sel=pick&&pick.id!==current.id?plans.find(p=>p.id===pick.id):null,up=sel&&sel.price>current.price;
+  const [pick,P]=S(null),[verdict,VD]=S(null),[form,FM]=S(FORM),smart=window.FGSmartOffer?FGSmartOffer.recommend({...form,plans}):null,tipId=smart?smart.plan.id:['monter','baisser','ok'].includes(verdict)?null:tip?.plan.id,review=R(null),sel=pick&&pick.id!==current.id?plans.find(p=>p.id===pick.id):null,up=sel&&sel.price>current.price;
   E(()=>{if(sel&&matchMedia('(max-width:760px)').matches)review.current?.scrollIntoView({behavior:'smooth',block:'nearest'});},[pick]);
   const tipText=tip&&(tip.plan.id===current.id?'Votre forfait actuel vous suffit.':tip.plan.mbps>current.mbps?'Passer à '+tip.plan.mbps+' Mb/s vous donnerait de la marge.':tip.plan.mbps+' Mb/s suffiraient pour vos usages du moment.');
   return h('div',{className:'pv'},
@@ -76,7 +93,9 @@
    next&&h('section',{className:'pv-next',role:'status'},h('span',{className:'pv-next-ico'},h(Icon,{d:I.calendar,size:20})),
     h('div',null,h('strong',null,'À partir du '+day(next.at)+' : '+next.plan.mbps+' Mb/s'),h('small',null,'Pour '+F(next.plan.price)+' par mois. D’ici là, vous gardez '+current.mbps+' Mb/s.')),
     h('button',{type:'button',className:'pv-link',onClick:onKeep,disabled:busy},'Garder '+current.mbps+' Mb/s')),
-   tip&&h('section',{className:'pv-tip'},h('span',{className:'j-chat-avatar pv-tip-art','aria-hidden':true},h('i'),h('i'),h('b')),
+   h(Bilan,{api,lab,plans,onPick:p=>P(p.id===current.id?null:p),onVerdict:VD}),
+   // Le bilan sur 7 jours prime sur le conseil de l'instant, pour ne jamais dire deux choses différentes.
+   tip&&!['monter','baisser','ok'].includes(verdict)&&h('section',{className:'pv-tip'},h('span',{className:'j-chat-avatar pv-tip-art','aria-hidden':true},h('i'),h('i'),h('b')),
     h('div',null,h('small',null,'Le conseil de Guardian'),h('p',null,'Chez vous, '+tip.connected+' appareil'+(tip.connected>1?'s':'')+' utilise'+(tip.connected>1?'nt':'')+' '+String(tip.used).replace('.',',')+' Mb/s en ce moment. '+tipText))),
    h(Finder,{plans,current,form,onForm:FM,onPick:p=>P(p)}),
    h('div',{className:'pv-list',role:'radiogroup','aria-label':'Choisir un forfait'},plans.map(p=>{
