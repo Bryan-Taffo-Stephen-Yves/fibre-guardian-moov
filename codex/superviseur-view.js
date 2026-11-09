@@ -113,6 +113,17 @@
         : h('p', {className: 'gs-empty'}, 'Rien de nouveau depuis six heures.'));
   }
 
+  // Parrainage (thème 5) : combien de clients partagent leur code, combien de filleuls, les derniers arrivés.
+  function Parrainage({b}) {
+    const p = b.parrainage; if (!p) return null;
+    const day = at => new Date(at).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'});
+    return h('section', {className: 'gs-block', 'aria-labelledby': 'gs-p-title'},
+      h('div', {className: 'gs-block-head'}, h('h3', {id: 'gs-p-title'}, 'Parrainages'), h('span', {className: 'gs-count'}, p.filleuls)),
+      h('dl', {className: 'gs-parr'}, [[p.codes, 'clients avec un code'], [p.filleuls, 'filleuls inscrits'], [p.rewarded, 'mois offerts']].map(([v, l]) => h('div', {key: l}, h('dt', null, v), h('dd', null, l)))),
+      p.recent.length ? h('ul', {className: 'gs-parr-list'}, p.recent.map((r, i) => h('li', {key: r.at + ':' + i}, h('span', null, h('b', null, r.parrain), ' a parrainé ', h('b', null, r.filleul)), h('small', null, day(r.at) + ' · mois offert le ' + day(r.rewardAt)))))
+        : h('p', {className: 'gs-empty'}, 'Aucun filleul pour l’instant. Chaque client trouve son code dans son compte.'));
+  }
+
   function View({api, onNavigate}) {
     const [b, setB] = S(null), [error, setError] = S(''), [request, setRequest] = S(null);
     const flight = R(false);
@@ -129,7 +140,7 @@
       h(Bulletin, {b, error, onAsk: askAbout}),
       h('div', {className: 'gs-grid'},
         h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate})),
-        h('div', {className: 'gs-side'}, h(Agents, {b}), h(Journal, {b}))));
+        h('div', {className: 'gs-side'}, h(Agents, {b}), h(Parrainage, {b}), h(Journal, {b}))));
   }
 
   root.FGSuperviseur = {View};

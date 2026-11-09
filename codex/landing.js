@@ -24,8 +24,13 @@
   h('div',{className:'lp-phone-tabs'},['Accueil','Guardian','Appareils','Compte'].map((t,i)=>h('span',{key:t,className:i===0?'on':''},t)))));}
  function Reveal({children,className='',as='section',...rest}){const ref=R(null),[seen,SEEN]=S(false);E(()=>{const el=ref.current;if(!el||!('IntersectionObserver' in window)){SEEN(true);return;}const io=new IntersectionObserver(([e])=>{if(e.isIntersecting){SEEN(true);io.disconnect();}},{threshold:.15});io.observe(el);return()=>io.disconnect();},[]);return h(as,{ref,className:className+' lp-reveal'+(seen?' lp-in':''),...rest},children);}
  // SmartOffer avant l'abonnement : le même questionnaire que dans « Changer de forfait » (plan-view.js).
- function Offer({onLogin}){const P=window.FGPlans,[form,FM]=S(P?P.FORM:null);if(!P)return null;
-  return h(Reveal,{id:'offre',className:'lp-section lp-offer'},h(P.Finder,{form,onForm:FM,withCommune:true,onPick:()=>onLogin('client'),pickLabel:p=>'Choisir la Fibre '+p.mbps}));}
+ // Lien de parrainage « ?parrain=MOOV-XXXXX » : on affiche qui invite, et le code est gardé pour le compte (client-home.js).
+ function useInvite(){const [inv,I]=S(null);E(()=>{const code=new URLSearchParams(location.search).get('parrain');if(!code)return;
+  fetch('/api/parrainage/code?code='+encodeURIComponent(code),{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(r=>{if(!r)return;I(r);try{localStorage.setItem('fg-parrain',r.code);}catch{}setTimeout(()=>document.getElementById('offre')?.scrollIntoView({behavior:'smooth',block:'start'}),400);}).catch(()=>{});},[]);return inv;}
+ function Offer({onLogin}){const P=window.FGPlans,[form,FM]=S(P?P.FORM:null),inv=useInvite();if(!P)return null;
+  return h(Reveal,{id:'offre',className:'lp-section lp-offer'},
+   inv&&h('div',{className:'lp-invite',role:'status'},h('span',{className:'lp-float-icon ok'},h(Icon,{name:'check',size:18})),h('p',null,h('b',null,inv.parrain+' vous invite chez Moov Fibre.'),' Avec son code ',h('b',null,inv.code),', vous aurez chacun un mois offert après 3 mois d’abonnement.')),
+   h(P.Finder,{form,onForm:FM,withCommune:true,onPick:()=>onLogin('client'),pickLabel:p=>'Choisir la Fibre '+p.mbps}));}
  function Page({onLogin,onAbout}){const [menu,MENU]=S(false);const jump=id=>e=>{e.preventDefault();MENU(false);document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});};
   return h('div',{className:'lp'},
    h('header',{className:'lp-nav'},h('a',{className:'lp-brand',href:'#top',onClick:jump('top')},h('span',{className:'lp-brand-icon'},h(Icon,{name:'spark',size:20})),'fibre',h('b',null,'guardian')),

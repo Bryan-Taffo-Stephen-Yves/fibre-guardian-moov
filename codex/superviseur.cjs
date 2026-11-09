@@ -152,7 +152,7 @@ function bilan(s,uid,{whatsapp=null,now=Date.now()}={}){
   numbers:{online,total,touched,quartiers:ports.length,open:incidents.length,pending:pending.length,free:technicians.filter(t=>!t.busy).length,technicians:technicians.length,avoided:calls.avoided,reassured:calls.reassured},
   quartiers:ports.map(p=>({id:p.id,zone:plainZone(p.zone),commune:p.commune,tone:p.tone,online:p.online,total:p.total})),
   agents:agents(s,{settings,ports,incidents,pending,technicians,calls,whatsapp,forecasts,now}),
-  findings:list.slice(0,12),journal:journal(s,ports,now)};
+  findings:list.slice(0,12),journal:journal(s,ports,now),parrainage:require('./parrainage.cjs').summary(s,now)};
 }
 
 // Transmettre un problème au responsable. Quand le problème a un dossier, la transmission entre DANS ce dossier

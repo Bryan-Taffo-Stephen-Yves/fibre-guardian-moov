@@ -30,6 +30,7 @@ function createGuardianServer(options={}){
  const WB=require('./whatsapp-bot.cjs'),bot=WB.config(options.env||process.env);WB.migrate(store);
  // Le client relie lui-même son WhatsApp à son compte (« Mon compte ») : un code envoyé depuis son téléphone, mêmes places que le jury.
  const WC=require('./whatsapp-compte.cjs');WC.migrate(store);
+ const PR=require('./parrainage.cjs');PR.migrate(store);
  // Places WhatsApp du jury : Green API avec Guardian qui lit les réponses (« OUI »), tant que l'offre gratuite du mois n'est pas pleine.
  const juryPlaces=()=>whatsapp.cfg?.jury&&bot&&!WA.full(store,whatsapp.cfg)?whatsapp.cfg.jury:0;
  // Pour la Régie : WhatsApp branché (« on »), en pause jusqu'au 1er du mois (« full », offre gratuite pleine), ou absent.
@@ -120,6 +121,8 @@ function createGuardianServer(options={}){
     }
     // Lien de suivi du technicien : public, en lecture seule, limité en débit.
     if(route.startsWith('/api/track/')&&route!=='/api/track/link'&&method==='GET'){store.rate('track:'+ip(req),120);return json(res,noc.tracked(store,decodeURIComponent(route.slice(11))));}
+    // Lien de parrainage « ?parrain=MOOV-XXXXX » sur la page d'accueil : prénom et initiale du parrain seulement.
+    if(route==='/api/parrainage/code'&&method==='GET'){store.rate('parrain:'+ip(req),60);return json(res,PR.lookup(store,url.searchParams.get('code')));}
     if(route==='/api/participant/join'&&method==='POST'){
      store.rate('join:'+ip(req),20);const d=await body(req,4096);insist(d.consent===true,'Votre consentement est nécessaire.');const l=store.get('SELECT * FROM labs WHERE code=?',String(d.code||''));insist(l&&!l.closed&&l.expires>Date.now(),'Invitation expirée ou incorrecte.',404);insist(store.get('SELECT count(*) AS n FROM participants WHERE lab=? AND revoked=0',l.id).n<30,'Session limitée à 30 participants.',409);const pid=id(),secret=token(),name=word(d.name,'Nom de l’appareil',80);store.run('INSERT INTO participants(id,lab,name,secret,joined,last_seen) VALUES(?,?,?,?,?,?)',pid,l.id,name,hash(secret),Date.now(),Date.now());store.event(l.home,null,'participant.join',name);return json(res,{id:pid,secret,name,expires:l.expires});
     }
@@ -190,6 +193,13 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
     if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}
+    // SmartOffer, ajustement : le bilan des 7 derniers jours (forfait-bilan.cjs). /demo remplit 7 jours du simulateur (mode laboratoire).
+    if((route==='/api/journey/bilan'&&method==='GET')||(route==='/api/journey/bilan/demo'&&method==='POST')){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration.',409);const FB=require('./forfait-bilan.cjs');
+     if(method==='POST'){const d=await body(req,512);insist(['soir','calme'].includes(d.profile),'Profil inconnu.');FB.seed(store,user.id,state,d.profile);}
+     return json(res,FB.compute(store,user.id,journey.snapshotFor(store,user.id,state),journey.PLANS));}
+    // Parrainage (thème 5) : son code, ses filleuls, et utiliser le code d'un proche (parrainage.cjs).
+    if(route==='/api/parrainage'&&method==='GET')return json(res,PR.state(store,user.id));
+    if(route==='/api/parrainage'&&method==='POST'){store.rate('parrain-use:'+user.id,10);return json(res,PR.use(store,user.id,await body(req,512)));}
     if(route==='/api/journey/start'&&method==='POST'){if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return json(res,{state:journey.snapshotFor(store,user.id,journey.get(store,user.id))});}
     if(route==='/api/journey/action'&&method==='POST')return json(res,{state:await journeyAction(user,await body(req,600000))});
     // « La photo qui parle » : lecture des voyants par Claude, sinon lecture faite sur le téléphone. La photo n'est pas conservée.
