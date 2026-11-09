@@ -97,6 +97,25 @@
         : h('p', {className: 'gs-empty'}, 'Rien à signaler : toutes les box ont une bonne lumière et aucun dossier n’est ouvert.'));
   }
 
+  // Retention Score (thème 6) : les clients qui risquent de partir, pourquoi, et quoi faire. Un conseiller agit, jamais Guardian seul.
+  function Retention({api}) {
+    const [r, setR] = S(null), [open, setOpen] = S(null), alive = R(true);
+    E(() => { alive.current = true; const load = () => { if (!document.hidden) api('/noc/retention').then(x => alive.current && setR(x)).catch(() => {}); }; load(); const t = setInterval(load, 8000); return () => { alive.current = false; clearInterval(t); }; }, []);
+    if (!r) return null;
+    const list = r.clients.filter(c => c.level !== 'faible').slice(0, 6), money = n => n.toLocaleString('fr-FR') + ' F';
+    return h('section', {className: 'gs-block gs-ret', 'aria-labelledby': 'gs-r-title'},
+      h('div', {className: 'gs-block-head'}, h('h3', {id: 'gs-r-title'}, 'Clients qui risquent de partir'), h('span', {className: 'gs-count'}, r.high + r.watch)),
+      h('p', {className: 'gs-ret-sum'}, r.high + r.watch ? h(React.Fragment, null, h('b', null, r.high), ' à risque élevé, ', h('b', null, r.watch), ' à surveiller sur ', r.total, ' clients. Abonnements en jeu : ', h('b', null, money(r.revenueAtRisk) + ' par an'), '.') : 'Aucun client à risque sur les ' + r.windowDays + ' derniers jours. Le score monte avec les pannes subies, les appels, une mauvaise note ou des mots de départ.'),
+      list.length > 0 && h('ul', {className: 'gs-ret-list'}, list.map(c => h('li', {key: c.id, className: 'is-' + c.level},
+        h('button', {type: 'button', className: 'gs-ret-row', 'aria-expanded': open === c.id, onClick: () => setOpen(open === c.id ? null : c.id)},
+          h('span', {className: 'gs-ret-score', 'aria-label': 'Score ' + c.score + ' sur 100'}, c.score),
+          h('span', {className: 'gs-ret-who'}, h('strong', null, c.name), h('small', null, (c.zone ? c.zone + ' · ' : '') + c.plan.mbps + ' Mb/s · ' + money(c.plan.price) + '/mois')),
+          h('em', {className: 'gs-ret-level'}, c.label)),
+        open === c.id && h('div', {className: 'gs-ret-detail'},
+          h('ul', null, c.factors.map(f => h('li', {key: f.key}, h('span', null, f.text), h('b', null, '+' + f.points)))),
+          h('p', {className: 'gs-ret-action'}, h('b', null, 'À faire : '), c.action.text))))));
+  }
+
   function Agents({b}) {
     return h('section', {className: 'gs-block', 'aria-labelledby': 'gs-a-title'},
       h('div', {className: 'gs-block-head'}, h('h3', {id: 'gs-a-title'}, 'Les agents que je supervise'), h('span', {className: 'gs-count'}, b.agents.length)),
@@ -137,7 +156,7 @@
     if (!b) return h('div', {className: 'gs gs-loading', role: 'status'}, error ? h('p', {className: 'gs-error', role: 'alert'}, error) : h('p', null, 'Je fais le tour du réseau…'));
     const askAbout = text => setRequest({text, at: Date.now()});
     return h('div', {className: 'gs'},
-      h(Bulletin, {b, error, onAsk: askAbout}),
+      h(Bulletin, {b, error, onAsk: askAbout}), h(Retention, {api}),
       h('div', {className: 'gs-grid'},
         h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate})),
         h('div', {className: 'gs-side'}, h(Agents, {b}), h(Parrainage, {b}), h(Journal, {b}))));

@@ -59,6 +59,24 @@
 .gs-count{min-width:26px;padding:2px 8px;border-radius:999px;background:var(--moov-neutral-100);font-size:12.5px;font-weight:650;text-align:center;font-variant-numeric:tabular-nums}
 .gs-note{margin-top:-6px!important;font-size:13px;color:var(--moov-text-muted)}
 .gs-empty{padding:14px;border-radius:12px;background:var(--gs-ok-bg);color:var(--gs-ok-ink);font-size:14px;line-height:1.45}
+/* Retention Score (thème 6) */
+.gs-ret-sum{margin:0 0 10px;font-size:14px;line-height:1.5;color:var(--moov-neutral-700)}
+.gs-ret-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.gs-ret-list>li{border-radius:14px;background:var(--moov-neutral-25);overflow:hidden}
+.gs-ret-row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;width:100%;min-height:60px;padding:8px 12px;border:0;background:none;color:var(--moov-ink);font:inherit;text-align:left;cursor:pointer}
+.gs-ret-row:focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:-3px}
+.gs-ret-score{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;font-size:17px;font-weight:700;background:var(--moov-neutral-100);color:var(--moov-ink)}
+.is-eleve .gs-ret-score{background:var(--moov-danger-700);color:var(--moov-white)}
+.is-moyen .gs-ret-score{background:var(--moov-warning-100);color:var(--moov-warning-700)}
+.gs-ret-who strong{display:block;font-size:15px}
+.gs-ret-who small{display:block;font-size:12.5px;color:var(--moov-neutral-500)}
+.gs-ret-level{font-size:12px;font-style:normal;font-weight:600;white-space:nowrap;color:var(--moov-neutral-600)}
+.is-eleve .gs-ret-level{color:var(--moov-danger-700)}
+.gs-ret-detail{display:grid;gap:8px;padding:0 12px 12px 68px}
+.gs-ret-detail ul{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.gs-ret-detail li{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--moov-neutral-700)}
+.gs-ret-action{margin:0;padding:10px 12px;border-radius:12px;background:var(--moov-primary-50);font-size:14px;line-height:1.45;color:var(--moov-ink)}
+@media (max-width:520px){.gs-ret-detail{padding-left:12px}}
 
 /* Questions */
 .gs-form{display:flex;gap:8px}
