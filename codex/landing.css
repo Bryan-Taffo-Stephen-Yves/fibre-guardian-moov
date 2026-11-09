@@ -239,3 +239,5 @@ body:has(.lp){padding:0;background:var(--moov-surface)}
 @media(max-width:719px){.lp-dash-kpis b{font-size:18px;white-space:nowrap}}
 .lp-offer .pv-find{padding:22px 18px;border-radius:28px}
 .lp-offer .pv-find-head h2{font-size:clamp(24px,4vw,34px)}
+.lp-invite{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;margin:0 0 14px;padding:14px 16px;border-radius:20px;background:var(--moov-success-50);color:var(--moov-ink);font-size:15px;line-height:1.45}
+.lp-invite p{margin:0}
