@@ -167,6 +167,8 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/labo'&&method==='GET')return json(res,require('./labo.cjs').snapshot(store,user.id,{segment:url.searchParams.get('segment'),otdr:url.searchParams.get('otdr')==='1',nm:url.searchParams.get('nm')}));
     // Guardian Superviseur : équipe Moov seulement (requireOperator dans superviseur.cjs), il propose, un responsable valide.
     if(route==='/api/noc/superviseur'&&method==='GET')return json(res,require('./superviseur.cjs').bilan(store,user.id,{whatsapp:WA.status(store,whatsapp.cfg)}));
+    // Retention Score (thème 6) : clients à risque de départ, équipe Moov seulement (retention.cjs).
+    if(route==='/api/noc/retention'&&method==='GET')return json(res,require('./retention.cjs').scores(store,user.id));
     if(route==='/api/noc/superviseur/ask'&&method==='POST')return json(res,await require('./superviseur.cjs').ask(store,user.id,await body(req,2048),{whatsapp:WA.status(store,whatsapp.cfg),log:m=>options.onError?options.onError(new Error(m)):console.warn(m)}));
     if(route==='/api/noc/superviseur/signal'&&method==='POST')return json(res,require('./superviseur.cjs').signal(store,user.id,await body(req,1024),{whatsapp:WA.status(store,whatsapp.cfg)}));
     // Copies Wi-Fi des clients : équipe Moov seulement (requireOperator dans copie-wifi.cjs).
