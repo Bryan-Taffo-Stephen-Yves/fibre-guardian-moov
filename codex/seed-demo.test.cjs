@@ -3,7 +3,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {Store}=require('./pilot-store.cjs');
 const {createGuardianServer}=require('./pilot-server.cjs');
-const {seedDemo,DEMO,NEIGHBOURS,CREW}=require('./seed-demo.cjs');
+const {seedDemo,DEMO,NEIGHBOURS,CREW,STAFF}=require('./seed-demo.cjs');
 
 const COUNTS=['users','noc_incidents','noc_notifications','audit'];
 function counts(store){return Object.fromEntries(COUNTS.map(t=>[t,store.get('SELECT count(*) AS n FROM '+t).n]));}
@@ -15,7 +15,7 @@ test('La démo pré-remplie crée la situation attendue, et un second passage ne
  try{
   const first=await seedDemo(store);assert.equal(first.seeded,true);
   const before=counts(store);
-  assert.equal(before.users,3+NEIGHBOURS.length+CREW.length,'3 comptes, un client par quartier et un compte par technicien');
+  assert.equal(before.users,3+NEIGHBOURS.length+CREW.length+STAFF.length,'3 comptes, un client par quartier, un compte par technicien, un conseiller et une superviseure');
   const incidents=store.all('SELECT segment_id AS segment,status FROM noc_incidents ORDER BY segment_id');
   assert.ok(incidents.some(i=>i.segment==='COC-03'&&i.status==='proposed'),'COC-03 en attente de validation');
   assert.ok(incidents.some(i=>i.segment==='YOP-07'&&i.status==='resolved'),'YOP-07 résolu dans la nuit');
@@ -37,7 +37,7 @@ test('Réinitialiser la démo : refusé au client, accepté pour l’administrat
   store.run("UPDATE noc_incidents SET status='resolved' WHERE segment_id='COC-03'");
   const r=await admin('/demo/reset',{confirm:true});assert.equal(r.status,200);
   assert.equal(store.get("SELECT status FROM noc_incidents WHERE segment_id='COC-03'").status,'proposed','la démo est rejouée');
-  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length+CREW.length);
+  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length+CREW.length+STAFF.length);
  }finally{if(saved===undefined)delete process.env[DEMO.admin.env];else process.env[DEMO.admin.env]=saved;server.close();}
 });
 
@@ -48,7 +48,7 @@ test('Remise à zéro répétée pendant la répétition : jamais bloquée par l
   await seedDemo(store);
   // Quatre remises à zéro dans la même minute : chacune recrée et reconnecte les comptes de la démo.
   for(let n=0;n<4;n++){const r=await resetDemo(store);assert.equal(r.seeded,true,'remise à zéro n° '+(n+1));}
-  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length+CREW.length,'tous les comptes de la démo sont là');
+  assert.equal(store.get('SELECT count(*) AS n FROM users').n,3+NEIGHBOURS.length+CREW.length+STAFF.length,'tous les comptes de la démo sont là');
  }finally{server.close();}
 });
 
