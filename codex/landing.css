@@ -237,3 +237,5 @@ body:has(.lp){padding:0;background:var(--moov-surface)}
 .lp-brand,.lp-btn{white-space:nowrap}
 @media(max-width:719px){.lp-nav-actions .lp-menu{display:none}}
 @media(max-width:719px){.lp-dash-kpis b{font-size:18px;white-space:nowrap}}
+.lp-offer .pv-find{padding:22px 18px;border-radius:28px}
+.lp-offer .pv-find-head h2{font-size:clamp(24px,4vw,34px)}
