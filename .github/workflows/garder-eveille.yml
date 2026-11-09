@@ -1,0 +1,37 @@
+# Garde Fibre Guardian réveillé sur Render (offre gratuite).
+# Render endort le service après 15 minutes sans visite. Ce petit robot
+# GitHub ouvre /api/health toutes les 5 minutes : l'appli reste prête
+# pour l'équipe et les données ne sont plus remises à zéro par la veille.
+# Gratuit (dépôt public), aucune clé, aucune variable Render touchée.
+name: Garder Fibre Guardian éveillé
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: garder-eveille
+  cancel-in-progress: false
+
+jobs:
+  reveil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ouvrir /api/health
+        env:
+          URL: https://fibre-guardian-moov.onrender.com/api/health
+        run: |
+          for essai in 1 2 3; do
+            if reponse=$(curl -fsS --max-time 90 "$URL"); then
+              echo "Fibre Guardian répond : $reponse"
+              exit 0
+            fi
+            echo "Essai $essai sans réponse, nouvel essai dans 20 s"
+            sleep 20
+          done
+          echo "::warning::Fibre Guardian n'a pas répondu après 3 essais"
+          exit 1
