@@ -16,7 +16,7 @@ const MARKERS={
  dioula:['ɛ','ɔ','ɲ','i ni ce','i ni sogoma','i ni wula','a ni ce','man nyi','ma nyi','mandi',' ka connexion',' bɛ ',' be di','tɛ taa','te taa','n ka ','mun be','mun bɛ','wele']
 };
 // Sens en français de chaque intention reconnue par les packs.
-const GLOSS={coupure:'Internet est coupé chez moi.',lent:'Ma connexion est lente.',wifi:'Mon Wi-Fi ne marche pas bien.',reboot:'Je veux redémarrer ma box.',appel:'Je veux parler à un technicien.',salut:'Bonjour.'};
+const GLOSS={coupure:'Internet est coupé chez moi.',lent:'Ma connexion est lente.',wifi:'Mon Wi-Fi ne marche pas bien.',reboot:'Je veux redémarrer ma box.',appel:'Je veux parler à un technicien.',suivi:'Quand le technicien arrive-t-il ?',salut:'Bonjour.'};
 
 function detect(text){
  const t=fold(text),raw=' '+String(text||'').toLowerCase()+' ';
@@ -25,6 +25,8 @@ function detect(text){
  const lang=d>n&&d>0?'dioula':n>0?'nouchi':'fr';
  if(lang==='fr')return {lang,french:null,intents:[]};
  const keys={...(PACKS[lang]?.keywords||{})};if(lang==='nouchi')keys.coupure=(keys.coupure||[]).concat(['y a fohi','fohi','partie']);
+ // « Ça arrive quand ? » : le client demande l'heure de retour (page « Parler à Guardian », fibre-voice-view.js).
+ keys.suivi=lang==='dioula'?['tuma jumɛn','tuma jumen']:['arrive quand','vient quand','revient quand','c est quand'];
  const intents=Object.keys(keys).filter(k=>keys[k].some(w=>t.includes(fold(w))));
  return {lang,intents,french:intents.length?intents.map(k=>GLOSS[k]).filter(Boolean).join(' '):null};
 }

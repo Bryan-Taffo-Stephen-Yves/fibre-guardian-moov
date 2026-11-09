@@ -43,6 +43,8 @@ function createGuardianServer(options={}){
  const WEL=require('./welcome.cjs');WEL.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
  const CW=require('./copie-wifi.cjs');CW.migrate(store);
+ // Fibre Voice (thème 8) : ce que les clients demandent quand ils parlent à Guardian (fibre-voice.cjs).
+ const FV=require('./fibre-voice.cjs');FV.migrate(store);
  const FD=require('./fair-deal.cjs');FD.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
@@ -68,6 +70,8 @@ function createGuardianServer(options={}){
       // Français familier que les règles ne reconnaissent pas (« la box fait n'importe quoi », « YouTube refuse de s'ouvrir ») : Claude en donne le sens, qui guide la réponse.
       else if(journey.intent(d.text)==='inconnu'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});if(ai&&journey.intent(ai.french)!=='inconnu')d.meaning=ai.lang==='fr'?{lang:'fr',french:ai.french}:ai;}}
      const state=journey.act(store,user.id,d);
+     // Fibre Voice : une question posée à la voix est comptée (sujet et langue seulement) pour l'équipe Moov.
+     if(d.type==='chat'&&d.channel==='voix'&&typeof d.text==='string')FV.record(store,user.id,{subject:journey.intent(d.meaning?.french||d.text),lang:d.meaning?.lang||'fr'});
      // Guardian : le moteur à règles a répondu ; Claude reformule si la clé est configurée, sinon rien ne change.
      if(d.type==='chat'&&guardianAi.available()){const [question,answer]=state.messages.slice(-2);const text=await guardianAi.rephrase({name:user.name,question:question?.text,draft:answer?.text,facts:answer?.facts,proof:answer?.proof,action:answer?.action,snapshot:state,history:state.messages.slice(0,-2),meaning:question?.lang?{lang:question.lang,french:question.meaning}:null},{store,uid:user.id,log,timeoutMs:Math.max(3000,Math.min(8000,10500-(Date.now()-started)))});if(text)return journey.refine(store,user.id,answer.id,text);}
      return state;}
@@ -197,6 +201,7 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
     // Bouton « Appeler Moov » : le serveur vocal dit d'abord ce que Moov sait du quartier (appels.cjs).
+    if(route==='/api/noc/voix'&&method==='GET')return json(res,FV.stats(store,user.id));
     if(route==='/api/noc/call'&&method==='POST')return json(res,require('./appels.cjs').call(store,user.id,await body(req,1024)));
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
     if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);return json(res,WEL.act(store,user.id,await body(req,1000000)));}

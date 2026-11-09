@@ -11,6 +11,8 @@
   }
   // Fibre Welcome (welcome-view.js) se charge juste avant le Superviseur, qui affiche son bloc « Nouveaux abonnés ».
   files.splice(files.indexOf('superviseur-view.js'), 0, 'welcome-view.js');
+  // Fibre Voice (fibre-voice-view.js) : la page « Parler à Guardian » et son bloc dans le Superviseur.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'fibre-voice-view.js');
   next();
   // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
