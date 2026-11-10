@@ -164,6 +164,7 @@
     plan&&h('div',{className:'ch-plan'},h('div',null,h('small',null,'Votre offre'),h('strong',null,plan.mbps+' Mb/s')),h('div',null,h('small',null,'Chaque mois'),h('strong',null,(plan.price||0).toLocaleString('fr-FR')+' F')),h('button',{type:'button',className:'ch-chip strong',onClick:()=>go('forfait')},'Changer de forfait'),state?.nextPlan&&h('p',{className:'ch-plan-next'},'À partir du '+new Date(state.nextPlan.at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}).replace(/^1 /,'1er ')+' : '+state.nextPlan.plan.mbps+' Mb/s pour '+(state.nextPlan.plan.price||0).toLocaleString('fr-FR')+' F par mois.'))),
    api&&h(WhatsAppCard,{api,go}),
    api&&h(ParrainageCard,{api}),
+   window.FGAcces&&h(FGAcces.Entry,{onOpen:()=>go('acces')}),
    h('section',{className:'ch-group'},h('h2',null,'Suivi et alertes'),
     row('bell','Notifications',bell?bell+' non lue'+(bell>1?'s':''):'Tout est lu',()=>go('notifications'),bell?h('span',{className:'ch-badge'},bell>9?'9+':bell):null),
     row('truck','Suivi du technicien','Où en est votre intervention',()=>go('tracking')),

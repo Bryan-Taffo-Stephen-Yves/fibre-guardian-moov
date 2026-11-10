@@ -46,6 +46,8 @@ function createGuardianServer(options={}){
  const CW=require('./copie-wifi.cjs');CW.migrate(store);
  // Fibre Voice (thème 8) : ce que les clients demandent quand ils parlent à Guardian (fibre-voice.cjs).
  const FV=require('./fibre-voice.cjs');FV.migrate(store);
+ // Fibre Access (thème 9) : tarif étudiant, pack voisins, paiement en plusieurs fois (acces.cjs).
+ const AC=require('./acces.cjs');AC.migrate(store);
  const FD=require('./fair-deal.cjs');FD.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
@@ -221,6 +223,10 @@ function createGuardianServer(options={}){
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
     if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);return json(res,WEL.act(store,user.id,await body(req,1000000)));}
     if(route==='/api/welcome/activate'&&method==='POST'){const st=WEL.activate(store,user.id);return json(res,{state:journey.snapshotFor(store,user.id,st)});}
+    if(route==='/api/acces'&&method==='GET')return json(res,AC.state(store,user.id));
+    if(route==='/api/acces'&&method==='POST'){store.rate('acces:'+user.id,30,600000);return json(res,AC.act(store,user.id,await body(req,1000000)));}
+    if(route==='/api/noc/acces'&&method==='GET')return json(res,AC.list(store,user.id));
+    if(route==='/api/noc/acces'&&method==='POST')return json(res,AC.decide(store,user.id,await body(req,2048)));
     if(route==='/api/noc/welcome'&&method==='GET')return json(res,WEL.list(store,user.id));
     if(route==='/api/noc/welcome'&&method==='POST')return json(res,WEL.operate(store,user.id,await body(req,2048)));
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
