@@ -49,6 +49,8 @@ function createGuardianServer(options={}){
  // Fibre Access (thème 9) : tarif étudiant, pack voisins, paiement en plusieurs fois (acces.cjs).
  const AC=require('./acces.cjs');AC.migrate(store);
  const FD=require('./fair-deal.cjs');FD.migrate(store);
+ // Fibre+ (thème 10) : contenus inclus dès 300 Mb/s et pack jeux en ligne (fibreplus.cjs).
+ const FP=require('./fibreplus.cjs');FP.migrate(store);
  // Fibre Voice, centre des avis (thème 8) : notes après intervention ou installation, rappel sous 24 h si la note est basse (avis.cjs).
  const AV=require('./avis.cjs');AV.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
@@ -78,6 +80,8 @@ function createGuardianServer(options={}){
       // Français familier que les règles ne reconnaissent pas (« la box fait n'importe quoi », « YouTube refuse de s'ouvrir ») : Claude en donne le sens, qui guide la réponse.
       else if(journey.intent(d.text)==='inconnu'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});if(ai&&journey.intent(ai.french)!=='inconnu')d.meaning=ai.lang==='fr'?{lang:'fr',french:ai.french}:ai;}}
      const state=journey.act(store,user.id,d);
+     // Fibre+ : un passage à 300 Mb/s ou plus active tout de suite le contenu inclus (le client est prévenu).
+     if(d.type==='upgrade-pay')FP.sync(store,user.id);
      // Fibre Voice : une question posée à la voix est comptée (sujet et langue seulement) pour l'équipe Moov.
      if(d.type==='chat'&&d.channel==='voix'&&typeof d.text==='string')FV.record(store,user.id,{subject:journey.intent(d.meaning?.french||d.text),lang:d.meaning?.lang||'fr'});
      // Guardian : le moteur à règles a répondu ; Claude reformule si la clé est configurée, sinon rien ne change.
@@ -220,6 +224,9 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
     // Bouton « Appeler Moov » : le serveur vocal dit d'abord ce que Moov sait du quartier (appels.cjs).
+    if(route==='/api/fibreplus'&&method==='GET')return json(res,FP.state(store,user.id));
+    if(route==='/api/fibreplus'&&method==='POST'){store.rate('fibreplus:'+user.id,30,600000);return json(res,FP.act(store,user.id,await body(req,1024)));}
+    if(route==='/api/noc/fibreplus'&&method==='GET')return json(res,FP.summary(store,user.id));
     if(route==='/api/noc/voix'&&method==='GET')return json(res,FV.stats(store,user.id));
     if(route==='/api/noc/avis'&&method==='GET')return json(res,AV.stats(store,user.id));
     if(route==='/api/noc/avis'&&method==='POST')return json(res,AV.done(store,user.id,await body(req,1024)));
