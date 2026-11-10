@@ -43,3 +43,32 @@ test('Côté Moov : réservé à l’équipe, clients triés du plus au moins à
   assert.equal((await fetch(base+'/api/noc/retention',{headers:{Cookie:cookie}})).status,403);
  }finally{srv.close();}
 });
+
+// Thème 6 : le conseiller appelle, puis envoie l'offre préparée par Guardian. Le client la reçoit dans ses notifications.
+test('Le conseiller note son appel et envoie l’offre adaptée à la cause, une fois par mois',async()=>{
+ const {Store}=require('./pilot-store.cjs'),operator=require('./operator-store.cjs'),journey=require('./journey-store.cjs'),noc=require('./noc-store.cjs');
+ const s=new Store(':memory:');operator.migrate(s);journey.migrate(s);noc.migrate(s);R.migrate(s);const ids={};
+ for(const n of ['awa','kader']){ids[n]=(await s.register({email:n+'@example.test',name:n==='awa'?'Awa Koné':'Kader',password:'retention-password-1'})).user.id;}
+ operator.grant(s,'kader@example.test','agent');
+ s.run("INSERT OR IGNORE INTO noc_segments(id,zone,total,online,latency,sample_at) VALUES('YOP-07','Yopougon · Niangon',20,20,10,?)",now);
+ s.run("INSERT OR REPLACE INTO noc_members(user_id,segment_id) VALUES(?,'YOP-07')",ids.awa);
+ const st=journey.seed();st.plan={mbps:100,price:20000};st.messages=[{role:'user',text:'Je veux résilier mon abonnement'}];journey.put(s,ids.awa,st);
+ const c=R.scores(s,ids.kader,now).clients.find(x=>x.id===ids.awa);
+ assert.equal(c.offer.kind,'mois');assert.match(c.offer.label,/1 mois offert \(20.000 F\)/);assert.equal(c.suivi,null);
+ assert.throws(()=>R.act(s,ids.awa,{client:ids.awa,action:'offre'},now),e=>e.status===403,'un client ne peut rien envoyer');
+ assert.throws(()=>R.act(s,ids.kader,{client:ids.awa,action:'appel',outcome:'peut-être'},now),/résultat de l’appel/);
+ let r=R.act(s,ids.kader,{client:ids.awa,action:'appel',outcome:'hesite'},now);
+ assert.equal(r.clients.find(x=>x.id===ids.awa).suivi.outcomeText,'Hésite encore');
+ r=R.act(s,ids.kader,{client:ids.awa,action:'offre'},now+1000);
+ assert.match(r.clients.find(x=>x.id===ids.awa).suivi.offerLabel,/1 mois offert/);
+ const n=journey.get(s,ids.awa).notifications[0];
+ assert.equal(n.title,'Une attention de Moov pour vous');assert.match(n.body,/prochain mois est offert/);
+ assert.throws(()=>R.act(s,ids.kader,{client:ids.awa,action:'offre'},now+2000),/déjà été envoyée/);
+});
+
+test('L’offre suit la cause : ligne saturée, mauvaise note, pannes',()=>{
+ const plan={mbps:100,price:20000};
+ assert.equal(R.offerFor([{key:'sature'}],plan).kind,'monter');
+ assert.equal(R.offerFor([{key:'note'}],plan).kind,'visite');
+ assert.equal(R.offerFor([{key:'pannes'}],plan).kind,'boost');
+});
