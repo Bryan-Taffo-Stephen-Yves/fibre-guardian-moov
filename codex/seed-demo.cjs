@@ -122,6 +122,11 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   at(6*HOUR+16*MIN);await request(direction,'/noc/action',{type:'simulate',segment:'YOP-07',scenario:'normal'});
   at(6*HOUR+15*MIN);await incidentAction(night.id,'verify');await notify(nightKey);
 
+  // --- Offres solidaires : un pack voisins ouvert à Cocody, un mois payé en 3 fois à Marcory (Fibre Access, acces.cjs)
+  const AC=require('./acces.cjs'),who=email=>store.get('SELECT id FROM users WHERE email=?',email).id,nb=seg=>NEIGHBOURS.find(n=>n.segment===seg).email;
+  at(5*HOUR);AC.act(store,who(nb('COC-03')),{action:'pack-open',pack:'voisins-300',confirm:true});
+  at(4*HOUR+30*MIN);AC.act(store,who(nb('MAR-02')),{action:'split',parts:3,confirm:true});AC.act(store,who(nb('MAR-02')),{action:'split-pay',part:0});
+
   // --- Ce matin : la box d'Awa ralentit, elle la redémarre à distance
   at(3*HOUR+12*MIN);await act({type:'scenario',value:'slow'});
   at(3*HOUR+10*MIN);await act({type:'reboot',confirm:true});

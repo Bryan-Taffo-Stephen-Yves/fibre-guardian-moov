@@ -96,7 +96,7 @@
       error && h('p', {className: 'gs-error', role: 'alert'}, error),
       list.length ? h('ul', {className: 'gs-findings'}, list.map(f => h(Finding, {key: f.key, f, open: isOpen(f), busy, onToggle: () => setOpened(isOpen(f) ? '' : f.key), onGo: f => onNavigate(f.go.page, f.go.incidentId), onSignal: signal})))
         : h('p', {className: 'gs-empty'}, 'Rien à signaler : toutes les box ont une bonne lumière et aucun dossier n’est ouvert.')),
-      root.FGFairDeal && h(root.FGFairDeal.Block, {api}));
+      root.FGFairDeal && h(root.FGFairDeal.Block, {api}), root.FGAcces && h(root.FGAcces.Block, {api}));
   }
 
   // Retention Score (thème 6) : les clients qui risquent de partir, pourquoi, et quoi faire. Un conseiller agit, jamais Guardian seul.
