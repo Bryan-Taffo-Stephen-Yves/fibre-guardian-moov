@@ -1,0 +1,96 @@
+/* Accueil client simple (accueil.js) : un voyant, quatre gros boutons, deux cartes au plus.
+   Mobile d'abord (390 px), puis deux colonnes sur grand écran. Couleurs Moov uniquement. */
+@keyframes ac-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ac-ring{0%{transform:scale(.72);opacity:.55}100%{transform:scale(1.25);opacity:0}}
+
+.ac{display:grid;gap:16px;max-width:1080px;padding-bottom:8px;animation:ac-in .45s var(--fg-ease,cubic-bezier(.16,1,.3,1)) both}
+
+.ac-hello{display:flex;align-items:center;gap:12px;min-height:64px}
+.ac-hello .ac-face{flex:none;margin:0}
+.ac-hello h1{margin:0;font:700 30px/1.05 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.035em;color:var(--moov-ink)}
+.ac-hello p{margin:4px 0 0;font-size:15px;color:var(--moov-text-muted,var(--moov-neutral-600))}
+
+/* Le voyant : une couleur, un dessin, une phrase */
+.ac-light{--tone:var(--moov-success-500);--tone-ink:var(--moov-success-700);--tone-soft:var(--moov-success-50);
+ position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 16px;align-items:center;padding:20px;border-radius:28px;
+ background:var(--tone-soft);color:var(--moov-ink);box-shadow:0 14px 34px -18px color-mix(in srgb,var(--tone) 55%,transparent)}
+.ac-light.ac-slow{--tone:var(--moov-accent-500);--tone-ink:var(--moov-accent-700);--tone-soft:var(--moov-accent-50)}
+.ac-light.ac-down{--tone:var(--moov-danger-500);--tone-ink:var(--moov-danger-700);--tone-soft:var(--moov-danger-50)}
+.ac-light.ac-wait{--tone:var(--moov-primary-500);--tone-ink:var(--moov-primary-700);--tone-soft:var(--moov-primary-50)}
+.ac-dot{position:relative;display:grid;place-items:center;width:76px;height:76px}
+.ac-dot>i{position:absolute;inset:0;border-radius:50%;background:var(--tone);animation:ac-ring 2.4s cubic-bezier(.16,1,.3,1) infinite}
+.ac-ok .ac-dot>i{animation-duration:3.6s}
+.ac-dot>b{position:relative;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--tone);color:var(--moov-white);box-shadow:0 8px 18px -6px color-mix(in srgb,var(--tone) 70%,transparent)}
+.ac-say{display:contents}
+.ac-say h2{grid-column:2;align-self:center}
+.ac-say p,.ac-pill{grid-column:1/-1}
+.ac-say h2{margin:0;font:700 22px/1.15 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.025em;color:var(--tone-ink);text-wrap:balance}
+.ac-say p{margin:0;font-size:16px;line-height:1.45;color:var(--moov-ink)}
+.ac-pill{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:var(--moov-surface);color:var(--moov-ink);font:600 14.5px var(--fg-font,inherit);cursor:pointer;box-shadow:0 2px 6px color-mix(in srgb,var(--moov-ink) 6%,transparent)}
+.ac-pill svg:last-child{color:var(--moov-neutral-500)}
+.ac-pill.warn{background:var(--moov-accent-100);color:var(--moov-accent-800)}
+.ac-light-actions{grid-column:1/-1;display:grid;gap:8px}
+.ac-go{min-height:52px;padding:0 18px;border:0;border-radius:16px;background:var(--tone);color:var(--moov-white);font:700 16.5px var(--fg-font,inherit);cursor:pointer;transition:transform .15s,filter .15s}
+.ac-slow .ac-go:not(.ghost){color:var(--moov-on-accent,var(--moov-neutral-900))}
+.ac-go:hover{filter:brightness(1.05)}
+.ac-go:active{transform:scale(.98)}
+.ac-go.ghost{background:var(--moov-surface);color:var(--tone-ink)}
+.ac-go:disabled{opacity:.6;cursor:default}
+
+/* Quatre gros boutons */
+.ac-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.journey .ac .ac-tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:14px;min-height:122px;width:100%;padding:16px;border:1px solid var(--moov-neutral-150);border-radius:24px;background:var(--moov-surface);color:var(--moov-ink);font:700 17px/1.2 var(--fg-font,inherit);letter-spacing:-.01em;text-align:left;cursor:pointer;box-shadow:0 6px 16px -10px color-mix(in srgb,var(--moov-ink) 25%,transparent);transition:transform .15s,border-color .15s}
+.ac .ac-ico{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.journey .ac .ac-tile.ap-call-button>svg{box-sizing:border-box;width:52px;height:52px;padding:13px;border-radius:16px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.journey .ac .ac-tile.ap-call-button>span{display:block;width:auto;height:auto;background:none;color:inherit;border-radius:0}
+.journey .ac .ac-tile.is-main{background:var(--moov-primary);border-color:transparent;color:var(--moov-white)}
+.ac .ac-tile.is-main .ac-ico{background:color-mix(in srgb,var(--moov-white) 18%,transparent);color:var(--moov-white)}
+.journey .ac .ac-tile:hover{border-color:var(--moov-primary-200)}
+.journey .ac .ac-tile:active{transform:scale(.97)}
+.ac-tile:disabled{opacity:.6}
+.ac :is(.ac-tile,.ac-go,.ac-pill,.ac-survie,.ap-call-button):focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:3px}
+
+.ac-survie{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 12px;border:0;background:none;color:var(--moov-neutral-700);font:500 15px var(--fg-font,inherit);cursor:pointer}
+.ac-survie b{color:var(--moov-primary);font-weight:700}
+.ac-cards{display:grid;gap:14px}
+.ac-cards>*{margin:0!important}
+
+/* Plus de boule flottante ni de dock sur l'accueil : Guardian est le premier gros bouton */
+.journey:has(.ac) .j-dock{display:none}
+
+@media(min-width:761px){
+ .ac{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px 24px;align-items:start}
+ .ac-hello,.ac-cards,.ac-survie{grid-column:1/-1}
+ .ac-survie{justify-content:flex-start;padding:0}
+ .ac-hello h1{font-size:38px}
+ .ac-light{min-height:262px;padding:28px;gap:22px;align-content:center}
+ .ac-dot{width:96px;height:96px}.ac-dot>b{width:80px;height:80px}
+ .ac-say{display:grid;gap:8px;grid-column:2;align-content:center}
+ .ac-say h2,.ac-say p,.ac-pill{grid-column:auto}
+ .ac-say h2{font-size:28px}
+ .ac-say p{font-size:17px}
+ .ac-light-actions{grid-auto-flow:column;justify-content:start}
+ .journey .ac .ac-tile{min-height:125px}
+ .ac-cards{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+}
+@media(prefers-reduced-motion:reduce){.ac{animation:none}.ac-dot>i{animation:none;opacity:.18;transform:scale(1.12)}}
+
+/* Mes appareils : la liste d'abord, l'historique et les conseils repliés */
+.device-usage .du-metrics:not(.du-metrics--period){grid-template-columns:repeat(2,minmax(0,1fr))}
+.device-usage .du-heading p{font-size:15px;line-height:1.45;max-width:46ch}
+.du-history{border:1px solid var(--moov-neutral-150);border-radius:24px;background:var(--moov-surface);padding:0 18px}
+.du-history>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;font:700 16px var(--fg-font,inherit);color:var(--moov-ink);cursor:pointer;list-style:none}
+.du-history>summary::-webkit-details-marker{display:none}
+.du-history>summary::after{content:'';width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);transition:transform .2s}
+.du-history[open]>summary::after{transform:rotate(-135deg) translateY(-3px)}
+.du-history[open]{display:grid;gap:16px;padding-bottom:18px}
+.du-history>summary:focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:2px;border-radius:12px}
+/* Prévision de coupure : la courbe et ses mesures se déplient sur demande */
+details.fc-graph>summary{display:flex;align-items:center;min-height:44px;font:600 15px var(--fg-font,inherit);color:var(--moov-primary);cursor:pointer;list-style:none}
+details.fc-graph>summary::-webkit-details-marker{display:none}
+details.fc-graph:not([open]){padding:0;background:none;border:0;box-shadow:none}
+@media(max-width:600px){.journey .du-device .du-volume{display:none}}
+/* Mon compte : le code d'un proche se déplie seulement si on en a un */
+.ch-parr-more>summary{display:flex;align-items:center;min-height:44px;font:600 15px var(--fg-font,inherit);color:var(--moov-primary);cursor:pointer;list-style:none}
+.ch-parr-more>summary::-webkit-details-marker{display:none}
+.ch-parr-more[open]>summary{color:var(--moov-ink)}
