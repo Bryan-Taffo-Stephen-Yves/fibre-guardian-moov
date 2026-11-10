@@ -53,7 +53,7 @@
         h('h2', {id: 'fc-title'}, 'C’est noté : ' + name + ' passe ' + longDay(prevention.slot)),
         h('p', null, 'Il nettoiera la prise de fibre de votre box. Votre internet ne sera pas coupé, et vous n’avez rien à préparer.'),
         person),
-      h('div', {className: 'fc-graph'}, h(Chart, {optical, prevention}), facts));
+      h('details', {className: 'fc-graph'}, h('summary', null, 'Voir la courbe de la lumière'), h(Chart, {optical, prevention}), facts));
     return h('section', {className: 'j-card fc-card', 'aria-labelledby': 'fc-title'},
       h('div', {className: 'fc-text'},
         h('small', {className: 'fc-eyebrow'}, 'Guardian a vu venir une panne'),
@@ -66,7 +66,7 @@
           h('div', {className: 'fc-actions'},
             h('button', {type: 'button', className: 'j-button primary', disabled: busy, onClick: () => onBook && onBook(slot.id)}, 'Ça me va'),
             optical.slots.length > 1 && !more && h('button', {type: 'button', className: 'j-button', disabled: busy, onClick: () => setMore(true)}, 'Un autre moment')))),
-      h('div', {className: 'fc-graph'}, h(Chart, {optical}), facts));
+      h('details', {className: 'fc-graph'}, h('summary', null, 'Voir la courbe de la lumière'), h(Chart, {optical}), facts));
   }
 
   root.FGForecast = {Card, Chart};
