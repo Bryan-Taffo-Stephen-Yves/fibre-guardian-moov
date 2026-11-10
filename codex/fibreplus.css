@@ -1,0 +1,31 @@
+/* Fibre+ (fibreplus-view.js) : contenus inclus sur la page « Changer de forfait » et bloc du Superviseur.
+   Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.fp{display:grid;gap:12px;padding:18px;border-radius:22px;background:var(--moov-primary-900);color:var(--moov-white);min-width:0}
+.fp-head{display:grid;gap:4px}
+.fp-badge{justify-self:start;padding:3px 10px;border-radius:999px;background:var(--moov-accent);color:var(--moov-on-accent);font-size:12.5px;font-weight:800;letter-spacing:.04em}
+.fp .fp-head h2,.pv .fp .fp-head h2{margin:4px 0 0;font-size:20px;line-height:1.2;color:var(--moov-white)}
+.fp .fp-head p{margin:0;font-size:14px;line-height:1.45;color:color-mix(in srgb,var(--moov-white) 78%,transparent)}
+.fp-contents{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.fp-contents li,.fp-gaming{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;align-items:center;padding:12px;border-radius:16px;background:color-mix(in srgb,var(--moov-white) 9%,transparent);border:1.5px solid transparent}
+.fp-contents li.is-mine,.fp-gaming.is-on{border-color:var(--moov-accent);background:color-mix(in srgb,var(--moov-white) 14%,transparent)}
+.fp-contents li.is-locked{opacity:.85}
+.fp-contents li>div,.fp-gaming>div{min-width:0}
+.fp-contents b,.fp-gaming b{display:block;font-size:15.5px;color:var(--moov-white)}
+.fp-contents small,.fp-gaming small{display:block;font-size:12.5px;line-height:1.4;color:color-mix(in srgb,var(--moov-white) 75%,transparent)}
+.fp-gift,.fp-gaming em{display:block;margin-top:4px;font-style:normal;font-size:12.5px;font-weight:650;color:var(--moov-accent-200)}
+.fp-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:color-mix(in srgb,var(--moov-white) 14%,transparent);color:var(--moov-white)}
+.fp-contents li>:last-child,.fp-gaming>:last-child{grid-column:2;justify-self:start}
+.fp-tag{padding:4px 10px;border-radius:999px;background:var(--moov-accent);color:var(--moov-on-accent);font-size:12px;font-weight:700}
+.fp-tag.is-lock{background:color-mix(in srgb,var(--moov-white) 16%,transparent);color:var(--moov-white)}
+.fp-btn{min-height:40px;padding:0 14px;border:1.5px solid color-mix(in srgb,var(--moov-white) 60%,transparent);border-radius:12px;background:transparent;color:var(--moov-white);font:inherit;font-size:14px;font-weight:650;cursor:pointer}
+.fp-btn.is-main{border-color:var(--moov-white);background:var(--moov-white);color:var(--moov-primary)}
+.fp-btn:disabled{opacity:.55;cursor:default}
+.fp-confirm{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fp-link{min-height:36px;border:0;background:none;color:var(--moov-white);font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer}
+.pv-tag.plus{background:var(--moov-primary-900);color:var(--moov-white)}
+
+/* Superviseur */
+.fp-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.fp-kpis div{padding:10px;border-radius:12px;background:var(--moov-neutral-25)}
+.fp-kpis dt{font-size:20px;font-weight:700;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.fp-kpis dd{margin:0;font-size:12px;line-height:1.3;color:var(--moov-text-muted)}

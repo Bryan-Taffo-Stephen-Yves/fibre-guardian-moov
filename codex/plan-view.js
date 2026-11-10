@@ -93,6 +93,7 @@
    next&&h('section',{className:'pv-next',role:'status'},h('span',{className:'pv-next-ico'},h(Icon,{d:I.calendar,size:20})),
     h('div',null,h('strong',null,'À partir du '+day(next.at)+' : '+next.plan.mbps+' Mb/s'),h('small',null,'Pour '+F(next.plan.price)+' par mois. D’ici là, vous gardez '+current.mbps+' Mb/s.')),
     h('button',{type:'button',className:'pv-link',onClick:onKeep,disabled:busy},'Garder '+current.mbps+' Mb/s')),
+   window.FGFibrePlus&&h(FGFibrePlus.Section,{api,mbps:current.mbps}),
    h(Bilan,{api,lab,plans,onPick:p=>P(p.id===current.id?null:p),onVerdict:VD}),
    // Le bilan sur 7 jours prime sur le conseil de l'instant, pour ne jamais dire deux choses différentes.
    tip&&!['monter','baisser','ok'].includes(verdict)&&h('section',{className:'pv-tip'},h('span',{className:'j-chat-avatar pv-tip-art','aria-hidden':true},h('i'),h('i'),h('b')),
@@ -102,7 +103,7 @@
     const mine=p.id===current.id,chosen=pick?.id===p.id,diff=p.price-current.price,later=next?.plan.id===p.id;
     return h('button',{key:p.id,type:'button',role:'radio','aria-checked':chosen,className:'pv-plan'+(mine?' mine':'')+(chosen?' chosen':''),onClick:()=>P(mine?null:p)},
      h('span',{className:'pv-speed'},h('b',null,p.mbps),h('small',null,'Mb/s')),
-     h('span',{className:'pv-info'},h('span',{className:'pv-tags'},mine&&h('em',{className:'pv-tag mine'},'Votre forfait'),tipId===p.id&&!mine&&h('em',{className:'pv-tag tip'},'Conseillé par Guardian'),later&&h('em',{className:'pv-tag later'},'Prévu le '+day(next.at))),h('small',null,USES[p.mbps]||'')),
+     h('span',{className:'pv-info'},h('span',{className:'pv-tags'},mine&&h('em',{className:'pv-tag mine'},'Votre forfait'),tipId===p.id&&!mine&&h('em',{className:'pv-tag tip'},'Conseillé par Guardian'),p.mbps>=300&&h('em',{className:'pv-tag plus'},'Fibre+ inclus'),later&&h('em',{className:'pv-tag later'},'Prévu le '+day(next.at))),h('small',null,USES[p.mbps]||'')),
      h('span',{className:'pv-price'},h('strong',null,F(p.price)),h('small',null,'par mois'),!mine&&h('i',{className:diff>0?'more':'less'},(diff>0?'+ ':'− ')+F(Math.abs(diff)))),
      h('span',{className:'pv-radio','aria-hidden':true},chosen&&h(Icon,{d:I.check,size:14})));
    })),

@@ -82,7 +82,9 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   const noc=require('./noc-store.cjs');
   // Leur espace est déjà ouvert (comme pour le jury) : à la première connexion, l'accueil montre tout de suite la panne de leur quartier.
   const J=require('./journey-store.cjs');
-  for(const n of NEIGHBOURS){const {user}=await store.register({email:n.email,name:n.name,password:passwords[DEMO.client.email]});J.put(store,user.id,J.seed());noc.join(store,user.id,{segment:n.segment,consent:true});}
+  // Fibre+ : trois voisins ont 300 Mb/s ou plus (contenus inclus), deux à 200 Mb/s (à qui proposer 300 Mb/s).
+  const SPEED={'PAL-02':3,'RIV-04':4,'PLA-01':3,'MAR-02':2,'ABO-01':2};
+  for(const n of NEIGHBOURS){const {user}=await store.register({email:n.email,name:n.name,password:passwords[DEMO.client.email]});const st=J.seed();if(SPEED[n.segment])st.plan={...J.PLANS[SPEED[n.segment]]};J.put(store,user.id,st);noc.join(store,user.id,{segment:n.segment,consent:true});}
 
   // --- Espace d'Awa : sa box à Yopougon et son quartier suivi
   let journey=(await request(awa,'/journey/start',{})).state;
@@ -126,6 +128,10 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   const AC=require('./acces.cjs'),who=email=>store.get('SELECT id FROM users WHERE email=?',email).id,nb=seg=>NEIGHBOURS.find(n=>n.segment===seg).email;
   at(5*HOUR);AC.act(store,who(nb('COC-03')),{action:'pack-open',pack:'voisins-300',confirm:true});
   at(4*HOUR+30*MIN);AC.act(store,who(nb('MAR-02')),{action:'split',parts:3,confirm:true});AC.act(store,who(nb('MAR-02')),{action:'split-pay',part:0});
+
+  const FP=require('./fibreplus.cjs');
+  for(const n of NEIGHBOURS)if(SPEED[n.segment]>=3)FP.sync(store,store.get('SELECT id FROM users WHERE email=?',n.email).id);
+  FP.act(store,store.get('SELECT id FROM users WHERE email=?',NEIGHBOURS.find(n=>n.segment==='MAR-02').email).id,{action:'gaming',on:true,confirm:true});
 
   // --- Ce matin : la box d'Awa ralentit, elle la redémarre à distance
   at(3*HOUR+12*MIN);await act({type:'scenario',value:'slow'});
