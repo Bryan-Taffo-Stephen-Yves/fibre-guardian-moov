@@ -161,7 +161,7 @@
       h(Bulletin, {b, error, onAsk: askAbout}), h(Retention, {api}),
       h('div', {className: 'gs-grid'},
         h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate}), root.FGWelcome && h(root.FGWelcome.Block, {api})),
-        h('div', {className: 'gs-side'}, h(Agents, {b}), h(Parrainage, {b}), root.FGFibreVoice && h(root.FGFibreVoice.Block, {api}), h(Journal, {b}))));
+        h('div', {className: 'gs-side'}, h(Agents, {b}), h(Parrainage, {b}), root.FGFidelite && h(root.FGFidelite.Block, {api}), root.FGFibreVoice && h(root.FGFibreVoice.Block, {api}), h(Journal, {b}))));
   }
 
   root.FGSuperviseur = {View};

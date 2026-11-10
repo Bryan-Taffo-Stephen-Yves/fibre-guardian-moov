@@ -47,6 +47,8 @@ function createGuardianServer(options={}){
  // Fibre Voice (thème 8) : ce que les clients demandent quand ils parlent à Guardian (fibre-voice.cjs).
  const FV=require('./fibre-voice.cjs');FV.migrate(store);
  const FD=require('./fair-deal.cjs');FD.migrate(store);
+ // Fibre Loyalty+ (thème 2) : points, niveaux Bronze, Argent, Or et avantages (fidelite.cjs).
+ const FL=require('./fidelite.cjs');FL.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -218,6 +220,9 @@ function createGuardianServer(options={}){
     // Bouton « Appeler Moov » : le serveur vocal dit d'abord ce que Moov sait du quartier (appels.cjs).
     if(route==='/api/noc/voix'&&method==='GET')return json(res,FV.stats(store,user.id));
     if(route==='/api/noc/call'&&method==='POST')return json(res,require('./appels.cjs').call(store,user.id,await body(req,1024)));
+    if(route==='/api/fidelite'&&method==='GET')return json(res,FL.state(store,user.id));
+    if(route==='/api/fidelite'&&method==='POST'){store.rate('fidelite:'+user.id,30,600000);const d=await body(req,1024);insist(['pay','redeem'].includes(d.action),'Action inconnue.');return json(res,d.action==='pay'?FL.pay(store,user.id,d):FL.redeem(store,user.id,d));}
+    if(route==='/api/noc/fidelite'&&method==='GET')return json(res,FL.summary(store,user.id));
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
     if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);return json(res,WEL.act(store,user.id,await body(req,1000000)));}
     if(route==='/api/welcome/activate'&&method==='POST'){const st=WEL.activate(store,user.id);return json(res,{state:journey.snapshotFor(store,user.id,st)});}
