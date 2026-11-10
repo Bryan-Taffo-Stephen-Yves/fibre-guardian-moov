@@ -51,6 +51,12 @@
 .gs-numbers .is-hot dd{color:var(--moov-warning-300,var(--moov-warning))}
 
 /* Mise en page : une colonne sur téléphone, deux sur grand écran. */
+.gs-tabs{display:flex;gap:4px;padding:4px;border-radius:14px;background:var(--moov-neutral-100)}
+.gs-tabs button{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:1;min-height:44px;border:0;border-radius:11px;background:none;color:var(--moov-text-muted);font-size:14px;font-weight:650;cursor:pointer;transition:background .2s var(--gs-ease),color .2s var(--gs-ease)}
+.gs-tabs button.is-on{background:var(--moov-white);color:var(--moov-ink);box-shadow:0 1px 3px color-mix(in srgb,var(--moov-primary-900) 14%,transparent)}
+.gs-tabs button:focus-visible{outline:3px solid var(--moov-primary-500);outline-offset:2px}
+.gs-tabs em{min-width:22px;padding:1px 7px;border-radius:999px;background:var(--gs-bad-bg);color:var(--gs-bad-ink);font-size:12px;font-style:normal;font-weight:800}
+.gs-reseau{display:grid;gap:16px;min-width:0}
 .gs-grid{display:grid;gap:16px;min-width:0}
 .gs-main,.gs-side{display:grid;gap:16px;align-content:start;min-width:0}
 .gs-block,.gs-ask{display:grid;gap:12px;padding:16px;border-radius:var(--gs-radius);background:var(--gs-card);border:1px solid var(--gs-line);box-shadow:0 1px 2px color-mix(in srgb,var(--moov-primary-900) 6%,transparent),0 8px 24px -18px color-mix(in srgb,var(--moov-primary-900) 30%,transparent)}
@@ -170,6 +176,8 @@
 @media (min-width:1100px){
  .gs-grid{grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr)}
  .gs-side{position:sticky;top:16px}
+ .gs-clients .gs-side{position:static}
+ .gs-tabs{justify-self:start;min-width:420px}
 }
 @media (prefers-reduced-motion:reduce){.gs *,.gs *::before,.gs *::after{animation:none!important;transition:none!important}}
 /* Parrainages (thème 5) */

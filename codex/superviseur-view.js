@@ -96,7 +96,7 @@
       error && h('p', {className: 'gs-error', role: 'alert'}, error),
       list.length ? h('ul', {className: 'gs-findings'}, list.map(f => h(Finding, {key: f.key, f, open: isOpen(f), busy, onToggle: () => setOpened(isOpen(f) ? '' : f.key), onGo: f => onNavigate(f.go.page, f.go.incidentId), onSignal: signal})))
         : h('p', {className: 'gs-empty'}, 'Rien à signaler : toutes les box ont une bonne lumière et aucun dossier n’est ouvert.')),
-      root.FGFairDeal && h(root.FGFairDeal.Block, {api}), root.FGAcces && h(root.FGAcces.Block, {api}));
+      root.FGFairDeal && h(root.FGFairDeal.Block, {api}));
   }
 
   // Retention Score (thème 6) : les clients qui risquent de partir, pourquoi, et quoi faire. Un conseiller agit, jamais Guardian seul.
@@ -147,6 +147,7 @@
 
   function View({api, onNavigate}) {
     const [b, setB] = S(null), [error, setError] = S(''), [request, setRequest] = S(null);
+    const [tab, setTab] = S(() => { try { return new URLSearchParams(location.search).get('vue') === 'clients' ? 'clients' : 'reseau'; } catch (e) { return 'reseau'; } });
     const flight = R(false);
     async function load() {
       if (flight.current || document.hidden) return; flight.current = true;
@@ -157,11 +158,21 @@
     E(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t); }, []);
     if (!b) return h('div', {className: 'gs gs-loading', role: 'status'}, error ? h('p', {className: 'gs-error', role: 'alert'}, error) : h('p', null, 'Je fais le tour du réseau…'));
     const askAbout = text => setRequest({text, at: Date.now()});
+    const pick = key => { setTab(key); try { const u = new URL(location.href); if (key === 'clients') u.searchParams.set('vue', 'clients'); else u.searchParams.delete('vue'); history.replaceState(history.state, '', u); } catch (e) {} };
+    // Deux onglets pour que chaque chose soit à sa place : le réseau (pannes, gestes, agents) d'un côté,
+    // les clients et les offres (thèmes commerciaux) de l'autre. Le lien ?vue=clients ouvre directement le second.
+    const tabs = [['reseau', 'Réseau', b.findings.length], ['clients', 'Clients et offres', null]];
     return h('div', {className: 'gs'},
-      h(Bulletin, {b, error, onAsk: askAbout}), h(Retention, {api}),
-      h('div', {className: 'gs-grid'},
-        h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate}), root.FGWelcome && h(root.FGWelcome.Block, {api}), root.FGAvis && h(root.FGAvis.Block, {api})),
-        h('div', {className: 'gs-side'}, h(Agents, {b}), h(Parrainage, {b}), root.FGFidelite && h(root.FGFidelite.Block, {api}), root.FGFibreVoice && h(root.FGFibreVoice.Block, {api}), root.FGFibrePlus && h(root.FGFibrePlus.Block, {api}), h(Journal, {b}))));
+      h('div', {className: 'gs-tabs', role: 'tablist', 'aria-label': 'Ce que je regarde'}, tabs.map(([key, label, n]) => h('button', {key, type: 'button', role: 'tab', id: 'gs-tab-' + key, 'aria-selected': tab === key, 'aria-controls': 'gs-panel', className: tab === key ? 'is-on' : '', onClick: () => pick(key)}, label, n > 0 && h('em', {'aria-label': n + ' à regarder'}, n)))),
+      tab === 'clients'
+        ? h('div', {className: 'gs-grid gs-clients', id: 'gs-panel', role: 'tabpanel', 'aria-labelledby': 'gs-tab-clients'},
+          h('div', {className: 'gs-main'}, h(Retention, {api}), root.FGAvis && h(root.FGAvis.Block, {api}), root.FGWelcome && h(root.FGWelcome.Block, {api})),
+          h('div', {className: 'gs-side'}, root.FGFidelite && h(root.FGFidelite.Block, {api}), h(Parrainage, {b}), root.FGAcces && h(root.FGAcces.Block, {api}), root.FGFibrePlus && h(root.FGFibrePlus.Block, {api}), root.FGFibreVoice && h(root.FGFibreVoice.Block, {api})))
+        : h('div', {className: 'gs-reseau', id: 'gs-panel', role: 'tabpanel', 'aria-labelledby': 'gs-tab-reseau'},
+          h(Bulletin, {b, error, onAsk: askAbout}),
+          h('div', {className: 'gs-grid'},
+            h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate})),
+            h('div', {className: 'gs-side'}, h(Agents, {b}), h(Journal, {b})))));
   }
 
   root.FGSuperviseur = {View};
