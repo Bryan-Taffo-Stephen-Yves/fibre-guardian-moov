@@ -1,4 +1,4 @@
-// Fibre Loyalty+ (thème 2) : la page « Ma fidélité » du client, sa carte sur l'accueil et le bloc du Superviseur.
+// Fibre Loyalty+ (thème 2) : la page « Ma fidélité » du client, sa carte dans « Mon compte » et le bloc du Superviseur.
 // Les points, les niveaux et les montants sont calculés par le serveur (fidelite.cjs) ; cet écran affiche et envoie.
 (function (root) {
   'use strict';
@@ -72,7 +72,7 @@
         onDone: () => P(false), onClose: () => P(false)}));
   }
 
-  // Sur l'accueil du client : son niveau et ce qui lui manque, en un coup d'œil.
+  // Dans « Mon compte » : son niveau et ce qui lui manque, en un coup d'œil.
   function Entry({api, onOpen}) {
     const [d, D] = S(null);
     E(() => { api('/fidelite').then(D).catch(() => {}); }, []);
