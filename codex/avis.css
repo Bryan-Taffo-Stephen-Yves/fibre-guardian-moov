@@ -1,0 +1,49 @@
+/* Fibre Voice, centre des avis (avis-view.js) : bloc « Avis des clients » du Superviseur.
+   Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.av-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.av-kpis div{display:grid;gap:2px;padding:10px 12px;border-radius:14px;background:var(--moov-neutral-25)}
+.av-kpis b{font-size:24px;line-height:1.1;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.av-kpis b small{font-size:13px;font-weight:600;color:var(--moov-text-muted);margin-left:2px}
+.av-kpis span{font-size:12px;color:var(--moov-text-muted)}
+.av-dist,.av-topics,.av-calls,.av-techs,.av-done{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.av-dist{gap:5px}
+.av-dist li{display:grid;grid-template-columns:34px minmax(0,1fr) 24px;gap:8px;align-items:center;font-size:12.5px;color:var(--moov-neutral-700)}
+.av-dist i,.av-topics i{display:block;height:8px;border-radius:99px;background:var(--moov-neutral-100);overflow:hidden}
+.av-dist b,.av-topics b{display:block;height:100%;border-radius:99px;background:var(--moov-primary)}
+.av-dist b.is-1,.av-dist b.is-2{background:var(--moov-danger-500)}
+.av-dist b.is-3{background:var(--moov-accent)}
+.av-dist em,.av-topics em{font-style:normal;font-weight:700;text-align:right;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.av-sub{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:4px}
+.av-sub h4{margin:0;font-size:14.5px;color:var(--moov-ink)}
+.av-sub small{font-size:12px;color:var(--moov-text-muted)}
+.av-call{display:grid;gap:8px;padding:12px;border-radius:14px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100)}
+.av-call.is-late{border-color:var(--moov-danger-700);background:var(--moov-danger-50)}
+.av-call-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.av-call-head b{display:block;font-size:15px;color:var(--moov-ink)}
+.av-call-head small{display:block;font-size:12.5px;color:var(--moov-text-muted)}
+.av-stars{flex:none;font-size:14px;letter-spacing:1px;color:var(--moov-accent)}
+.av-stars i{font-style:normal;color:var(--moov-neutral-200)}
+.av-quote{margin:0;font-size:14px;line-height:1.45;color:var(--moov-neutral-700)}
+.av-due{margin:0;font-size:12.5px;font-weight:600;color:var(--moov-primary-700)}
+.av-call.is-late .av-due{color:var(--moov-danger-700)}
+.av-outcomes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.av-btn{min-height:40px;padding:0 14px;border:1px solid var(--moov-neutral-200);border-radius:12px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.av-btn.is-main{border-color:var(--moov-primary);background:var(--moov-primary);color:var(--moov-on-primary)}
+.av-call>.av-btn{justify-self:start}
+.av-btn:disabled{opacity:.55;cursor:default}
+.av-link{min-height:40px;border:0;background:none;color:var(--moov-text-muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.av-done li{font-size:12.5px;color:var(--moov-text-muted)}
+.av-done b{color:var(--moov-neutral-700)}
+.av-topics li{display:grid;grid-template-columns:minmax(0,1fr) 28px;grid-template-areas:'name n' 'bar n' 'tone tone';gap:3px 8px;align-items:center;font-size:13.5px;color:var(--moov-ink)}
+.av-topics span{grid-area:name}
+.av-topics i{grid-area:bar}
+.av-topics em{grid-area:n}
+.av-topics small{grid-area:tone;font-size:11.5px;color:var(--moov-text-muted)}
+.av-topics li.is-bad b{background:var(--moov-danger-700)}
+.av-topics li.is-bad small{color:var(--moov-danger-700)}
+.av-topics li.is-good b{background:var(--moov-success-700)}
+.av-techs li{display:grid;grid-template-columns:minmax(0,1fr) auto 52px;gap:8px;align-items:center;font-size:13.5px;color:var(--moov-ink)}
+.av-techs b{color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.av-techs small{font-size:12px;color:var(--moov-text-muted);text-align:right}
+.gs-count.av-alarm{background:var(--moov-danger-50);color:var(--moov-danger-700)}
+.av-topics li.is-mixed b{background:var(--moov-accent)}
