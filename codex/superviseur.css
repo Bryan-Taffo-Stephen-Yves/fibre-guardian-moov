@@ -82,7 +82,15 @@
 .gs-ret-detail ul{display:grid;gap:4px;margin:0;padding:0;list-style:none}
 .gs-ret-detail li{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--moov-neutral-700)}
 .gs-ret-action{margin:0;padding:10px 12px;border-radius:12px;background:var(--moov-primary-50);font-size:14px;line-height:1.45;color:var(--moov-ink)}
-@media (max-width:520px){.gs-ret-detail{padding-left:12px}}
+.gs-ret-done{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.gs-ret-done li{font-size:13.5px;color:var(--gs-ok-ink)}
+.gs-ret-buttons{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gs-ret-buttons>span{width:100%;font-size:13px;color:var(--moov-neutral-600)}
+.gs-ret-btn{min-height:44px;padding:8px 14px;border:1px solid var(--moov-neutral-200);border-radius:12px;background:var(--moov-white);color:var(--moov-ink);font-size:14px;font-weight:600;cursor:pointer;text-align:left}
+.gs-ret-btn.is-main{background:var(--moov-primary-600);border-color:var(--moov-primary-600);color:var(--moov-white)}
+.gs-ret-btn:disabled{opacity:.6;cursor:wait}
+.gs-ret-btn:focus-visible{outline:3px solid var(--moov-primary-200);outline-offset:2px}
+@media (max-width:520px){.gs-ret-detail{padding-left:12px}.gs-ret-btn{flex:1 1 100%}}
 
 /* Questions */
 .gs-form{display:flex;gap:8px}

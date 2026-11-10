@@ -100,8 +100,15 @@
   }
 
   // Retention Score (thème 6) : les clients qui risquent de partir, pourquoi, et quoi faire. Un conseiller agit, jamais Guardian seul.
+  const OUTCOME_WORDS = {reste: 'Rassuré, il reste', hesite: 'Hésite encore', absent: 'Pas de réponse'};
   function Retention({api}) {
-    const [r, setR] = S(null), [open, setOpen] = S(null), alive = R(true);
+    const [r, setR] = S(null), [open, setOpen] = S(null), [asking, setAsking] = S(null), [busy, setBusy] = S(false), [error, setError] = S(''), alive = R(true);
+    async function act(client, action, outcome) {
+      setBusy(true); setError('');
+      try { const x = await api('/noc/retention', 'POST', {client, action, outcome}); if (alive.current) { setR(x); setAsking(null); } }
+      catch (e) { setError(e.message || 'Action impossible.'); }
+      finally { setBusy(false); }
+    }
     E(() => { alive.current = true; const load = () => { if (!document.hidden) api('/noc/retention').then(x => alive.current && setR(x)).catch(() => {}); }; load(); const t = setInterval(load, 8000); return () => { alive.current = false; clearInterval(t); }; }, []);
     if (!r) return null;
     const list = r.clients.filter(c => c.level !== 'faible').slice(0, 6), money = n => n.toLocaleString('fr-FR') + ' F';
@@ -115,7 +122,17 @@
           h('em', {className: 'gs-ret-level'}, c.label)),
         open === c.id && h('div', {className: 'gs-ret-detail'},
           h('ul', null, c.factors.map(f => h('li', {key: f.key}, h('span', null, f.text), h('b', null, '+' + f.points)))),
-          h('p', {className: 'gs-ret-action'}, h('b', null, 'À faire : '), c.action.text))))));
+          h('p', {className: 'gs-ret-action'}, h('b', null, 'À faire : '), c.action.text),
+          c.suivi && (c.suivi.calledAt || c.suivi.offerAt) && h('ul', {className: 'gs-ret-done'},
+            c.suivi.calledAt && h('li', null, 'Appelé à ' + clock(c.suivi.calledAt) + ' : ' + c.suivi.outcomeText),
+            c.suivi.offerAt && h('li', null, 'Offre envoyée à ' + clock(c.suivi.offerAt) + ' : ' + c.suivi.offerLabel)),
+          error && h('p', {className: 'gs-error', role: 'alert'}, error),
+          asking === c.id
+            ? h('div', {className: 'gs-ret-buttons', role: 'group', 'aria-label': 'Résultat de l’appel'}, h('span', null, 'Résultat de l’appel :'),
+              Object.entries(OUTCOME_WORDS).map(([k, label]) => h('button', {key: k, type: 'button', className: 'gs-ret-btn', disabled: busy, onClick: () => act(c.id, 'appel', k)}, label)))
+            : h('div', {className: 'gs-ret-buttons'},
+              h('button', {type: 'button', className: 'gs-ret-btn is-main', disabled: busy, onClick: () => setAsking(c.id)}, 'J’ai appelé ce client'),
+              c.suivi && c.suivi.offerAt ? null : h('button', {type: 'button', className: 'gs-ret-btn', disabled: busy, onClick: () => act(c.id, 'offre')}, 'Envoyer l’offre : ' + c.offer.label)))))));
   }
 
   function Agents({b}) {
