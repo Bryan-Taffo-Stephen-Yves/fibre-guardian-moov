@@ -21,6 +21,8 @@
     };
     document.head.appendChild(script);
   }
+  // Fibre Loyalty+ (fidelite-view.js) : la page « Ma fidélité », sa carte sur l'accueil et son bloc dans le Superviseur.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'fidelite-view.js');
   // Fibre Welcome (welcome-view.js) se charge juste avant le Superviseur, qui affiche son bloc « Nouveaux abonnés ».
   files.splice(files.indexOf('superviseur-view.js'), 0, 'welcome-view.js');
   // Fibre Access (acces-view.js) : la page « Offres solidaires » et son bloc dans le Superviseur.

@@ -49,6 +49,8 @@ function createGuardianServer(options={}){
  // Fibre Access (thème 9) : tarif étudiant, pack voisins, paiement en plusieurs fois (acces.cjs).
  const AC=require('./acces.cjs');AC.migrate(store);
  const FD=require('./fair-deal.cjs');FD.migrate(store);
+ // Fibre Loyalty+ (thème 2) : points, niveaux Bronze, Argent, Or et avantages (fidelite.cjs).
+ const FL=require('./fidelite.cjs');FL.migrate(store);
  // Fibre Voice, centre des avis (thème 8) : notes après intervention ou installation, rappel sous 24 h si la note est basse (avis.cjs).
  const AV=require('./avis.cjs');AV.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
@@ -224,6 +226,9 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/avis'&&method==='GET')return json(res,AV.stats(store,user.id));
     if(route==='/api/noc/avis'&&method==='POST')return json(res,AV.done(store,user.id,await body(req,1024)));
     if(route==='/api/noc/call'&&method==='POST')return json(res,require('./appels.cjs').call(store,user.id,await body(req,1024)));
+    if(route==='/api/fidelite'&&method==='GET')return json(res,FL.state(store,user.id));
+    if(route==='/api/fidelite'&&method==='POST'){store.rate('fidelite:'+user.id,30,600000);const d=await body(req,1024);insist(['pay','redeem'].includes(d.action),'Action inconnue.');return json(res,d.action==='pay'?FL.pay(store,user.id,d):FL.redeem(store,user.id,d));}
+    if(route==='/api/noc/fidelite'&&method==='GET')return json(res,FL.summary(store,user.id));
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
     if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);const r=WEL.act(store,user.id,await body(req,1000000));AV.sync(store);return json(res,r);}
     if(route==='/api/welcome/activate'&&method==='POST'){const st=WEL.activate(store,user.id);return json(res,{state:journey.snapshotFor(store,user.id,st)});}

@@ -86,6 +86,11 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
 
   // --- Espace d'Awa : sa box à Yopougon et son quartier suivi
   let journey=(await request(awa,'/journey/start',{})).state;
+  // Fibre Loyalty+ : factures passées. Awa a payé ses 11 dernières factures à temps (2 en agence) : en payant celle du mois
+  // avec Moov Money pendant la démo, elle passe Argent. Ses voisins sont répartis entre Bronze, Argent et Or.
+  const FL=require('./fidelite.cjs');
+  FL.history(store,awa.id,{months:11,agence:[7,4]},start);
+  for(const [k,n] of NEIGHBOURS.entries()){const u=store.get('SELECT id FROM users WHERE email=?',n.email);FL.history(store,u.id,k<3?{months:24}:k<7?{months:14,agence:[9]}:{months:6,late:[3]},start);}
   const act=async data=>{journey=(await request(awa,'/journey/action',{version:journey.version,...data})).state;};
   await request(awa,'/noc/join',{segment:'YOP-07',consent:true});
   await act({type:'scenario',value:'devices'});
