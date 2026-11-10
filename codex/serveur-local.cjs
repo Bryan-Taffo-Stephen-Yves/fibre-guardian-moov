@@ -30,6 +30,8 @@ if (require.main === module) {
   pilot.on('error', e => { console.error(e.message); process.exitCode = 1; });
   ready.catch(e => { console.error('Démo pré-remplie impossible :', e.message); })
     .then(() => pilot.listen(port, host, () => console.log('Fibre Guardian : ' + (env.GUARDIAN_ORIGIN || 'http://127.0.0.1:' + port) + '/codex/ (données : ' + path.dirname(dbFile) + ') ; Ctrl+C pour arrêter.')));
-  const stop = () => pilot.close(() => process.exit(0));
+  // Sur Render : le serveur se rend visite toutes les 10 minutes pour ne pas s'endormir (voir garder-eveille.cjs).
+  const eveil = require('./garder-eveille.cjs').start(env, {log: m => console.log(m)});
+  const stop = () => { if (eveil) eveil(); pilot.close(() => process.exit(0)); };
   process.on('SIGTERM', stop); process.on('SIGINT', stop);
 }
