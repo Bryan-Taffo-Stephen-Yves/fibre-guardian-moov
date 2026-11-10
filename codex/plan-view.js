@@ -29,7 +29,7 @@
     h('output',{'aria-live':'polite'},value),
     h('button',{type:'button','aria-label':'Une '+unit+' de plus',onClick:()=>onChange(Math.min(max,value+1)),disabled:value>=max},'+')));
  }
- function Finder({plans,current,form,onForm,onPick,pickLabel,withCommune}){
+ function Finder({plans,current,form,onForm,onPick,pickLabel,withCommune,invite}){
   const SO=window.FGSmartOffer;if(!SO)return null;
   const set=k=>v=>onForm({...form,[k]:v}),uses=form.uses;
   const r=SO.recommend({...form,plans:plans&&plans.length?plans:SO.PLANS}),toggle=id=>set('uses')(uses.includes(id)?uses.filter(u=>u!==id):uses.concat(id));
@@ -56,7 +56,7 @@
     h('ul',{className:'pv-perks'},
      h('li',null,h(Icon,{d:I.wifi,size:18}),r.extenders?'Wi-Fi : '+r.rooms+' pièces, c’est trop pour la box seule. Ajoutez '+r.extenders+' répéteur'+(r.extenders>1?'s':'')+' Wi-Fi, un toutes les 2 pièces.':'Wi-Fi : la box couvre vos '+r.rooms+' pièce'+(r.rooms>1?'s':'')+', placez-la au centre de la maison.'),
      uses.includes('jeux')&&h('li',null,h(Icon,{d:I.game,size:18}),'Un jeu de '+SO.GAME_GB+' Go (la taille d’un Call of Duty) se télécharge en '+SO.duration(r.gameMinutes)+' environ.'),
-     withCommune&&r.commune&&h('li',{className:r.inZone?'':'warn'},h(Icon,{d:I.pin,size:18}),r.inZone?r.commune+' fait partie de la zone fibre : un conseiller confirme votre adresse exacte.':'Votre ville n’est pas encore dans notre zone fibre. Un conseiller Moov vous dit ce qui est possible à votre adresse.')),
+     withCommune&&r.commune&&h('li',{className:r.inZone?'':'warn'},h(Icon,{d:I.pin,size:18}),r.inZone?(invite?h('span',null,r.commune+' fait partie de la zone fibre. ',h('b',null,'Votre offre : Fibre '+r.plan.mbps+' à '+F(r.plan.price)+' par mois, et 1 mois offert après 3 mois (code de '+invite.parrain+').'),' Un conseiller confirme votre adresse exacte.'):r.commune+' fait partie de la zone fibre : un conseiller confirme votre adresse exacte.'):'Votre ville n’est pas encore dans notre zone fibre. Un conseiller Moov vous dit ce qui est possible à votre adresse.')),
     r.sources.length>0&&h('details',{className:'pv-sources'},h('summary',null,'D’où viennent ces chiffres ?'),h('ul',null,r.sources.map(s=>h('li',{key:s.id},s.text)))),
     !mine&&onPick&&h('button',{type:'button',className:'pv-cta',onClick:()=>onPick(r.plan)},pickLabel?pickLabel(r.plan):'Voir l’offre '+r.plan.mbps+' Mb/s')):
    h('p',{className:'pv-hint'},'Cochez au moins un usage pour voir le forfait conseillé.'));
