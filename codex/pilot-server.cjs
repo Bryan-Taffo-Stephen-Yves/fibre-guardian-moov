@@ -55,6 +55,8 @@ function createGuardianServer(options={}){
  const FL=require('./fidelite.cjs');FL.migrate(store);
  // Fibre Voice, centre des avis (thème 8) : notes après intervention ou installation, rappel sous 24 h si la note est basse (avis.cjs).
  const AV=require('./avis.cjs');AV.migrate(store);
+ // Retention Score (thème 6) : appel du conseiller et offre de rétention (retention.cjs).
+ require('./retention.cjs').migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -204,6 +206,7 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/superviseur'&&method==='GET')return json(res,require('./superviseur.cjs').bilan(store,user.id,{whatsapp:WA.status(store,whatsapp.cfg)}));
     // Retention Score (thème 6) : clients à risque de départ, équipe Moov seulement (retention.cjs).
     if(route==='/api/noc/retention'&&method==='GET')return json(res,require('./retention.cjs').scores(store,user.id));
+    if(route==='/api/noc/retention'&&method==='POST')return json(res,require('./retention.cjs').act(store,user.id,await body(req,1024)));
     if(route==='/api/noc/superviseur/ask'&&method==='POST')return json(res,await require('./superviseur.cjs').ask(store,user.id,await body(req,2048),{whatsapp:WA.status(store,whatsapp.cfg),log:m=>options.onError?options.onError(new Error(m)):console.warn(m)}));
     if(route==='/api/noc/superviseur/signal'&&method==='POST')return json(res,require('./superviseur.cjs').signal(store,user.id,await body(req,1024),{whatsapp:WA.status(store,whatsapp.cfg)}));
     // Copies Wi-Fi des clients : équipe Moov seulement (requireOperator dans copie-wifi.cjs).
