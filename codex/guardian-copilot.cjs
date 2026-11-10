@@ -45,8 +45,8 @@ function operatorReply(s,user,d,text){
    message=[phase,plan?.title?'Hypothèse : '+sentence(plan.title):'',
     'Prochaine étape · '+(ROLE_LABELS[item.nextRole]||item.nextRole||'responsable à désigner')+' : '+sentence(item.nextStep||'Examiner les preuves du dossier')].filter(Boolean).join(' ');
    if(item.mode!=='demo')message+=' Il s’agit d’un signalement client : aucune commande de box n’est déclenchée sans validation.';
-   if(capabilities.canApprove&&item.status==='proposed')actions.push(link('approvals','Examiner le plan à valider'));
-   else if(item.technician&&capabilities.canInstruct)actions.push(link('missions','Suivre la mission terrain'));
+   if(capabilities.canApprove&&item.status==='proposed')actions.push(link('operations','Valider le plan'));
+   else if(item.technician&&capabilities.canInstruct)actions.push(link('operations','Suivre le technicien'));
    else if(capabilities.canInstruct)actions.push(link('incidents','Examiner les preuves du dossier'));
   }
  }

@@ -57,7 +57,7 @@
     }
     function no() { CF(null); const text = 'D’accord, je ne touche à rien.'; DN(text); say(text); }
     function listen(why) {
-      const Rec = Speech(); if (!Rec) return;
+      const Rec = Speech(); if (!Rec) { X('Ce navigateur ne sait pas écouter la voix. Touchez une phrase ci-dessous, Guardian vous répond.'); return; }
       if (listening) { try { rec.current.stop(); } catch (e) {} return; }
       store.set(MIC_KEY, '1'); root.FGVoice && FGVoice.stop(); mode.current = why || 'ask';
       const r = new Rec(); rec.current = r; r.lang = 'fr-FR'; r.interimResults = true; r.maxAlternatives = 1;
@@ -69,7 +69,7 @@
         HE(said); if (!final) return; try { r.stop(); } catch (er) {}
         const t = said.trim().replace(/’/g, "'"), wait = mode.current !== 'ask'; if (wait && YES.test(t)) yes(); else if (wait && NO.test(t)) no(); else ask(t);
       };
-      try { r.start(); } catch (e) { LI(false); }
+      try { r.start(); } catch (e) { LI(false); X('Le micro n’a pas pu démarrer. Touchez une phrase ci-dessous.'); }
     }
     const next = last && NEXT[last.action];
     return h('div', {className: 'fv-page'},
