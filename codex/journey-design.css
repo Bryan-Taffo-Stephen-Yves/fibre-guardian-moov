@@ -69,3 +69,6 @@ body:has(.journey){background:var(--moov-neutral-100)}
 .j-entry-form .j-segmented .j-button{flex:1 1 110px;min-height:46px;border:1px solid transparent;background:transparent;color:var(--moov-neutral-600);font-weight:500;transition:none}
 .j-entry-form .j-segmented .j-button[aria-pressed=true],.j-entry-form .j-segmented .j-button[aria-pressed=true]:hover{background:var(--moov-primary-100);border-color:var(--moov-primary-200);color:var(--moov-neutral-900);font-weight:700;box-shadow:0 2px 5px color-mix(in srgb,var(--moov-neutral-900) 7.1%,transparent)}
 .j-entry-form .j-segmented .j-button:focus-visible{outline:3px solid var(--moov-neutral-900);outline-offset:2px}
+
+/* Débit reçu / promis (thème 4) : la part du débit promis, en mots. */
+.j-stats .j-speed .j-speed-share{margin-top:4px;font-weight:600;color:var(--moov-primary-700)}
