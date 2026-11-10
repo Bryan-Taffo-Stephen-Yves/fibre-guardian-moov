@@ -23,6 +23,14 @@ const CREW=require('./noc-store.cjs').TECHS.filter(t=>t.id!=='ibrahim').map(t=>(
 // Mot de passe tiré au hasard et jamais affiché : on y entre seulement par la barre des rôles (role-bar.cjs),
 // elle-même ouverte sur un appareil par la direction connectée avec son mot de passe.
 const STAFF=[{email:'kader.diallo@demo.fibre-guardian.ci',name:'Kader Diallo',role:'agent'},{email:'fatou.bamba@demo.fibre-guardian.ci',name:'Fatou Bamba',role:'supervisor'}];
+// Voisins d'Awa à Niangon (YOP-07) : ils notent l'intervention de la nuit, pour que le bloc « Avis des clients »
+// du Superviseur montre de vrais retours (Fibre Voice, avis.cjs). Mot de passe tiré au hasard et jamais affiché.
+const REVIEWERS=[
+ ['Kouassi Bamba',5,'Arrivé à l’heure et très poli. Il a tout expliqué à ma fille.'],
+ ['Aminata Touré',5,'Rapide et efficace, merci Moov.'],
+ ['Jean-Marc Yapi',4,'Bon travail, mais on a attendu le technicien toute la matinée.'],
+ ['Nadège Kouamé',3,'Le technicien était gentil, mais il a laissé un câble qui traîne par terre.']
+].map(([name,rating,comment])=>({name,rating,comment,email:name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[ -]/g,'.')+'@demo.fibre-guardian.ci'}));
 const MIN=60000,HOUR=3600000;
 
 function isSeeded(store){return !!store.get('SELECT id FROM users WHERE email=?',DEMO.admin.email);}
@@ -118,6 +126,14 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   at(3*HOUR+12*MIN);await act({type:'scenario',value:'slow'});
   at(3*HOUR+10*MIN);await act({type:'reboot',confirm:true});
 
+  // --- Awa note l'intervention de la nuit : 2 sur 5, un conseiller doit la rappeler sous 24 h (Fibre Voice, avis.cjs)
+  at(3*HOUR);await request(awa,'/noc/feedback',{id:night.id,rating:2,comment:'Koffi a été très poli et il a bien expliqué, mais Internet est encore lent le soir.'});
+
+  for(const [k,r] of REVIEWERS.entries()){
+   at(5*HOUR-k*25*MIN);const {user}=await store.register({email:r.email,name:r.name,password:crypto.randomBytes(18).toString('base64url')});
+   J.put(store,user.id,J.seed());noc.join(store,user.id,{segment:'YOP-07',consent:true});noc.feedback(store,user.id,{id:night.id,rating:r.rating,comment:r.comment});
+  }
+
   // --- Dossiers clients partagés avec le support
   at(2*HOUR+40*MIN);await relogin();
   const home=(await request(awa,'/homes',{name:'Maison Koné · Yopougon'})).id;
@@ -161,7 +177,7 @@ async function resetDemo(store,options={}){
  return seedDemo(store,options);
 }
 
-module.exports={seedDemo,resetDemo,isSeeded,isComplete,isEmpty,DEMO,NEIGHBOURS,CREW,STAFF};
+module.exports={seedDemo,resetDemo,isSeeded,isComplete,isEmpty,DEMO,NEIGHBOURS,CREW,STAFF,REVIEWERS};
 
 if(require.main===module){
  const {Store}=require('./pilot-store.cjs');

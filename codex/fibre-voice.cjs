@@ -1,5 +1,5 @@
 'use strict';
-// Fibre Voice (thème 8) : le client parle à Guardian au lieu d'écrire (page « Parler à Guardian », fibre-voice-view.js).
+// « Parler à Guardian » (le centre des avis du thème 8 est dans avis.cjs) : le client parle à Guardian au lieu d'écrire (page « Parler à Guardian », fibre-voice-view.js).
 // Ici, côté serveur : on note seulement le sujet et la langue de chaque question posée à la voix (jamais le son,
 // jamais le texte), pour que l'équipe Moov voie ce que les clients demandent quand ils parlent.
 const O=require('./operator-store.cjs');

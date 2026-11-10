@@ -104,7 +104,7 @@
         h('li', null, h('b', null, 'Mesurez votre débit'), h('small', null, 'Près de la box, en Wi-Fi : vous devriez voir environ ' + order.plan.mbps + ' Mb/s.'), h('a', {className: 'j-button', href: 'test.html'}, 'Tester ma connexion')),
         h('li', null, h('b', null, 'Gardez le mot de passe Wi-Fi'), h('small', null, 'Il est écrit sous la box. Ne le donnez qu’aux personnes de la maison.')),
         h('li', null, h('b', null, 'Un souci ? Demandez à Guardian'), h('small', null, 'Il regarde votre box et vous dit quoi faire, avant même d’appeler.'))),
-      order.rating ? h('p', {className: 'fw-thanks'}, 'Merci pour votre note : ' + '★'.repeat(order.rating)) :
+      order.rating ? h('p', {className: 'fw-thanks'}, order.rating <= 2 ? 'Merci pour votre note, et pardon. Un conseiller Moov vous rappelle sous 24 h.' : 'Merci pour votre note : ' + '★'.repeat(order.rating)) :
         h('div', {className: 'fw-rate'}, h('b', null, 'Comment s’est passée l’installation ?'),
           h('div', {className: 'fw-stars', role: 'radiogroup', 'aria-label': 'Note'}, [1, 2, 3, 4, 5].map(n => h('button', {key: n, type: 'button', role: 'radio', 'aria-checked': n === stars, 'aria-label': n + ' sur 5', className: n <= stars ? 'is-on' : '', onClick: () => St(n)}, '★'))),
           stars > 0 && h('input', {className: 'fw-input', value: comment, maxLength: 300, placeholder: 'Un mot pour le technicien (facultatif)', onChange: e => Co(e.target.value)}),
