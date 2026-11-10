@@ -1,0 +1,88 @@
+/* Fibre Access (acces-view.js) : page « Offres solidaires », entrée de « Mon compte » et bloc du Superviseur.
+   Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.ac-page{display:grid;gap:14px;max-width:720px;min-width:0}
+.ac-top h1{margin:0 0 6px;font-size:clamp(28px,7vw,40px);line-height:1.05;letter-spacing:-.02em;color:var(--moov-ink)}
+.ac-top p{margin:0;font-size:15px;color:var(--moov-text-muted)}
+.ac-card{display:grid;gap:12px;padding:16px;border-radius:20px;background:var(--moov-surface);border:1px solid var(--moov-neutral-100);min-width:0}
+.ac-card.is-on{border-color:var(--moov-primary-100);background:var(--moov-primary-25)}
+.ac-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start}
+.ac-head h2{margin:0 0 3px;font-size:17px;color:var(--moov-ink)}
+.ac-head p{margin:0;font-size:14px;line-height:1.45;color:var(--moov-neutral-700)}
+.ac-ico{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.ac-small{margin:0;font-size:13.5px;line-height:1.45;color:var(--moov-text-muted)}
+.ac-ok{margin:0;padding:10px 12px;border-radius:12px;background:var(--moov-success-50);color:var(--moov-success-700);font-size:14.5px;font-weight:600}
+.ac-note{margin:0;padding:10px 12px;border-radius:12px;background:var(--moov-warning-100);color:var(--moov-warning-700);font-size:14px}
+.ac-wait{display:flex;gap:10px;align-items:center;margin:0;font-size:14.5px;color:var(--moov-ink)}
+.ac-pulse{flex:none;width:12px;height:12px;border-radius:50%;background:var(--moov-primary);box-shadow:0 0 0 0 var(--moov-primary-200);animation:ac-pulse 1.8s ease-out infinite}
+@keyframes ac-pulse{to{box-shadow:0 0 0 12px transparent}}
+@media(prefers-reduced-motion:reduce){.ac-pulse{animation:none}}
+.ac-form{display:grid;gap:10px}
+.ac-field{display:grid;gap:5px;font-size:13.5px;color:var(--moov-neutral-700)}
+.ac-field input,.ac-join input,.ac-select{min-height:46px;padding:0 12px;border:1.5px solid var(--moov-neutral-200);border-radius:12px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;font-size:15px;width:100%;min-width:0}
+.ac-photo{position:relative;display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center;padding:10px;border:1.5px dashed var(--moov-neutral-200);border-radius:14px;cursor:pointer}
+.ac-photo.is-set{border-style:solid;border-color:var(--moov-success-300);background:var(--moov-success-50)}
+.ac-photo img,.ac-photo-empty{width:76px;height:56px;border-radius:8px;object-fit:cover}
+.ac-photo-empty{display:grid;place-items:center;background:var(--moov-neutral-50);color:var(--moov-neutral-500)}
+.ac-photo b{display:block;font-size:14.5px;color:var(--moov-ink)}
+.ac-photo small{display:block;font-size:12.5px;color:var(--moov-text-muted)}
+.ac-file{position:absolute;inset:0;opacity:0;cursor:pointer}
+.ac-photo:has(.ac-file:focus-visible){outline:2px solid var(--moov-focus);outline-offset:2px}
+.ac-go{min-height:50px;padding:0 18px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font:inherit;font-size:16px;font-weight:650;cursor:pointer}
+.ac-go:disabled,.ac-btn:disabled{opacity:.55;cursor:default}
+.ac-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ac-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 14px;border:1.5px solid var(--moov-primary);border-radius:12px;background:var(--moov-surface);color:var(--moov-primary);font:inherit;font-size:14px;font-weight:650;text-decoration:none;cursor:pointer}
+.ac-btn.is-main{background:var(--moov-primary);color:var(--moov-on-primary)}
+.ac-link{min-height:40px;border:0;background:none;color:var(--moov-text-muted);font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer}
+
+/* Pack voisins */
+.ac-offers,.ac-homes,.ac-parts,.ac-cards{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.ac-offers li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:12px;border:1.5px solid var(--moov-neutral-150);border-radius:14px}
+.ac-offers li.is-picked{border-color:var(--moov-primary);box-shadow:0 0 0 3px var(--moov-primary-50)}
+.ac-offers b{display:block;font-size:15px;color:var(--moov-ink)}
+.ac-offers small,.ac-share small{display:block;font-size:12.5px;color:var(--moov-text-muted)}
+.ac-share{text-align:right}
+.ac-share strong{font-size:18px;color:var(--moov-primary);font-variant-numeric:tabular-nums}
+.ac-offers .ac-btn{grid-column:1/-1;justify-self:start}
+.ac-join{display:grid;gap:6px;font-size:13.5px;color:var(--moov-neutral-700)}
+.ac-join>div{display:flex;gap:8px}
+.ac-pack{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ac-pack>div{padding:10px 12px;border-radius:14px;background:var(--moov-surface);border:1px solid var(--moov-neutral-100)}
+.ac-pack small{display:block;font-size:12px;color:var(--moov-text-muted)}
+.ac-pack strong{display:block;font-size:20px;color:var(--moov-ink);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.ac-homes{grid-template-columns:1fr 1fr;gap:6px}
+.ac-homes li{padding:8px 10px;border-radius:10px;background:var(--moov-surface);border:1px solid var(--moov-neutral-100);font-size:13.5px;color:var(--moov-ink)}
+.ac-homes li.is-me{font-weight:650}
+.ac-homes li.is-free{border-style:dashed;color:var(--moov-neutral-500)}
+
+/* Paiement en plusieurs fois */
+.ac-choice{flex:1 1 140px;display:grid;gap:2px;padding:12px;border:1.5px solid var(--moov-neutral-150);border-radius:14px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;text-align:left;cursor:pointer}
+.ac-choice b{font-size:16px}
+.ac-choice small{font-size:12.5px;color:var(--moov-text-muted)}
+.ac-choice.is-picked{border-color:var(--moov-primary);box-shadow:0 0 0 3px var(--moov-primary-50)}
+.ac-parts li{display:grid;grid-template-columns:62px auto minmax(0,1fr);gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--moov-surface);border:1px solid var(--moov-neutral-100);font-size:14px;color:var(--moov-ink)}
+.ac-parts b{font-variant-numeric:tabular-nums}
+.ac-parts small{text-align:right;font-size:12.5px;color:var(--moov-text-muted)}
+.ac-parts li.is-paid{background:var(--moov-success-50);border-color:transparent}
+.ac-parts li.is-paid small{color:var(--moov-success-700);font-weight:600}
+.ac-parts li.is-next{border-color:var(--moov-primary)}
+
+/* Entrée dans « Mon compte » */
+.ac-entry{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;padding:14px;border:1px solid var(--moov-neutral-100);border-radius:18px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;text-align:left;cursor:pointer}
+.ac-entry strong{display:block;font-size:15.5px}
+.ac-entry small{display:block;font-size:13px;color:var(--moov-text-muted)}
+.ac-entry:focus-visible{outline:3px solid var(--moov-focus);outline-offset:2px}
+
+/* Superviseur */
+.ac-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.ac-kpis div{padding:10px;border-radius:12px;background:var(--moov-neutral-25)}
+.ac-kpis dt{font-size:22px;font-weight:700;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.ac-kpis dd{margin:0;font-size:12px;line-height:1.3;color:var(--moov-text-muted)}
+.ac-cards li{display:grid;gap:10px;padding:12px;border-radius:14px;background:var(--moov-neutral-25)}
+.ac-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.ac-card-head b{display:block;font-size:15px;color:var(--moov-ink)}
+.ac-card-head small{display:block;font-size:12.5px;color:var(--moov-neutral-500)}
+.ac-due{flex:none;padding:4px 10px;border-radius:999px;background:var(--moov-warning-100);color:var(--moov-warning-700);font-size:12px;font-weight:600}
+.ac-due.is-late{background:var(--moov-danger-50);color:var(--moov-danger-700)}
+.ac-thumb{width:100%;max-width:320px;aspect-ratio:16/10;object-fit:cover;border-radius:10px;background:var(--moov-neutral-100)}
+.ac-select{min-height:42px;font-size:13.5px;flex:1 1 200px;width:auto}
+.ac-join .ac-btn{flex:none;white-space:nowrap}
