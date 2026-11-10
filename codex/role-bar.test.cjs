@@ -23,15 +23,45 @@ async function call(base,route,{body,jarMap={},csrf}={}){
 }
 async function login(base,email,password){const j={};const r=await call(base,'/auth/login',{body:{email,password},jarMap:j});assert.equal(r.status,200,'connexion '+email);return {jar:j,csrf:r.data.user.csrf};}
 
-test('Sans passe de démo : la barre n’existe pas et aucun rôle n’est donné',async()=>{
+test('Comptes de démo sans rien taper : Client, Conseiller, Technicien, Superviseur ; la Direction garde son mot de passe',async()=>{
  const {server,base}=await fresh();
  try{
-  assert.deepEqual((await call(base,'/demo/roles')).data,{active:false});
-  const r=await call(base,'/demo/roles/switch',{body:{role:'direction'}});
+  const first=(await call(base,'/demo/roles')).data;
+  assert.equal(first.accounts,true);assert.equal(first.active,false,'pas de barre sans session de démo');
+  assert.deepEqual(first.roles.filter(r=>r.locked).map(r=>r.key),['direction'],'seule la Direction est verrouillée');
+  const expected={client:'subscriber',conseiller:'agent',technicien:'technician',superviseur:'supervisor'};
+  for(const [key,role] of Object.entries(expected)){
+   const j={};const r=await call(base,'/demo/roles/switch',{body:{role:key},jarMap:j});
+   assert.equal(r.status,200,key);assert.equal(r.data.user.role,role);
+   assert.equal((await call(base,'/session',{jarMap:j})).data.user.role,role,'le serveur confirme le rôle '+role);
+   const bar=(await call(base,'/demo/roles',{jarMap:j})).data;
+   assert.equal(bar.active,true,'la barre suit la session de démo');assert.equal(bar.roles.find(x=>x.current).key,key);
+  }
+  // La Direction : refusée sans mot de passe, même avec un faux passe ou depuis une session de démo.
+  const j={};await call(base,'/demo/roles/switch',{body:{role:'superviseur'},jarMap:j});
+  const r=await call(base,'/demo/roles/switch',{body:{role:'direction'},jarMap:j});
   assert.equal(r.status,403);assert.equal(r.data.user,undefined);
-  // Un faux passe ne marche pas non plus.
   assert.equal((await call(base,'/demo/roles/switch',{body:{role:'direction'},jarMap:{guardian_demo:'faux-passe'}})).status,403);
+  assert.equal((await call(base,'/session',{jarMap:j})).data.user.role,'supervisor','la superviseure reste superviseure');
+  // Le superviseur de démo ne peut ni remettre la démo à zéro ni activer la barre de la direction.
+  assert.equal((await call(base,'/demo/reset',{body:{confirm:true},jarMap:j,csrf:(await call(base,'/session',{jarMap:j})).data.user.csrf})).status,403);
+  // Quitter (bouton Direction) ferme la session actuelle.
+  assert.equal((await call(base,'/demo/roles/leave',{body:{},jarMap:j})).status,200);
+  assert.equal((await call(base,'/session',{jarMap:j})).data.user,null);
+  // Un juré inscrit avec son numéro ne voit pas la barre.
+  const juror={};const otp=await call(base,'/journey/otp/request',{body:{name:'Koné',phone:'0700000077',mode:'demo'},jarMap:juror});
+  await call(base,'/journey/otp/verify',{body:{...otp.data,code:otp.data.demoCode},jarMap:juror});
+  assert.ok((await call(base,'/session',{jarMap:juror})).data.user);
+  assert.equal((await call(base,'/demo/roles',{jarMap:juror})).data.active,false);
  }finally{server.close();}
+});
+
+test('GUARDIAN_DEMO_ACCOUNTS=off : plus aucun compte de démo ouvert',async()=>{
+ const {server,base}=await fresh();const saved=process.env.GUARDIAN_DEMO_ACCOUNTS;process.env.GUARDIAN_DEMO_ACCOUNTS='off';
+ try{
+  assert.deepEqual((await call(base,'/demo/roles')).data,{active:false,accounts:false});
+  assert.equal((await call(base,'/demo/roles/switch',{body:{role:'client'}})).status,403);
+ }finally{if(saved===undefined)delete process.env.GUARDIAN_DEMO_ACCOUNTS;else process.env.GUARDIAN_DEMO_ACCOUNTS=saved;server.close();}
 });
 
 test('Seule la direction connectée peut activer la barre sur son appareil',async()=>{
@@ -48,7 +78,7 @@ test('Seule la direction connectée peut activer la barre sur son appareil',asyn
  }finally{server.close();}
 });
 
-test('Avec le passe : un geste pour changer de rôle, avec une vraie session vérifiée par le serveur',async()=>{
+test('Avec le passe de la direction : la Direction aussi en un geste, avec une vraie session vérifiée par le serveur',async()=>{
  const {store,server,base}=await fresh();
  try{
   const dir=await login(base,DEMO.admin.email,'direction-test-2026');
@@ -82,6 +112,7 @@ test('Avec le passe : un geste pour changer de rôle, avec une vraie session vé
   const pass=dir.jar.guardian_demo;
   assert.equal((await call(base,'/demo/roles/close',{body:{},jarMap:dir.jar})).status,200);
   assert.equal((await call(base,'/demo/roles/switch',{body:{role:'direction'},jarMap:{guardian_demo:pass}})).status,403);
+  assert.equal((await call(base,'/demo/roles',{jarMap:dir.jar})).data.roles.find(r=>r.key==='direction').locked,true,'Direction de nouveau verrouillée');
   assert.ok(c.data.user);
  }finally{server.close();}
 });

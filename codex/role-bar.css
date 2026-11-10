@@ -36,3 +36,22 @@ html.has-rolebar body{padding-bottom:var(--rb-h)!important}
  html.has-rolebar .noc .n-copilot-launch{bottom:calc(16px + var(--rb-h))!important}
 }
 html.has-rolebar .tv-toast{bottom:calc(20px + var(--rb-h))!important}
+
+/* Verrou du bouton Direction (mot de passe demandé). */
+.rb-face{position:relative;display:inline-grid;flex:0 0 auto}
+.rb-lock{position:absolute;right:-4px;bottom:-3px;padding:2px;box-sizing:content-box;border-radius:50%;background:var(--moov-neutral-900);color:var(--moov-white);box-shadow:0 0 0 1.5px var(--moov-white)}
+
+/* « Comptes de démo » sous le formulaire de connexion (role-bar.js, DemoAccounts). */
+.rb-accounts{margin-top:22px;padding-top:18px;border-top:1px solid var(--moov-neutral-150);text-align:center}
+.rb-accounts h3{margin:0;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--moov-neutral-500)}
+.rb-accounts>p{margin:4px 0 12px;font-size:13px;color:var(--moov-neutral-600)}
+.rb-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.rb-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:5px 14px 5px 6px;border:1px solid var(--moov-neutral-200);border-radius:999px;background:var(--moov-surface);color:var(--moov-neutral-900);font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .18s ease,background-color .18s ease,transform .18s cubic-bezier(.2,.8,.2,1)}
+.rb-chip:hover:not(:disabled){border-color:var(--moov-primary-300);background:var(--moov-primary-25)}
+.rb-chip:active:not(:disabled){transform:scale(.96)}
+.rb-chip:focus-visible{outline:2px solid var(--moov-focus);outline-offset:2px}
+.rb-chip:disabled{opacity:.55;cursor:default}
+.rb-chip.is-busy{animation:rb-pulse 1s ease-in-out infinite}
+.rb-chip .rb-lock{background:var(--moov-neutral-900)}
+.rb-hint{margin:12px auto 0;max-width:420px;padding:10px 14px;border-radius:14px;background:var(--moov-primary-25);color:var(--moov-primary-800);font-size:13px;line-height:1.4}
+@media (prefers-reduced-motion:reduce){.rb-chip{transition:none}.rb-chip.is-busy{animation:none}}
