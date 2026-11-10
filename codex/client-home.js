@@ -173,7 +173,7 @@
     row('alert','Signaler un problème','Photo et lieu, en une minute',()=>go('report')),
     row('phone','Sans internet · *144#','Guardian répond même hors ligne',()=>go('survie'))),
    h('section',{className:'ch-group'},h('h2',null,'L’application'),
-    row('info','À propos de la démo','Ce qui est réel et ce qui est simulé',onAbout)),
+    row('info','À propos de la démo','Comment fonctionne cette démonstration',onAbout)),
    h('button',{type:'button',className:'ch-logout',onClick:onLogout,disabled:busy},h(Icon,{name:'logout',size:19}),'Se déconnecter'));
  }
  window.FGClientHome={LiveTrip,ReportHero,Account,WhatsAppCard,ParrainageCard,Icon};
