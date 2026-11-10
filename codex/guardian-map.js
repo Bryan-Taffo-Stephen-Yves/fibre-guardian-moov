@@ -132,13 +132,13 @@
           onPick&&point&&h('g',{'data-map-marker':true,transform:'translate('+point.x+' '+point.y+')',className:'g-map-report-pin'},h('ellipse',{cy:9,rx:18,ry:5,fill:'var(--moov-neutral-900)',opacity:.14}),h('path',{d:'M0 6S-15-8-15-18a15 15 0 1 1 30 0C15-8 0 6 0 6Z',fill:'var(--moov-neutral-900)',stroke:'var(--moov-white)',strokeWidth:3}),h('circle',{cy:-18,r:6,fill:'var(--moov-primary-100)'})),
           p&&h(Van,{position:p,id})
         ),
-        h('div',{className:'g-map-top'},h('span',{className:'g-map-badge'},h('i'),'PLAN DU RÉSEAU'),h('span',{className:'g-map-north','aria-label':'Orientation schématique nord'},'↑',h('small',null,'N'))),
+        h('div',{className:'g-map-top'},h('span',{className:'g-map-badge'},h('i'),'VOTRE QUARTIER'),h('span',{className:'g-map-north','aria-label':'Orientation schématique nord'},'↑',h('small',null,'N'))),
         h('div',{className:'g-map-tools',role:'group','aria-label':'Outils de la carte'},btn('Agrandir la carte','plus',()=>Z(v=>Math.min(2.5,v+.5)),{disabled:zoom>=2.5}),btn('Réduire la carte','minus',()=>Z(v=>Math.max(1,v-.5)),{disabled:zoom<=1}),btn('Recentrer la carte','center',()=>{C({x:focus.x,y:focus.y});Z(1.5);}),!onPick&&btn('Afficher le réseau','layers',()=>N(v=>!v),{'aria-pressed':network})),
         zoom>1&&h('button',{type:'button',className:'g-map-reset',onClick:()=>{Z(1);C({x:270,y:215});}},'Vue complète · '+zoom.toFixed(1)+'×'),
         p&&h('div',{className:'g-map-trip'},h('span',{className:'g-map-driver'},h(Icon,{name:'arrow'})),h('div',null,h('strong',null,p.technician||'Équipe terrain'),h('small',null,LABELS[incident?.status]||'Trajet de l’équipe')),h('div',{className:'g-map-arrival','data-numeric':arrival.numeric},h('strong',null,arrival.value),h('small',null,arrival.caption))),
-        onPick&&h('div',{className:'g-map-location'},h('span',{className:'g-map-driver'},h(Icon,{name:'pin'})),h('div',null,h('strong',null,outside?'Coordonnées hors de ce plan':point?'Emplacement du signalement':'Placez votre repère'),h('small',null,outside?'Vos coordonnées sont conservées. Ce plan n’est pas géographique.':point?Number(selectedPoint.lat).toFixed(5)+' · '+Number(selectedPoint.lon).toFixed(5):'Cliquez sur le plan ou utilisez les flèches.')))
+        onPick&&h('div',{className:'g-map-location'},h('span',{className:'g-map-driver'},h(Icon,{name:'pin'})),h('div',null,h('strong',null,outside?'Vous êtes hors de ce dessin':point?'Emplacement du signalement':'Placez votre repère'),h('small',null,outside?'Pas de souci : Moov garde votre position.':point?Number(selectedPoint.lat).toFixed(5)+' · '+Number(selectedPoint.lon).toFixed(5):'Cliquez sur le plan ou utilisez les flèches.')))
       ),
-      h('footer',{className:'g-map-footer'},h('span',null,h('i',{className:'g-map-legend-dot'}),onPick?'Position déclarée':'Réseau schématique'),h('small',null,'Plan schématique'))
+      h('footer',{className:'g-map-footer'},h('span',null,h('i',{className:'g-map-legend-dot'}),onPick?'Votre position':'Réseau schématique'),h('small',null,'Dessin simplifié'))
     );
   }
   window.FGMap={View,toCoordinates,toPoint,viewportAt,centerToReveal,arrivalDetails};

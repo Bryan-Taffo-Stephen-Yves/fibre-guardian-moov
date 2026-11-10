@@ -151,8 +151,8 @@
     h('button',{type:'button',className:'ch-chip',onClick:copy},h(Icon,{name:'copy',size:16}),'Copier le message')),
    d.filleuls.length>0&&h('ul',{className:'ch-parr-list'},d.filleuls.map((f,i)=>h('li',{key:f.at+':'+i},h('b',null,f.name),h('small',null,f.rewarded?'Mois offert le '+day(f.rewardAt):'Inscrit le '+day(f.at)+' · mois offert le '+day(f.rewardAt))))),
    d.parrain?h('p',{className:'ch-parr-note'},'Code accepté : vous et '+d.parrain.name+' aurez chacun un mois offert le '+day(d.parrain.rewardAt)+'.'):
-    d.canUse&&h('form',{className:'ch-parr-form',onSubmit:use},h('label',{htmlFor:'ch-parr-input'},'Un proche vous a donné un code ?'),
-     h('div',null,h('input',{id:'ch-parr-input',value:code,onChange:e=>C(e.target.value),placeholder:'MOOV-XXXXX',maxLength:12,autoCapitalize:'characters',autoComplete:'off',required:true}),h('button',{type:'submit',className:'ch-chip strong',disabled:busy||!code.trim()},busy?'Un instant…':'Valider'))),
+    d.canUse&&h('details',{className:'ch-parr-more',open:!!code},h('summary',null,'Un proche vous a donné un code ?'),h('form',{className:'ch-parr-form',onSubmit:use},h('label',{htmlFor:'ch-parr-input',className:'j-sr'},'Code de parrainage'),
+     h('div',null,h('input',{id:'ch-parr-input',value:code,onChange:e=>C(e.target.value),placeholder:'MOOV-XXXXX',maxLength:12,autoCapitalize:'characters',autoComplete:'off',required:true}),h('button',{type:'submit',className:'ch-chip strong',disabled:busy||!code.trim()},busy?'Un instant…':'Valider')))),
    err&&h('p',{className:'ch-wa-error',role:'alert'},err),done&&h('p',{className:'ch-parr-done',role:'status'},done));
  }
 
@@ -168,14 +168,12 @@
    api&&h(ParrainageCard,{api}),
    window.FGAcces&&h(FGAcces.Entry,{onOpen:()=>go('acces')}),
    api&&h(WhatsAppCard,{api,go}),
-   h('section',{className:'ch-group'},h('h2',null,'Suivi et alertes'),
-    row('bell','Notifications',bell?bell+' non lue'+(bell>1?'s':''):'Tout est lu',()=>go('notifications'),bell?h('span',{className:'ch-badge'},bell>9?'9+':bell):null),
-    row('truck','Suivi du technicien','Où en est votre intervention',()=>go('tracking')),
-    row('map','Carte des pannes','Est-ce que c’est général ?',()=>go('ville'))),
-   h('section',{className:'ch-group'},h('h2',null,'En cas de coupure'),
-    row('alert','Signaler un problème','Photo et lieu, en une minute',()=>go('report')),
-    row('phone','Sans internet · *144#','Guardian répond même hors ligne',()=>go('survie'))),
-   h('section',{className:'ch-group'},h('h2',null,'L’application'),
+   h('section',{className:'ch-group'},h('h2',null,'Mon suivi'),
+    row('bell','Mes messages',bell?bell+' message'+(bell>1?'s':'')+' à lire':'Tout est lu',()=>go('notifications')),
+    row('truck','Ma réparation','Qui vient chez vous et quand',()=>go('tracking')),
+    row('map','Carte des pannes','Les pannes dans Abidjan',()=>go('ville'))),
+   // Signaler et *144# sont déjà en gros boutons sur l'accueil : pas de doublon ici.
+   h('section',{className:'ch-group'},h('h2',null,'Aide'),
     row('info','À propos de la démo','Comment fonctionne cette démonstration',onAbout)),
    h('button',{type:'button',className:'ch-logout',onClick:onLogout,disabled:busy},h(Icon,{name:'logout',size:19}),'Se déconnecter'));
  }
