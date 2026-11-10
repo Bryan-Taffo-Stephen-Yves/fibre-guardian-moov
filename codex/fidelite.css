@@ -1,0 +1,88 @@
+/* Fibre Loyalty+ (fidelite-view.js) : page « Ma fidélité », carte d'accueil et bloc du Superviseur.
+   Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.fl-page{display:grid;gap:14px;max-width:720px;min-width:0}
+.fl-head h1{margin:0 0 6px;font-size:clamp(28px,7vw,40px);line-height:1.05;letter-spacing:-.02em;color:var(--moov-ink)}
+.fl-head p{margin:0;font-size:15px;color:var(--moov-text-muted)}
+.fl-wait{color:var(--moov-text-muted)}
+.fl-card{display:grid;gap:12px;padding:16px;border-radius:20px;background:var(--moov-surface);border:1px solid var(--moov-neutral-100);min-width:0}
+.fl-card h2{margin:0;font-size:17px;color:var(--moov-ink)}
+.fl-small{margin:0;font-size:13.5px;line-height:1.45;color:var(--moov-text-muted)}
+
+/* Niveau : Bronze, Argent, Or */
+.fl-tier{--fl-ink:var(--moov-accent-800);--fl-bg:var(--moov-accent-50);background:var(--fl-bg);border-color:transparent}
+.fl-tier.is-argent,.fl-entry.is-argent{--fl-ink:var(--moov-neutral-700);--fl-bg:var(--moov-neutral-100)}
+.fl-tier.is-or,.fl-entry.is-or{--fl-ink:var(--moov-accent-700);--fl-bg:var(--moov-accent-100)}
+.fl-entry{--fl-ink:var(--moov-accent-800);--fl-bg:var(--moov-accent-50)}
+.fl-tier-top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.fl-medal{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--moov-surface);color:var(--fl-ink);box-shadow:0 1px 3px color-mix(in srgb,var(--moov-neutral-900) 12%,transparent)}
+.fl-tier-top small,.fl-points small{display:block;font-size:12.5px;color:var(--moov-neutral-600)}
+.fl-tier-top strong{display:block;font-size:24px;line-height:1.1;color:var(--fl-ink)}
+.fl-points{text-align:right}
+.fl-points strong{font-size:30px;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.fl-gauge{display:grid;gap:6px}
+.fl-gauge p{margin:0;font-size:14.5px;font-weight:600;color:var(--moov-ink)}
+.fl-track{display:block;height:10px;border-radius:99px;background:color-mix(in srgb,var(--moov-surface) 70%,transparent);overflow:hidden}
+.fl-track b{display:block;height:100%;border-radius:99px;background:var(--moov-primary);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+@media(prefers-reduced-motion:reduce){.fl-track b{transition:none}}
+.fl-won{margin:0;padding:12px 14px;border-radius:14px;background:var(--moov-success-50);color:var(--moov-success-700);font-weight:600}
+
+.fl-ico{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--moov-primary-50);color:var(--moov-primary)}
+.fl-boost{display:flex;gap:12px;align-items:center;background:var(--moov-primary-900);border-color:transparent;color:var(--moov-white)}
+.fl-boost .fl-ico{background:var(--moov-accent);color:var(--moov-on-accent)}
+.fl-boost strong{display:block;font-size:16px}
+.fl-boost small{display:block;font-size:13px;color:color-mix(in srgb,var(--moov-white) 78%,transparent)}
+
+/* Facture du mois */
+.fl-bill-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fl-bill-top small{display:block;font-size:13px;color:var(--moov-text-muted)}
+.fl-bill-top strong{display:block;font-size:24px;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.fl-chip{flex:none;padding:4px 10px;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary-700);font-size:12.5px;font-weight:600}
+.fl-chip.is-ok{background:var(--moov-success-50);color:var(--moov-success-700)}
+.fl-chip.is-late{background:var(--moov-danger-50);color:var(--moov-danger-700)}
+.fl-pay{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:52px;padding:0 18px;border:0;border-radius:16px;background:var(--moov-primary);color:var(--moov-on-primary);font:inherit;font-size:16px;font-weight:650;cursor:pointer}
+.fl-pay small{padding:3px 9px;border-radius:999px;background:var(--moov-accent);color:var(--moov-on-accent);font-size:12.5px;font-weight:700}
+.fl-pay:disabled{opacity:.55;cursor:default}
+
+/* 12 mois à temps */
+.fl-dots{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin:0;padding:0;list-style:none}
+.fl-dots li{height:10px;border-radius:99px;background:var(--moov-neutral-100)}
+.fl-dots li.is-on{background:var(--moov-success-500)}
+
+/* Avantages */
+.fl-rewards,.fl-rules,.fl-history,.fl-tiers,.fl-ex{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.fl-rewards li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;padding:12px;border-radius:14px;background:var(--moov-neutral-25)}
+.fl-rewards li>div{min-width:0}
+.fl-rewards b{display:block;font-size:15px;color:var(--moov-ink)}
+.fl-rewards small{display:block;font-size:12.5px;color:var(--moov-text-muted)}
+.fl-rewards .fl-btn,.fl-rewards .fl-confirm{grid-column:2;justify-self:start}
+.fl-confirm{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fl-btn{min-height:40px;padding:0 14px;border:1.5px solid var(--moov-primary);border-radius:12px;background:var(--moov-surface);color:var(--moov-primary);font:inherit;font-size:14px;font-weight:650;cursor:pointer}
+.fl-btn.is-main{background:var(--moov-primary);color:var(--moov-on-primary)}
+.fl-btn:disabled{border-color:var(--moov-neutral-200);color:var(--moov-neutral-500);cursor:default}
+.fl-link{min-height:36px;border:0;background:none;color:var(--moov-primary);font:inherit;font-size:13.5px;font-weight:600;text-decoration:underline;cursor:pointer}
+.fl-rules li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:baseline;font-size:14.5px;color:var(--moov-neutral-700)}
+.fl-rules b{color:var(--moov-primary);font-variant-numeric:tabular-nums}
+.fl-rules .fl-link{margin-left:6px}
+.fl-history li{display:grid;grid-template-columns:minmax(0,1fr) auto 44px;gap:10px;align-items:center;font-size:14px;color:var(--moov-ink)}
+.fl-history small{font-size:12.5px;color:var(--moov-text-muted)}
+.fl-history small.is-late{color:var(--moov-danger-700);font-weight:600}
+.fl-history b{text-align:right;color:var(--moov-success-700);font-variant-numeric:tabular-nums}
+
+/* Carte d'accueil */
+.fl-entry{display:flex;align-items:center;gap:14px;width:100%;margin:0 0 12px;padding:14px 16px;border:0;border-radius:22px;background:var(--fl-bg);color:var(--moov-ink);font:inherit;text-align:left;cursor:pointer}
+.fl-entry .fl-medal{width:48px;height:48px}
+.fl-entry-main{display:grid;gap:4px;flex:1;min-width:0}
+.fl-entry strong{font-size:16px;color:var(--fl-ink)}
+.fl-entry small{font-size:13.5px;color:var(--moov-neutral-700)}
+.fl-entry .fl-track{height:7px;margin-top:2px;background:var(--moov-surface)}
+.fl-entry:focus-visible{outline:3px solid var(--moov-focus);outline-offset:3px}
+
+/* Superviseur */
+.fl-tiers li{display:grid;grid-template-columns:64px minmax(0,1fr) 28px;gap:8px;align-items:center;font-size:13.5px;color:var(--moov-ink)}
+.fl-tiers i{display:block;height:8px;border-radius:99px;background:var(--moov-neutral-100);overflow:hidden}
+.fl-tiers b{display:block;height:100%;border-radius:99px;background:var(--moov-accent-700)}
+.fl-tiers .is-argent b{background:var(--moov-neutral-500)}
+.fl-tiers .is-or b{background:var(--moov-accent)}
+.fl-tiers em{font-style:normal;font-weight:700;text-align:right}
+.fl-ex li{font-size:12.5px;color:var(--moov-text-muted)}
+.fl-ex b{color:var(--moov-neutral-700)}
