@@ -30,7 +30,7 @@
  function Offer({onLogin}){const P=window.FGPlans,[form,FM]=S(P?P.FORM:null),inv=useInvite();if(!P)return null;
   return h(Reveal,{id:'offre',className:'lp-section lp-offer'},
    inv&&h('div',{className:'lp-invite',role:'status'},h('span',{className:'lp-float-icon ok'},h(Icon,{name:'check',size:18})),h('p',null,h('b',null,inv.parrain+' vous invite chez Moov Fibre.'),' Avec son code ',h('b',null,inv.code),', vous aurez chacun un mois offert après 3 mois d’abonnement.')),
-   h(P.Finder,{form,onForm:FM,withCommune:true,onPick:p=>{try{sessionStorage.setItem('fg-welcome-plan',p.id);}catch(e){}onLogin('client');},pickLabel:p=>'Choisir la Fibre '+p.mbps}));}
+   h(P.Finder,{form,onForm:FM,withCommune:true,invite:inv,onPick:p=>{try{sessionStorage.setItem('fg-welcome-plan',p.id);}catch(e){}onLogin('client');},pickLabel:p=>'Choisir la Fibre '+p.mbps}));}
  function Page({onLogin,onAbout}){const [menu,MENU]=S(false);const jump=id=>e=>{e.preventDefault();MENU(false);document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});};
   return h('div',{className:'lp'},
    h('header',{className:'lp-nav'},h('a',{className:'lp-brand',href:'#top',onClick:jump('top')},h('span',{className:'lp-brand-icon'},h(Icon,{name:'spark',size:20})),'fibre',h('b',null,'guardian')),
