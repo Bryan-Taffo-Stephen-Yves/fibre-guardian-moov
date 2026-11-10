@@ -44,9 +44,11 @@ function createGuardianServer(options={}){
  const WEL=require('./welcome.cjs');WEL.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
  const CW=require('./copie-wifi.cjs');CW.migrate(store);
- // Fibre Voice (thème 8) : ce que les clients demandent quand ils parlent à Guardian (fibre-voice.cjs).
+ // « Parler à Guardian » : ce que les clients demandent quand ils parlent à Guardian (fibre-voice.cjs).
  const FV=require('./fibre-voice.cjs');FV.migrate(store);
  const FD=require('./fair-deal.cjs');FD.migrate(store);
+ // Fibre Voice, centre des avis (thème 8) : notes après intervention ou installation, rappel sous 24 h si la note est basse (avis.cjs).
+ const AV=require('./avis.cjs');AV.migrate(store);
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -187,7 +189,7 @@ function createGuardianServer(options={}){
      insist(d.confirm===true,'Confirmez la remise à zéro.');const r=await jury.reset(store,user.id,{log:m=>console.log(m),credentialsFile:demoCredentials()}),s=store.session(r.user);cookie(res,s.secret,8*3600);
      return json(res,{...jury.status(store,r.user.id,origin),whatsapp:waState(),user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});}
     if(route==='/api/guardian/chat'&&method==='POST')return json(res,require('./guardian-copilot.cjs').reply(store,user,await body(req,4096)));
-    if(route==='/api/noc/feedback'&&method==='POST')return json(res,noc.feedback(store,user.id,await body(req,4096)));
+    if(route==='/api/noc/feedback'&&method==='POST'){const r=noc.feedback(store,user.id,await body(req,4096));AV.sync(store);return json(res,r);}
     if(route==='/api/noc/overview'&&method==='GET')return json(res,{...noc.overview(store,user.id),whatsapp:WA.status(store,whatsapp.cfg)});
     if(route==='/api/noc/labo'&&method==='GET')return json(res,require('./labo.cjs').snapshot(store,user.id,{segment:url.searchParams.get('segment'),otdr:url.searchParams.get('otdr')==='1',nm:url.searchParams.get('nm')}));
     // Guardian Superviseur : équipe Moov seulement (requireOperator dans superviseur.cjs), il propose, un responsable valide.
@@ -217,9 +219,11 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
     // Bouton « Appeler Moov » : le serveur vocal dit d'abord ce que Moov sait du quartier (appels.cjs).
     if(route==='/api/noc/voix'&&method==='GET')return json(res,FV.stats(store,user.id));
+    if(route==='/api/noc/avis'&&method==='GET')return json(res,AV.stats(store,user.id));
+    if(route==='/api/noc/avis'&&method==='POST')return json(res,AV.done(store,user.id,await body(req,1024)));
     if(route==='/api/noc/call'&&method==='POST')return json(res,require('./appels.cjs').call(store,user.id,await body(req,1024)));
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
-    if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);return json(res,WEL.act(store,user.id,await body(req,1000000)));}
+    if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);const r=WEL.act(store,user.id,await body(req,1000000));AV.sync(store);return json(res,r);}
     if(route==='/api/welcome/activate'&&method==='POST'){const st=WEL.activate(store,user.id);return json(res,{state:journey.snapshotFor(store,user.id,st)});}
     if(route==='/api/noc/welcome'&&method==='GET')return json(res,WEL.list(store,user.id));
     if(route==='/api/noc/welcome'&&method==='POST')return json(res,WEL.operate(store,user.id,await body(req,2048)));
