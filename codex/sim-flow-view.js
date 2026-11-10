@@ -30,6 +30,9 @@
           a.state === 'working' && h('span', {className: 'sf-bar'}, h('i', {style: {transform: 'scaleX(' + a.progress.toFixed(3) + ')'}})))))));
   }
 
+  // En démo (barre des rôles en bas), on dit comment passer au rôle qui a le droit d'agir.
+  const demoHint = () => typeof document?.querySelector === 'function' && document.querySelector('.rb-bar') ? ' Pour le faire en démo, touchez « Superviseur » en bas de l’écran.' : '';
+
   // Prochaine décision humaine. Chaque bouton passe par le serveur, qui vérifie les droits.
   function NextStep({incident, segment, data, now, run, busy}) {
     const ready = now >= (F.agents(incident, segment, data.technicians, now).at(-1).end), dispatch = incident.plan?.dispatch;
@@ -44,13 +47,13 @@
     if (!ready) body = h('p', {className: 'sf-wait'}, 'Guardian termine son analyse. La validation s’ouvre juste après.');
     else if (incident.status === 'proposed') body = data.canApprove
       ? [h('p', {key: 'p'}, dispatch ? 'Guardian propose une intervention. Rien ne part sans votre accord.' : kind === 'olt' ? 'Guardian propose de redémarrer l’équipement central à distance. Rien ne se fait sans votre accord.' : 'Guardian propose une action à distance. Rien ne part sans votre accord.'), h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'approve', note: 'Plan validé depuis le simulateur.'})}, 'Valider le plan')]
-      : h('p', null, 'Un responsable Moov doit valider le plan.');
+      : h('p', null, 'C’est le superviseur qui valide le plan (ici ou sur WhatsApp).' + demoHint());
     else if (incident.status === 'approved' && dispatch) body = data.canDispatch
       ? [h('label', {key: 't', className: 'sf-field'}, 'Équipe à envoyer', h('select', {value: tech || suggested?.id || '', onChange: e => setTech(e.target.value)}, (data.technicians || []).filter(t => !t.busy).map(t => h('option', {key: t.id, value: t.id}, t.name + ' · ' + (t.id === suggested?.id ? 'la plus proche' : t.team))))),
         flood && h('label', {key: 'w', className: 'sf-check'}, h('input', {type: 'checkbox', checked: dry, onChange: e => setDry(e.target.checked)}), 'L’eau s’est retirée (photo du gardien reçue)'),
         h('label', {key: 's', className: 'sf-check'}, h('input', {type: 'checkbox', checked: safe, onChange: e => setSafe(e.target.checked)}), 'Consignes de sécurité vérifiées'),
         h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy || !safe || (flood && !dry) || !(tech || suggested), onClick: () => run({...base, type: 'dispatch', technician: tech || suggested.id, safety: true, ...(flood ? {waterCleared: true} : {})})}, flood && !dry ? 'Attendre que l’eau se retire' : 'Envoyer l’équipe')]
-      : h('p', null, 'Un responsable Moov doit choisir l’équipe.');
+      : h('p', null, 'C’est le superviseur qui choisit et envoie le technicien.' + demoHint());
     else if (['dispatched', 'en_route', 'on_site'].includes(incident.status)) body = h('button', {type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'advance'})}, ({dispatched: 'Confirmer le départ de ' + first, en_route: first + ' est arrivé' + (/a$/.test(first) ? 'e' : '') + ' sur place', on_site: 'Réparation terminée'})[incident.status]);
     else if (incident.status === 'verifying' || (incident.status === 'approved' && !dispatch)) body = [h('p', {key: 'p'}, incident.status === 'verifying' ? 'Guardian vérifie que toutes les box reviennent avant de clôturer.' : remote ? remote[0] : 'Quand le quartier est rétabli, Guardian vérifie les box puis clôture.'), h('button', {key: 'b', type: 'button', className: 'sf-primary', disabled: busy, onClick: () => run({...base, type: 'verify'}, {restore: segment.id})}, incident.status === 'approved' && remote ? remote[1] : 'Rétablir et vérifier')];
     if (!body) return null;

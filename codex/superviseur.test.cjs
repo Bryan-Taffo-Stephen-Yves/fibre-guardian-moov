@@ -42,7 +42,7 @@ test('Une coupure remonte en premier, avec la cause, le dossier et le bon écran
   t.sim('YOP-07','fiber');N.scan(t.store);
   const b=S.bilan(t.store,t.chef),f=b.findings[0];
   assert.equal(f.key,'panne:YOP-07');assert.equal(f.level,'critique');assert.match(f.title,/12 box sur 20 éteintes/);
-  assert.match(f.cause,/Fibre coupée/);assert.equal(f.go.page,'approvals');assert.ok(f.incidentId);
+  assert.match(f.cause,/Fibre coupée/);assert.equal(f.go.page,'operations');assert.equal(f.go.label,'Valider le plan');assert.ok(f.incidentId);
   assert.equal(b.headline.tone,'bad');assert.match(b.headline.text,/Yopougon/);
   assert.equal(b.numbers.pending,1);assert.equal(b.agents.find(a=>a.key==='analyse').tone,'warn');
   assert.ok(b.journal.some(j=>/J’ai ouvert un dossier pour Yopougon/.test(j.text)),'journal de l’agent');

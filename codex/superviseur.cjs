@@ -68,10 +68,12 @@ function findings(s,{ports,incidents,technicians,forecasts,olts,now,signals}){
   let next=advice,go={page:'incidents',label:'Ouvrir le dossier'};
   if(i){
    facts.push({label:'Dossier',value:STATUS[i.status]||i.status});
-   if(i.status==='proposed'){next='Validez le plan préparé : il attend depuis '+minutes(now-i.updated)+'. '+advice;go={page:'approvals',label:'Examiner le plan à valider'};}
-   else if(i.status==='approved'){next=freeTechs.length?'Affectez un technicien : '+freeTechs[0].name+' est disponible.':'Aucun technicien libre : rappelez une équipe ou libérez une mission.';go={page:'missions',label:'Affecter une équipe'};}
-   else if(['dispatched','en_route','on_site'].includes(i.status)){const t=technicians.find(t=>t.id===i.technician);next=(t?t.name+' ':'L’équipe ')+(i.status==='on_site'?'est sur place.':i.status==='en_route'?'est en route.':'doit confirmer son départ.')+' Je préviens les clients à chaque étape.';go={page:'missions',label:'Suivre l’équipe'};}
-   else if(i.status==='verifying'){next='Vérifiez le retour des mesures avant de clore le dossier.';go={page:'incidents',label:'Vérifier le rétablissement'};}
+   // Une panne = un seul dossier, ouvert dans le Centre d'opérations : chaque étape (valider, envoyer, suivre, vérifier) s'y fait au même endroit.
+   go={page:'operations',label:'Ouvrir le dossier'};
+   if(i.status==='proposed'){next='Validez le plan préparé : il attend depuis '+minutes(now-i.updated)+'. '+advice;go={page:'operations',label:'Valider le plan'};}
+   else if(i.status==='approved'){next=freeTechs.length?'Envoyez un technicien : '+freeTechs[0].name+' est disponible.':'Aucun technicien libre : rappelez une équipe ou libérez une mission.';go={page:'operations',label:'Envoyer un technicien'};}
+   else if(['dispatched','en_route','on_site'].includes(i.status)){const t=technicians.find(t=>t.id===i.technician);next=(t?t.name+' ':'L’équipe ')+(i.status==='on_site'?'est sur place.':i.status==='en_route'?'est en route.':'doit confirmer son départ.')+' Je préviens les clients à chaque étape.';go={page:'operations',label:'Suivre le technicien'};}
+   else if(i.status==='verifying'){next='Vérifiez le retour des mesures avant de clore le dossier.';go={page:'operations',label:'Vérifier le rétablissement'};}
   }else facts.push({label:'Dossier',value:'ouverture au prochain passage de la détection'});
   if(i)facts.unshift({label:'Dossier n°',value:N.ref(i.id)});
   out.push({key:'panne:'+p.id,level:p.tone==='down'?'critique':'majeure',segment:p.id,zone:plainZone(p.zone),title,cause,facts,advice:next,go:{...go,incidentId:i?.id||null,segment:p.id},since:p.since||now,incidentId:i?.id||null,ref:i?N.ref(i.id):null});
@@ -80,9 +82,9 @@ function findings(s,{ports,incidents,technicians,forecasts,olts,now,signals}){
  for(const i of incidents){const hold=N.holdOf(s,i);if(!hold)continue;const p=ports.find(x=>x.id===i.segment_id),zone=plainZone(p?.zone||i.segment_id);
   out.push({key:'partielle:'+i.id,level:'critique',segment:i.segment_id,zone,title:'Réparation incomplète à '+zone+' : '+hold.remaining+' foyer'+(hold.remaining>1?'s':'')+' encore coupé'+(hold.remaining>1?'s':''),cause:'Branche secondaire encore coupée après la réparation principale (probable)',
    facts:[{label:'Box en ligne',value:hold.online+' sur '+hold.total},{label:'Réparation déclarée',value:i.repair_at?minutes(now-i.repair_at)+' plus tôt':'—'}],
-   advice:i.status==='verifying'?'Je garde le dossier ouvert. Lancez un contrôle ciblé de la branche secondaire avant toute clôture.':'Contrôle ciblé en cours : je vérifierai les mesures dès que la réparation sera de nouveau déclarée.',go:{page:'incidents',label:'Ouvrir le dossier',incidentId:i.id,segment:i.segment_id},since:hold.at,incidentId:i.id});}
+   advice:i.status==='verifying'?'Je garde le dossier ouvert. Lancez un contrôle ciblé de la branche secondaire avant toute clôture.':'Contrôle ciblé en cours : je vérifierai les mesures dès que la réparation sera de nouveau déclarée.',go:{page:'operations',label:'Ouvrir le dossier',incidentId:i.id,segment:i.segment_id},since:hold.at,incidentId:i.id});}
  // Plan qui attend trop longtemps : on le fait remonter, même si la panne est « seulement » majeure.
- for(const f of out)if(f.go.page==='approvals'){const i=incidents.find(x=>x.id===f.incidentId);if(i&&now-i.updated>180000)f.level='critique';}
+ for(const f of out)if(f.go.label==='Valider le plan'){const i=incidents.find(x=>x.id===f.incidentId);if(i&&now-i.updated>180000)f.level='critique';}
  for(const o of olts){
   if(o.board!=='En service')continue;
   if(o.cpu>=80||o.uplink>=90)out.push({key:'centrale:'+o.commune,level:'majeure',segment:null,zone:o.commune,title:'Centrale de '+o.commune+' très chargée',cause:o.uplink>=90?'Trafic de la commune au maximum de la liaison':'Processeur de la centrale très sollicité',facts:[{label:'Processeur',value:o.cpu+' %'},{label:'Liaison',value:String(o.uplink).replace('.',',')+' %'},{label:'Température',value:String(o.temperature).replace('.',',')+' °C'}],advice:'Surveiller la centrale et prévenir le responsable capacité si la charge reste haute.',go:{page:'labo',label:'Voir la centrale dans le Labo',segment:ports.find(p=>p.commune===o.commune)?.id||null},since:now});
