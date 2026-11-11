@@ -215,11 +215,11 @@ function scanSave(row, p, scan, now = Date.now()) {
   if (!scan || typeof scan !== 'object' || !Array.isArray(scan.devices)) return;
   if (p.scan && now - p.scan.at < SCAN_GAP_MS) return; // un tour toutes les 20 secondes suffit : les envois plus rapprochés sont ignorés
   const self = macOf(scan.mac), myIp = lanIp(scan.ip), gateway = lanIp(scan.gateway), prefix = int(scan.prefix, 8, 30);
-  const first = !p.scan, seen = new Set(), unknown = [];
+  const first = !p.scan, seen = new Set(), unknown = [], macs = new Map();
   for (const raw of scan.devices.slice(0, 120)) {
     const ip = lanIp(raw?.ip), mac = macOf(raw?.mac);
     if (!ip || !mac || groupMac(mac) || seen.size >= MAX_DEVICES) continue;
-    const id = deviceId(row, mac); if (seen.has(id)) continue; seen.add(id);
+    const id = deviceId(row, mac); if (seen.has(id)) continue; seen.add(id); macs.set(id, mac);
     const oui = mac.slice(0, 8), random = privateMac(mac);
     const kind = ip === gateway ? (ip.startsWith('172.20.10.') || random ? 'partage' : 'box') : mac === self || ip === myIp ? 'pc' : random ? 'mobile' : 'appareil';
     if (kind === 'appareil' && !VENDORS.has(oui)) unknown.push(oui);
@@ -253,6 +253,13 @@ function scanSave(row, p, scan, now = Date.now()) {
   for (const d of list) d.label = count[d.base] > 1 || d.n > 1 ? d.base + ' ' + d.n : d.base;
   p.scan = {at: now, medium: scan.medium === 'cable' ? 'cable' : 'wifi', subnet: myIp && prefix ? myIp.split('.').slice(0, 3).join('.') + '.0/' + Math.max(24, prefix) : null};
   if (unknown.length) askVendors([...new Set(unknown)]);
+  // Surveillance du Wi-Fi (veille-wifi.cjs) : les appareils là maintenant, avec leur adresse MAC le temps du calcul seulement.
+  if (onScan) try { onScan(row, list.filter(d => !d.gone && macs.has(d.id)).map(d => ({mac: macs.get(d.id), kind: d.kind, label: d.label}))); } catch {}
+}
+let onScan = null;
+// Un PC branché en ce moment sur l'un des liens de ce compte (écran Appareils de l'application).
+function pcLive(s, uid, now = Date.now()) {
+  return s.all('SELECT token_hash FROM speed_links WHERE user_id=? AND expires>?', uid, now).some(r => { const p = PC.get(r.token_hash); return !!p && now - p.at < LIVE_MS; });
 }
 // Ce que la page affiche : les appareils là maintenant, ceux partis il y a peu, et les dernières arrivées et départs.
 function devicesView(p, now = Date.now()) {
@@ -332,6 +339,7 @@ function agent(origin, token) {
     "Write-Host '  Toutes les 20 secondes, il compte les appareils de ce Wi-Fi (sans leur nom, sans rien changer).'",
     "Write-Host '  Il ne fait que 4 opérations, quand vous les demandez sur la page :'",
     "Write-Host '  tester la box, tester Internet, réparer le DNS, reconnecter le Wi-Fi.'",
+    "Write-Host '  Si « Me prévenir sur WhatsApp » est activé, Guardian vous écrit quand un nouvel appareil arrive.'",
     "Write-Host '  Laissez cette fenêtre ouverte. Fermez-la pour arrêter.'",
     "Write-Host ''",
     "function Field($text, $pattern) { $m = [regex]::Match($text, '(?mi)^\\s*(' + $pattern + ')[^:\\r\\n]*:\\s*(.+?)\\s*$'); if ($m.Success) { $m.Groups[2].Value } else { $null } }",
@@ -426,5 +434,5 @@ function info(s, row) {
     scenarios: Object.entries(SCENARIOS).map(([id, f]) => ({id, label: f.label, hint: f.hint, down: f.down ?? 0, add: f.add ?? 0, jitter: f.jitter ?? 0, loss: f.loss ?? 100, cut: !!f.cut, signal: f.signal ?? 1}))};
 }
 
-module.exports = {migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
+module.exports = {pcLive, setOnScan: f => { onScan = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
   setVendorFetch: f => { vendorFetch = f || ((...a) => fetch(...a)); VENDOR_QUEUE.length = 0; vendorLast = 0; }, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};

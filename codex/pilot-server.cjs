@@ -40,6 +40,8 @@ function createGuardianServer(options={}){
  const info=m=>options.log?.(m);let refusedAt=0;
  const waRefused=m=>{const t=Date.now();if(t-refusedAt<60000)return;refusedAt=t;info(m);};
  const VT=require('./vrai-test.cjs');VT.migrate(store);
+ // Surveillance du Wi-Fi : nouvel appareil vu par le PC branché, grosse consommation jouée dans la Régie → WhatsApp du propriétaire (veille-wifi.cjs).
+ const VW=require('./veille-wifi.cjs');VW.migrate(store);VT.setOnScan(VW.hook(store,()=>whatsapp.cfg,{onError:e=>options.onError?.(e)}));
  // Fibre Welcome (thème 1) : commande, dossier, rendez-vous et installation d'un nouvel abonné (welcome.cjs).
  const WEL=require('./welcome.cjs');WEL.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
@@ -117,7 +119,9 @@ function createGuardianServer(options={}){
      if(route==='/api/test/upload'&&method==='POST'){store.rate('vt-up:'+key,30,VT.LINK_MS);let size=0;for await(const chunk of req){size+=chunk.length;if(size>VT.MAX_UPLOAD){res.setHeader('Connection','close');throw new Problem(413,'Envoi trop volumineux.');}}return json(res,{bytes:size});}
      // « Brancher ce PC » : le fichier à lancer, puis ses relevés Wi-Fi toutes les 2 secondes (gardés en mémoire seulement).
      if(route==='/api/test/agent'&&method==='GET'){store.rate('vt-agent:'+key,10,VT.LINK_MS);const file=VT.agent(origin,req.headers['x-test-token']);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="Guardian-Wi-Fi.cmd"','Content-Length':Buffer.byteLength(file)});res.end(file);return;}
-     if(route==='/api/test/wifi'&&method==='POST'){store.rate('vt-wifi-in:'+key,1200,VT.LINK_MS);return json(res,VT.wifiSave(row,await body(req,16384)));}
+     if(route==='/api/test/wifi'&&method==='POST'){store.rate('vt-wifi-in:'+key,1200,VT.LINK_MS);const r=VT.wifiSave(row,await body(req,16384));VW.keepLink(store,row);return json(res,r);}
+     if(route==='/api/test/veille'&&method==='GET'){store.rate('vt-veille:'+key,600,VT.LINK_MS);return json(res,VW.view(store,row.user_id));}
+     if(route==='/api/test/veille'&&method==='POST'){store.rate('vt-veille-in:'+key,60,VT.LINK_MS);const d=await body(req,512);return json(res,typeof d.mine==='string'?VW.mine(store,row.user_id,d.mine):VW.toggle(store,row.user_id,d.on));}
      if(route==='/api/test/copy'&&method==='GET'){store.rate('vt-copy:'+key,600,VT.LINK_MS);return json(res,CW.latest(store,row));}
      if(route==='/api/test/copy'&&method==='POST'){store.rate('vt-copy-in:'+key,300,VT.LINK_MS);const d=await body(req,8192),net=await VT.network(ip(req));return json(res,d.new===true?CW.start(store,row,d,{net}):CW.update(store,row,d,{net}),d.new===true?201:200);}
      if(route==='/api/test/copy/simulate'&&method==='POST'){store.rate('vt-copy-sim:'+key,300,VT.LINK_MS);return json(res,CW.simulate(store,row,await body(req,1024)));}
@@ -195,6 +199,9 @@ function createGuardianServer(options={}){
     // Régie : réservée à l'administrateur (vérifié dans jury-store), elle enchaîne les actions NOC habituelles.
     if(route==='/api/regie'&&method==='GET')return json(res,{...jury.status(store,user.id,origin),whatsapp:waState()});
     if(route==='/api/regie'&&method==='POST'){const d=await body(req,1024);
+     // « Un appareil consomme beaucoup » : alerte de surveillance du Wi-Fi jouée sur le réseau de démo (administrateur seulement).
+     if(d.type==='heavy'){insist(operator.role(store,user.id)==='admin','Régie réservée à l’administrateur.',403);store.rate('regie-heavy',6,60000);const st=jury.status(store,user.id,origin);insist(st.room,'Ouvrez d’abord la salle du jury.',409);
+      const heavy=await VW.regieHeavy(store,whatsapp.cfg,user.id,st.network?.copy||null);return json(res,{...st,whatsapp:waState(),heavy});}
      if(d.type!=='reset')return json(res,{...jury.step(store,user.id,d,origin),whatsapp:waState()});
      insist(d.confirm===true,'Confirmez la remise à zéro.');const r=await jury.reset(store,user.id,{log:m=>console.log(m),credentialsFile:demoCredentials()}),s=store.session(r.user);cookie(res,s.secret,8*3600);
      return json(res,{...jury.status(store,r.user.id,origin),whatsapp:waState(),user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});}
@@ -266,6 +273,9 @@ function createGuardianServer(options={}){
      const leds=image?await guardianAi.readLeds(image,{store,uid:user.id,log}):null,reading=leds?{source:'claude',...leds}:boxReading.localReading(d.local);
      insist(reading,'Je n’ai pas pu lire cette photo. Reprenez-la de face, voyants visibles, à environ 30 cm de la box.',422);
      return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
+    // Surveillance du Wi-Fi, depuis l'écran Appareils : chacun ne voit et ne règle que la sienne.
+    if(route==='/api/veille'&&method==='GET')return json(res,{...VW.view(store,user.id),pc:VT.pcLive(store,user.id)});
+    if(route==='/api/veille'&&method==='POST'){const d=await body(req,512);return json(res,{...(typeof d.mine==='string'?VW.mine(store,user.id,d.mine):VW.toggle(store,user.id,d.on)),pc:VT.pcLive(store,user.id)});}
     if(route==='/api/test/link'&&method==='POST'){store.rate('vt-link:'+user.id,10,600000);return json(res,VT.link(store,user.id,{origin}));}
     // « Mon compte » : le client relie son WhatsApp (un code, envoyé à Guardian depuis son téléphone, puis le numéro confirmé
     // ici), ou arrête. Clients seulement (vérifié dans whatsapp-compte.cjs).

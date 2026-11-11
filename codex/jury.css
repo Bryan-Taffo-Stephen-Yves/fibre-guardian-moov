@@ -274,3 +274,5 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy-choice-btn:hover:not(:disabled){background:var(--moov-accent);color:var(--moov-on-accent)}
 .jy-choice-btn:disabled{opacity:.6;cursor:wait}
 @media(prefers-reduced-motion:reduce){.jy-dev.is-down i{animation:none}.jy-member,.jy-dev{transition:none}}
+.jy-watch{display:grid;gap:10px}.jy-watch p{margin:0;line-height:1.5}.jy-watch .jy-secondary{justify-self:start}
+.jy-watch-sent{padding:10px 13px;border-radius:12px;background:var(--moov-warning-100);font-size:14px}
