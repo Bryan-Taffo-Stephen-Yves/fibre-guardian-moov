@@ -256,7 +256,7 @@ function scanSave(row, p, scan, now = Date.now()) {
   // Surveillance du Wi-Fi (veille-wifi.cjs) : les appareils là maintenant, avec leur adresse MAC le temps du calcul seulement.
   if (onScan) try { onScan(row, list.filter(d => !d.gone && macs.has(d.id)).map(d => ({mac: macs.get(d.id), kind: d.kind, label: d.label}))); } catch {}
 }
-let onScan = null;
+let onScan = null, onBeat = null;
 // Un PC branché en ce moment sur l'un des liens de ce compte (écran Appareils de l'application).
 function pcLive(s, uid, now = Date.now()) {
   return s.all('SELECT token_hash FROM speed_links WHERE user_id=? AND expires>?', uid, now).some(r => { const p = PC.get(r.token_hash); return !!p && now - p.at < LIVE_MS; });
@@ -302,6 +302,8 @@ function wifiSave(row, d) {
   p.w = error ? {error} : {ssid: text(d?.ssid, 64), signal: int(d?.signal, 0, 100), channel: int(d?.channel, 0, 200), band: text(d?.band, 20), radio: text(d?.radio, 30), rxMbps: int(d?.rxMbps, 0, 100000), txMbps: int(d?.txMbps, 0, 100000), auth: text(d?.auth, 40), computer: text(d?.computer, 40)};
   p.at = now;
   if (d?.scan) scanSave(row, p, d.scan, now);
+  // Surveillance du Wi-Fi (veille-wifi.cjs) : le PC est vivant ; avec le tour du réseau, sa mesure d'Internet.
+  if (onBeat) try { onBeat(row, {net: d?.net && typeof d.net === 'object' ? {ms: int(d.net.ms, 0, 60000), lost: int(d.net.lost, 0, 10), n: int(d.net.n, 1, 10)} : null}); } catch {}
   // Une opération en attente part avec la réponse ; le PC ne sait faire que celles de la liste.
   const next = p.ops.find(x => x.state === 'attente');
   if (next) { next.state = 'en cours'; next.sent = now; }
@@ -339,7 +341,8 @@ function agent(origin, token) {
     "Write-Host '  Toutes les 20 secondes, il compte les appareils de ce Wi-Fi (sans leur nom, sans rien changer).'",
     "Write-Host '  Il ne fait que 4 opérations, quand vous les demandez sur la page :'",
     "Write-Host '  tester la box, tester Internet, réparer le DNS, reconnecter le Wi-Fi.'",
-    "Write-Host '  Si « Me prévenir sur WhatsApp » est activé, Guardian vous écrit quand un nouvel appareil arrive.'",
+    "Write-Host '  Si « Me prévenir sur WhatsApp » est activé, Guardian vous écrit quand un nouvel appareil arrive'",
+    "Write-Host '  ou quand Internet coupe. Toutes les 20 secondes, il mesure aussi Internet (3 petits signaux).'",
     "Write-Host '  Laissez cette fenêtre ouverte. Fermez-la pour arrêter.'",
     "Write-Host ''",
     "function Field($text, $pattern) { $m = [regex]::Match($text, '(?mi)^\\s*(' + $pattern + ')[^:\\r\\n]*:\\s*(.+?)\\s*$'); if ($m.Success) { $m.Groups[2].Value } else { $null } }",
@@ -398,7 +401,7 @@ function agent(origin, token) {
     "  } elseif ($out -match 'location|localisation|emplacement') { $body = @{ error = 'location' } }",
     "  elseif ($out -match 'wlansvc|not running|pas en cours') { $body = @{ error = 'netsh' } }",
     "  else { $body = @{ error = 'no-wifi' } }",
-    "  if ($scan) { $body.scan = $scan }",
+    "  if ($scan) { $body.scan = $scan; $body.net = Ping-Host '8.8.8.8' 3; $body.net.n = 3 }",
     "  try {",
     "    $resp = Send $body; $scan = $null",
     "    if ($ssid) { Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + $ssid + '  signal ' + $body.signal + ' %') }",
@@ -434,5 +437,5 @@ function info(s, row) {
     scenarios: Object.entries(SCENARIOS).map(([id, f]) => ({id, label: f.label, hint: f.hint, down: f.down ?? 0, add: f.add ?? 0, jitter: f.jitter ?? 0, loss: f.loss ?? 100, cut: !!f.cut, signal: f.signal ?? 1}))};
 }
 
-module.exports = {pcLive, setOnScan: f => { onScan = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
+module.exports = {pcLive, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
   setVendorFetch: f => { vendorFetch = f || ((...a) => fetch(...a)); VENDOR_QUEUE.length = 0; vendorLast = 0; }, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};

@@ -45,7 +45,7 @@
   E(()=>{let alive=true;const load=()=>apiRef.current('/veille').then(v=>{if(alive){W(v);X('');}}).catch(()=>{});load();const t=setInterval(load,6000);return()=>{alive=false;clearInterval(t);};},[]);
   const send=async body=>{B(true);try{W(await apiRef.current('/veille','POST',body));X('');}catch(e){X(e.message);}finally{B(false);}};
   if(!w)return null;
-  const state=!w.on?'Guardian vous écrit sur WhatsApp quand un appareil inconnu se connecte à votre Wi-Fi, ou quand un appareil consomme beaucoup plus que d’habitude.'
+  const state=!w.on?'Guardian vous écrit sur WhatsApp quand un appareil inconnu se connecte à votre Wi-Fi, quand Internet coupe ou devient instable, ou quand un appareil consomme beaucoup plus que d’habitude.'
    :!w.pc?'Activée. Pour voir les appareils qui arrivent, laissez un PC Windows allumé sur votre Wi-Fi : « Tester ma connexion », puis « Brancher ce PC ».'
    :w.learning?'Guardian apprend vos appareils habituels… encore '+w.learnLeft+' s.'
    :'Surveillance active · '+w.usual+' appareil'+(w.usual>1?'s':'')+' habituel'+(w.usual>1?'s':'')+'.';
@@ -54,7 +54,7 @@
    h('div',{className:'du-watch-head'},h('span',{className:'du-device-icon'},h(Icon,{name:'shield'})),h('div',null,h('h2',{id:'du-watch-title'},'Me prévenir sur WhatsApp'),h('p',null,state)),
     h('button',{type:'button',role:'switch','aria-checked':!!w.on,'aria-labelledby':'du-watch-title',className:'du-switch',disabled:busy,onClick:()=>send({on:!w.on})},h('i'))),
    w.pending?.length>0&&h('ul',{className:'du-watch-list','aria-label':'Nouveaux appareils'},w.pending.slice(0,3).map(p=>h('li',{key:p.id},h('span',null,h('strong',null,p.label),h('small',null,'Arrivé à '+clock(p.at)+(p.night?', en pleine nuit':''))),button('C’est à moi',()=>send({mine:p.id}),{disabled:busy})))),
-   last&&h('p',{className:'du-watch-last'+(last.kind==='conso'?' heavy':''),role:'status'},h('strong',null,(last.whatsapp?'Envoyé sur WhatsApp à ':'Alerte de ')+clock(last.at)),' ',last.text.split('\n')[0]),
+   last&&h('p',{className:'du-watch-last'+(['conso','coupure','instable'].includes(last.kind)?' heavy':''),role:'status'},h('strong',null,(last.whatsapp?'Envoyé sur WhatsApp à ':'Alerte de ')+clock(last.at)),' ',last.text.split('\n')[0]),
    error?h('p',{role:'alert',className:'j-error'},error):null,
    h('small',{className:'du-watch-note'},'Guardian ne lit jamais ce que font vos appareils : seulement leur arrivée et la quantité de données.'));
  }

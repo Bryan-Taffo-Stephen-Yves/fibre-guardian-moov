@@ -189,6 +189,7 @@
 .vt-watch-new{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:13px;background:var(--moov-accent-25);border:1px dashed var(--moov-accent-200)}
 .vt-mine{min-height:40px;padding:0 14px;font-size:14px}
 .vt-watch-last{margin:0!important;padding:8px 11px;border-radius:11px;font-size:13px;background:var(--moov-neutral-50);color:var(--moov-neutral-700)!important}
+.vt-watch-last.warn{background:var(--moov-warning-100);color:var(--moov-warning)!important}
 .vt-watch-last.new{background:var(--moov-success-50);color:var(--moov-success-700)!important}
 @media (prefers-reduced-motion:reduce){.vt-switch,.vt-switch i{transition:none}}
 
