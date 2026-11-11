@@ -93,7 +93,8 @@ test('La fiche limite le débit au choix du client et retire un appareil après 
  app.confirmations[0].run();assert.equal(app.actions[1][1].action,'remove');assert.equal(app.actions[1][1].confirm,true);
 });
 test('Le rafraîchissement attend la requête active et les erreurs deviennent visibles',async()=>{
- let reject;const app=harness({api:()=>new Promise((_,no)=>{reject=no;})});app.render();app.flushEffects();assert.equal(app.apiCalls.length,1);
- for(let i=0;i<3;i++)for(const timer of app.timers.values())timer();assert.equal(app.apiCalls.length,1,'Aucune seconde requête pendant la première');
+ let reject;const app=harness({api:url=>url==='/veille'?Promise.resolve({on:false,pending:[],log:[]}):new Promise((_,no)=>{reject=no;})});const usage=()=>app.apiCalls.filter(u=>u.startsWith('/journey/usage')).length; // la carte « Me prévenir sur WhatsApp » a sa propre requête (/veille)
+ app.render();app.flushEffects();assert.equal(usage(),1);
+ for(let i=0;i<3;i++)for(const timer of app.timers.values())timer();assert.equal(usage(),1,'Aucune seconde requête pendant la première');
  reject(new Error('Serveur de test indisponible'));await Promise.resolve();await app.settle();const alert=all(app.tree,node=>node.props.role==='alert')[0];assert.equal(text(alert),'Serveur de test indisponible');
 });

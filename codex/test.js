@@ -64,6 +64,7 @@
    el('label',{class:'vt-wifi',for:'vt-wifi'},el('span',{},'Nom du Wi-Fi',el('em',{class:'vt-wifi-tag',id:'vt-wifi-tag',hidden:''},'Lu sur ce PC')),wifi,el('small',{id:'vt-wifi-help',text:windows?'Une page web ne peut pas lire ce nom elle-même. Tapez-le, ou branchez ce PC juste en dessous : Windows le donnera.':'Votre téléphone ne laisse aucune page web lire ce nom : tapez-le une fois, il est gardé sur cet appareil.'})),
    windows?pcBlock():null,
    windows?el('div',{class:'vt-devices',id:'vt-devices',hidden:''}):null,
+   windows?el('div',{class:'vt-watch',id:'vt-watch',hidden:''}):null,
    el('fieldset',{class:'vt-net'},el('legend',{text:'Cet appareil est connecté par :'}),nets,detected?el('p',{class:'vt-net-hint',text:'Choix proposé par votre appareil. Corrigez-le si besoin.'}):null),
    el('dl',{class:'vt-facts',id:'vt-facts'},...facts()));
   const full=el('section',{class:'vt-card vt-full','aria-labelledby':'vt-full-title'},
@@ -146,7 +147,30 @@
   if(dl)dl.replaceChildren(...facts());
   // La liste n'est redessinée que si un appareil arrive ou part (ou toutes les 20 secondes pour les durées).
   const dv=document.getElementById('vt-devices');if(dv){dv.hidden=!(pcOn&&lan);const sig=lan?JSON.stringify([lan.devices.map(d=>d.id+d.label),lan.events.map(e=>e.type+e.label),Math.floor(Date.now()/20000)]):'';if(pcOn&&lan&&sig!==dv.dataset.sig){dv.dataset.sig=sig;dv.replaceChildren(...devicesView());}}
+  const wb=document.getElementById('vt-watch');if(wb){wb.hidden=!(pcOn&&lan);if(pcOn&&lan)loadWatch();}
   if(copyRec)paintCopy();
+ }
+ // ---------- Surveillance du Wi-Fi : Guardian prévient sur WhatsApp quand un nouvel appareil se connecte ----------
+ // Le propriétaire l'active ici (ou dans l'écran Appareils de l'application). Une minute pour apprendre les appareils
+ // habituels, puis une alerte par nouvel appareil. « C'est à moi » le rend habituel. Rien n'est lu de ce que font les appareils.
+ let watch=null,watchAt=0,watchBusy=false;
+ async function loadWatch(force=false){if(watchBusy||(!force&&Date.now()-watchAt<5000))return;watchBusy=true;watchAt=Date.now();try{watch=await api('veille',null,6000);paintWatch();}catch{}finally{watchBusy=false;}}
+ async function setWatch(body){watchBusy=true;try{watch=await api('veille',body,8000);}catch(e){watch={...(watch||{}),error:e.message};}finally{watchBusy=false;watchAt=Date.now();paintWatch(true);}}
+ function paintWatch(focus=false){
+  const box=document.getElementById('vt-watch');if(!box||!watch)return;
+  const sig=JSON.stringify([watch.on,watch.learning,watch.usual,watch.pending,watch.log?.[0]?.at,watch.error]);if(sig===box.dataset.sig)return;box.dataset.sig=sig;
+  const sw=el('button',{type:'button',class:'vt-switch',id:'vt-watch-switch',role:'switch','aria-checked':String(!!watch.on),'aria-labelledby':'vt-watch-title'},el('i'));sw.onclick=()=>setWatch({on:!watch.on});
+  const state=!watch.on?'Guardian vous écrit sur WhatsApp quand un appareil inconnu se connecte à ce Wi-Fi. Laissez ce PC allumé et la fenêtre noire ouverte.'
+   :watch.learning?'Guardian apprend vos appareils habituels… encore '+watch.learnLeft+' s.'
+   :'Surveillance active · '+plural(watch.usual,'appareil')+' habituel'+(watch.usual>1?'s':'')+'. Guardian ne lit jamais ce que font vos appareils.';
+  const pend=(watch.pending||[]).slice(0,3).map(p=>{const b=el('button',{type:'button',class:'vt-btn vt-mine'},'C’est à moi');b.onclick=()=>setWatch({mine:p.id});
+   return el('li',{class:'vt-watch-new'},el('div',{class:'vt-dev-text'},el('b',{text:p.label}),el('small',{text:'Arrivé à '+hour(p.at)+(p.night?', en pleine nuit':'')})),b);});
+  const last=(watch.log||[])[0];
+  box.replaceChildren(...[el('div',{class:'vt-watch-head'},el('div',{},el('h3',{id:'vt-watch-title',text:'Me prévenir sur WhatsApp'}),el('p',{class:'vt-watch-state',text:state})),sw),
+   pend.length?el('ul',{class:'vt-watch-list','aria-label':'Nouveaux appareils'},...pend):null,
+   last?el('p',{class:'vt-watch-last'+(last.kind==='nouveau'?' new':''),role:'status',text:(last.whatsapp?'Envoyé sur WhatsApp à ':'Alerte de ')+hour(last.at)+' : '+last.text.split('\n')[0]}):null,
+   watch.error?el('p',{class:'vt-pc-status warn',role:'alert',text:watch.error}):null].filter(Boolean));
+  if(focus)document.getElementById('vt-watch-switch')?.focus();
  }
  // Les appareils vus par le PC sur ce Wi-Fi : type d'appareil, adresse locale, fin de l'adresse MAC. Jamais leur nom.
  const devIcon=kind=>el('span',{class:'vt-dev-icon '+kind},icon(DEV[kind]||DEV.appareil,18));

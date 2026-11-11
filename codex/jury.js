@@ -292,12 +292,12 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
 
  function Regie(){
   const {api,csrf}=useApi();
-  const [user,U]=S(undefined),[data,D]=S(null),[busy,BZ]=S(''),[error,X]=S(''),[notice,N]=S(''),[confirm,CF]=S(false),[show,SH]=S(false),[about,AB]=S(false),[now,NOW]=S(Date.now()),[ssid,SS]=S('MOOV-FIBRE-DEMO');
+  const [user,U]=S(undefined),[data,D]=S(null),[busy,BZ]=S(''),[error,X]=S(''),[notice,N]=S(''),[confirm,CF]=S(false),[show,SH]=S(false),[about,AB]=S(false),[now,NOW]=S(Date.now()),[ssid,SS]=S('MOOV-FIBRE-DEMO'),[heavy,HV]=S(null);
   async function load(){try{D(await api('/regie'));X('');}catch(e){if(e.status===401)U(null);else if(e.status===403)D(null),X(e.message);else X(e.message);}}
   E(()=>{api('/session').then(r=>{U(r.user);if(r.user)csrf.current=r.user.csrf;}).catch(e=>{U(null);X(e.message);});},[]);
   E(()=>{if(!user||user.role!=='admin')return;load();const t=setInterval(()=>{load();NOW(Date.now());},2000);return()=>clearInterval(t);},[user?.id,user?.role]);
   E(()=>{if(!show)return;const k=e=>{if(e.key==='Escape')SH(false);};document.addEventListener('keydown',k);return()=>document.removeEventListener('keydown',k);},[show]);
-  async function run(type,message,extra={}){if(busy)return;BZ(extra.fault?type+':'+extra.fault:type);X('');N('');const start=performance.now();try{const r=await api('/regie','POST',type==='reset'?{type,confirm:true}:{type,...extra});if(r.user){U(r.user);csrf.current=r.user.csrf;}D(r);N(typeof message==='function'?message(performance.now()-start):message);CF(false);}catch(e){X(e.message);if(e.status===401)U(null);}finally{BZ('');}}
+  async function run(type,message,extra={}){if(busy)return;BZ(extra.fault?type+':'+extra.fault:type);X('');N('');const start=performance.now();try{const r=await api('/regie','POST',type==='reset'?{type,confirm:true}:{type,...extra});if(r.user){U(r.user);csrf.current=r.user.csrf;}if(r.heavy)HV(r.heavy);D(r);N(typeof message==='function'?message(performance.now()-start):message);CF(false);}catch(e){X(e.message);if(e.status===401)U(null);}finally{BZ('');}}
   async function login(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.currentTarget));BZ('login');X('');try{const r=await api('/auth/login','POST',{email:f.email,password:f.password});U(r.user);}catch(err){X(err.message);}finally{BZ('');}}
   const header=h(Header,{right:h('span',{className:'jy-who'},'Régie'),onAbout:()=>AB(true)});
   if(user===undefined)return h('div',{className:'jy jy--regie'},header,h('main',{className:'jy-main'},h('p',{className:'jy-loading',role:'status'},'Ouverture de la régie…')));
@@ -341,6 +341,13 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
     room&&next==='repair'&&!scene?.hold&&scene?.dispatch!==false&&h('div',{className:'jy-variant'},h('p',null,h('b',null,'Variante pour le jury : '),'la réparation principale est faite, mais 4 foyers restent coupés. Guardian doit refuser de clôturer.'),B(busy==='partial'?'En cours…':'Réparation partielle',()=>run('partial','Réparation partielle : 4 foyers restent coupés. Guardian garde le dossier ouvert.'),{className:'jy-secondary',disabled:!!busy})),
     scene?.hold&&h('p',{className:'jy-hint',role:'status'},'Guardian refuse la clôture : '+scene.hold.remaining+' foyers encore coupés. Étape 4 : contrôle ciblé, puis vérification.'),
     !room&&h('p',{className:'jy-hint'},'Ouvrez d’abord la salle du jury.')),
+   // Surveillance du Wi-Fi : le nouvel appareil se montre en vrai (PC branché) ; la grosse consommation se joue ici,
+   // car seule la box connaît la consommation de chaque appareil (en vrai : Moov la lit à distance).
+   room&&h('section',{className:'jy-card jy-watch'},h('p',{className:'jy-kicker'},'WI-FI SURVEILLÉ PAR GUARDIAN'),
+    h('p',null,h('b',null,'Nouvel appareil, en vrai : '),'activez « Me prévenir sur WhatsApp » sur la page « Tester ma connexion » avec le PC branché, puis demandez à un membre du jury de se connecter à '+(network||'votre Wi-Fi')+'.'),
+    h('p',null,h('b',null,'Grosse consommation : '),'Guardian prévient le propriétaire qu’un appareil utilise beaucoup plus de données que d’habitude.'),
+    B(busy==='heavy'?'En cours…':'Un appareil consomme beaucoup',()=>run('heavy','Alerte « grosse consommation » envoyée : sur WhatsApp à ceux qui l’ont confirmé, et dans l’écran Appareils.'),{className:'jy-secondary',disabled:!!busy}),
+    heavy&&h('p',{className:'jy-watch-sent',role:'status'},h('b',null,heavy.whatsapp?'Envoyé sur WhatsApp à '+heavy.whatsapp+' téléphone'+(heavy.whatsapp>1?'s':'')+' : ':'Message de Guardian : '),heavy.text.split('\n')[0])),
    data?.report&&h('section',{className:'jy-card jy-report'},h('p',{className:'jy-kicker'},'RAPPORT DE PREUVES'),h('h2',null,data.report.verified?'Service rétabli et vérifié':'Scène en cours'),
     h('dl',null,data.report.rows.map(r=>h('div',{key:r.key},h('dt',null,r.label),h('dd',null,r.seconds==null?'—':dur(r.seconds)))),
      // Réseau saturé : rien n'est coupé, on montre les box en ligne (mais lentes) à la détection, puis à la vérification.
