@@ -113,3 +113,53 @@ test('Surveillance du Wi-Fi : depuis l’écran Appareils (session), et « gross
     assert.equal(v.log[0].kind, 'conso', 'l’alerte arrive aussi dans l’application de l’administrateur');
   } finally { t.close(); }
 });
+
+test('Chutes de connexion : une minute de silence du PC = coupure, puis « connexion revenue », et connexion instable', async () => {
+  VT.setVendorFetch(async () => ({ok: false, status: 404, text: async () => ''}));
+  const t = await setup();
+  try {
+    const l = VT.link(t.store, t.awa), sent = [];
+    const cfg = {provider: 'greenapi', id: '1', token: 't', url: 'https://wa.test', clients: [], list: []};
+    const fetchImpl = async (url, o) => { sent.push(JSON.parse(o.body).message); return {ok: true, status: 200, json: async () => ({})}; };
+    t.store.run('INSERT INTO wa_accounts VALUES(?,?,?)', t.awa, '2250701020304', Date.now());
+    // Sans surveillance : rien n'est suivi.
+    await t.page('wifi', l.token, {...WIFI});
+    assert.ok(!VW.BEATS.has(t.awa));
+    await t.page('veille', l.token, {on: true});
+    await t.page('wifi', l.token, {...WIFI});
+    assert.ok(VW.BEATS.has(t.awa), 'le PC est suivi');
+    const last = VW.BEATS.get(t.awa).at;
+    // 40 secondes de silence : rien. 70 secondes : coupure, une seule fois.
+    await VW.check(t.store, () => cfg, {now: last + 40000, fetchImpl});
+    assert.equal(sent.length, 0);
+    await VW.check(t.store, () => cfg, {now: last + 70000, fetchImpl});
+    await VW.check(t.store, () => cfg, {now: last + 90000, fetchImpl});
+    assert.equal(sent.length, 1, 'une seule alerte de coupure');
+    assert.match(sent[0], /ne reçoit plus rien de votre Wi-Fi depuis \d+ h \d\d/);
+    assert.match(sent[0], /PC qui surveille est éteint/, 'le message dit honnêtement qu’un PC éteint se tait aussi');
+    // Le PC réécrit : « connexion revenue », avec la durée.
+    const back = VW.beat(t.store, t.awa, {}, last + 4 * 60000);
+    assert.equal(back.length, 1); assert.equal(back[0].kind, 'retour');
+    assert.match(back[0].text, /Votre connexion est revenue à \d+ h \d\d\. Elle a été coupée 4 minutes/);
+    assert.equal(VW.beat(t.store, t.awa, {}, last + 4 * 60000 + 2000).length, 0, 'pas de deuxième « revenue »');
+    // Pertes trois tours de suite : connexion instable, une fois par demi-heure au plus.
+    let got = [];
+    for (let i = 0; i < 3; i++) got = got.concat(VW.beat(t.store, t.awa, {net: {ms: 80, lost: 1, n: 3}}, last + 5 * 60000 + i * 20000));
+    assert.equal(got.length, 1); assert.equal(got[0].kind, 'instable'); assert.match(got[0].text, /33 % des signaux se perdent/);
+    for (let i = 0; i < 3; i++) got = got.concat(VW.beat(t.store, t.awa, {net: {ms: 900, lost: 0, n: 3}}, last + 7 * 60000 + i * 20000));
+    assert.equal(got.length, 1, 'pas de nouvelle alerte avant une demi-heure');
+    // Une bonne mesure remet le compte à zéro.
+    VW.beat(t.store, t.awa, {net: {ms: 900, lost: 0, n: 3}}, last + 40 * 60000);
+    VW.beat(t.store, t.awa, {net: {ms: 30, lost: 0, n: 3}}, last + 40 * 60000 + 20000);
+    assert.equal(VW.beat(t.store, t.awa, {net: {ms: 900, lost: 0, n: 3}}, last + 40 * 60000 + 40000).length, 0);
+    // Le PC envoie sa mesure d'Internet avec le tour du réseau : elle arrive bien à Guardian.
+    const real = VW.beat; let seen = null;
+    VT.setOnBeat((row, d) => { seen = d; });
+    await later(30000, () => t.page('wifi', l.token, {...WIFI, scan: scanOf([]), net: {ms: 42, lost: 0, n: 3}}));
+    assert.deepEqual(seen.net, {ms: 42, lost: 0, n: 3});
+    // Arrêter la surveillance : plus rien n'est suivi.
+    await t.page('veille', l.token, {on: false});
+    assert.ok(!VW.BEATS.has(t.awa));
+    assert.equal(real, VW.beat);
+  } finally { t.close(); VT.setVendorFetch(null); VT.setOnBeat(null); }
+});

@@ -160,7 +160,7 @@
   const box=document.getElementById('vt-watch');if(!box||!watch)return;
   const sig=JSON.stringify([watch.on,watch.learning,watch.usual,watch.pending,watch.log?.[0]?.at,watch.error]);if(sig===box.dataset.sig)return;box.dataset.sig=sig;
   const sw=el('button',{type:'button',class:'vt-switch',id:'vt-watch-switch',role:'switch','aria-checked':String(!!watch.on),'aria-labelledby':'vt-watch-title'},el('i'));sw.onclick=()=>setWatch({on:!watch.on});
-  const state=!watch.on?'Guardian vous écrit sur WhatsApp quand un appareil inconnu se connecte à ce Wi-Fi. Laissez ce PC allumé et la fenêtre noire ouverte.'
+  const state=!watch.on?'Guardian vous écrit sur WhatsApp quand un appareil inconnu se connecte à ce Wi-Fi, ou quand Internet coupe. Laissez ce PC allumé et la fenêtre noire ouverte.'
    :watch.learning?'Guardian apprend vos appareils habituels… encore '+watch.learnLeft+' s.'
    :'Surveillance active · '+plural(watch.usual,'appareil')+' habituel'+(watch.usual>1?'s':'')+'. Guardian ne lit jamais ce que font vos appareils.';
   const pend=(watch.pending||[]).slice(0,3).map(p=>{const b=el('button',{type:'button',class:'vt-btn vt-mine'},'C’est à moi');b.onclick=()=>setWatch({mine:p.id});
@@ -168,7 +168,7 @@
   const last=(watch.log||[])[0];
   box.replaceChildren(...[el('div',{class:'vt-watch-head'},el('div',{},el('h3',{id:'vt-watch-title',text:'Me prévenir sur WhatsApp'}),el('p',{class:'vt-watch-state',text:state})),sw),
    pend.length?el('ul',{class:'vt-watch-list','aria-label':'Nouveaux appareils'},...pend):null,
-   last?el('p',{class:'vt-watch-last'+(last.kind==='nouveau'?' new':''),role:'status',text:(last.whatsapp?'Envoyé sur WhatsApp à ':'Alerte de ')+hour(last.at)+' : '+last.text.split('\n')[0]}):null,
+   last?el('p',{class:'vt-watch-last'+(last.kind==='nouveau'||last.kind==='retour'?' new':last.kind==='coupure'||last.kind==='instable'?' warn':''),role:'status',text:(last.whatsapp?'Envoyé sur WhatsApp à ':'Alerte de ')+hour(last.at)+' : '+last.text.split('\n')[0]}):null,
    watch.error?el('p',{class:'vt-pc-status warn',role:'alert',text:watch.error}):null].filter(Boolean));
   if(focus)document.getElementById('vt-watch-switch')?.focus();
  }

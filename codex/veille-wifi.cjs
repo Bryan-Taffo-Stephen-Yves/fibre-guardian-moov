@@ -1,7 +1,8 @@
 'use strict';
 // Surveillance du Wi-Fi : Guardian prévient le propriétaire de la box sur WhatsApp
 //   1. quand un appareil qu'il ne connaît pas se connecte à son Wi-Fi (vrai : vu par le PC Windows branché, « Guardian-Wi-Fi.cmd ») ;
-//   2. quand un appareil consomme beaucoup plus que d'habitude (joué dans la Régie : seule la box connaît la consommation de
+//   2. quand la connexion tombe, revient, ou devient instable (vrai : le PC branché se tait, puis réécrit ; il mesure Internet) ;
+//   3. quand un appareil consomme beaucoup plus que d'habitude (joué dans la Régie : seule la box connaît la consommation de
 //      chaque appareil, et seul Moov peut la lire à distance, par son système de gestion des box).
 // C'est le propriétaire qui l'active. Guardian apprend d'abord les appareils habituels (ceux là pendant la première minute),
 // puis il écrit dès qu'un nouveau arrive. Le propriétaire répond « C'est à moi » dans l'application : l'appareil devient habituel.
@@ -53,7 +54,7 @@ function view(s, uid, now = Date.now()) {
 // Arrêter : Guardian oublie tout (appareils habituels, nouveaux, alertes).
 function toggle(s, uid, on, {now = Date.now()} = {}) {
   insist(typeof on === 'boolean', 'Choix invalide.');
-  if (!on) { s.run('DELETE FROM wifi_watch WHERE user_id=?', uid); return view(s, uid, now); }
+  if (!on) { s.run('DELETE FROM wifi_watch WHERE user_id=?', uid); BEATS.delete(uid); return view(s, uid, now); }
   const w = row(s, uid);
   if (!w.on) { w.on = now; w.known = []; w.pending = []; w.log = []; save(s, uid, w); }
   return view(s, uid, now);
@@ -139,6 +140,62 @@ function hook(s, getCfg, {onError} = {}) {
   };
 }
 
+// ---------- Chutes de connexion ----------
+// Le PC branché écrit à Guardian toutes les 2 secondes, et toutes les 20 secondes il mesure Internet (3 sondes vers 8.8.8.8).
+// Si Internet tombe chez le client, le PC ne peut plus écrire : au bout d'une minute de silence, Guardian prévient le
+// propriétaire sur WhatsApp (son téléphone le reçoit par les données mobiles). Quand le PC réécrit, Guardian dit que la
+// connexion est revenue et combien de temps elle a été coupée. Si les mesures montrent des pertes ou des temps de réponse
+// très longs trois fois de suite (une minute), il prévient que la connexion est instable (une fois par demi-heure au plus).
+// Un PC éteint ou fermé se tait aussi : le message le dit honnêtement. Tout reste en mémoire (rien en base).
+const SILENT_MS = 60000, FORGET_MS = 30 * 60000, BAD_ROUNDS = 3, BAD_MS = 300, UNSTABLE_GAP = 30 * 60000;
+const BEATS = new Map();
+const minutes = ms => { const m = Math.max(1, Math.round(ms / 60000)); return m + ' minute' + (m > 1 ? 's' : ''); };
+function textDown(from) {
+  return 'Guardian ne reçoit plus rien de votre Wi-Fi depuis ' + hhmm(from) + '. Votre connexion Internet est sans doute coupée (ou le PC qui surveille est éteint).\n\n'
+    + 'Regardez le voyant de la box : s’il est rouge, la fibre est coupée. Ouvrez l’application Fibre Guardian avec vos données mobiles : elle vous dit si c’est une panne du quartier.';
+}
+function textBack(from, at) {
+  return 'Votre connexion est revenue à ' + hhmm(at) + '. Elle a été coupée ' + minutes(at - from) + ', depuis ' + hhmm(from) + '.';
+}
+function textUnstable(net) {
+  const lost = net.n ? Math.round(100 * net.lost / net.n) : 0;
+  return 'Votre connexion est instable depuis une minute : ' + (lost > 0 ? lost + ' % des signaux se perdent' : 'Internet met ' + net.ms + ' ms à répondre') + '. Les appels vidéo et les jeux peuvent couper.\n\n'
+    + 'Redémarrez la box (débranchez-la 10 secondes). Si ça continue, écrivez « lent » à Guardian.';
+}
+// Chaque envoi du PC : renvoie les alertes à envoyer tout de suite (retour de la connexion, connexion instable).
+function beat(s, uid, d = {}, now = Date.now()) {
+  if (!isOn(s, uid)) { BEATS.delete(uid); return []; }
+  const b = BEATS.get(uid) || {at: now, down: null, bad: 0, unstable: 0}, out = [];
+  if (b.down?.alerted) out.push({kind: 'retour', text: textBack(b.down.from, now), at: now});
+  b.down = null; b.at = now;
+  const net = d?.net;
+  if (net && typeof net === 'object') {
+    const n = Math.min(10, Math.max(1, Number(net.n) || 3)), lost = Math.min(n, Math.max(0, Number(net.lost) || 0)), ms = Number.isFinite(Number(net.ms)) && net.ms !== null ? Math.round(Number(net.ms)) : null;
+    b.bad = lost > 0 || (ms != null && ms > BAD_MS) ? b.bad + 1 : 0;
+    if (b.bad >= BAD_ROUNDS && now - b.unstable > UNSTABLE_GAP) { b.unstable = now; b.bad = 0; out.push({kind: 'instable', text: textUnstable({n, lost, ms}), at: now}); }
+  }
+  BEATS.set(uid, b);
+  return out;
+}
+// Toutes les 15 secondes : un PC qui se tait depuis une minute = coupure probable.
+async function check(s, getCfg, {now = Date.now(), fetchImpl = fetch} = {}) {
+  for (const [uid, b] of BEATS) {
+    let on = false; try { on = isOn(s, uid); } catch {}
+    if (!on || now - b.at > FORGET_MS) { BEATS.delete(uid); continue; }
+    if (b.down || now - b.at < SILENT_MS) continue;
+    b.down = {from: b.at, alerted: false};
+    await deliver(s, getCfg(), uid, {kind: 'coupure', text: textDown(b.at), at: now}, {fetchImpl, now});
+    b.down.alerted = true;
+  }
+}
+function beatHook(s, getCfg, {onError} = {}) {
+  return (linkRow, d) => {
+    let alerts = [];
+    try { alerts = beat(s, linkRow.user_id, d); } catch (e) { onError?.(e); return; }
+    (async () => { for (const a of alerts) await deliver(s, getCfg(), linkRow.user_id, a); })().catch(e => onError?.(e));
+  };
+}
+
 // Tant que la surveillance est active et que le PC envoie ses relevés, son lien de test reste valable (30 minutes glissantes).
 function keepLink(s, linkRow, now = Date.now()) {
   if (!isOn(s, linkRow.user_id)) return;
@@ -165,4 +222,4 @@ async function regieHeavy(s, cfg, adminUid, copy, {fetchImpl = fetch, now = Date
   return {device: device.label, text: alert.text, phones: users.length, whatsapp};
 }
 
-module.exports = {regieHeavy, migrate, view, toggle, mine, scan, heavy, heavyDevice, deliver, hook, keepLink, isOn, phoneOf, textNew, textHeavy, wid, LEARN_MS, HOUR_MAX};
+module.exports = {beat, check, beatHook, textDown, textBack, textUnstable, SILENT_MS, BEATS, regieHeavy, migrate, view, toggle, mine, scan, heavy, heavyDevice, deliver, hook, keepLink, isOn, phoneOf, textNew, textHeavy, wid, LEARN_MS, HOUR_MAX};

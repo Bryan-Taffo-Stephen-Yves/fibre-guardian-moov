@@ -41,7 +41,9 @@ function createGuardianServer(options={}){
  const waRefused=m=>{const t=Date.now();if(t-refusedAt<60000)return;refusedAt=t;info(m);};
  const VT=require('./vrai-test.cjs');VT.migrate(store);
  // Surveillance du Wi-Fi : nouvel appareil vu par le PC branché, grosse consommation jouée dans la Régie → WhatsApp du propriétaire (veille-wifi.cjs).
- const VW=require('./veille-wifi.cjs');VW.migrate(store);VT.setOnScan(VW.hook(store,()=>whatsapp.cfg,{onError:e=>options.onError?.(e)}));
+ const VW=require('./veille-wifi.cjs');VW.migrate(store);VT.setOnScan(VW.hook(store,()=>whatsapp.cfg,{onError:e=>options.onError?.(e)}));VT.setOnBeat(VW.beatHook(store,()=>whatsapp.cfg,{onError:e=>options.onError?.(e)}));
+ // Coupure : un PC surveillé qui se tait depuis une minute (toutes les 15 secondes, rien à faire sans PC surveillé).
+ const vwTimer=setInterval(()=>{if(VW.BEATS.size)VW.check(store,()=>whatsapp.cfg).catch(e=>options.onError?.(e));},15000);vwTimer.unref();
  // Fibre Welcome (thème 1) : commande, dossier, rendez-vous et installation d'un nouvel abonné (welcome.cjs).
  const WEL=require('./welcome.cjs');WEL.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
@@ -339,6 +341,6 @@ function createGuardianServer(options={}){
    let data;try{data=await fs.promises.readFile(target);}catch(_){throw new Problem(404,'Introuvable');}res.writeHead(200,{'Content-Type':TYPES[ext]});res.end(method==='HEAD'?undefined:data);
   }catch(e){if(res.headersSent){res.end();return;}json(res,{error:e instanceof Problem?e.message:'Erreur interne. Aucune action confirmée.'},e instanceof Problem?e.status:500);if(!(e instanceof Problem)&&options.onError)options.onError(e);}
  };
- const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const forgetJury=()=>{try{jury.forgetWhatsapp(store);}catch(e){options.onError?.(e);}};forgetJury();const cleanup=setInterval(()=>{store.cleanup();forgetJury();},3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
+ const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const forgetJury=()=>{try{jury.forgetWhatsapp(store);}catch(e){options.onError?.(e);}};forgetJury();const cleanup=setInterval(()=>{store.cleanup();forgetJury();},3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(vwTimer);clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
 }
 module.exports={createGuardianServer};
