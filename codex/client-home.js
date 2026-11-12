@@ -173,6 +173,8 @@
     row('truck','Ma réparation','Qui vient chez vous et quand',()=>go('tracking')),
     row('map','Carte des pannes','Les pannes dans Abidjan',()=>go('ville'))),
    // Signaler et *144# sont déjà en gros boutons sur l'accueil : pas de doublon ici.
+   // « Mes données » : voir, télécharger ou effacer ce que l'application garde (loi n°2013-450).
+   window.FGDonnees&&h(FGDonnees.Entry,{onOpen:()=>go('donnees')}),
    h('section',{className:'ch-group'},h('h2',null,'Aide'),
     row('info','À propos de la démo','Comment fonctionne cette démonstration',onAbout)),
    h('button',{type:'button',className:'ch-logout',onClick:onLogout,disabled:busy},h(Icon,{name:'logout',size:19}),'Se déconnecter'));

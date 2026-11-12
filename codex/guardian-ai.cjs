@@ -62,6 +62,8 @@ const SYSTEM='Tu es Guardian, l’assistant de Moov Africa Côte d’Ivoire pour
 
 function budget(store,uid){
  if(!store)return true;
+ // Le client a refusé les services d'IA dans « Mes données » : Guardian garde sa réponse écrite à l'avance.
+ if(!require('./donnees.cjs').iaAllowed(store,uid))return false;
  try{store.rate('guardian-ai:'+uid,PER_USER,PER_USER_MS);store.rate('guardian-ai:jour',PER_DAY,DAY_MS);return true;}catch{return false;}
 }
 
