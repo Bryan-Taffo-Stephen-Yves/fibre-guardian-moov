@@ -60,5 +60,21 @@
         h(Svg, {d: 'm9 6 6 6-6 6', size: 18})));
   }
 
-  root.FGDonnees = {View, Entry};
+  // Superviseur, onglet « Clients et offres » : qui, dans l'équipe Moov, a consulté des données de clients cette semaine.
+  // Lu seulement par un superviseur ou la direction (le serveur refuse les autres : le bloc ne s'affiche pas).
+  const when = at => { const d = new Date(at), today = new Date(); const t = d.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}); return d.toDateString() === today.toDateString() ? 'Aujourd’hui ' + t : d.toLocaleDateString('fr-FR', {weekday: 'short', day: 'numeric', month: 'short'}) + ' ' + t; };
+  function Journal({api}) {
+    const [d, D] = S(null), alive = R(true);
+    E(() => { alive.current = true; const load = () => { if (!document.hidden) api('/noc/donnees').then(x => alive.current && D(x)).catch(() => alive.current && D(null)); }; load(); const t = setInterval(load, 30000); return () => { alive.current = false; clearInterval(t); }; }, []);
+    if (!d) return null;
+    return h('section', {className: 'gs-block dp-journal', 'aria-labelledby': 'dp-journal-title'},
+      h('div', {className: 'gs-block-head'}, h('h3', {id: 'dp-journal-title'}, 'Qui a consulté les données des clients'), h('span', {className: 'gs-count'}, d.people)),
+      h('p', {className: 'gs-note'}, 'Chaque écran qui montre des clients est noté : qui, quoi, quand. Gardé 12 mois, visible par le superviseur et la direction.'),
+      d.entries.length ? h('ul', {className: 'dp-jlist'}, d.entries.slice(0, 8).map((e, i) => h('li', {key: i},
+        h('div', null, h('b', null, e.who), h('small', null, e.role)),
+        h('div', null, h('span', null, e.what), h('small', null, when(e.at))))))
+        : h('p', {className: 'gs-empty'}, 'Personne n’a consulté de données de clients cette semaine.'));
+  }
+
+  root.FGDonnees = {View, Entry, Journal};
 })(window);

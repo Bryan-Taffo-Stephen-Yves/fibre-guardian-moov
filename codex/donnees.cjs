@@ -15,6 +15,9 @@ const PHOTO_COLS = new Set(['photo', 'id_photo', 'home_photo']);
 const DEMO_DOMAIN = '@demo.fibre-guardian.ci';
 
 function migrate(s) {
+  // Journal « qui a regardé quoi » : chaque consultation de données clients par l'équipe Moov (gardé 12 mois).
+  s.db.exec('CREATE TABLE IF NOT EXISTS donnees_acces(id INTEGER PRIMARY KEY AUTOINCREMENT,actor TEXT NOT NULL,what TEXT NOT NULL,first INTEGER NOT NULL,at INTEGER NOT NULL,times INTEGER NOT NULL DEFAULT 1)');
+  s.db.exec('CREATE INDEX IF NOT EXISTS donnees_acces_at ON donnees_acces(at)');
   s.db.exec('CREATE TABLE IF NOT EXISTS donnees_choix(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,ia INTEGER NOT NULL,at INTEGER NOT NULL)');
 }
 
@@ -114,6 +117,25 @@ function erase(s, uid, d) {
   return {ok: true};
 }
 
+// Ce que l'équipe Moov peut consulter sur les clients : une ligne par écran ouvert. Les blocs du Superviseur se
+// rafraîchissent toutes les 8 secondes : une même personne sur un même écran compte une seule fois par quart d'heure.
+const VUES = {retention: 'Clients qui risquent de partir', welcome: 'Nouveaux abonnés et leurs photos', acces: 'Offres solidaires et cartes d’étudiant', avis: 'Avis et commentaires des clients', fairdeal: 'Gestes après une coupure', copies: 'Copies du Wi-Fi d’un client'};
+const WINDOW = 15 * 60000;
+function seen(s, actor, key, now = Date.now()) {
+  const what = VUES[key]; if (!what || !actor) return;
+  const last = s.get('SELECT id,at FROM donnees_acces WHERE actor=? AND what=? ORDER BY at DESC LIMIT 1', actor, what);
+  if (last && now - last.at < WINDOW) s.run('UPDATE donnees_acces SET at=?,times=times+1 WHERE id=?', now, last.id);
+  else s.run('INSERT INTO donnees_acces(actor,what,first,at) VALUES(?,?,?,?)', actor, what, now, now);
+}
+// Le journal se lit par un superviseur ou la direction seulement.
+function journal(s, uid, now = Date.now()) {
+  const role = require('./operator-store.cjs').role(s, uid);
+  insist(['supervisor', 'admin'].includes(role), 'Journal réservé au superviseur et à la direction.', 403);
+  const ROLE = {agent: 'Conseiller', supervisor: 'Superviseur', admin: 'Direction'};
+  const rows = s.all("SELECT a.what,a.first,a.at,a.times,u.name,COALESCE(g.role,CASE WHEN f.user_id IS NOT NULL THEN 'technician' END) AS role FROM donnees_acces a LEFT JOIN users u ON u.id=a.actor LEFT JOIN operator_grants g ON g.user_id=a.actor LEFT JOIN noc_field_accounts f ON f.user_id=a.actor WHERE a.at>? ORDER BY a.at DESC LIMIT 40", now - 7 * DAY);
+  return {entries: rows.map(r => ({who: r.name || 'Compte effacé', role: ROLE[r.role] || (r.role === 'technician' ? 'Technicien' : 'Équipe Moov'), what: r.what, first: r.first, at: r.at})), week: s.get('SELECT count(*) AS n FROM donnees_acces WHERE at>?', now - 7 * DAY).n, people: s.get('SELECT count(DISTINCT actor) AS n FROM donnees_acces WHERE at>?', now - 7 * DAY).n};
+}
+
 // Effacement automatique de ce qui ne sert plus.
 function purge(s, now = Date.now()) {
   const before = days => now - days * DAY, done = {};
@@ -123,6 +145,7 @@ function purge(s, now = Date.now()) {
   run('liens', 'speed_links', 'DELETE FROM speed_links WHERE expires<?', before(1));
   run('photos', 'citizen_reports', "UPDATE citizen_reports SET photo='' WHERE photo<>'' AND created<?", before(DUREES.photos));
   run('voix', 'voice_requests', 'DELETE FROM voice_requests WHERE at<?', before(DUREES.voix));
+  run('journal', 'donnees_acces', 'DELETE FROM donnees_acces WHERE at<?', before(365));
   run('whatsapp', 'wa_inbox', 'DELETE FROM wa_inbox WHERE at<?', before(DUREES.messagesWhatsapp));
   if (has(s, 'wifi_watch')) {
     let n = 0;
@@ -136,4 +159,4 @@ function purge(s, now = Date.now()) {
   return done;
 }
 
-module.exports = {migrate, inventory, choose, iaAllowed, exportData, erase, purge, masque, DUREES};
+module.exports = {migrate, seen, journal, VUES, inventory, choose, iaAllowed, exportData, erase, purge, masque, DUREES};

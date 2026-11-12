@@ -145,3 +145,40 @@ test('effacement automatique : relevés, copies, journal du Wi-Fi et photos de s
     assert.equal(s.get("SELECT photo FROM citizen_reports WHERE id='r1'").photo, '');
   } finally { await close(); }
 });
+
+test('équipe Moov : chaque consultation de données clients est notée, une fois par quart d’heure, lisible par le superviseur seulement', async () => {
+  const {s, base, close} = await start();
+  try {
+    await seedDemo(s);
+    const boss = await signup(base, 'superviseur@example.test'), agent = await signup(base, 'conseiller@example.test'), client = await signup(base, 'client@example.test');
+    s.run('INSERT INTO operator_grants VALUES(?,?,?)', boss.user.id, 'supervisor', Date.now());
+    s.run('INSERT INTO operator_grants VALUES(?,?,?)', agent.user.id, 'agent', Date.now());
+    for (const p of ['/api/noc/retention', '/api/noc/retention', '/api/noc/avis', '/api/noc/welcome']) assert.equal((await agent.call(p)).status, 200, p);
+    assert.equal((await agent.call('/api/noc/donnees')).status, 403);
+    assert.equal((await client.call('/api/noc/donnees')).status, 403);
+    const r = await boss.call('/api/noc/donnees'), d = await r.json();
+    assert.equal(r.status, 200);
+    const mine = d.entries.filter(e => e.who === 'Koffi Test' && e.role === 'Conseiller');
+    assert.deepEqual(mine.map(e => e.what).sort(), ['Avis et commentaires des clients', 'Clients qui risquent de partir', 'Nouveaux abonnés et leurs photos']);
+    assert.equal(s.get("SELECT times FROM donnees_acces WHERE what='Clients qui risquent de partir'").times, 2);
+    // Un quart d'heure plus tard : nouvelle ligne.
+    DP.seen(s, agent.user.id, 'retention', Date.now() + 16 * 60000);
+    assert.equal(s.get("SELECT count(*) AS n FROM donnees_acces WHERE what='Clients qui risquent de partir'").n, 2);
+  } finally { await close(); }
+});
+
+test('équipe Moov : le numéro WhatsApp relié par un client n’apparaît sur aucun écran de l’équipe', async () => {
+  const {s, base, close} = await start();
+  try {
+    await seedDemo(s);
+    const awa = s.get("SELECT id FROM users WHERE email='awa.kone@demo.fibre-guardian.ci'").id;
+    s.run('INSERT OR REPLACE INTO wa_accounts VALUES(?,?,?)', awa, '2250707123456', Date.now());
+    const boss = await signup(base, 'direction2@example.test');
+    s.run('INSERT INTO operator_grants VALUES(?,?,?)', boss.user.id, 'admin', Date.now());
+    for (const p of ['/api/noc/superviseur', '/api/noc/overview', '/api/noc/workspace', '/api/noc/retention', '/api/noc/avis', '/api/noc/welcome', '/api/noc/acces', '/api/noc/fairdeal', '/api/noc/copies', '/api/noc/donnees']) {
+      const r = await boss.call(p), text = await r.text();
+      assert.equal(r.status, 200, p + ' ' + text.slice(0, 120));
+      assert.doesNotMatch(text, /0707123456|07 07 12 34 56/, p);
+    }
+  } finally { await close(); }
+});

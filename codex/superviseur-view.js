@@ -184,7 +184,7 @@
       tab === 'clients'
         ? h('div', {className: 'gs-grid gs-clients', id: 'gs-panel', role: 'tabpanel', 'aria-labelledby': 'gs-tab-clients'},
           h('div', {className: 'gs-main'}, h(Retention, {api}), root.FGAvis && h(root.FGAvis.Block, {api}), root.FGWelcome && h(root.FGWelcome.Block, {api})),
-          h('div', {className: 'gs-side'}, root.FGFidelite && h(root.FGFidelite.Block, {api}), h(Parrainage, {b}), root.FGAcces && h(root.FGAcces.Block, {api}), root.FGFibrePlus && h(root.FGFibrePlus.Block, {api}), root.FGFibreVoice && h(root.FGFibreVoice.Block, {api})))
+          h('div', {className: 'gs-side'}, root.FGFidelite && h(root.FGFidelite.Block, {api}), h(Parrainage, {b}), root.FGAcces && h(root.FGAcces.Block, {api}), root.FGFibrePlus && h(root.FGFibrePlus.Block, {api}), root.FGFibreVoice && h(root.FGFibreVoice.Block, {api}), root.FGDonnees && h(root.FGDonnees.Journal, {api})))
         : h('div', {className: 'gs-reseau', id: 'gs-panel', role: 'tabpanel', 'aria-labelledby': 'gs-tab-reseau'},
           h(Bulletin, {b, error, onAsk: askAbout}),
           h('div', {className: 'gs-grid'},

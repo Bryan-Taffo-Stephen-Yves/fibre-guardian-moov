@@ -217,12 +217,12 @@ function createGuardianServer(options={}){
     // Guardian Superviseur : équipe Moov seulement (requireOperator dans superviseur.cjs), il propose, un responsable valide.
     if(route==='/api/noc/superviseur'&&method==='GET')return json(res,require('./superviseur.cjs').bilan(store,user.id,{whatsapp:WA.status(store,whatsapp.cfg)}));
     // Retention Score (thème 6) : clients à risque de départ, équipe Moov seulement (retention.cjs).
-    if(route==='/api/noc/retention'&&method==='GET')return json(res,require('./retention.cjs').scores(store,user.id));
+    if(route==='/api/noc/retention'&&method==='GET'){const r=require('./retention.cjs').scores(store,user.id);DP.seen(store,user.id,'retention');return json(res,r);}
     if(route==='/api/noc/retention'&&method==='POST')return json(res,require('./retention.cjs').act(store,user.id,await body(req,1024)));
     if(route==='/api/noc/superviseur/ask'&&method==='POST')return json(res,await require('./superviseur.cjs').ask(store,user.id,await body(req,2048),{whatsapp:WA.status(store,whatsapp.cfg),log:m=>options.onError?options.onError(new Error(m)):console.warn(m)}));
     if(route==='/api/noc/superviseur/signal'&&method==='POST')return json(res,require('./superviseur.cjs').signal(store,user.id,await body(req,1024),{whatsapp:WA.status(store,whatsapp.cfg)}));
     // Copies Wi-Fi des clients : équipe Moov seulement (requireOperator dans copie-wifi.cjs).
-    if(route==='/api/noc/copies'&&method==='GET')return json(res,url.searchParams.get('id')?CW.detail(store,user.id,url.searchParams.get('id')):CW.list(store,user.id));
+    if(route==='/api/noc/copies'&&method==='GET'){if(!url.searchParams.get('id'))return json(res,CW.list(store,user.id));const r=CW.detail(store,user.id,url.searchParams.get('id'));DP.seen(store,user.id,'copies');return json(res,r);}
     if(route==='/api/noc/copies/simulate'&&method==='POST')return json(res,CW.teamSimulate(store,user.id,await body(req,1024)));
     if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
@@ -236,7 +236,7 @@ function createGuardianServer(options={}){
     // Bandeaux en direct d'une mission (client, technicien, équipe Moov), voir mission-feed.cjs.
     if(route==='/api/noc/pings'&&method==='GET')return json(res,require('./mission-feed.cjs').pings(store,user.id,url.searchParams.get('since')));
     // Fair Deal (thème 4) : gestes calculés après une coupure réparée, validés ou refusés par un responsable (fair-deal.cjs).
-    if(route==='/api/noc/fairdeal'&&method==='GET')return json(res,FD.list(store,user.id));
+    if(route==='/api/noc/fairdeal'&&method==='GET'){const r=FD.list(store,user.id);DP.seen(store,user.id,'fairdeal');return json(res,r);}
     if(route==='/api/noc/fairdeal'&&method==='POST')return json(res,FD.decide(store,user.id,await body(req,1024)));
     if(route==='/api/noc/notifications'&&method==='GET')return json(res,noc.notifications(store,user.id));
     if(route==='/api/noc/notifications'&&method==='POST')return json(res,noc.readNotifications(store,user.id,await body(req,24000)));
@@ -245,7 +245,7 @@ function createGuardianServer(options={}){
     if(route==='/api/fibreplus'&&method==='POST'){store.rate('fibreplus:'+user.id,30,600000);return json(res,FP.act(store,user.id,await body(req,1024)));}
     if(route==='/api/noc/fibreplus'&&method==='GET')return json(res,FP.summary(store,user.id));
     if(route==='/api/noc/voix'&&method==='GET')return json(res,FV.stats(store,user.id));
-    if(route==='/api/noc/avis'&&method==='GET')return json(res,AV.stats(store,user.id));
+    if(route==='/api/noc/avis'&&method==='GET'){const r=AV.stats(store,user.id);DP.seen(store,user.id,'avis');return json(res,r);}
     if(route==='/api/noc/avis'&&method==='POST')return json(res,AV.done(store,user.id,await body(req,1024)));
     if(route==='/api/noc/call'&&method==='POST')return json(res,require('./appels.cjs').call(store,user.id,await body(req,1024)));
     if(route==='/api/fidelite'&&method==='GET')return json(res,FL.state(store,user.id));
@@ -256,9 +256,9 @@ function createGuardianServer(options={}){
     if(route==='/api/welcome/activate'&&method==='POST'){const st=WEL.activate(store,user.id);return json(res,{state:journey.snapshotFor(store,user.id,st)});}
     if(route==='/api/acces'&&method==='GET')return json(res,AC.state(store,user.id));
     if(route==='/api/acces'&&method==='POST'){store.rate('acces:'+user.id,30,600000);return json(res,AC.act(store,user.id,await body(req,1000000)));}
-    if(route==='/api/noc/acces'&&method==='GET')return json(res,AC.list(store,user.id));
+    if(route==='/api/noc/acces'&&method==='GET'){const r=AC.list(store,user.id);DP.seen(store,user.id,'acces');return json(res,r);}
     if(route==='/api/noc/acces'&&method==='POST')return json(res,AC.decide(store,user.id,await body(req,2048)));
-    if(route==='/api/noc/welcome'&&method==='GET')return json(res,WEL.list(store,user.id));
+    if(route==='/api/noc/welcome'&&method==='GET'){const r=WEL.list(store,user.id);DP.seen(store,user.id,'welcome');return json(res,r);}
     if(route==='/api/noc/welcome'&&method==='POST')return json(res,WEL.operate(store,user.id,await body(req,2048)));
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
     if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
@@ -280,6 +280,8 @@ function createGuardianServer(options={}){
      return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
     // Surveillance du Wi-Fi, depuis l'écran Appareils : chacun ne voit et ne règle que la sienne.
     // « Mes données » : voir, télécharger, choisir, effacer. Seulement son propre compte, jamais celui d'un autre.
+    // Journal « qui a regardé quoi » : superviseur et direction seulement (vérifié dans donnees.cjs).
+    if(route==='/api/noc/donnees'&&method==='GET')return json(res,DP.journal(store,user.id));
     if(route==='/api/donnees'&&method==='GET')return json(res,DP.inventory(store,user.id));
     if(route==='/api/donnees'&&method==='POST')return json(res,DP.choose(store,user.id,await body(req,512)));
     if(route==='/api/donnees/export'&&method==='GET'){store.rate('dp-export:'+user.id,10,600000);const file=JSON.stringify(DP.exportData(store,user.id),null,2);res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="mes-donnees-fibre-guardian.json"'});res.end(file);return;}
