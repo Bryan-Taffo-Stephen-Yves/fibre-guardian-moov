@@ -1,0 +1,37 @@
+# Lance les 5 commandes de test de Fibre Guardian (version codex/) à chaque PR
+# et à chaque fusion sur main. Une coche verte sur la PR = tous les tests passent.
+# Gratuit (dépôt public), aucune clé, aucune variable Render touchée.
+name: Tests Fibre Guardian
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Tests automatiques (node --test)
+        run: node --test codex/*.test.cjs
+      - name: Centre d'opérations (noc-check)
+        run: node codex/noc-check.cjs
+      - name: Parcours client (journey-scenario-check)
+        run: node codex/journey-scenario-check.cjs
+      - name: Guardian (guardian-workflow-check)
+        run: node codex/guardian-workflow-check.cjs
+      - name: Équipe Moov (noc-team-workflow-check)
+        run: node codex/noc-team-workflow-check.cjs
