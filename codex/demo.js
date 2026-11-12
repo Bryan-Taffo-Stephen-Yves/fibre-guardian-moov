@@ -46,6 +46,15 @@
    step==='idle'?h('button',{type:'button',className:'fg-demo-danger',onClick:()=>setStep('confirm')},'Réinitialiser la démo'):
    h('div',{className:'fg-demo-choices'},h('button',{type:'button',className:'fg-demo-danger',disabled:step==='busy',onClick:run},step==='busy'?'Réinitialisation…':'Oui, tout remettre à zéro'),h('button',{type:'button',className:'fg-demo-choice',disabled:step==='busy',onClick:()=>setStep('idle')},'Annuler')));
  }
+ // « Vos données et la loi » : ce que Fibre Guardian fait des données personnelles (loi n°2013-450), en clair.
+ const LAW=[
+  ['La loi','En Côte d’Ivoire, la loi n°2013-450 du 19 juin 2013 protège les données personnelles. L’ARTCI veille à son respect. Moov, responsable du service, devra déclarer le traitement à l’ARTCI avant la mise en service réelle.'],
+  ['Le moins possible','Guardian garde seulement ce qui sert à trouver une panne ou à prévenir le client. La photo de la box est lue puis oubliée ; les relevés de débit, les copies du Wi-Fi et le journal de surveillance sont effacés après 30 jours ; la carte d’étudiant et les photos d’abonnement dès la décision du conseiller.'],
+  ['Le client décide','La surveillance du Wi-Fi et les alertes WhatsApp ne s’allument qu’à sa demande. Dans « Mon compte », « Mes données » montre tout ce qui est gardé, le télécharge en un fichier et efface le compte en deux gestes.'],
+  ['Services hors de Côte d’Ivoire','Claude (Anthropic) rédige les réponses et lit les photos de box ; Groq transcrit les notes vocales ; Green API transmet les messages WhatsApp. Ils sont hébergés hors du pays. Le client peut refuser l’IA dans « Mes données » : Guardian répond alors avec ses règles. Pour un vrai service, ces transferts demandent l’accord de l’ARTCI et un contrat avec chaque service.'],
+  ['Sécurité','Mots de passe transformés (scrypt) et jamais lisibles, connexion HTTPS, code à usage unique, sessions limitées à 8 heures, nombre d’essais limité, et chaque rôle (client, conseiller, technicien, superviseur, direction) revérifié par le serveur à chaque action. Aucune clé ni mot de passe dans le code.']
+ ];
+ function Law(){return h('div',{className:'fg-demo-block'},h('h3',null,'Vos données et la loi'),h('ul',{className:'fg-demo-list'},LAW.map(([title,text])=>h('li',{key:title},h('strong',null,title),h('span',null,text)))));}
  function About({onClose,user,scenarios,scenario,onScenario,busy,children}){
   const box=R(null),[assistant,setAssistant]=S('regles');
   E(()=>{let live=true;fetch('/api/health',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{if(live&&d.assistant)setAssistant(d.assistant);}).catch(()=>{});return()=>{live=false;};},[]);
@@ -56,6 +65,7 @@
     h('header',null,h('span',{className:'fg-demo-badge is-static'},'Démo'),h('h2',{id:'fg-demo-title'},'À propos de la démo'),h('button',{type:'button',className:'fg-demo-close',onClick:onClose,'aria-label':'Fermer'},'×')),
     h('p',{className:'fg-demo-lead'},'Fibre Guardian est présenté ici en version de démonstration. Les parcours et les règles de sécurité sont réels ; voici ce qui est simulé.'),
     h('ul',{className:'fg-demo-list'},items.map(([title,text])=>h('li',{key:title},h('strong',null,title),h('span',null,text)))),
+    h(Law),
     scenarios&&h('div',{className:'fg-demo-block'},h('h3',null,'Choisir une situation à montrer'),h('p',null,'Changez la situation de la box pour présenter un cas.'),
      h('div',{className:'fg-demo-choices'},Object.entries(scenarios).map(([value,label])=>h('button',{type:'button',key:value,className:'fg-demo-choice'+(scenario===value?' is-active':''),'aria-pressed':scenario===value,disabled:busy,onClick:()=>onScenario(value)},label)))),
     children,

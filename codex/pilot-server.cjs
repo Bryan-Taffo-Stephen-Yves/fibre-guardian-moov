@@ -61,6 +61,9 @@ function createGuardianServer(options={}){
  const AV=require('./avis.cjs');AV.migrate(store);
  // Retention Score (thème 6) : appel du conseiller et offre de rétention (retention.cjs).
  require('./retention.cjs').migrate(store);
+ // Données personnelles (loi n°2013-450) : « Mes données » du client, choix de l'IA, effacement automatique de ce qui ne sert plus (donnees.cjs).
+ const DP=require('./donnees.cjs');DP.migrate(store);try{DP.purge(store);}catch(e){options.onError?.(e);}
+ const dpTimer=setInterval(()=>{try{DP.purge(store);}catch(e){options.onError?.(e);}},6*3600000);dpTimer.unref();
  for(const r of store.all('SELECT * FROM citizen_reports'))noc.importReport(store,r.user_id,r);
  // Derrière un hébergeur (Railway, Render…) : le TLS est terminé par son proxy, qui transmet X-Forwarded-Proto et l'adresse du visiteur.
  const proxy=!!options.proxy;insist(!proxy||/^https:\/\//.test(options.origin||''),'Mode hébergé : GUARDIAN_ORIGIN doit être une adresse https.');
@@ -276,6 +279,11 @@ function createGuardianServer(options={}){
      insist(reading,'Je n’ai pas pu lire cette photo. Reprenez-la de face, voyants visibles, à environ 30 cm de la box.',422);
      return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
     // Surveillance du Wi-Fi, depuis l'écran Appareils : chacun ne voit et ne règle que la sienne.
+    // « Mes données » : voir, télécharger, choisir, effacer. Seulement son propre compte, jamais celui d'un autre.
+    if(route==='/api/donnees'&&method==='GET')return json(res,DP.inventory(store,user.id));
+    if(route==='/api/donnees'&&method==='POST')return json(res,DP.choose(store,user.id,await body(req,512)));
+    if(route==='/api/donnees/export'&&method==='GET'){store.rate('dp-export:'+user.id,10,600000);const file=JSON.stringify(DP.exportData(store,user.id),null,2);res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="mes-donnees-fibre-guardian.json"'});res.end(file);return;}
+    if(route==='/api/donnees'&&method==='DELETE'){store.rate('dp-erase:'+user.id,5,600000);const r=DP.erase(store,user.id,await body(req,512));cookie(res,'',0);return json(res,r);}
     if(route==='/api/veille'&&method==='GET')return json(res,{...VW.view(store,user.id),pc:VT.pcLive(store,user.id)});
     if(route==='/api/veille'&&method==='POST'){const d=await body(req,512);return json(res,{...(typeof d.mine==='string'?VW.mine(store,user.id,d.mine):VW.toggle(store,user.id,d.on)),pc:VT.pcLive(store,user.id)});}
     if(route==='/api/test/link'&&method==='POST'){store.rate('vt-link:'+user.id,10,600000);return json(res,VT.link(store,user.id,{origin}));}

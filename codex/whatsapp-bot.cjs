@@ -346,7 +346,8 @@ async function handle(s, cfg, payload, {chat, photo = null, origin = '', fetchIm
   // Note vocale : Guardian répète ce qu'il a compris, puis répond comme à un message écrit.
   let heard = '';
   if (m.audio) {
-    if (!cfg.groq) return answer(s, cfg, m, DEAF, MENUS.accueil, fetchImpl);
+    // Pas de transcription chez Groq si le client a refusé les services d'IA dans « Mes données ».
+    if (!cfg.groq || !require('./donnees.cjs').iaAllowed(s, user.id)) return answer(s, cfg, m, DEAF, MENUS.accueil, fetchImpl);
     try { heard = await transcribe(cfg, m.audio, fetchImpl); } catch { heard = ''; }
     if (heard.length < 2) return answer(s, cfg, m, UNHEARD, MENUS.accueil, fetchImpl);
     m.text = heard;

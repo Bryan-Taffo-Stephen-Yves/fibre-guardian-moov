@@ -35,6 +35,8 @@
   files.splice(files.indexOf('app.js'), 0, 'role-bar.js');
   // Fibre Voice, centre des avis (avis-view.js) : bloc « Avis des clients » du Superviseur.
   files.splice(files.indexOf('superviseur-view.js'), 0, 'avis-view.js');
+  // « Mes données » (donnees-view.js) : page reliée à « Mon compte ».
+  files.splice(files.indexOf('app.js'), 0, 'donnees-view.js');
   next();
   // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
