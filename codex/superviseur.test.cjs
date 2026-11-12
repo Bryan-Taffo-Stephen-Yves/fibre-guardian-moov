@@ -11,6 +11,23 @@ async function seeded(){
  const uid=email=>store.get('SELECT id FROM users WHERE email=?',email).id;
  return {store,chef:uid(DEMO.admin.email),awa:uid(DEMO.client.email),sim:(segment,scenario)=>N.operate(store,uid(DEMO.admin.email),{type:'simulate',segment,scenario}),close:()=>server.close()};
 }
+test('Le Superviseur est réservé au responsable et à la direction : un conseiller sans mandat reçoit 403',async()=>{
+ const t=await seeded();
+ try{
+  const uid=email=>t.store.get('SELECT id FROM users WHERE email=?',email).id,kader=uid('kader.diallo@demo.fibre-guardian.ci'),fatou=uid('fatou.bamba@demo.fibre-guardian.ci');
+  assert.throws(()=>S.bilan(t.store,kader),e=>e.status===403&&/réservé au responsable/.test(e.message));
+  await assert.rejects(S.ask(t.store,kader,{question:'Quel quartier va le plus mal ?'}),e=>e.status===403);
+  assert.throws(()=>S.signal(t.store,kader,{key:'x'}),e=>e.status===403);
+  assert.ok(S.bilan(t.store,fatou).agents.length,'la superviseure garde son accès');
+  assert.ok(S.bilan(t.store,t.chef).agents.length,'la direction garde son accès');
+  // Mandat donné par la direction (même règle que « valider un plan ») : le conseiller entre, puis plus après l'expiration.
+  t.store.run('INSERT INTO noc_delegations(user_id,granted_by,expires) VALUES(?,?,?)',kader,t.chef,Date.now()+3600000);
+  assert.ok(S.bilan(t.store,kader).agents.length,'conseiller mandaté');
+  t.store.run('UPDATE noc_delegations SET expires=? WHERE user_id=?',Date.now()-1,kader);
+  assert.throws(()=>S.bilan(t.store,kader),e=>e.status===403);
+ }finally{t.close();}
+});
+
 // La démo pré-remplie contient déjà une panne à Cocody : on part d'un réseau calme.
 async function calm(){const t=await seeded();t.sim('COC-03','normal');return t;}
 
