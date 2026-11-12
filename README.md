@@ -1,71 +1,90 @@
 # Fibre Guardian
 
-Prototype de diagnostic de ligne fibre pour Moov Africa Côte d'Ivoire : détection de panne, agent conversationnel en français, nouchi et dioula, lecture des voyants par photo, canal SMS, incidents de zone et score de résiliation.
+[![Tests Fibre Guardian](https://github.com/Bryan-Taffo-Stephen-Yves/fibre-guardian-moov/actions/workflows/tests.yml/badge.svg)](https://github.com/Bryan-Taffo-Stephen-Yves/fibre-guardian-moov/actions/workflows/tests.yml)
 
-## Lancer l'application
+Application de self-care et de diagnostic de la fibre pour **Moov Africa Côte d'Ivoire**, présentée au concours MOOV APPLICATION 2026 (thème 3 « Fibre Guardian »).
 
-**Windows** : double-cliquez sur **`lancer.bat`**. Une fenêtre noire s'ouvre, puis le navigateur affiche l'application sur `http://localhost:8000`. Laissez la fenêtre noire ouverte pendant l'utilisation, et fermez-la pour arrêter. Rien n'est à installer : le lanceur utilise Node.js ou Python s'ils sont présents, et sinon PowerShell, qui est déjà dans Windows.
+Quand la fibre d'un client ne marche plus, Guardian trouve la cause, prévient le client avant qu'il appelle, ouvre **un seul dossier** pour toute la zone, fait valider un plan par un responsable Moov, envoie le bon technicien et confirme le retour du service.
 
-**Mac** : double-cliquez sur `lancer.command`. Au premier lancement, faites clic droit puis « Ouvrir ».
+- **En ligne :** https://fibre-guardian-moov.onrender.com (hébergement gratuit : la première ouverture peut prendre une minute).
+- **Version active :** tout le code de l'application est dans [`codex/`](codex/).
 
-**Linux** : `./lancer.sh`.
+## Qui l'utilise
 
-Tout fonctionne sans Internet : React, three.js et la police Archivo sont dans `vendor/`. Une fois la page ouverte, Edge ou Chrome proposent « Installer l'application » dans la barre d'adresse. L'application installée marche ensuite en mode avion.
+| Rôle | Ce qu'il fait dans l'app |
+| --- | --- |
+| Client | Voit l'état de sa fibre, teste sa connexion, parle à Guardian (app ou WhatsApp), suit l'arrivée du technicien |
+| Conseiller Moov | Répond aux dossiers partagés par les clients, prépare les appels de rétention |
+| Superviseur | Suit les pannes de la ville, valide les plans, envoie les équipes |
+| Technicien | Ne voit que ses missions, applique les consignes, déclare la réparation |
+| Direction | Voit l'impact (appels évités, interventions), règle la démo |
 
-Vous pouvez aussi ouvrir `index.html` directement, par double-clic. L'application marche, mais elle ne peut pas s'installer et l'agent Claude n'est pas disponible.
+## Comment c'est construit
 
-> Si le navigateur affiche « localhost a refusé de se connecter », c'est que le serveur n'est pas lancé : la fenêtre noire de `lancer.bat` doit rester ouverte.
-
-## Organisation
-
-| Fichier | Rôle | CDC |
-|---|---|---|
-| `src/engine.js` | Règles physiques ordonnées, référence de 7 jours par tranche horaire (médiane / MAD), classe « anomalie », simulateur de ligne, collecte veille / diagnostic avec tampon | M1, M2, 6.3, 7.1 |
-| `src/fleet.js` | Flotte de 48 abonnés sur 4 segments, agrégation sur 3 min, incident de zone (≥ 5 abonnés et ≥ 25 % du segment), notification avant appel, score de résiliation | M9, M10, M12 |
-| `src/agent.js` | Intention de la question, réponse locale à partir des mesures, garde-fous (chiffres présents dans les mesures, longueur), appel au serveur si disponible | M5, 7.3 |
-| `src/lang/*.js` | Un fichier par langue | ENF-23 |
-| `src/vision.js` | Contrôle de qualité de la photo, repérage des voyants par couleur, clignotement sur deux photos, croisement avec la puissance optique | M6, 7.4 |
-| `server/server.mjs` | Serveur optionnel : sert l'application, `/api/agent` et `/api/vision` avec Claude | 7.2 |
-| `sw.js`, `manifest.webmanifest` | Fonctionnement hors ligne et installation | ENF |
-| `tests/` | Tests automatiques et évaluation sur corpus | 3.2, 7.3 |
-
-## Serveur d'agent (optionnel)
-
-```bash
-npm install
-export ANTHROPIC_API_KEY=...   # clé fournie par l'équipe, jamais écrite dans le code
-npm start                      # http://localhost:8080 (ou lancer.bat, sur le port 8000)
+```mermaid
+flowchart TD
+  A["Téléphone ou PC<br/>(page web installable)"] --> S
+  W["WhatsApp<br/>(Green API)"] --> S
+  S["Serveur Node.js<br/>codex/pilot-server.cjs"] --> M["Modules métier<br/>codex/*.cjs"]
+  M --> D[("Base SQLite<br/>node:sqlite")]
+  S --> X["Services externes facultatifs<br/>Claude, Groq, Green API"]
 ```
 
-- Le modèle utilisé est `claude-opus-5`, en effort bas pour que le premier texte arrive en moins de 5 s (ENF-4).
-- Le repli côté serveur est activé (`fallbacks: "default"`) : si le modèle est surchargé, l'API bascule seule sur un modèle de secours.
-- Le téléphone envoie les mesures avec la question. Il rejette toute réponse qui cite un chiffre absent des mesures et répond alors en local.
-- Sans clé, ou si le serveur ne répond pas en 5 s, l'application répond en local. Elle ne tombe jamais en panne à cause de l'agent.
-- La photo est envoyée au serveur uniquement si `config.js` le prévoit. Elle n'est jamais conservée (ENF-17).
+- **Serveur :** Node.js 22.5 ou plus récent, **sans aucune dépendance npm**. Un seul programme sert l'application, l'API et le webhook WhatsApp.
+- **Données :** une base SQLite (`node:sqlite`). Chaque module crée ses propres tables au démarrage.
+- **Écran :** React chargé localement (`vendor/`), sans outil de compilation ; `codex/bootstrap.js` charge les vues.
+- **Sécurité :** mots de passe chiffrés (scrypt), session en cookie HttpOnly et SameSite, contrôle d'origine sur chaque envoi, limite de tentatives, en-têtes CSP. Les droits de chaque rôle sont vérifiés **côté serveur**.
+- **Services externes :** Claude (reformulation, lecture de photo), Groq (notes vocales) et Green API (WhatsApp) ne s'allument que si leur clé est réglée dans les variables d'environnement. Sans clé, l'application marche quand même. Aucun secret n'est dans le dépôt.
 
-## Ajouter une langue
+## Lancer en local
 
-1. Copier `src/lang/fr.js` en `src/lang/<code>.js`, puis traduire `verdict`, `keywords`, `quick` et `reply`.
-2. Ajouter `<code>` dans `src/lang/manifest.js`.
-3. Ajouter le fichier dans la liste de `sw.js` pour l'usage hors ligne.
-4. Lancer `npm test` : chaque classe de panne doit avoir un verdict, et chaque réponse doit passer les garde-fous.
+```sh
+node codex/serveur-local.cjs
+```
+
+- Client : http://127.0.0.1:8186/codex/
+- Équipe Moov : http://127.0.0.1:8186/codex/?portal=moov&section=operations
+
+Au premier lancement, la démo se remplit seule (clients, techniciens, pannes). Les comptes de démonstration sont décrits dans [`codex/README.md`](codex/README.md).
 
 ## Tests
 
-```bash
-npm test                          # 20 tests : détection, flotte, agent, vision
-npm run eval                      # intention et garde-fous sur tests/corpus.json
-node tests/eval-corpus.js mon_corpus.json
+Les 5 commandes ci-dessous tournent automatiquement sur chaque PR (badge en haut de cette page) :
+
+```sh
+node --test codex/*.test.cjs
+node codex/noc-check.cjs
+node codex/journey-scenario-check.cjs
+node codex/guardian-workflow-check.cjs
+node codex/noc-team-workflow-check.cjs
 ```
 
-`tests/corpus.json` est **synthétique** : il ne sert qu'à amorcer l'outil. Remplacez-le par les formulations réelles collectées auprès d'abonnés et de locuteurs natifs. Le format est `{ "items": [{ "lang", "text", "intent" }] }`.
+La plupart des tests démarrent le vrai serveur avec une vraie base, puis rejouent les parcours (client, superviseur, technicien, WhatsApp).
 
-## Ce qui reste simulé ou à valider
+## Ce qui est réel et ce qui est joué
 
-- **Télémétrie de la box** : la puissance optique, le rapport S/B, le Wi-Fi et les appareils viennent du simulateur. En réel, il faut un accès TR-069 / TR-369 ou un agent sur la box. Le débit, la latence, la gigue et la perte sont réellement mesurés par « Lancer la mesure réelle ».
-- **Historique de 7 jours** : il est généré. En production, il vient des agrégats horaires.
-- **Vision** : la lecture est heuristique (couleur et luminosité), fiable sur une photo nette prise de face. Il faut la valider sur de vraies photos de box Moov. Le serveur peut compléter avec Claude.
-- **Dioula et nouchi** : les textes sont à faire valider par des locuteurs natifs. Le dioula répond court, avec une traduction française.
-- **SMS et USSD** : le canal est simulé dans l'application. Il faut la passerelle SMS de Moov.
-- **Score de résiliation** : les poids sont posés à la main (`CHURN_W` dans `src/fleet.js`). Ils sont à réestimer sur l'historique réel des résiliations.
-- **Économie** : toutes les valeurs marquées « hypothèse » sont à remplacer par les chiffres de Moov.
+Le badge « Démo » dans l'application ouvre la page « À propos de la démo », qui liste honnêtement ce qui est simulé. En résumé :
+
+- **Réel :** comptes et droits, dossiers de panne et leur validation, messages WhatsApp, test de connexion mesuré sur l'appareil du client, lecture de la photo de la box, notes vocales.
+- **Joué :** les mesures des box (il faut l'accès TR-069 de Moov), les pannes déclenchées depuis la Régie, les chiffres d'impact estimés. Les prises vers le vrai réseau Moov sont prêtes mais fermées : voir [`codex/BRANCHEMENTS.md`](codex/BRANCHEMENTS.md).
+
+## Pour passer en production
+
+Cette version est un **monolithe volontaire**, pensé pour une démonstration fiable. Pour un vrai service chez Moov, les étapes prévues sont :
+
+1. Une base qui dure : PostgreSQL sauvegardée, avec des migrations numérotées.
+2. Le serveur découpé : chaque module déclare ses propres routes.
+3. Une seule liste de rôles et de droits, testée rôle par rôle.
+4. Les outils de démonstration (Régie, comptes de démo, pannes jouées) isolés pour être débranchés d'un coup.
+5. L'écran compilé et mis en cache, la 3D et le labo chargés seulement quand on les ouvre.
+
+## Dans ce dépôt
+
+| Dossier | Contenu |
+| --- | --- |
+| [`codex/`](codex/) | **L'application active** : serveur, modules, écrans, tests |
+| [`codex/DEPLOIEMENT.md`](codex/DEPLOIEMENT.md) | Mise en ligne (Docker, Render) et variables d'environnement |
+| `src/` | Briques reprises par `codex/` : langues (français, nouchi, dioula), lecture de photo, agent |
+| `vendor/` | Bibliothèques embarquées (React, three.js) |
+| `documents/` | Cahier des charges d'origine, et la description de l'[ancien prototype](documents/ANCIEN-PROTOTYPE.md) |
+| Racine (`index.html`, `server/`, `lancer.bat`) | Ancien prototype, conservé tel quel |
