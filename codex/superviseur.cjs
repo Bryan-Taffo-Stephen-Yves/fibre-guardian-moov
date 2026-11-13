@@ -8,6 +8,9 @@
 // la réponse à partir du même état, sans pouvoir ajouter de chiffre (garde-fous de guardian-ai.cjs).
 const O=require('./operator-store.cjs'),N=require('./noc-store.cjs'),L=require('./labo.cjs'),A=require('./appels.cjs'),AI=require('./guardian-ai.cjs');
 const {id,insist,paragraph}=require('./pilot-model.cjs');
+// Le Superviseur voit tout le réseau et transmet des signaux : réservé au responsable de supervision, à la direction
+// et au conseiller qui a reçu un mandat (mêmes droits que « valider un plan », noc-store.cjs). Un client reçoit 403 comme avant.
+function chef(s,uid){insist(N.rights(s,uid).canApprove,'Le Superviseur est réservé au responsable de supervision et à la direction.',403);}
 
 const LEVELS=['critique','majeure','attention','info'];
 const STATUS={reported:'détecté, analyse en cours',proposed:'plan prêt, il attend la validation d’un responsable',approved:'plan validé, équipe à affecter',dispatched:'équipe affectée, départ à confirmer',en_route:'technicien en route',on_site:'technicien sur place',verifying:'réparation déclarée, retour des mesures à vérifier',rejected:'plan refusé, nouvelle analyse à faire'};
@@ -140,7 +143,7 @@ function journal(s,ports,now){
 }
 
 function bilan(s,uid,{whatsapp=null,now=Date.now()}={}){
- O.requireOperator(s,uid);
+ chef(s,uid);
  const labo=L.snapshot(s,uid,{},now),ports=labo.ports,settings=s.get('SELECT * FROM noc_settings WHERE id=1');
  const incidents=s.all("SELECT * FROM noc_incidents WHERE mode='demo' AND status NOT IN ('resolved','closed') ORDER BY created");
  const pending=incidents.filter(i=>i.status==='proposed');
@@ -163,7 +166,7 @@ function bilan(s,uid,{whatsapp=null,now=Date.now()}={}){
 // Sans dossier (signal faible, centrale chargée), c'est une ligne datée dans le journal de l'équipe.
 // Jamais de commande réseau : seul un responsable décide.
 function signal(s,uid,d,options={}){
- O.requireOperator(s,uid);
+ chef(s,uid);
  const key=String(d?.key||'');insist(key&&key.length<=120,'Problème inconnu.');
  const b=bilan(s,uid,options),f=b.findings.find(x=>x.key===key);insist(f,'Ce problème n’est plus d’actualité.',404);
  insist(!f.signaled,'Déjà transmis au responsable.',409);
@@ -210,7 +213,7 @@ function regles(b,question){
 }
 
 async function ask(s,uid,d,options={}){
- O.requireOperator(s,uid);
+ chef(s,uid);
  const question=paragraph(d?.question,'Question',400);
  s.rate('superviseur-ask:'+uid,40,600000);
  const b=bilan(s,uid,options),draft=regles(b,question);
