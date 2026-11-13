@@ -1,5 +1,5 @@
 'use strict';
-const http=require('node:http'),https=require('node:https'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const http=require('node:http'),https=require('node:https'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),zlib=require('node:zlib');
 const {Store,passwordHash,passwordMatches}=require('./pilot-store.cjs');
 const operator=require('./operator-store.cjs');
 const approvals=require('./approval-store.cjs');
@@ -13,6 +13,11 @@ const roleBar=require('./role-bar.cjs');
 const {id,token,hash,Problem,insist,word,paragraph,number,metrics,diagnose,recording,floorplan,placement}=require('./pilot-model.cjs');
 const ROOT=path.resolve(__dirname,'..'),TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.webmanifest':'application/manifest+json','.mp3':'audio/mpeg','.m4a':'audio/mp4','.ogg':'audio/ogg','.opus':'audio/ogg'};
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+// Fichiers fixes gardés en mémoire avec leur empreinte (ETag) et leur version compressée ; relus seulement s'ils changent sur le disque.
+const STATIC=new Map(),ZIP=new Set(['.html','.js','.css','.svg','.json','.webmanifest']);
+async function staticFile(target,ext){const st=await fs.promises.stat(target);if(!st.isFile())throw new Error('pas un fichier');const known=STATIC.get(target);if(known&&known.mtime===st.mtimeMs&&known.size===st.size)return known;
+ const raw=await fs.promises.readFile(target),etag='"'+crypto.createHash('sha1').update(raw).digest('base64url').slice(0,22)+'"',gz=ZIP.has(ext)&&raw.length>1024?zlib.gzipSync(raw,{level:6}):null;
+ const file={mtime:st.mtimeMs,size:st.size,raw,etag,gz:gz&&gz.length<raw.length?gz:null};STATIC.set(target,file);return file;}
 async function body(req,max=1048576){insist((req.headers['content-type']||'').split(';')[0]==='application/json','JSON requis.',415);let size=0,parts=[];for await(const chunk of req){size+=chunk.length;insist(size<=max,'Requête trop volumineuse.',413);parts.push(chunk);}try{const v=JSON.parse(Buffer.concat(parts).toString());insist(v&&typeof v==='object'&&!Array.isArray(v),'Objet JSON requis.');return v;}catch(e){if(e instanceof Problem)throw e;throw new Problem(400,'JSON invalide.');}}
 function createGuardianServer(options={}){
  const store=options.store||new Store(options.db||path.join(__dirname,'.local','pilot.sqlite'));
@@ -348,7 +353,14 @@ function createGuardianServer(options={}){
    if(!['GET','HEAD'].includes(method)){res.writeHead(405);res.end();return;}
    let pathname=decodeURIComponent(url.pathname);if(pathname==='/'){res.writeHead(302,{Location:'/codex/'});res.end();return;}if(pathname.endsWith('/'))pathname+='index.html';
    const target=path.resolve(ROOT,'.'+pathname),ext=path.extname(target);insist(target.startsWith(ROOT+path.sep)&&TYPES[ext]&&/^\/(codex\/|src\/|vendor\/|config\.js$|icon\.svg$|index\.html$)/.test(pathname)&&!pathname.split('/').some(p=>p.startsWith('.')),'Introuvable',404);
-   let data;try{data=await fs.promises.readFile(target);}catch(_){throw new Problem(404,'Introuvable');}res.writeHead(200,{'Content-Type':TYPES[ext]});res.end(method==='HEAD'?undefined:data);
+   // Fichiers fixes : le navigateur garde sa copie et demande seulement « a-t-elle changé ? » (ETag, réponse 304 vide).
+   // « no-cache » oblige cette question à chaque visite : jamais d'ancienne version affichée après une mise à jour.
+   // Les textes (pages, scripts, styles) partent compressés quand le navigateur le permet.
+   let file;try{file=await staticFile(target,ext);}catch(_){throw new Problem(404,'Introuvable');}
+   const headers={'Content-Type':TYPES[ext],'Cache-Control':'no-cache','ETag':file.etag,'Vary':'Accept-Encoding'};
+   if(String(req.headers['if-none-match']||'').split(',').map(v=>v.trim()).includes(file.etag)){res.writeHead(304,headers);res.end();return;}
+   const zipped=file.gz&&/\bgzip\b/.test(String(req.headers['accept-encoding']||''));if(zipped)headers['Content-Encoding']='gzip';
+   const data=zipped?file.gz:file.raw;headers['Content-Length']=data.length;res.writeHead(200,headers);res.end(method==='HEAD'?undefined:data);
   }catch(e){if(res.headersSent){res.end();return;}json(res,{error:e instanceof Problem?e.message:'Erreur interne. Aucune action confirmée.'},e instanceof Problem?e.status:500);if(!(e instanceof Problem)&&options.onError)options.onError(e);}
  };
  const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const forgetJury=()=>{try{jury.forgetWhatsapp(store);}catch(e){options.onError?.(e);}};forgetJury();const cleanup=setInterval(()=>{store.cleanup();forgetJury();},3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(vwTimer);clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
