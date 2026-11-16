@@ -11,6 +11,7 @@
 .vt-loading{margin:40vh 0 0;text-align:center;color:var(--moov-text-muted)}
 
 .vt-head{display:flex;align-items:center;gap:10px;padding:4px 2px}
+.vt-back{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid var(--moov-neutral-150);border-radius:50%;background:var(--moov-white);color:var(--moov-ink);text-decoration:none;transition:background .16s,transform .16s}.vt-back:hover{background:var(--moov-neutral-50)}.vt-back:active{transform:scale(.94)}
 .vt-head img{width:38px;height:38px;border-radius:11px;box-shadow:var(--vt-shadow)}
 .vt-head div{display:grid;line-height:1.25}
 .vt-head strong{font-size:16px;letter-spacing:-.01em}

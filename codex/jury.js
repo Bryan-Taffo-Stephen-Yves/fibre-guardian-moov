@@ -43,9 +43,10 @@
  };
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&signal.ready)signal.awake();});
 
- function Header({right,onAbout}){
+ // back : la flèche retour (Régie → Centre d'opérations). Les jurés n'en ont pas : leur page est tout leur espace.
+ function Header({right,onAbout,back}){
   return h('header',{className:'jy-top'},
-   h('span',{className:'jy-brand'},h('span',{className:'jy-mark','aria-hidden':true},h(Mark)),h('span',null,h('strong',null,'Fibre Guardian'),h('small',null,'Moov Africa'))),
+   h('span',{className:'jy-brand'},back&&h('a',{className:'jy-back',href:back,'aria-label':'Retour au centre d’opérations'},h('svg',{viewBox:'0 0 24 24',width:20,height:20,'aria-hidden':true,fill:'none',stroke:'currentColor',strokeWidth:2.2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M15 5l-7 7 7 7'}))),h('span',{className:'jy-mark','aria-hidden':true},h(Mark)),h('span',null,h('strong',null,'Fibre Guardian'),h('small',null,'Moov Africa'))),
    h('span',{className:'jy-top-right'},right,window.FGDemo&&h(window.FGDemo.Badge,{onClick:onAbout})));
  }
  function Robot(){return window.FGJourney?.Robot?h(window.FGJourney.Robot,{small:true}):null;}
@@ -299,7 +300,7 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
   E(()=>{if(!show)return;const k=e=>{if(e.key==='Escape')SH(false);};document.addEventListener('keydown',k);return()=>document.removeEventListener('keydown',k);},[show]);
   async function run(type,message,extra={}){if(busy)return;BZ(extra.fault?type+':'+extra.fault:type);X('');N('');const start=performance.now();try{const r=await api('/regie','POST',type==='reset'?{type,confirm:true}:{type,...extra});if(r.user){U(r.user);csrf.current=r.user.csrf;}if(r.heavy)HV(r.heavy);D(r);N(typeof message==='function'?message(performance.now()-start):message);CF(false);}catch(e){X(e.message);if(e.status===401)U(null);}finally{BZ('');}}
   async function login(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.currentTarget));BZ('login');X('');try{const r=await api('/auth/login','POST',{email:f.email,password:f.password});U(r.user);}catch(err){X(err.message);}finally{BZ('');}}
-  const header=h(Header,{right:h('span',{className:'jy-who'},'Régie'),onAbout:()=>AB(true)});
+  const header=h(Header,{right:h('span',{className:'jy-who'},'Régie'),onAbout:()=>AB(true),back:'?portal=moov&section=operations'});
   if(user===undefined)return h('div',{className:'jy jy--regie'},header,h('main',{className:'jy-main'},h('p',{className:'jy-loading',role:'status'},'Ouverture de la régie…')));
   if(!user||user.role!=='admin')return h('div',{className:'jy jy--regie'},header,h('main',{id:'main',className:'jy-main'},
    h('form',{className:'jy-card jy-login',onSubmit:login},h('p',{className:'jy-kicker'},'RÉGIE DE LA DÉMONSTRATION'),h('h1',null,'Connexion administrateur'),

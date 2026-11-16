@@ -86,7 +86,6 @@
   E(()=>{if(sel&&matchMedia('(max-width:760px)').matches)review.current?.scrollIntoView({behavior:'smooth',block:'nearest'});},[pick]);
   const tipText=tip&&(tip.plan.id===current.id?'Votre forfait actuel vous suffit.':tip.plan.mbps>current.mbps?'Passer à '+tip.plan.mbps+' Mb/s vous donnerait de la marge.':tip.plan.mbps+' Mb/s suffiraient pour vos usages du moment.');
   return h('div',{className:'pv'},
-   h('button',{type:'button',className:'pv-back',onClick:onBack},h(Icon,{d:I.back,size:18}),'Mon compte'),
    h('header',{className:'pv-head'},
     h('div',null,h('h1',null,'Changer de forfait'),h('p',null,'Installation et box offertes. Vous changez quand vous voulez.')),
     h('div',{className:'pv-now'},window.FGAvatar&&h(FGAvatar.Face,{name:user?.name,size:44,role:'client'}),h('div',null,h('small',null,'Votre forfait'),h('strong',null,current.mbps+' Mb/s'),h('span',null,F(current.price)+' par mois')))),

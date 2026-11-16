@@ -21,7 +21,6 @@
     async function ia(on) { B(true); X(''); try { const r = await api('/donnees', 'POST', {ia: on}); D(r); Y(on ? 'Guardian peut de nouveau utiliser l’IA pour vous répondre.' : 'C’est noté : vos messages ne passent plus par l’IA.'); } catch (e) { X(e.message); } B(false); }
     async function erase() { B(true); X(''); try { await api('/donnees', 'DELETE', {confirm: true}); onErased?.(); } catch (e) { X(e.message); B(false); U(false); } }
     return h('div', {className: 'dp-page'},
-      h('button', {type: 'button', className: 'dp-back', onClick: onBack}, h(Svg, {d: 'M15 18l-6-6 6-6', size: 18}), 'Mon compte'),
       h('header', {className: 'dp-top'}, h('span', {className: 'dp-shield'}, h(Svg, {d: SHIELD, size: 26})), h('div', null, h('h1', null, 'Mes données'), h('p', null, 'Ce que Fibre Guardian garde sur vous, pourquoi, et pendant combien de temps. Vous pouvez tout télécharger ou tout effacer.'))),
       say && h('p', {className: 'dp-ok', role: 'status'}, say),
       err && h('p', {className: 'dp-error', role: 'alert'}, err),

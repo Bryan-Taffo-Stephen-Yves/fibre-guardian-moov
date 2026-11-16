@@ -3,6 +3,7 @@ body:has(.jy){padding:0;margin:0;background:var(--moov-page)}
 .jy{min-height:100vh;min-height:100dvh;background:var(--moov-page);color:var(--moov-ink);display:flex;flex-direction:column}
 .jy-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:color-mix(in srgb,var(--moov-surface) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--moov-line)}
 .jy-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.jy-back{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid var(--moov-neutral-150);border-radius:50%;background:var(--moov-white);color:var(--moov-ink);text-decoration:none;transition:background .16s,transform .16s}.jy-back:hover{background:var(--moov-neutral-50)}.jy-back:active{transform:scale(.94)}
 .jy-brand strong{display:block;font-size:15px;letter-spacing:-.2px}
 .jy-brand small{display:block;font-size:11px;color:var(--moov-text-muted)}
 .jy-mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--moov-primary)}
