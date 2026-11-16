@@ -3,7 +3,7 @@
 // - Page de connexion : « Comptes de démo », un bouton par rôle, sans rien taper (comme dans Dabali).
 //   Client, Conseiller, Technicien et Superviseur s'ouvrent pour tout le monde, avec les droits normaux de leur rôle.
 // - La Direction (réglages, équipe, Régie, « Tout remettre à zéro ») reste derrière son mot de passe :
-//   sans lui, son bouton ouvre la connexion avec l'adresse déjà remplie.
+//   sans lui, son bouton n'est pas montré (on se connecte avec l'adresse et le mot de passe, comme tout compte).
 // - Exception : sur un appareil où la direction connectée a activé la barre (« À propos de la démo »),
 //   un passe (cookie HttpOnly, SameSite=Strict, 12 heures) permet aussi d'ouvrir la Direction en un geste.
 // - Chaque bouton ouvre une vraie session sur un compte de démo précis : le rôle attendu est revérifié,
@@ -45,7 +45,7 @@ function account(s,r){const u=s.get('SELECT id,email,name FROM users WHERE email
 function list(s,secret,uid){
  const pass=valid(s,secret),accounts=enabled();
  if(!pass&&!accounts)return {active:false,accounts:false};
- const roles=ROLES.map(r=>{const u=account(s,r);return {key:r.key,label:r.label,name:u?.name||null,ready:!!u,current:!!u&&u.id===uid,locked:!pass&&!r.open,email:!r.open?r.email:undefined,login:r.login};});
+ const roles=ROLES.map(r=>{const u=account(s,r);return {key:r.key,label:r.label,name:u?.name||null,ready:!!u,current:!!u&&u.id===uid,locked:!pass&&!r.open,email:!r.open?r.email:undefined,login:r.login};}).filter(r=>!r.locked||r.current);
  return {active:pass||roles.some(r=>r.current),accounts,pass,roles};
 }
 // Choisir un rôle : ouvert à tous pour les rôles « open », sinon le passe de la direction est exigé.

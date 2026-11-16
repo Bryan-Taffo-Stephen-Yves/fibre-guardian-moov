@@ -28,7 +28,7 @@ test('Comptes de démo sans rien taper : Client, Conseiller, Technicien, Supervi
  try{
   const first=(await call(base,'/demo/roles')).data;
   assert.equal(first.accounts,true);assert.equal(first.active,false,'pas de barre sans session de démo');
-  assert.deepEqual(first.roles.filter(r=>r.locked).map(r=>r.key),['direction'],'seule la Direction est verrouillée');
+  assert.deepEqual(first.roles.map(r=>r.key),['client','conseiller','technicien','superviseur'],'la Direction n’est pas montrée sans son passe');
   const expected={client:'subscriber',conseiller:'agent',technicien:'technician',superviseur:'supervisor'};
   for(const [key,role] of Object.entries(expected)){
    const j={};const r=await call(base,'/demo/roles/switch',{body:{role:key},jarMap:j});
@@ -112,7 +112,8 @@ test('Avec le passe de la direction : la Direction aussi en un geste, avec une v
   const pass=dir.jar.guardian_demo;
   assert.equal((await call(base,'/demo/roles/close',{body:{},jarMap:dir.jar})).status,200);
   assert.equal((await call(base,'/demo/roles/switch',{body:{role:'direction'},jarMap:{guardian_demo:pass}})).status,403);
-  assert.equal((await call(base,'/demo/roles',{jarMap:dir.jar})).data.roles.find(r=>r.key==='direction').locked,true,'Direction de nouveau verrouillée');
+  const back=(await call(base,'/demo/roles',{jarMap:dir.jar})).data.roles.find(r=>r.key==='direction');
+  assert.ok(!back||back.locked,'Direction de nouveau fermée (cachée, ou verrouillée si c’est la session en cours)');
   assert.ok(c.data.user);
  }finally{server.close();}
 });
