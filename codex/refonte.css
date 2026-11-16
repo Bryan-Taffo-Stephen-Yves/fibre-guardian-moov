@@ -89,6 +89,7 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
 .journey .j-header{grid-area:header;position:sticky;top:0;z-index:20;min-height:64px;padding:10px 32px;margin:0;max-width:none;border-bottom:1px solid var(--fg-line);background:color-mix(in srgb,var(--moov-surface) 82%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
 .journey .j-breadcrumb{font-size:14px;color:var(--moov-text-muted);gap:8px}
 .journey .j-breadcrumb strong{color:var(--moov-ink);font-weight:600}
+.journey .j-back{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;margin:-4px 2px -4px -6px;border:1px solid var(--moov-neutral-150);border-radius:50%;background:var(--moov-white);color:var(--moov-ink);cursor:pointer;transition:background .16s,transform .16s}.journey .j-back:hover{background:var(--moov-neutral-50)}.journey .j-back:active{transform:scale(.94)}
 .journey .j-header .j-actions{gap:10px}
 .journey .j-header .j-bell{width:40px;height:40px;min-height:40px;padding:0;border-radius:50%;box-shadow:none}
 .journey .j-header .j-user-avatar{width:36px;height:36px;border:0;box-shadow:0 0 0 2px var(--moov-surface),0 0 0 3px var(--moov-primary-100);background:linear-gradient(145deg,var(--moov-accent-200),var(--moov-accent-500));color:var(--moov-accent-800);font-weight:700;font-size:15px}

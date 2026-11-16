@@ -34,7 +34,9 @@
   catch{throw Object.assign(new Error('Guardian ne répond pas. Vérifiez que cet appareil est connecté, puis réessayez.'),{status:0});}
   const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||'Le test n’a pas pu se terminer.'),{status:r.status});return d;
  }
- const head=(demo=false)=>{const h=el('header',{class:'vt-head'},el('img',{src:'pwa/icon-192.png',alt:''}),el('div',{},el('strong',{text:'Moov Africa · Fibre'}),el('small',{text:'Tester ma connexion avec Guardian'})));
+ // La flèche ramène à l'accueil de l'application (on n'est jamais coincé sur cette page).
+ const back=()=>{const a=el('a',{class:'vt-back',href:'./','aria-label':'Retour à l’accueil'}),i=svg('svg',{viewBox:'0 0 24 24',width:20,height:20,'aria-hidden':'true',fill:'none',stroke:'currentColor','stroke-width':2.2,'stroke-linecap':'round','stroke-linejoin':'round'});i.append(svg('path',{d:'M15 5l-7 7 7 7'}));a.append(i);return a;};
+ const head=(demo=false)=>{const h=el('header',{class:'vt-head'},back(),el('img',{src:'pwa/icon-192.png',alt:''}),el('div',{},el('strong',{text:'Moov Africa · Fibre'}),el('small',{text:'Tester ma connexion avec Guardian'})));
   if(demo){const b=el('button',{type:'button',class:'vt-demo-badge',id:'vt-demo-badge','aria-expanded':'false','aria-controls':'vt-demo'},'Démo');b.onclick=()=>toggleDemo();h.append(b);}return h;};
 
  // Le cadran : échelle logarithmique de 0 à 1 000 Mbps, pour qu'1 Mbps et 300 Mbps soient lisibles tous les deux.
