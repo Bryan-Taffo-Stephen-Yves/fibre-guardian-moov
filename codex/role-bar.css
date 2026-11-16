@@ -54,4 +54,5 @@ html.has-rolebar .tv-toast{bottom:calc(20px + var(--rb-h))!important}
 .rb-chip.is-busy{animation:rb-pulse 1s ease-in-out infinite}
 .rb-chip .rb-lock{background:var(--moov-neutral-900)}
 .rb-hint{margin:12px auto 0;max-width:420px;padding:10px 14px;border-radius:14px;background:var(--moov-primary-25);color:var(--moov-primary-800);font-size:13px;line-height:1.4}
+.rb-pin{margin:14px auto 0;max-width:340px;display:grid;gap:8px;text-align:left}.rb-pin label{font-size:13px;font-weight:600;color:var(--moov-ink)}.rb-pin-row{display:flex;gap:8px}.rb-pin input{flex:1;min-width:0;min-height:48px;padding:0 14px;border:1px solid var(--moov-neutral-200);border-radius:14px;background:var(--moov-white);color:var(--moov-ink);font:600 20px/1 inherit;letter-spacing:.4em}.rb-pin input:focus-visible{outline:2px solid var(--moov-primary-200);outline-offset:2px}.rb-pin-go{min-height:48px;padding:0 20px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-white);font:600 15px/1 inherit;cursor:pointer}.rb-pin-go:disabled{opacity:.5;cursor:default}
 @media (prefers-reduced-motion:reduce){.rb-chip{transition:none}.rb-chip.is-busy{animation:none}}

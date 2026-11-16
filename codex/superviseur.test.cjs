@@ -115,7 +115,8 @@ test('Avec la clé, Claude rédige à partir de l’état ; un chiffre inventé 
   reply='C’est Yopougon · Niangon : 12 box sur 20 sont éteintes, sans doute une fibre coupée. Je vous conseille de valider le plan et d’envoyer une équipe avec un réflectomètre.';
   const ok=await S.ask(t.store,t.chef,{question:'Quel quartier va le plus mal ?'});
   assert.equal(ok.writer,'claude');assert.equal(ok.answer,reply);assert.match(seen,/État du réseau/);assert.match(seen,/Problème 1 \[critique\]/);
-  reply='Yopougon a 57 box éteintes depuis 3 jours.';
+  // Un chiffre qui ne peut pas être dans l'état (les durées « depuis N minutes » de l'état suivent l'horloge : 57 y apparaissait parfois).
+  reply='Yopougon a 4817 box éteintes depuis hier.';
   const bad=await S.ask(t.store,t.chef,{question:'Quel quartier va le plus mal ?'});
   assert.equal(bad.writer,'regles','chiffre absent de l’état : réponse par règles');
  }finally{AI.setTransport(null);if(key===undefined)delete process.env.ANTHROPIC_API_KEY;else process.env.ANTHROPIC_API_KEY=key;t.close();}
