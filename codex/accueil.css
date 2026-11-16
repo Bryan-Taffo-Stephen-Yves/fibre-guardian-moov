@@ -1,79 +1,113 @@
-/* Accueil client simple (accueil.js) : un voyant, quatre gros boutons, deux cartes au plus.
+/* Accueil client (accueil.js), dans l'esprit d'une application bancaire épurée :
+   un en-tête bleu Moov arrondi (avatar, bonjour, cloche, chiffre clé, deux gros boutons),
+   un bandeau qui dit ce qui se passe, quatre actions rapides en tuiles pastel, les derniers messages.
    Mobile d'abord (390 px), puis deux colonnes sur grand écran. Couleurs Moov uniquement. */
-@keyframes ac-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes ac-ring{0%{transform:scale(.72);opacity:.55}100%{transform:scale(1.25);opacity:0}}
+@keyframes ac-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.ac{--ac-ease:var(--fg-ease,cubic-bezier(.16,1,.3,1));--ac-white:var(--moov-white);
+ display:grid;gap:18px;max-width:1120px;padding-bottom:12px}
 
-.ac{display:grid;gap:16px;max-width:1080px;padding-bottom:8px;animation:ac-in .45s var(--fg-ease,cubic-bezier(.16,1,.3,1)) both}
+/* En-tête bleu */
+.ac-hero{position:relative;isolation:isolate;overflow:hidden;display:grid;gap:22px;padding:18px 20px 22px;border-radius:0 0 36px 36px;color:var(--ac-white);
+ background:
+  radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--moov-sky-300,var(--moov-primary-200)) 55%,transparent) 0,transparent 55%),
+  linear-gradient(160deg,var(--moov-primary-500) 0%,var(--moov-primary) 48%,var(--moov-primary-700) 100%);
+ box-shadow:0 22px 40px -24px color-mix(in srgb,var(--moov-primary-700) 75%,transparent);animation:ac-in .5s var(--ac-ease) both}
+.ac-hero::before{content:'';position:absolute;inset:-40% -30% auto auto;width:520px;height:520px;z-index:-1;border-radius:50%;
+ background:repeating-radial-gradient(circle,transparent 0 26px,color-mix(in srgb,var(--ac-white) 7%,transparent) 26px 27px);opacity:.9}
+.ac-top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
+.ac-face{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--moov-accent-100);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac-white) 35%,transparent);overflow:hidden;font-weight:700;color:var(--moov-accent-700)}
+.ac-hi{display:grid;justify-items:center;text-align:center;min-width:0}
+.ac-hi small{font-size:14px;color:color-mix(in srgb,var(--ac-white) 82%,transparent)}
+.ac-hi strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 19px/1.25 var(--fg-font,inherit);letter-spacing:-.01em}
+.ac-top-actions{display:flex;align-items:center;gap:8px}
+.ac-top-actions .fg-demo-badge{min-height:32px;padding:0 11px;border:1px solid color-mix(in srgb,var(--ac-white) 40%,transparent);border-radius:999px;background:color-mix(in srgb,var(--ac-white) 14%,transparent);color:var(--ac-white);font:600 12.5px var(--fg-font,inherit)}
+.ac-round{position:relative;display:grid;place-items:center;width:46px;height:46px;border:0;border-radius:50%;background:color-mix(in srgb,var(--ac-white) 22%,transparent);color:var(--ac-white);cursor:pointer;transition:background .2s}
+.ac-round:hover{background:color-mix(in srgb,var(--ac-white) 30%,transparent)}
+.ac-round-dot{position:absolute;top:11px;right:12px;width:9px;height:9px;border-radius:50%;background:var(--moov-accent-500);box-shadow:0 0 0 2px var(--moov-primary)}
+.ac-key{display:grid;gap:4px}
+.ac-key>span{font-size:15px;color:color-mix(in srgb,var(--ac-white) 85%,transparent)}
+.ac-key strong{font:700 44px/1.05 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.ac-key strong small{font-size:22px;font-weight:600;letter-spacing:-.01em;color:inherit;opacity:.85}
+.ac-key p{margin:2px 0 0;font-size:14px;color:color-mix(in srgb,var(--ac-white) 72%,transparent)}
+.ac-hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ac-hero-btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:0 10px;border:1px solid color-mix(in srgb,var(--ac-white) 22%,transparent);border-radius:16px;background:color-mix(in srgb,var(--moov-primary-700) 45%,transparent);color:var(--ac-white);font:600 15px/1.15 var(--fg-font,inherit);text-align:left;cursor:pointer;transition:background .2s,transform .15s}
+.ac-hero-btn:hover{background:color-mix(in srgb,var(--moov-primary-700) 65%,transparent)}
+.ac-hero-btn:active{transform:scale(.98)}
+.ac-hero-btn:disabled{opacity:.65}
 
-.ac-hello{display:flex;align-items:center;gap:12px;min-height:64px}
-.ac-hello .ac-face{flex:none;margin:0}
-.ac-hello h1{margin:0;font:700 30px/1.05 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.035em;color:var(--moov-ink)}
-.ac-hello p{margin:4px 0 0;font-size:15px;color:var(--moov-text-muted,var(--moov-neutral-600))}
-
-/* Le voyant : une couleur, un dessin, une phrase */
-.ac-light{--tone:var(--moov-success-500);--tone-ink:var(--moov-success-700);--tone-soft:var(--moov-success-50);
- position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 16px;align-items:center;padding:20px;border-radius:28px;
- background:var(--tone-soft);color:var(--moov-ink);box-shadow:0 14px 34px -18px color-mix(in srgb,var(--tone) 55%,transparent)}
-.ac-light.ac-slow{--tone:var(--moov-accent-500);--tone-ink:var(--moov-accent-700);--tone-soft:var(--moov-accent-50)}
-.ac-light.ac-down{--tone:var(--moov-danger-500);--tone-ink:var(--moov-danger-700);--tone-soft:var(--moov-danger-50)}
-.ac-light.ac-wait{--tone:var(--moov-primary-500);--tone-ink:var(--moov-primary-700);--tone-soft:var(--moov-primary-50)}
-.ac-dot{position:relative;display:grid;place-items:center;width:76px;height:76px}
-.ac-dot>i{position:absolute;inset:0;border-radius:50%;background:var(--tone);animation:ac-ring 2.4s cubic-bezier(.16,1,.3,1) infinite}
-.ac-ok .ac-dot>i{animation-duration:3.6s}
-.ac-dot>b{position:relative;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--tone);color:var(--moov-white);box-shadow:0 8px 18px -6px color-mix(in srgb,var(--tone) 70%,transparent)}
-.ac-say{display:contents}
-.ac-say h2{grid-column:2;align-self:center}
-.ac-say p,.ac-pill{grid-column:1/-1}
-.ac-say h2{margin:0;font:700 22px/1.15 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.025em;color:var(--tone-ink);text-wrap:balance}
-.ac-say p{margin:0;font-size:16px;line-height:1.45;color:var(--moov-ink)}
-.ac-pill{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:var(--moov-surface);color:var(--moov-ink);font:600 14.5px var(--fg-font,inherit);cursor:pointer;box-shadow:0 2px 6px color-mix(in srgb,var(--moov-ink) 6%,transparent)}
-.ac-pill svg:last-child{color:var(--moov-neutral-500)}
-.ac-pill.warn{background:var(--moov-accent-100);color:var(--moov-accent-800)}
-.ac-light-actions{grid-column:1/-1;display:grid;gap:8px}
-.ac-go{min-height:52px;padding:0 18px;border:0;border-radius:16px;background:var(--tone);color:var(--moov-white);font:700 16.5px var(--fg-font,inherit);cursor:pointer;transition:transform .15s,filter .15s}
+/* Bandeau : ce qui se passe maintenant */
+.ac-alert{--tone:var(--moov-success-500);--tone-ink:var(--moov-success-700);--tone-soft:var(--moov-success-50);
+ display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 14px;align-items:center;padding:16px;border-radius:22px;background:var(--moov-surface);
+ box-shadow:0 10px 28px -18px color-mix(in srgb,var(--moov-ink) 35%,transparent),0 0 0 1px var(--moov-neutral-100);animation:ac-in .5s .06s var(--ac-ease) both}
+.ac-alert.ac-slow{--tone:var(--moov-accent-500);--tone-ink:var(--moov-accent-700);--tone-soft:var(--moov-accent-50)}
+.ac-alert.ac-down{--tone:var(--moov-danger-500);--tone-ink:var(--moov-danger-700);--tone-soft:var(--moov-danger-50)}
+.ac-alert.ac-wait{--tone:var(--moov-primary-500);--tone-ink:var(--moov-primary-700);--tone-soft:var(--moov-primary-50)}
+.ac-alert-ico{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:var(--tone-soft);color:var(--tone)}
+.ac-alert h2{margin:0;font:700 17.5px/1.25 var(--fg-font,inherit);letter-spacing:-.01em;color:var(--moov-ink)}
+.ac-alert p{margin:3px 0 0;font-size:14.5px;line-height:1.45;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.ac-alert-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.ac-go{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;border:0;border-radius:14px;background:var(--tone);color:var(--ac-white);font:600 15.5px var(--fg-font,inherit);cursor:pointer;transition:filter .15s,transform .15s}
 .ac-slow .ac-go:not(.ghost){color:var(--moov-on-accent,var(--moov-neutral-900))}
 .ac-go:hover{filter:brightness(1.05)}
 .ac-go:active{transform:scale(.98)}
-.ac-go.ghost{background:var(--moov-surface);color:var(--tone-ink)}
+.ac-go.ghost{background:var(--tone-soft);color:var(--tone-ink)}
+.ac-go.soft{flex:0 1 auto;min-height:42px;background:var(--moov-neutral-50,var(--moov-canvas));color:var(--moov-ink);border:1px solid var(--moov-neutral-150)}
+.ac-go.soft.warn{background:var(--moov-accent-50);border-color:var(--moov-accent-200);color:var(--moov-accent-800)}
 .ac-go:disabled{opacity:.6;cursor:default}
-
-/* Quatre gros boutons */
-.ac-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.journey .ac .ac-tile{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:14px;min-height:122px;width:100%;padding:16px;border:1px solid var(--moov-neutral-150);border-radius:24px;background:var(--moov-surface);color:var(--moov-ink);font:700 17px/1.2 var(--fg-font,inherit);letter-spacing:-.01em;text-align:left;cursor:pointer;box-shadow:0 6px 16px -10px color-mix(in srgb,var(--moov-ink) 25%,transparent);transition:transform .15s,border-color .15s}
-.ac .ac-ico{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:var(--moov-primary-50);color:var(--moov-primary)}
-.journey .ac .ac-tile.ap-call-button>svg{box-sizing:border-box;width:52px;height:52px;padding:13px;border-radius:16px;background:var(--moov-primary-50);color:var(--moov-primary)}
-.journey .ac .ac-tile.ap-call-button>span{display:block;width:auto;height:auto;background:none;color:inherit;border-radius:0}
-.journey .ac .ac-tile.is-main{background:var(--moov-primary);border-color:transparent;color:var(--moov-white)}
-.ac .ac-tile.is-main .ac-ico{background:color-mix(in srgb,var(--moov-white) 18%,transparent);color:var(--moov-white)}
-.journey .ac .ac-tile:hover{border-color:var(--moov-primary-200)}
-.journey .ac .ac-tile:active{transform:scale(.97)}
-.ac-tile:disabled{opacity:.6}
-.ac :is(.ac-tile,.ac-go,.ac-pill,.ac-survie,.ap-call-button):focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:3px}
-
-.ac-survie{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 12px;border:0;background:none;color:var(--moov-neutral-700);font:500 15px var(--fg-font,inherit);cursor:pointer}
-.ac-survie b{color:var(--moov-primary);font-weight:700}
 .ac-cards{display:grid;gap:14px}
 .ac-cards>*{margin:0!important}
 
-/* Plus de boule flottante ni de dock sur l'accueil : Guardian est le premier gros bouton */
+/* Actions rapides : quatre tuiles pastel */
+.ac-quick{display:grid;gap:12px;animation:ac-in .5s .12s var(--ac-ease) both}
+.ac-quick h2,.ac-recent h2{margin:0;font:700 18px/1.2 var(--fg-font,inherit);letter-spacing:-.015em;color:var(--moov-ink)}
+.ac-quick-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.journey .ac .ac-quick-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;min-height:92px;width:100%;padding:12px 4px;border:0;border-radius:20px;background:var(--moov-primary-100);color:var(--moov-primary-700);font:600 13.5px/1.15 var(--fg-font,inherit);text-align:center;cursor:pointer;transition:background .2s,transform .15s}
+.journey .ac .ac-quick-tile>svg{width:26px;height:26px;color:var(--moov-primary)}
+.journey .ac .ac-quick-tile>span{display:block}
+.journey .ac .ac-quick-tile:hover{background:var(--moov-primary-200)}
+.journey .ac .ac-quick-tile:active{transform:scale(.96)}
+
+/* Derniers messages */
+.ac-recent{display:grid;gap:6px;padding:16px 14px 8px;border-radius:24px;background:var(--moov-surface);box-shadow:0 0 0 1px var(--moov-neutral-100);animation:ac-in .5s .18s var(--ac-ease) both}
+.ac-recent-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 4px}
+.ac-round.small{width:40px;height:40px;background:var(--moov-surface);color:var(--moov-ink);box-shadow:0 4px 14px -6px color-mix(in srgb,var(--moov-ink) 30%,transparent),0 0 0 1px var(--moov-neutral-100)}
+.ac-recent ul{display:grid;margin:0;padding:0;list-style:none}
+.ac-recent li+li{border-top:1px solid var(--moov-neutral-100)}
+.ac-recent li>button{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:68px;padding:10px 4px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:14px}
+.ac-recent li>button:hover{background:var(--moov-neutral-50,var(--moov-canvas))}
+.ac-recent-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--moov-surface);box-shadow:0 4px 12px -6px color-mix(in srgb,var(--moov-ink) 35%,transparent),0 0 0 1px var(--moov-neutral-100);color:var(--moov-primary)}
+.ac-recent-ico.ok{color:var(--moov-success-700)}
+.ac-recent-ico.warn{color:var(--moov-accent-600)}
+.ac-recent-txt{display:grid;gap:2px;min-width:0}
+.ac-recent-txt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15.5px;font-weight:600;color:var(--moov-ink)}
+.ac-recent-txt small{font-size:13.5px;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.ac-recent-tag{font-size:12.5px;font-weight:600;color:var(--moov-neutral-500)}
+.ac-recent-tag.new{padding:4px 9px;border-radius:999px;background:var(--moov-accent-100);color:var(--moov-accent-800)}
+.ac-recent-empty{margin:0;padding:6px 4px 12px;font-size:14.5px;line-height:1.45;color:var(--moov-text-muted,var(--moov-neutral-600))}
+.ac :is(.ac-round,.ac-hero-btn,.ac-go,.ac-quick-tile,.ac-recent li>button,.fg-demo-badge):focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:3px}
+.ac-hero :is(.ac-round,.ac-hero-btn,.fg-demo-badge):focus-visible{outline-color:var(--ac-white)}
+
+/* Plus de boule flottante sur l'accueil : Guardian est le premier gros bouton */
 .journey:has(.ac) .j-dock{display:none}
 
-@media(min-width:761px){
- .ac{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px 24px;align-items:start}
- .ac-hello,.ac-cards,.ac-survie{grid-column:1/-1}
- .ac-survie{justify-content:flex-start;padding:0}
- .ac-hello h1{font-size:38px}
- .ac-light{min-height:262px;padding:28px;gap:22px;align-content:center}
- .ac-dot{width:96px;height:96px}.ac-dot>b{width:80px;height:80px}
- .ac-say{display:grid;gap:8px;grid-column:2;align-content:center}
- .ac-say h2,.ac-say p,.ac-pill{grid-column:auto}
- .ac-say h2{font-size:28px}
- .ac-say p{font-size:17px}
- .ac-light-actions{grid-auto-flow:column;justify-content:start}
- .journey .ac .ac-tile{min-height:125px}
- .ac-cards{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+@media(max-width:760px){
+ /* L'en-tête bleu remplace la barre du haut sur l'accueil, et colle aux bords de l'écran */
+ .journey:has(.ac-hero) .j-header{display:none}
+ .ac-hero{margin:0 -16px;padding-top:calc(18px + env(safe-area-inset-top))}
 }
-@media(prefers-reduced-motion:reduce){.ac{animation:none}.ac-dot>i{animation:none;opacity:.18;transform:scale(1.12)}}
+@media(max-width:360px){.ac-quick-row{gap:8px}.journey .ac .ac-quick-tile{font-size:12.5px}.ac-hero-btn{font-size:14px}}
+@media(min-width:761px){
+ .ac{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-auto-flow:row dense;gap:20px 24px;align-items:start}
+ .ac-hero{grid-row:span 2;border-radius:32px;padding:26px 28px 28px;gap:28px}
+ .ac-key strong{font-size:56px}
+ .ac-hero-btn{min-height:60px;font-size:16px}
+ .ac-alert{align-self:stretch;align-content:center;padding:20px}
+ .ac-cards{grid-column:1/-1;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+ .ac-recent{grid-column:1/-1}
+ .journey .ac .ac-quick-tile{min-height:104px;font-size:14.5px}
+}
+@media(prefers-reduced-motion:reduce){.ac-hero,.ac-alert,.ac-quick,.ac-recent{animation:none}.ac-quick-tile,.ac-hero-btn,.ac-go{transition:none}}
+
 
 /* Mes appareils : la liste d'abord, l'historique et les conseils repliés */
 .device-usage .du-metrics:not(.du-metrics--period){grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -94,3 +128,40 @@ details.fc-graph:not([open]){padding:0;background:none;border:0;box-shadow:none}
 .ch-parr-more>summary{display:flex;align-items:center;min-height:44px;font:600 15px var(--fg-font,inherit);color:var(--moov-primary);cursor:pointer;list-style:none}
 .ch-parr-more>summary::-webkit-details-marker{display:none}
 .ch-parr-more[open]>summary{color:var(--moov-ink)}
+
+/* Mon compte et Mes appareils : le profil et le titre sur fond bleu, à toutes les tailles */
+.journey[data-view=compte] .ch-profile{padding:22px;border-radius:28px;color:var(--moov-white);
+ background:linear-gradient(180deg,var(--moov-primary) 0%,var(--moov-primary-700) 100%);box-shadow:0 22px 40px -24px color-mix(in srgb,var(--moov-primary-700) 75%,transparent)}
+.journey[data-view=compte] .ch-profile h1{color:var(--moov-white)}
+.journey[data-view=compte] .ch-profile p{color:color-mix(in srgb,var(--moov-white) 78%,transparent)}
+.journey[data-view=compte] .ch-plan{background:color-mix(in srgb,var(--moov-white) 13%,transparent);border:1px solid color-mix(in srgb,var(--moov-white) 18%,transparent)}
+.journey[data-view=compte] .ch-plan small{color:color-mix(in srgb,var(--moov-white) 75%,transparent)}
+.journey[data-view=compte] .ch-plan strong{color:var(--moov-white)}
+.journey[data-view=compte] .ch-plan .ch-chip.strong{background:var(--moov-white);color:var(--moov-primary-700)}
+
+.journey[data-view=devices] .device-usage .du-heading{padding:24px 28px;border-radius:28px;color:var(--moov-white);
+ background:linear-gradient(180deg,var(--moov-primary) 0%,var(--moov-primary-700) 100%)}
+.journey[data-view=devices] .du-heading h1{color:var(--moov-white)}
+.journey[data-view=devices] .du-heading p{color:color-mix(in srgb,var(--moov-white) 80%,transparent)}
+
+/* Les autres écrans client prennent le même habit : barre du haut bleue, bande bleue arrondie
+   sous le titre (Mon compte, Mes appareils), cartes blanches dessous. Téléphone seulement. */
+@media(max-width:760px){
+ .journey[data-espace=client] .j-header{border-bottom:0;border-radius:0 0 28px 28px;color:var(--moov-white);-webkit-backdrop-filter:none;backdrop-filter:none;
+  background:linear-gradient(160deg,var(--moov-primary-500) 0%,var(--moov-primary) 100%);box-shadow:0 14px 30px -22px color-mix(in srgb,var(--moov-primary-700) 80%,transparent)}
+ .journey[data-espace=client] .j-header{box-sizing:border-box;width:calc(100% + 32px);flex:none}
+ .journey[data-espace=client]:is([data-view=compte],[data-view=devices]) .j-header{border-radius:0;box-shadow:none}
+ .journey[data-espace=client]:is([data-view=compte],[data-view=devices]) .j-main{padding-top:0}
+ .journey[data-espace=client] .j-header :is(.j-breadcrumb,.j-breadcrumb strong,.j-back){color:var(--moov-white)}
+ .journey[data-espace=client] .j-header .j-breadcrumb strong{font-size:19px;font-weight:600}
+ .journey[data-espace=client] .j-header :is(.j-bell,.j-logout,.j-menu-toggle,.j-back){border:0;background:color-mix(in srgb,var(--moov-white) 20%,transparent);color:var(--moov-white)}
+ .journey[data-espace=client] .j-header .j-logout:before{background:var(--moov-white)}
+ .journey[data-espace=client] .j-header .fg-demo-badge{border:1px solid color-mix(in srgb,var(--moov-white) 40%,transparent);background:color-mix(in srgb,var(--moov-white) 14%,transparent);color:var(--moov-white)}
+ .journey[data-espace=client] .j-header .j-bell-count.j-bell-dot{border-color:var(--moov-primary)}
+
+ .journey[data-view=compte] .ch-profile{margin:0 -16px;padding:6px 20px 24px;border-radius:0 0 32px 32px}
+ .journey[data-view=devices] .device-usage .du-heading{margin:0 -16px;padding:4px 20px 26px;border-radius:0 0 32px 32px}
+ .journey[data-view=devices] .du-heading h1{display:none}
+ .journey[data-view=devices] .du-heading p{margin:0}
+ .journey[data-espace=client] .j-header .j-logout{display:none}
+}
