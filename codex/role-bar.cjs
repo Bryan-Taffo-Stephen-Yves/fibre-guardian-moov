@@ -3,12 +3,14 @@
 // - Page de connexion : « Comptes de démo », un bouton par rôle, sans rien taper (comme dans Dabali).
 //   Client, Conseiller, Technicien et Superviseur s'ouvrent pour tout le monde, avec les droits normaux de leur rôle.
 // - La Direction (réglages, équipe, Régie, « Tout remettre à zéro ») reste derrière son mot de passe :
-//   sans lui, son bouton n'est pas montré (on se connecte avec l'adresse et le mot de passe, comme tout compte).
+//   sans lui, son bouton demande le code PIN du propriétaire s'il est réglé, sinon il ouvre la connexion, adresse remplie.
 // - Exception : sur un appareil où la direction connectée a activé la barre (« À propos de la démo »),
 //   un passe (cookie HttpOnly, SameSite=Strict, 12 heures) permet aussi d'ouvrir la Direction en un geste.
 // - Chaque bouton ouvre une vraie session sur un compte de démo précis : le rôle attendu est revérifié,
 //   et les droits restent vérifiés côté serveur à chaque action. Aucun mot de passe ici ni dans le navigateur.
 // - GUARDIAN_DEMO_ACCOUNTS=off retire les comptes de démo (seul le passe de la direction reste).
+// - GUARDIAN_DIRECTION_PIN (4 à 12 chiffres, réglé par le propriétaire dans l'hébergeur, jamais dans git) : « Entrer avec mon
+//   code PIN » ouvre la Direction sans adresse ni mot de passe, même quand les comptes de démo sont fermés. 5 essais par quart d'heure.
 const crypto=require('node:crypto');
 const {DEMO,STAFF}=require('./seed-demo.cjs');
 const operator=require('./operator-store.cjs'),workspace=require('./noc-workspace.cjs'),{insist}=require('./pilot-model.cjs');
@@ -25,6 +27,7 @@ const ROLES=[
  {key:'direction',label:'Direction',email:DEMO.admin.email,role:'admin',open:false,page:'?portal=moov&section=operations',login:'?portal=moov&compte=direction'}
 ];
 const enabled=()=>String(process.env.GUARDIAN_DEMO_ACCOUNTS||'').toLowerCase()!=='off';
+const pinSet=()=>/^\d{4,12}$/.test(String(process.env.GUARDIAN_DIRECTION_PIN||''));
 const hash=v=>crypto.createHash('sha256').update(String(v)).digest('hex');
 
 function migrate(s){s.db.exec('CREATE TABLE IF NOT EXISTS demo_passes(token TEXT PRIMARY KEY,created_by TEXT NOT NULL,created INTEGER NOT NULL,expires INTEGER NOT NULL)');}
@@ -44,11 +47,20 @@ function account(s,r){const u=s.get('SELECT id,email,name FROM users WHERE email
 // La barre apparaît avec le passe, ou pour une session ouverte sur un compte de démo (pas pour un juré inscrit avec son numéro).
 function list(s,secret,uid){
  const pass=valid(s,secret),accounts=enabled();
- if(!pass&&!accounts)return {active:false,accounts:false};
- const roles=ROLES.map(r=>{const u=account(s,r);return {key:r.key,label:r.label,name:u?.name||null,ready:!!u,current:!!u&&u.id===uid,locked:!pass&&!r.open,email:!r.open?r.email:undefined,login:r.login};}).filter(r=>!r.locked||r.current);
- return {active:pass||roles.some(r=>r.current),accounts,pass,roles};
+ if(!pass&&!accounts)return {active:false,accounts:false,pin:pinSet()};
+ const roles=ROLES.map(r=>{const u=account(s,r);return {key:r.key,label:r.label,name:u?.name||null,ready:!!u,current:!!u&&u.id===uid,locked:!pass&&!r.open,email:!r.open?r.email:undefined,login:r.login};});
+ return {active:pass||roles.some(r=>r.current),accounts,pass,roles,pin:pinSet()};
 }
 // Choisir un rôle : ouvert à tous pour les rôles « open », sinon le passe de la direction est exigé.
+// Le code PIN du propriétaire : comparé en temps constant ; chaque entrée est tracée.
+function pin(s,given){
+ insist(pinSet(),'Le code PIN n’est pas réglé sur ce site.',404);
+ const a=crypto.createHash('sha256').update(String(given||'')).digest(),b=crypto.createHash('sha256').update(String(process.env.GUARDIAN_DIRECTION_PIN)).digest();
+ insist(crypto.timingSafeEqual(a,b),'Code PIN incorrect.',401);
+ const r=ROLES.find(x=>x.key==='direction'),u=account(s,r);insist(u,'Le compte Direction n’est pas prêt. Réinitialisez la démo.',404);
+ s.event(null,u.id,'demo.pin','Entrée en Direction avec le code PIN');
+ return {user:u,page:r.page,role:r.key};
+}
 function pick(s,secret,key){
  const r=ROLES.find(x=>x.key===key);insist(r,'Rôle inconnu.',404);
  const pass=valid(s,secret);
@@ -58,4 +70,4 @@ function pick(s,secret,key){
  s.event(null,u.id,'demo.rolebar.switch','Entrée par les comptes de démo : '+r.label+(pass?' (barre de la direction)':''));
  return {user:u,page:r.page,role:r.key};
 }
-module.exports={migrate,open,close,list,pick,valid,ROLES,TTL};
+module.exports={migrate,open,close,list,pick,pin,valid,ROLES,TTL};

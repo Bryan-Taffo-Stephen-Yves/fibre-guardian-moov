@@ -48,18 +48,30 @@
  function DemoAccounts({onDirection,disabled}){
   const [data,setData]=S(null),[busy,setBusy]=S(''),[error,setError]=S(''),[hint,setHint]=S('');
   const fill=email=>setTimeout(()=>{const f=document.querySelector('.ln-panel form');const m=f?.querySelector('input[name=email]'),p=f?.querySelector('input[name=password]');if(m&&email){m.value=email;}p?.focus();},60);
-  E(()=>{load().then(d=>{setData(d);const dir=d.roles?.find(r=>r.key==='direction');if(new URLSearchParams(location.search).get('compte')==='direction'&&dir){setHint('Direction : entrez son mot de passe. Elle peut tout remettre à zéro, elle reste donc protégée.');fill(dir.email);}});},[]);
+  const [pin,setPin]=S(false);
+  // Direction verrouillée : le code PIN du propriétaire s'il est réglé sur le site, sinon l'adresse et le mot de passe.
+  const direction=(d,dir)=>{if(d.pin){setPin(true);setHint('');setTimeout(()=>document.getElementById('rb-pin')?.focus(),60);return;}onDirection?.();setHint('Direction : entrez son mot de passe. Elle peut tout remettre à zéro, elle reste donc protégée.');fill(dir.email);};
+  E(()=>{load().then(d=>{setData(d);const dir=d.roles?.find(r=>r.key==='direction');if(new URLSearchParams(location.search).get('compte')==='direction'&&dir)direction(d,dir);});},[]);
   if(!data?.roles)return null;
+  async function enter(e){
+   e.preventDefault();const v=new FormData(e.currentTarget).get('pin');if(busy)return;setBusy('pin');setError('');
+   try{const d=await post('/api/demo/pin',{pin:String(v||'')});location.assign(new URL(location.pathname+d.page,location.origin).href);}
+   catch(err){setError(err.message);setBusy('');e.target.querySelector('input')?.select();}
+  }
   async function pick(r){
    if(busy||!r.ready)return;setError('');
-   if(r.locked){onDirection?.();setHint('Direction : entrez son mot de passe. Elle peut tout remettre à zéro, elle reste donc protégée.');fill(r.email);return;}
+   if(r.locked){direction(data,r);return;}
    setBusy(r.key);try{await choose(r);}catch(e){setError(e.message);setBusy('');}
   }
   return h('section',{className:'rb-accounts','aria-labelledby':'rb-accounts-title'},
    h('h3',{id:'rb-accounts-title'},'Comptes de démo'),
    h('p',null,'Un geste pour entrer, sans rien taper.'),
-   h('div',{className:'rb-chips'},data.roles.map(r=>h('button',{type:'button',key:r.key,className:'rb-chip'+(busy===r.key?' is-busy':''),disabled:disabled||!r.ready||!!busy,onClick:()=>pick(r),title:HINT[r.key]+(r.locked?' · mot de passe demandé':'')},
+   h('div',{className:'rb-chips'},data.roles.map(r=>h('button',{type:'button',key:r.key,className:'rb-chip'+(busy===r.key?' is-busy':''),disabled:disabled||!r.ready||!!busy,onClick:()=>pick(r),title:HINT[r.key]+(r.locked?(data.pin?' · code PIN demandé':' · mot de passe demandé'):'')},
     h('span',{className:'rb-face'},h(Face,{name:r.name,label:r.label,look:LOOK[r.key]}),r.locked&&h(Lock)),h('span',null,r.label)))),
+   pin&&h('form',{className:'rb-pin',onSubmit:enter},
+    h('label',{htmlFor:'rb-pin'},'Code PIN de la Direction'),
+    h('div',{className:'rb-pin-row'},h('input',{id:'rb-pin',name:'pin',type:'password',inputMode:'numeric',pattern:'[0-9]*',maxLength:12,autoComplete:'current-password',required:true,disabled:!!busy}),
+     h('button',{type:'submit',className:'rb-pin-go',disabled:!!busy},busy==='pin'?'Un instant…':'Entrer'))),
    hint&&h('p',{className:'rb-hint',role:'status'},hint),
    error&&h('p',{className:'j-error',role:'alert'},error));
  }

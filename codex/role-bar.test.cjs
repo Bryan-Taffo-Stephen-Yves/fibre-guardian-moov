@@ -28,7 +28,7 @@ test('Comptes de démo sans rien taper : Client, Conseiller, Technicien, Supervi
  try{
   const first=(await call(base,'/demo/roles')).data;
   assert.equal(first.accounts,true);assert.equal(first.active,false,'pas de barre sans session de démo');
-  assert.deepEqual(first.roles.map(r=>r.key),['client','conseiller','technicien','superviseur'],'la Direction n’est pas montrée sans son passe');
+  assert.deepEqual(first.roles.filter(r=>r.locked).map(r=>r.key),['direction'],'seule la Direction est verrouillée');
   const expected={client:'subscriber',conseiller:'agent',technicien:'technician',superviseur:'supervisor'};
   for(const [key,role] of Object.entries(expected)){
    const j={};const r=await call(base,'/demo/roles/switch',{body:{role:key},jarMap:j});
@@ -59,7 +59,7 @@ test('Comptes de démo sans rien taper : Client, Conseiller, Technicien, Supervi
 test('GUARDIAN_DEMO_ACCOUNTS=off : plus aucun compte de démo ouvert',async()=>{
  const {server,base}=await fresh();const saved=process.env.GUARDIAN_DEMO_ACCOUNTS;process.env.GUARDIAN_DEMO_ACCOUNTS='off';
  try{
-  assert.deepEqual((await call(base,'/demo/roles')).data,{active:false,accounts:false});
+  assert.deepEqual((await call(base,'/demo/roles')).data,{active:false,accounts:false,pin:false});
   assert.equal((await call(base,'/demo/roles/switch',{body:{role:'client'}})).status,403);
  }finally{if(saved===undefined)delete process.env.GUARDIAN_DEMO_ACCOUNTS;else process.env.GUARDIAN_DEMO_ACCOUNTS=saved;server.close();}
 });
@@ -112,8 +112,7 @@ test('Avec le passe de la direction : la Direction aussi en un geste, avec une v
   const pass=dir.jar.guardian_demo;
   assert.equal((await call(base,'/demo/roles/close',{body:{},jarMap:dir.jar})).status,200);
   assert.equal((await call(base,'/demo/roles/switch',{body:{role:'direction'},jarMap:{guardian_demo:pass}})).status,403);
-  const back=(await call(base,'/demo/roles',{jarMap:dir.jar})).data.roles.find(r=>r.key==='direction');
-  assert.ok(!back||back.locked,'Direction de nouveau fermée (cachée, ou verrouillée si c’est la session en cours)');
+  assert.equal((await call(base,'/demo/roles',{jarMap:dir.jar})).data.roles.find(r=>r.key==='direction').locked,true,'Direction de nouveau verrouillée');
   assert.ok(c.data.user);
  }finally{server.close();}
 });
@@ -131,4 +130,32 @@ test('Le passe expire et survit à « Tout remettre à zéro » ; aucun mot de p
   assert.equal(R.list(store,q.secret).roles.every(r=>r.ready),true,'les comptes sont recréés');
  }finally{server.close();}
  for(const f of ['role-bar.js','role-bar.cjs']){const src=fs.readFileSync(path.join(__dirname,f),'utf8');assert.ok(!/demo-2026|password\s*:/.test(src),f+' sans mot de passe');}
+});
+
+test('Code PIN du propriétaire : la Direction en un code, réglé seulement dans l’hébergeur, 5 essais par quart d’heure',async()=>{
+ const saved=process.env.GUARDIAN_DIRECTION_PIN;delete process.env.GUARDIAN_DIRECTION_PIN;
+ const {server,base,store}=await fresh();
+ try{
+  // Pas de code réglé : rien ne change, la Direction garde son mot de passe.
+  assert.equal((await call(base,'/demo/roles')).data.pin,false);
+  assert.equal((await call(base,'/demo/pin',{body:{pin:'0000'}})).status,404);
+  process.env.GUARDIAN_DIRECTION_PIN='12';assert.equal((await call(base,'/demo/roles')).data.pin,false,'un code trop court ne compte pas');
+  process.env.GUARDIAN_DIRECTION_PIN='4826';
+  const list=(await call(base,'/demo/roles')).data;
+  assert.equal(list.pin,true);assert.equal(list.roles.find(r=>r.key==='direction').locked,true,'le bouton reste, verrouillé');
+  assert.ok(!JSON.stringify(list).includes('4826'),'jamais le code dans une réponse');
+  // Mauvais code : refusé, aucune session.
+  const bad={};const r1=await call(base,'/demo/pin',{body:{pin:'1111'},jarMap:bad});
+  assert.equal(r1.status,401);assert.equal(bad.guardian,undefined);
+  assert.equal((await call(base,'/demo/pin',{body:{pin:{x:1}}})).status,401);
+  // Bon code : une vraie session Direction, revérifiée par le serveur, et tracée.
+  const j={};const ok=await call(base,'/demo/pin',{body:{pin:'4826'},jarMap:j});
+  assert.equal(ok.status,200);assert.equal(ok.data.role,'direction');assert.equal(ok.data.user.role,'admin');
+  assert.equal((await call(base,'/session',{jarMap:j})).data.user.role,'admin');
+  assert.ok(store.get("SELECT count(*) AS n FROM audit WHERE action='demo.pin'").n>=1,'entrée tracée');
+  // Au 6e essai du quart d'heure, même le bon code attend.
+  for(let k=0;k<2;k++)await call(base,'/demo/pin',{body:{pin:'0000'}});
+  const blocked=await call(base,'/demo/pin',{body:{pin:'4826'}});
+  assert.equal(blocked.status,429);assert.match(blocked.data.error,/quart d’heure/);
+ }finally{server.close();if(saved===undefined)delete process.env.GUARDIAN_DIRECTION_PIN;else process.env.GUARDIAN_DIRECTION_PIN=saved;}
 });

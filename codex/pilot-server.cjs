@@ -197,6 +197,12 @@ function createGuardianServer(options={}){
      const old=(req.headers.cookie||'').match(/(?:^|;\s*)guardian=([^;]+)/)?.[1];if(old&&old.length<=100)store.run('DELETE FROM sessions WHERE token=?',hash(old));
      const s=store.session(r.user);cookie(res,s.secret,8*3600);return json(res,{page:r.page,role:r.role,user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});
     }
+    // Bouton Direction avec le code PIN du propriétaire (GUARDIAN_DIRECTION_PIN) : 5 essais par quart d'heure et par adresse, 20 par heure en tout.
+    if(route==='/api/demo/pin'&&method==='POST'){
+     insist(secure||local,'HTTPS requis pour votre espace.',403);try{store.rate('pin:'+ip(req),5,15*60000);store.rate('pin-all',20,3600000);}catch(e){if(e.status===429)throw new Problem(429,'Trop d’essais. Réessayez dans un quart d’heure.');throw e;}const d=await body(req,512),r=roleBar.pin(store,d.pin);
+     const old=(req.headers.cookie||'').match(/(?:^|;\s*)guardian=([^;]+)/)?.[1];if(old&&old.length<=100)store.run('DELETE FROM sessions WHERE token=?',hash(old));
+     const s=store.session(r.user);cookie(res,s.secret,8*3600);return json(res,{page:r.page,role:r.role,user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});
+    }
     // Bouton Direction sans passe : on quitte le compte de démo actuel, puis la connexion demande le mot de passe.
     if(route==='/api/demo/roles/leave'&&method==='POST'){const old=(req.headers.cookie||'').match(/(?:^|;\s*)guardian=([^;]+)/)?.[1];if(old&&old.length<=100)store.run('DELETE FROM sessions WHERE token=?',hash(old));cookie(res,'',0);return json(res,{ok:true});}
     if(route==='/api/demo/roles/close'&&method==='POST'){roleBar.close(store,demoPass(req));passCookie(res,'',0);return json(res,{ok:true});}
