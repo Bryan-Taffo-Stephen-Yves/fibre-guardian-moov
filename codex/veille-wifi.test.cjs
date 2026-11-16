@@ -163,3 +163,12 @@ test('Chutes de connexion : une minute de silence du PC = coupure, puis « conne
     assert.equal(real, VW.beat);
   } finally { t.close(); VT.setVendorFetch(null); VT.setOnBeat(null); }
 });
+
+test('Wi-Fi : un nom accentué mal lu par Windows (« RÃ‰SEAU ») est remis d’aplomb, un vrai nom n’est pas touché', () => {
+  assert.equal(VT.unmangle('RÃ‰SEAU PIRATÃ‰'), 'RÉSEAU PIRATÉ');
+  assert.equal(VT.unmangle('CafÃ© de la gare'), 'Café de la gare');
+  assert.equal(VT.unmangle('Ã la maison'), 'Ã la maison');
+  assert.equal(VT.unmangle('Moov Box 5G'), 'Moov Box 5G');
+  assert.equal(VT.unmangle('Été'), 'Été');
+  assert.equal(VT.unmangle(null), null);
+});

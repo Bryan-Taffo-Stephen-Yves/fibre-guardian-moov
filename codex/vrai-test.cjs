@@ -286,6 +286,16 @@ function opText(op, r, before = []) {
   if (op === 'wifi') return r.ok ? 'Wi-Fi reconnecté à « ' + (r.ssid || 'votre réseau') + ' ».' : 'Le PC n’a pas réussi à se reconnecter tout seul. Choisissez votre Wi-Fi dans la liste de Windows.';
   return '';
 }
+// Windows PowerShell 5.1 lit parfois la sortie de netsh (écrite en UTF-8) comme du Windows-1252 : « RÉSEAU » devient
+// « RÃ‰SEAU ». Guardian remet le texte d'aplomb : chaque caractère redevient son octet Windows-1252, puis on relit en UTF-8.
+// Si le résultat n'est pas de l'UTF-8 valide, le texte est gardé tel quel (un vrai « Ã » dans un nom reste un « Ã »).
+const CP1252 = new Map([[0x20AC, 0x80], [0x201A, 0x82], [0x0192, 0x83], [0x201E, 0x84], [0x2026, 0x85], [0x2020, 0x86], [0x2021, 0x87], [0x02C6, 0x88], [0x2030, 0x89], [0x0160, 0x8A], [0x2039, 0x8B], [0x0152, 0x8C], [0x017D, 0x8E], [0x2018, 0x91], [0x2019, 0x92], [0x201C, 0x93], [0x201D, 0x94], [0x2022, 0x95], [0x2013, 0x96], [0x2014, 0x97], [0x02DC, 0x98], [0x2122, 0x99], [0x0161, 0x9A], [0x203A, 0x9B], [0x0153, 0x9C], [0x017E, 0x9E], [0x0178, 0x9F]]);
+function unmangle(v) {
+  if (typeof v !== 'string' || !/[ÃÂâ][\u0080-\u00BF\u0152-\u2122]/.test(v)) return v;
+  const bytes = [];
+  for (const ch of v) { const c = ch.codePointAt(0), b = c < 0x100 ? c : CP1252.get(c); if (b === undefined) return v; bytes.push(b); }
+  try { return new TextDecoder('utf-8', {fatal: true}).decode(Uint8Array.from(bytes)); } catch { return v; }
+}
 function wifiSave(row, d) {
   const p = pc(row), now = Date.now();
   // Le PC rend le résultat d'une opération demandée sur la page.
@@ -299,7 +309,7 @@ function wifiSave(row, d) {
     return {ok: true};
   }
   const error = ['location', 'no-wifi', 'netsh'].includes(d?.error) ? d.error : null;
-  p.w = error ? {error} : {ssid: text(d?.ssid, 64), signal: int(d?.signal, 0, 100), channel: int(d?.channel, 0, 200), band: text(d?.band, 20), radio: text(d?.radio, 30), rxMbps: int(d?.rxMbps, 0, 100000), txMbps: int(d?.txMbps, 0, 100000), auth: text(d?.auth, 40), computer: text(d?.computer, 40)};
+  p.w = error ? {error} : {ssid: text(unmangle(d?.ssid), 64), signal: int(d?.signal, 0, 100), channel: int(d?.channel, 0, 200), band: text(d?.band, 20), radio: text(unmangle(d?.radio), 30), rxMbps: int(d?.rxMbps, 0, 100000), txMbps: int(d?.txMbps, 0, 100000), auth: text(unmangle(d?.auth), 40), computer: text(d?.computer, 40)};
   p.at = now;
   if (d?.scan) scanSave(row, p, d.scan, now);
   // Surveillance du Wi-Fi (veille-wifi.cjs) : le PC est vivant ; avec le tour du réseau, sa mesure d'Internet.
@@ -437,5 +447,5 @@ function info(s, row) {
     scenarios: Object.entries(SCENARIOS).map(([id, f]) => ({id, label: f.label, hint: f.hint, down: f.down ?? 0, add: f.add ?? 0, jitter: f.jitter ?? 0, loss: f.loss ?? 100, cut: !!f.cut, signal: f.signal ?? 1}))};
 }
 
-module.exports = {pcLive, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
+module.exports = {unmangle, pcLive, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
   setVendorFetch: f => { vendorFetch = f || ((...a) => fetch(...a)); VENDOR_QUEUE.length = 0; vendorLast = 0; }, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};
