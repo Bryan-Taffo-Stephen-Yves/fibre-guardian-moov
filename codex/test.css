@@ -25,6 +25,12 @@
 .vt p{margin:0;color:var(--moov-text-muted)}
 
 /* Choix du réseau : 2 × 2 sur téléphone */
+.vt-where{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;margin:16px 0 0;padding:14px;border-radius:16px;background:var(--moov-accent-50);border:1px solid var(--moov-accent-200);color:var(--moov-accent-800)}
+.vt-where[hidden]{display:none}
+.vt-where>svg{margin-top:2px}
+.vt-where strong{display:block;font-size:15px;color:var(--moov-ink)}
+.vt-where p{margin:4px 0 10px;font-size:14px;line-height:1.45;color:var(--moov-text-muted,var(--moov-neutral-700))}
+.vt-where-again{min-height:42px;padding:0 14px;border:1px solid var(--moov-accent-200);border-radius:12px;background:var(--moov-surface);color:var(--moov-accent-800);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .vt-net{margin-top:18px;border:0;padding:0}
 .vt-net legend{padding:0;margin-bottom:8px;font-size:14px;font-weight:600;color:var(--moov-ink)}
 .vt-net-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
