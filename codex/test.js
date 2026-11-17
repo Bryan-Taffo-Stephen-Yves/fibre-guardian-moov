@@ -63,6 +63,7 @@
   const card=el('section',{class:'vt-card vt-network','aria-labelledby':'vt-title'},
    el('span',{class:'vt-eyebrow'},el('i'),'VOTRE RÉSEAU, EN CE MOMENT'),el('h1',{id:'vt-title',text:hello}),
    el('p',{text:'Guardian mesure la connexion de cet appareil, là où vous êtes. Rien n’est installé.'}),
+   el('div',{class:'vt-where',id:'vt-where',role:'status',hidden:''}),
    el('label',{class:'vt-wifi',for:'vt-wifi'},el('span',{},'Nom du Wi-Fi',el('em',{class:'vt-wifi-tag',id:'vt-wifi-tag',hidden:''},'Lu sur ce PC')),wifi,el('small',{id:'vt-wifi-help',text:windows?'Une page web ne peut pas lire ce nom elle-même. Tapez-le, ou branchez ce PC juste en dessous : Windows le donnera.':'Votre téléphone ne laisse aucune page web lire ce nom : tapez-le une fois, il est gardé sur cet appareil.'})),
    windows?pcBlock():null,
    windows?el('div',{class:'vt-devices',id:'vt-devices',hidden:''}):null,
@@ -86,7 +87,21 @@
   if(c&&(c.downlink||c.effectiveType))rows.push(['Estimation de l’appareil',[c.effectiveType&&c.effectiveType.toUpperCase(),c.downlink?fr(c.downlink,c.downlink<10?1:0)+' Mbps':null,c.rtt?fr(c.rtt)+' ms':null].filter(Boolean).join(' · ')]);
   return rows.map(([k,v])=>el('div',{},el('dt',{text:k}),el('dd',{text:v})));
  }
- async function loadNetwork(){try{net=await api('network',null,6000);}catch(e){net={ip:null,operator:null};}const dl=document.getElementById('vt-facts');if(dl)dl.replaceChildren(...facts());}
+ async function loadNetwork(){try{net=await api('network',null,6000);}catch(e){net={ip:null,operator:null};}const dl=document.getElementById('vt-facts');if(dl)dl.replaceChildren(...facts());where();}
+ // Pas sur le Wi-Fi de la box ? Le serveur reconnaît les données mobiles et les autres opérateurs (la page, elle, ne peut pas lire le nom du Wi-Fi).
+ // On le dit avant le test, et on coche la bonne case : sinon on croirait mesurer la fibre.
+ function where(){
+  const box=document.getElementById('vt-where');if(!box)return;
+  const kind=navigator.connection?.type==='cellular'?'mobile':net?.place,phone=/iPhone|iPad|Android/.test(navigator.userAgent),op=String(net?.operator||'').replace(/\s+(c[oô]te|ci\b).*$/i,'').trim();
+  if(kind!=='mobile'&&kind!=='autre'){box.hidden=true;box.replaceChildren();return;}
+  const again=el('button',{type:'button',class:'vt-where-again'},'J’ai changé de réseau');again.onclick=()=>{box.hidden=true;loadNetwork();};
+  box.replaceChildren(icon(kind==='mobile'?'M8 3h8v18H8zM11 18h2':'M3 14h18v5H3zM7 16.5h.01M11 16.5h.01M8 14l-2-8M16 14l2-8',22),
+   el('div',{},el('strong',{text:'Vous n’êtes pas sur le Wi-Fi de votre box Moov'}),
+    el('p',{text:(kind==='mobile'?(phone?'Cet appareil utilise ses données mobiles':'Cet appareil passe par les données mobiles d’un téléphone (partage de connexion)'):'Cet appareil est sur le réseau d’un autre opérateur')+(op?' : '+op:'')+'. Le test mesurera ce réseau, pas votre fibre. Pour tester la fibre, connectez-vous au Wi-Fi de la box.'}),again));
+  box.hidden=false;
+  const wifiBox=document.querySelector('input[name=net][value=wifi]');
+  if(kind==='mobile'&&wifiBox?.checked&&!network()){const pick=document.querySelector('input[name=net][value='+(phone?'cellular':'hotspot')+']');if(pick)pick.checked=true;}
+ }
 
  // ---------- Brancher ce PC (Windows) : un petit fichier lit le Wi-Fi auprès de Windows et l'envoie ici ----------
  function pcBlock(){

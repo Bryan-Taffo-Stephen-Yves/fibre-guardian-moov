@@ -161,7 +161,7 @@ test('En direct : petits échantillons, débit d’envoi compté puis oublié, e
     assert.equal(net.local, true, 'adresse locale : aucun service extérieur appelé');
     const calls = [], fake = async url => { calls.push(url); return {ok: true, json: async () => ({status: 'success', isp: 'Orange Cote d\'Ivoire', city: 'Abidjan', country: 'Côte d’Ivoire'})}; };
     const o = await VT.network('::ffff:102.67.12.34', {fetchImpl: fake});
-    assert.deepEqual(o, {ip: '102.67.12.34', operator: 'Orange Cote d\'Ivoire', city: 'Abidjan', country: 'Côte d’Ivoire'});
+    assert.deepEqual(o, {ip: '102.67.12.34', operator: 'Orange Cote d\'Ivoire', city: 'Abidjan', country: 'Côte d’Ivoire', mobile: false, place: 'autre'});
     await VT.network('102.67.12.34', {fetchImpl: fake}); assert.equal(calls.length, 1, 'réponse gardée une heure en mémoire');
     const down = await VT.network('41.66.1.2', {fetchImpl: async () => { throw new Error('hors ligne'); }});
     assert.equal(down.ip, '41.66.1.2'); assert.equal(down.operator, null, 'service indisponible : l’adresse seule');
@@ -223,5 +223,23 @@ test('Brancher ce PC : relevés Wi-Fi en direct, opérations demandées sur la p
     // Erreur de Windows (localisation coupée) : affichée telle quelle, sans faux nom.
     await t.page('wifi', l.token, {error: 'location', ssid: 'faux'});
     assert.deepEqual((await get()).wifi.error, 'location'); assert.equal((await get()).wifi.ssid, undefined);
+  } finally { t.close(); }
+});
+
+test('Wi-Fi de la box ou données mobiles : le réseau vu par le serveur dit où est branché l’appareil', async () => {
+  assert.equal(VT.place({operator: 'Moov Africa Cote d\'Ivoire', mobile: false}), 'box', 'Internet fixe de Moov : le Wi-Fi de la box');
+  assert.equal(VT.place({operator: 'Atlantique Telecom', mobile: false}), 'box');
+  assert.equal(VT.place({operator: 'Moov Africa Cote d\'Ivoire', mobile: true}), 'mobile', 'données mobiles Moov : pas la box');
+  assert.equal(VT.place({operator: 'Orange Cote d\'Ivoire', mobile: true}), 'mobile');
+  assert.equal(VT.place({operator: 'MTN Cote d\'Ivoire', mobile: false}), 'autre', 'Wi-Fi d’un autre opérateur');
+  assert.equal(VT.place({operator: 'Some ISP', as: 'AS37092 Moov Africa'}), 'box', 'le nom peut venir du numéro de réseau');
+  assert.equal(VT.place({}), null, 'on ne sait pas : on ne dit rien');
+  const mob = await VT.network('102.67.99.1', {fetchImpl: async () => ({ok: true, json: async () => ({status: 'success', isp: 'MTN Cote d\'Ivoire', mobile: true, city: 'Abidjan', country: 'Côte d’Ivoire'})})});
+  assert.equal(mob.place, 'mobile'); assert.equal(mob.mobile, true);
+  const t = await setup();
+  try {
+    const r = await t.app('/journey/network');
+    assert.equal(r.status, 200); assert.deepEqual(r.data, {place: null, operator: null}, 'adresse locale : rien à dire');
+    assert.equal((await fetch(t.base + '/api/journey/network')).status, 401, 'réservé au client connecté');
   } finally { t.close(); }
 });

@@ -111,6 +111,17 @@ function preview(m, id) {
   return {scenario: id, label: f.label, metrics: sim, level, text: f.guardian, facts: v.facts};
 }
 
+// Où est branché l'appareil, d'après le réseau vu par le serveur (une page web ne peut pas lire le nom du Wi-Fi) :
+// « mobile » = données mobiles (Orange, MTN, Moov…), « autre » = Internet d'un autre opérateur (Wi-Fi d'une box Orange, MTN…),
+// « box » = Internet fixe de Moov, donc sans doute le Wi-Fi de la box. null = on ne sait pas, on ne dit rien.
+const MOOV = /moov|atlantique/i;
+function place({operator, org, as, mobile} = {}) {
+  const moov = MOOV.test([operator, org, as].filter(Boolean).join(' '));
+  if (mobile === true) return 'mobile';
+  if (moov) return 'box';
+  return operator ? 'autre' : null;
+}
+
 // L'opérateur du réseau d'où vient la mesure (Orange, MTN, Moov…), d'après l'adresse IP publique. Rien n'est gardé
 // en base ; une réponse est mise de côté une heure en mémoire. Service gratuit, sans clé ; s'il ne répond pas, on n'affiche que l'adresse.
 const OPERATORS = new Map();
@@ -121,9 +132,12 @@ async function network(rawIp, {fetchImpl = fetch} = {}) {
   const hit = OPERATORS.get(ip); if (hit && Date.now() - hit.at < 3600000) return hit.data;
   let data = {ip, operator: null, city: null, country: null};
   try {
-    const r = await fetchImpl('http://ip-api.com/json/' + encodeURIComponent(ip) + '?fields=status,country,city,isp,org&lang=fr', {signal: AbortSignal.timeout(2500)});
+    const r = await fetchImpl('http://ip-api.com/json/' + encodeURIComponent(ip) + '?fields=status,country,city,isp,org,as,mobile&lang=fr', {signal: AbortSignal.timeout(2500)});
     const d = r.ok ? await r.json() : null;
-    if (d?.status === 'success') data = {ip, operator: String(d.isp || d.org || '').slice(0, 60) || null, city: String(d.city || '').slice(0, 40) || null, country: String(d.country || '').slice(0, 40) || null};
+    if (d?.status === 'success') {
+      const operator = String(d.isp || d.org || '').slice(0, 60) || null, mobile = d.mobile === true;
+      data = {ip, operator, city: String(d.city || '').slice(0, 40) || null, country: String(d.country || '').slice(0, 40) || null, mobile, place: place({operator, org: d.org, as: d.as, mobile})};
+    }
   } catch {}
   if (OPERATORS.size > 500) OPERATORS.clear();
   OPERATORS.set(ip, {at: Date.now(), data});
@@ -447,5 +461,5 @@ function info(s, row) {
     scenarios: Object.entries(SCENARIOS).map(([id, f]) => ({id, label: f.label, hint: f.hint, down: f.down ?? 0, add: f.add ?? 0, jitter: f.jitter ?? 0, loss: f.loss ?? 100, cut: !!f.cut, signal: f.signal ?? 1}))};
 }
 
-module.exports = {unmangle, pcLive, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
+module.exports = {unmangle, place, pcLive, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
   setVendorFetch: f => { vendorFetch = f || ((...a) => fetch(...a)); VENDOR_QUEUE.length = 0; vendorLast = 0; }, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};

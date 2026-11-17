@@ -82,7 +82,7 @@
  function Thinking(){const [step,setStep]=S(0);E(()=>{const t=setInterval(()=>setStep(v=>Math.min(v+1,THINKING.length-1)),1400);return()=>clearInterval(t);},[]);
   return h('div',{className:'j-bubble assistant j-typing',role:'status'},h('span',{className:'j-typing-dots','aria-hidden':true},h('i'),h('i'),h('i')),h('p',null,THINKING[step]));}
  function App({Legacy}){
-  const [menu,Menu]=S(false),[confirmation,CF]=S(null);
+  const [menu,Menu]=S(false),[confirmation,CF]=S(null),[where,WH]=S(null);
   const [scenarioPending,SP]=S(null),[scenarioError,SE]=S('');
   const [ready,Q]=S(false),[user,U]=S(null),[state,D]=S(null),[view,setView]=S(()=>{const r=readRoute();return !LAB&&['real','reports'].includes(r)?'home':r;}),[mode,M]=S('client'),[entry,A]=S(({moov:'admin',account:'email'})[new URLSearchParams(location.search).get('portal')]||'client'),[challenge,C]=S(null),[busy,BZ]=S(false),[error,X]=S(''),[notice,N]=S(''),[chat,CH]=S(false),[welcome,W]=S(false),[realReports,RR]=S(null),[selected,SI]=S(null),[home,HOME]=S('home-1'),[legacy,LEG]=S(location.protocol==='file:'||new URLSearchParams(location.search).get('classic')==='1'),[listening,LI]=S(false),[heard,HE]=S(''),[pay,PAY]=S(null),[paid,PD]=S(null),[about,AB]=S(false),[shared,UN]=S(0),[pending,PQ]=S(''),[landing,LAND]=S(()=>{const q=new URLSearchParams(location.search);return !!window.FGLanding&&!q.has('portal')&&!q.has('section')&&!q.has('login');});
   const lock=R(false),userRef=R(null),stateRef=R(null),recognition=R(null),chatEnd=R(null),spoken=R(null);
@@ -104,6 +104,9 @@
   E(()=>{if(!user||!window.FGWelcome||OPERATOR.includes(user.role))return;let plan='';try{plan=sessionStorage.getItem(FGWelcome.PLAN_KEY)||'';}catch(e){}
    if(plan){V('bienvenue');return;}api('/welcome').then(r=>{const o=r.order;if(o&&!['annule','installe'].includes(o.status))if(readRoute()==='home')V('bienvenue',true);}).catch(()=>{});},[user?.id]);
   E(()=>{if(!user)return;let alive=true;const load=()=>api('/noc/notifications').then(r=>{if(alive)UN(r.unreadCount||0);}).catch(()=>{});load();const t=setInterval(load,5000);return()=>{alive=false;clearInterval(t);};},[user?.id,view]);
+  // Wi-Fi de la box ou données mobiles ? Demandé au serveur à l'ouverture, au retour sur l'appli et quand le téléphone change de réseau.
+  E(()=>{if(!user||OPERATOR.includes(user.role))return;let alive=true;const c=navigator.connection,load=()=>{if(document.visibilityState!=='visible')return;api('/journey/network').then(r=>{if(alive)WH({...r,cellular:c?.type==='cellular'});}).catch(()=>{});};
+   load();document.addEventListener('visibilitychange',load);c?.addEventListener?.('change',load);return()=>{alive=false;document.removeEventListener('visibilitychange',load);c?.removeEventListener?.('change',load);};},[user?.id]);
   E(()=>{if(chat)chatEnd.current?.scrollIntoView({block:'nearest'});},[state?.messages.length,chat,pending]);
   E(()=>{if(!chat)recognition.current?.abort();},[chat]);
   E(()=>{const last=state?.messages?.at(-1);if(!last)return;if(spoken.current===null||spoken.current===last.id){spoken.current=last.id;return;}spoken.current=last.id;if(last.role==='assistant'&&(chat||view==='guardian')&&FGVoice.isEnabled())FGVoice.speak(last);},[state?.messages?.length]);
@@ -155,7 +158,7 @@
   }
   function homeView(){
    // Accueil simple (accueil.js) : un voyant, quatre gros boutons, deux cartes au plus.
-   if(window.FGAccueil){const cards=[window.FGClientHome&&h(FGClientHome.LiveTrip,{key:'trip',api,onTrack:()=>go('tracking')}),!state.sharedIncident&&!fault&&window.FGForecast&&state.optical?.state==='fading'&&h(window.FGForecast.Card,{key:'prevision',optical:state.optical,prevention:state.prevention,busy,onBook:slot=>run(()=>action('prevention',{slot}))}),!state.sharedIncident&&state.zoneNews&&h(React.Fragment,{key:'news'},zoneNewsCard(state.zoneNews))];
+   if(window.FGAccueil){const cards=[FGAccueil.Where&&h(FGAccueil.Where,{key:'where',where:fault||state.sharedIncident||state.metrics?.state==='redémarrage'?null:where,busy,onReboot:()=>act('reboot',{confirm:true},'Redémarrage lancé. Votre box revient dans quelques secondes.')}),window.FGClientHome&&h(FGClientHome.LiveTrip,{key:'trip',api,onTrack:()=>go('tracking')}),!state.sharedIncident&&!fault&&window.FGForecast&&state.optical?.state==='fading'&&h(window.FGForecast.Card,{key:'prevision',optical:state.optical,prevention:state.prevention,busy,onBook:slot=>run(()=>action('prevention',{slot}))}),!state.sharedIncident&&state.zoneNews&&h(React.Fragment,{key:'news'},zoneNewsCard(state.zoneNews))];
     return h(FGAccueil.Home,{state,user,fault,busy,call:window.FGAppel?h(FGAppel.CallButton,{api,onGuardian:()=>CH(true),onSupport:()=>V('notifications'),className:'ac-quick-tile',label:'Appeler'}):null,cards,
      recent:(state.notifications||[]).filter(n=>n.home===home).slice(0,12),bell,demo:h(FGDemo.Badge,{onClick:()=>AB(true)}),
      on:{bell:()=>go('notifications'),voice:()=>go(window.FGFibreVoice?'voix':'guardian'),test:()=>run(async()=>{const r=await api('/test/link','POST',{});location.href=r.url;}),report:()=>V('report'),survie:()=>go('survie'),track:()=>go('tracking'),devices:()=>V('devices'),guardian:()=>ask(state.metrics?.latency===null?'Ma box ne répond plus':'Ma connexion est lente'),reboot:()=>act('reboot',{confirm:true},'Redémarrage lancé. Votre box revient dans quelques secondes.')}});}

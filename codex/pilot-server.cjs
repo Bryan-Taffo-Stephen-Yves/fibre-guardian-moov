@@ -272,6 +272,8 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/welcome'&&method==='GET'){const r=WEL.list(store,user.id);DP.seen(store,user.id,'welcome');return json(res,r);}
     if(route==='/api/noc/welcome'&&method==='POST')return json(res,WEL.operate(store,user.id,await body(req,2048)));
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
+    // Le réseau d'où vient cet appareil (Wi-Fi de la box Moov ou données mobiles), pour le prévenir sur l'accueil. Rien n'est gardé.
+    if(route==='/api/journey/network'&&method==='GET'){store.rate('net:'+user.id,30,600000);const n=await VT.network(ip(req));return json(res,{place:n.place||null,operator:n.operator||null});}
     if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}
     // SmartOffer, ajustement : le bilan des 7 derniers jours (forfait-bilan.cjs). /demo remplit 7 jours du simulateur (mode laboratoire).

@@ -87,5 +87,20 @@
      h('span',{className:'ac-recent-tag'+(n.read?'':' new')},n.read?'Lu':'Nouveau')));})):
      h('p',{className:'ac-recent-empty'},'Pas de message pour l’instant. Guardian vous écrit ici dès qu’il se passe quelque chose.')));
  }
- window.FGAccueil={Home,status};
+ // Le téléphone n'est pas sur le Wi-Fi de la box : le serveur voit des données mobiles, ou le réseau d'un autre opérateur.
+ // (Une page web ne peut pas lire le nom du Wi-Fi.) Sur données mobiles, Guardian peut quand même redémarrer la box à distance.
+ const short=op=>String(op||'').replace(/\s+(c[oô]te|ci\b|s\.?a\.?\b).*$/i,'').trim();
+ function Where({where,busy,onReboot}){
+  const kind=where?.cellular?'mobile':where?.place,[hid,setHid]=React.useState(()=>{try{return sessionStorage.getItem('fg-where-ok')||'';}catch{return '';}});
+  if(kind!=='mobile'&&kind!=='autre'||hid===kind)return null;
+  const hide=()=>{try{sessionStorage.setItem('fg-where-ok',kind);}catch{}setHid(kind);},op=short(where.operator),phone=/iPhone|iPad|Android/.test(navigator.userAgent);
+  return h('section',{className:'ac-where ac-where-'+kind,role:'status'},
+   h('span',{className:'ac-where-ico','aria-hidden':true},h(Icon,{d:kind==='mobile'?P.sms:P.box,size:24})),
+   h('div',null,h('h2',null,'Vous n’êtes pas sur le Wi-Fi de votre box'),
+    h('p',null,kind==='mobile'?(phone?'Ce téléphone utilise ses données mobiles':'Cet appareil passe par les données mobiles d’un téléphone')+(op?' '+op:'')+'. Si le Wi-Fi de la maison ne marche plus, Guardian peut redémarrer votre box d’ici.':(phone?'Ce téléphone':'Cet appareil')+' est sur un autre réseau'+(op?' ('+op+')':'')+'. Pour suivre votre fibre Moov, connectez-vous au Wi-Fi de votre box.')),
+   h('div',{className:'ac-where-actions'},
+    kind==='mobile'&&onReboot&&h('button',{type:'button',className:'ac-where-go',onClick:onReboot,disabled:busy},h(Icon,{d:P.refresh,size:18}),'Redémarrer ma box'),
+    h('button',{type:'button',className:'ac-where-ok',onClick:hide},'Compris')));
+ }
+ window.FGAccueil={Home,status,Where};
 })();
