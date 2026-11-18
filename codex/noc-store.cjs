@@ -185,14 +185,33 @@ function settleSimulated(s,uid,segment,engaged=false){for(const {id:iid} of s.al
 function lastScenario(s,segment,before=Number.MAX_SAFE_INTEGER){for(const r of s.all("SELECT detail FROM noc_events WHERE kind='simulation' AND incident_id IS NULL AND at<=? ORDER BY at DESC,rowid DESC LIMIT 60",before)){const d=JSON.parse(r.detail||'{}');if(d.segment===segment)return d.scenario||null;}return null;}
 function area(s,segment){const row=s.get('SELECT online,total FROM noc_segments WHERE id=?',segment);return row?{online:row.online,total:row.total}:null;}
 function client(s,uid){const member=s.get('SELECT segment_id FROM noc_members WHERE user_id=?',uid);const incidents=s.all('SELECT i.id FROM noc_incidents i LEFT JOIN noc_members m ON m.user_id=? WHERE i.reporter=? OR '+REACH+' ORDER BY i.updated DESC LIMIT 30',uid,uid).map(({id})=>{const i=readIncident(s,id);return {id:i.id,ref:ref(i.id),next:nextStep(i),title:i.title,status:i.status,terminal:!isOpen(i),restorationVerified:i.status==='resolved'&&i.mode==='demo',mode:i.mode,segment:i.segment_id,zone:i.plan?.cause==='OLT_FAILURE'?zoneName(s,i.segment_id).split(' · ')[0]+' · toute la commune':zoneName(s,i.segment_id),cause:i.plan?.cause||null,area:i.mode==='demo'&&i.segment_id?area(s,i.segment_id):null,partial:holdOf(s,i),position:i.status==='en_route'?position(i):null,technician:i.technician?techCard(TECHS.find(t=>t.id===i.technician)):null,feedback:s.get('SELECT rating,comment FROM noc_feedback WHERE user_id=? AND incident_id=?',uid,i.id)||null,events:s.all('SELECT e.id,e.kind,e.public_text,e.at FROM noc_events e WHERE e.incident_id=? AND '+INTERNAL+' ORDER BY e.at,e.rowid',i.id)};}).map(item=>require('./appels.cjs').decorate(s,item));return {segment:member?.segment_id||null,zone:zoneName(s,member?.segment_id),zones:s.all('SELECT id,zone FROM noc_segments ORDER BY zone').map(z=>({id:z.id,zone:plainZone(z.zone)})),incidents};}
+// Boîte du client : une seule carte par panne, qui se met à jour. Chaque étape n'apparaît qu'une fois,
+// dans l'ordre, avec des mots simples (le message tout prêt envoyé par un conseiller rejoint l'étape qu'il annonce).
+const TEMPLATE_STEP={received:'received',review:'plan.proposed',approved:'plan.approved',assigned:'dispatched',en_route:'en_route',on_site:'on_site',verifying:'verifying',closed:'closed',resolved:'resolved'};
+function plainStep(kind,text,detail){
+ const n=Number(detail?.remaining)||0;
+ if(kind==='closed')return detail?.networkVerified?'Internet est revenu dans votre quartier. Le dossier est fermé.':'Le support a fermé votre dossier. Si internet ne marche toujours pas, signalez-le de nouveau.';
+ return ({detected:'Guardian a repéré une coupure dans votre quartier. Moov s’en occupe.',received:'Votre signalement est bien reçu. Moov regarde ce qui se passe.','plan.proposed':'Moov prépare la réparation.','plan.complement':'Moov vérifie encore quelques points avant d’envoyer un technicien.','plan.approved':'La réparation est décidée.',dispatched:'Un technicien est choisi. Il part bientôt.',resolved:'Internet est revenu dans votre quartier. Tout marche de nouveau.',reopened:'Le support a rouvert votre dossier pour le revoir.','guardian.hold':n?'La grosse réparation est faite, mais '+n+' maison'+(n>1?'s sont':' est')+' encore sans internet. Moov fait un dernier contrôle.':null})[kind]||text;
+}
+function inboxCards(s,rows){
+ const groups=new Map();for(const r of rows.slice().reverse()){if(!groups.has(r.incident_id))groups.set(r.incident_id,[]);groups.get(r.incident_id).push(r);}
+ return [...groups.values()].map(list=>{
+  const steps=[],seen=new Set();
+  for(const r of list){const detail=JSON.parse(r.detail||'{}'),kind=r.kind==='support.template'?TEMPLATE_STEP[detail.template]||r.kind:r.kind,key=['eta.updated','support.response','followup','support.template'].includes(kind)?r.id:kind;
+   if(seen.has(key))continue;seen.add(key);steps.push({kind,text:plainStep(kind,r.public_text,detail),at:r.at});}
+  const last=list[list.length-1],step=steps[steps.length-1],unread=list.filter(r=>r.read_at===null).length,done=['resolved','closed'].includes(last.status);
+  return {id:last.incident_id,ids:list.map(r=>r.id),title:last.status==='resolved'||(last.status==='closed'&&step.kind==='closed'&&/revenu/.test(step.text))?'Internet est revenu':done?'Dossier fermé':last.title,body:step.text,kind:step.kind,steps,at:last.at,read:unread===0,unread,mode:last.mode,segment:last.segment_id,zone:zoneName(s,last.segment_id),incidentStatus:last.status,terminal:done,page:'tracking'};
+ }).sort((a,b)=>b.at-a.at);
+}
 const INBOX_FROM=" FROM noc_notifications n JOIN noc_events e ON e.id=n.event_id JOIN noc_incidents i ON i.id=e.incident_id LEFT JOIN noc_members m ON m.user_id=n.user_id WHERE n.user_id=? AND "+INTERNAL+" AND (i.reporter=n.user_id OR "+REACH+")";
 function notifications(s,uid){
  // Synchroniser aussi le journal déjà visible au moment où l'abonné rejoint sa zone fictive.
  const visible=s.all("SELECT e.id FROM noc_events e JOIN noc_incidents i ON i.id=e.incident_id LEFT JOIN noc_members m ON m.user_id=? WHERE "+INTERNAL+" AND (i.reporter=? OR "+REACH+") ORDER BY e.at DESC,e.rowid DESC LIMIT 200",uid,uid);
  for(const e of visible)deliver(s,uid,e.id);
- const items=s.all('SELECT n.id,n.read_at,e.incident_id,e.kind,e.public_text,e.at,i.title,i.mode,i.segment_id,i.status'+INBOX_FROM+' ORDER BY e.at DESC,e.rowid DESC LIMIT 200',uid).map(r=>({id:r.id,incidentId:r.incident_id,title:r.title,body:r.public_text,kind:r.kind,mode:r.mode,segment:r.segment_id,zone:zoneName(s,r.segment_id),createdAt:r.at,readAt:r.read_at,read:r.read_at!==null,incidentStatus:r.status,page:'tracking'}));
- const unreadCount=s.get('SELECT count(*) AS n'+INBOX_FROM+' AND n.read_at IS NULL',uid).n;
- return {items,unreadCount,source:'Notifications Fibre Guardian'};
+ const rows=s.all('SELECT n.id,n.read_at,e.incident_id,e.kind,e.public_text,e.detail,e.at,i.title,i.mode,i.segment_id,i.status'+INBOX_FROM+' ORDER BY e.at DESC,e.rowid DESC LIMIT 200',uid);
+ const items=rows.map(r=>({id:r.id,incidentId:r.incident_id,title:r.title,body:r.public_text,kind:r.kind,mode:r.mode,segment:r.segment_id,zone:zoneName(s,r.segment_id),createdAt:r.at,readAt:r.read_at,read:r.read_at!==null,incidentStatus:r.status,page:'tracking'}));
+ const unreadCount=s.get('SELECT count(*) AS n'+INBOX_FROM+' AND n.read_at IS NULL',uid).n,cards=inboxCards(s,rows);
+ return {items,cards,unreadCount,unreadCards:cards.filter(c=>!c.read).length,source:'Notifications Fibre Guardian'};
 }
 function readNotifications(s,uid,d){
  notifications(s,uid);
