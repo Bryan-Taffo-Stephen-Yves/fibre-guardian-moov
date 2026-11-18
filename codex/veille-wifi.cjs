@@ -141,7 +141,7 @@ function hook(s, getCfg, {onError} = {}) {
 }
 
 // ---------- Chutes de connexion ----------
-// Le PC branché écrit à Guardian toutes les 2 secondes, et toutes les 20 secondes il mesure Internet (3 sondes vers 8.8.8.8).
+// Le PC branché écrit à Guardian toutes les 2 à 5 secondes (il regarde les appareils toutes les 5 secondes), et toutes les 20 secondes il mesure Internet (3 sondes vers 8.8.8.8).
 // Si Internet tombe chez le client, le PC ne peut plus écrire : au bout d'une minute de silence, Guardian prévient le
 // propriétaire sur WhatsApp (son téléphone le reçoit par les données mobiles). Quand le PC réécrit, Guardian dit que la
 // connexion est revenue et combien de temps elle a été coupée. Si les mesures montrent des pertes ou des temps de réponse

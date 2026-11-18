@@ -167,12 +167,13 @@ function pc(row) {
   return p;
 }
 
-// Appareils connectés au Wi-Fi : toutes les 20 secondes, le fichier PC envoie une petite sonde à chaque adresse du réseau
+// Appareils connectés au Wi-Fi : toutes les 5 secondes environ, le fichier PC envoie une petite sonde à chaque adresse du réseau
 // local, puis lit la table des voisins de Windows (adresse locale + adresse MAC de chaque appareil qui a répondu).
 // Guardian ne garde ni le nom des appareils ni leur adresse MAC complète : un numéro anonyme, le type d'appareil,
 // l'adresse locale et les 2 derniers octets de l'adresse MAC. Un téléphone en veille peut disparaître quelques minutes.
 // Le numéro anonyme est signé avec une clé tirée au hasard au démarrage du serveur : on ne peut pas en retrouver l'adresse MAC.
-const GONE_MS = 50000, FORGET_MS = 10 * 60000, MAX_DEVICES = 64, MAX_KEPT = 128, SCAN_GAP_MS = 8000;
+// Un tour toutes les 5 secondes : un nouvel appareil est vu quelques secondes après son arrivée sur le Wi-Fi (avant : 20 s).
+const GONE_MS = 50000, FORGET_MS = 10 * 60000, MAX_DEVICES = 64, MAX_KEPT = 128, SCAN_GAP_MS = 3000;
 const DEVICE_KEY = crypto.randomBytes(32);
 const deviceId = (row, mac) => crypto.createHmac('sha256', DEVICE_KEY).update(row.token_hash + '|' + mac).digest('hex').slice(0, 12);
 const lanIp = v => {
@@ -227,7 +228,7 @@ function baseLabel(d) {
 }
 function scanSave(row, p, scan, now = Date.now()) {
   if (!scan || typeof scan !== 'object' || !Array.isArray(scan.devices)) return;
-  if (p.scan && now - p.scan.at < SCAN_GAP_MS) return; // un tour toutes les 20 secondes suffit : les envois plus rapprochés sont ignorés
+  if (p.scan && now - p.scan.at < SCAN_GAP_MS) return; // un tour toutes les 5 secondes suffit : les envois plus rapprochés (moins de 3 s) sont ignorés
   const self = macOf(scan.mac), myIp = lanIp(scan.ip), gateway = lanIp(scan.gateway), prefix = int(scan.prefix, 8, 30);
   const first = !p.scan, seen = new Set(), unknown = [], macs = new Map();
   for (const raw of scan.devices.slice(0, 120)) {
@@ -362,7 +363,7 @@ function agent(origin, token) {
     "$url = '" + origin + "/api/test/wifi'; $token = '" + token + "'",
     "Write-Host ''",
     "Write-Host '  Guardian lit le Wi-Fi de ce PC et l''envoie à votre page de test.' -ForegroundColor Cyan",
-    "Write-Host '  Toutes les 20 secondes, il compte les appareils de ce Wi-Fi (sans leur nom, sans rien changer).'",
+    "Write-Host '  Toutes les 5 secondes, il compte les appareils de ce Wi-Fi (sans leur nom, sans rien changer).'",
     "Write-Host '  Il ne fait que 4 opérations, quand vous les demandez sur la page :'",
     "Write-Host '  tester la box, tester Internet, réparer le DNS, reconnecter le Wi-Fi.'",
     "Write-Host '  Si « Me prévenir sur WhatsApp » est activé, Guardian vous écrit quand un nouvel appareil arrive'",
@@ -406,7 +407,7 @@ function agent(origin, token) {
     "    for ($k = $start + 1; $k -lt $start + $size - 1; $k++) { $t = $base + '.' + $k; if ($t -ne $ip) { try { $tasks.Add((New-Object Net.NetworkInformation.Ping).SendPingAsync($t, 500)) } catch {} } }",
     "    try { [Threading.Tasks.Task]::WaitAll($tasks.ToArray(), 2500) | Out-Null } catch {}",
     "    $ok = @{}; foreach ($t in $tasks) { try { if ($t.Status -eq 'RanToCompletion' -and $t.Result.Status -eq 'Success') { $ok[[string]$t.Result.Address] = $true } } catch {} }",
-    "    Start-Sleep -Milliseconds 1500",
+    "    Start-Sleep -Milliseconds 1000",
     "    $self = $null; try { $self = [string](Get-NetAdapter -InterfaceIndex $nic -ErrorAction Stop).MacAddress } catch {}",
     "    $now = @{}; $list = @(Get-NetNeighbor -InterfaceIndex $nic -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $a = [string]$_.IPAddress; $a.StartsWith($base + '.') -and $_.LinkLayerAddress -and [string]$_.LinkLayerAddress -ne '00-00-00-00-00-00' -and ([string]$_.State -eq 'Reachable' -or $ok.ContainsKey($a) -or $script:prev.ContainsKey($a)) } | Select-Object -First 80 | ForEach-Object { if ([string]$_.State -eq 'Reachable' -or $ok.ContainsKey([string]$_.IPAddress)) { $now[[string]$_.IPAddress] = $true }; @{ ip = [string]$_.IPAddress; mac = [string]$_.LinkLayerAddress } })",
     "    $script:prev = $now",
@@ -414,10 +415,12 @@ function agent(origin, token) {
     "  } catch { return $null }",
     "}",
     "$labels = @{ box = 'Tester la box'; internet = 'Tester Internet'; dns = 'Réparer le DNS'; wifi = 'Reconnecter le Wi-Fi' }",
-    // Un tour du réseau toutes les 20 secondes (chronomètre) ; s'il n'a pas pu partir, il repart avec l'envoi suivant.
-    "$clock = [Diagnostics.Stopwatch]::StartNew(); $nextScan = 0; $scan = $null",
+    // Un tour du réseau toutes les 5 secondes (chronomètre) : un nouvel appareil part vers Guardian dans les secondes qui suivent.
+    // La mesure d'Internet (3 petits signaux vers 8.8.8.8) reste toutes les 20 secondes : la règle « instable » compte en tours de 20 s.
+    // La fenêtre n'écrit le nombre d'appareils que s'il change (ou toutes les 20 secondes), pour rester lisible.
+    "$clock = [Diagnostics.Stopwatch]::StartNew(); $nextScan = 0; $nextNet = 0; $nextSay = 0; $lastCount = -1; $scan = $null",
     "while ($true) {",
-    "  if ($clock.ElapsedMilliseconds -ge $nextScan) { $nextScan = $clock.ElapsedMilliseconds + 20000; $fresh = Scan-Lan; if ($fresh) { $scan = $fresh; $where = 'ce Wi-Fi'; if ($fresh.medium -eq 'cable') { $where = 'ce réseau' }; Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + @($fresh.devices).Count + ' appareils vus sur ' + $where) } }",
+    "  if ($clock.ElapsedMilliseconds -ge $nextScan) { $nextScan = $clock.ElapsedMilliseconds + 5000; $fresh = Scan-Lan; if ($fresh) { $scan = $fresh; $count = @($fresh.devices).Count; if ($count -ne $lastCount -or $clock.ElapsedMilliseconds -ge $nextSay) { $where = 'ce Wi-Fi'; if ($fresh.medium -eq 'cable') { $where = 'ce réseau' }; $color = 'Gray'; if ($lastCount -ge 0 -and $count -gt $lastCount) { $color = 'Green' }; Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + $count + ' appareils vus sur ' + $where) -ForegroundColor $color; $lastCount = $count; $nextSay = $clock.ElapsedMilliseconds + 20000 } } }",
     "  $out = (netsh wlan show interfaces) | Out-String",
     "  $ssid = Field $out 'SSID'",
     "  if ($ssid) {",
@@ -425,10 +428,10 @@ function agent(origin, token) {
     "  } elseif ($out -match 'location|localisation|emplacement') { $body = @{ error = 'location' } }",
     "  elseif ($out -match 'wlansvc|not running|pas en cours') { $body = @{ error = 'netsh' } }",
     "  else { $body = @{ error = 'no-wifi' } }",
-    "  if ($scan) { $body.scan = $scan; $body.net = Ping-Host '8.8.8.8' 3; $body.net.n = 3 }",
+    "  if ($scan) { $body.scan = $scan; if ($clock.ElapsedMilliseconds -ge $nextNet) { $nextNet = $clock.ElapsedMilliseconds + 20000; $body.net = Ping-Host '8.8.8.8' 3; $body.net.n = 3 } }",
     "  try {",
     "    $resp = Send $body; $scan = $null",
-    "    if ($ssid) { Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + $ssid + '  signal ' + $body.signal + ' %') }",
+    "    if ($ssid) { if ($body.net) { Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + $ssid + '  signal ' + $body.signal + ' %') } }",
     "    elseif ($body.error -eq 'location') { Write-Host '  Windows cache le nom du Wi-Fi : activez la Localisation (Paramètres > Confidentialité et sécurité > Localisation).' -ForegroundColor Yellow }",
     "    else { Write-Host '  Ce PC n''est pas connecté en Wi-Fi.' -ForegroundColor Yellow }",
     "    $a = $resp.action",

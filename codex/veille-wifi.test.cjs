@@ -76,6 +76,31 @@ test('Surveillance du Wi-Fi : apprend les appareils habituels, signale le nouvea
   } finally { t.close(); VT.setVendorFetch(null); }
 });
 
+test('Surveillance du Wi-Fi : un nouvel appareil est signalé au tour suivant, 5 secondes après (plus 20 secondes)', async () => {
+  VT.setVendorFetch(async () => ({ok: false, status: 404, text: async () => ''}));
+  const t = await setup();
+  try {
+    const l = VT.link(t.store, t.awa);
+    await t.page('veille', l.token, {on: true});
+    await later(2000, () => t.page('wifi', l.token, {...WIFI, scan: scanOf([])}));
+    // Après la minute d'apprentissage : un tour sans nouveauté, puis 5 secondes plus tard l'appareil arrive.
+    await later(VW.LEARN_MS + 5000, () => t.page('wifi', l.token, {...WIFI, scan: scanOf([])}));
+    await later(VW.LEARN_MS + 10000, () => t.page('wifi', l.token, {...WIFI, scan: scanOf([{ip: '192.168.1.78', mac: 'C6-00-00-00-00-78'}])}));
+    await settle();
+    let v = (await t.page('veille', l.token)).data;
+    assert.equal(v.log.length, 1, 'le tour 5 secondes après le précédent est pris en compte');
+    // Un renvoi trop rapproché (moins de 3 secondes) reste ignoré : pas d'emballement du serveur.
+    await later(VW.LEARN_MS + 11000, () => t.page('wifi', l.token, {...WIFI, scan: scanOf([{ip: '192.168.1.79', mac: 'C6-00-00-00-00-79'}])}));
+    await settle();
+    v = (await t.page('veille', l.token)).data;
+    assert.equal(v.log.length, 1, 'tour ignoré : moins de 3 secondes après le précédent');
+    // Le fichier du PC fait bien un tour toutes les 5 secondes, et mesure Internet toutes les 20 secondes.
+    const cmd = VT.agent('https://guardian.test', l.token);
+    assert.match(cmd, /\$nextScan = \$clock\.ElapsedMilliseconds \+ 5000/);
+    assert.match(cmd, /\$nextNet = \$clock\.ElapsedMilliseconds \+ 20000; \$body\.net = Ping-Host '8\.8\.8\.8' 3/);
+  } finally { t.close(); VT.setVendorFetch(null); }
+});
+
 test('Surveillance du Wi-Fi : le message part sur le WhatsApp déjà relié au compte, 6 par heure au plus', async () => {
   const t = await setup();
   try {
