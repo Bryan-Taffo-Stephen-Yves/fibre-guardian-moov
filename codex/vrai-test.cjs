@@ -266,12 +266,39 @@ function scanSave(row, p, scan, now = Date.now()) {
   for (const d of list) { const b = baseLabel(d); if (d.base !== b) { d.base = b; p.seen[b] = (p.seen[b] || 0) + 1; d.n = p.seen[b]; } }
   const count = {}; for (const d of list) if (!d.gone) count[d.base] = (count[d.base] || 0) + 1;
   for (const d of list) d.label = count[d.base] > 1 || d.n > 1 ? d.base + ' ' + d.n : d.base;
-  p.scan = {at: now, medium: scan.medium === 'cable' ? 'cable' : 'wifi', subnet: myIp && prefix ? myIp.split('.').slice(0, 3).join('.') + '.0/' + Math.max(24, prefix) : null};
+  p.scan = {at: now, medium: ['cable', 'hotspot'].includes(scan.medium) ? scan.medium : 'wifi', subnet: myIp && prefix ? myIp.split('.').slice(0, 3).join('.') + '.0/' + Math.max(24, prefix) : null};
   if (unknown.length) askVendors([...new Set(unknown)]);
   // Surveillance du Wi-Fi (veille-wifi.cjs) : les appareils là maintenant, avec leur adresse MAC le temps du calcul seulement.
   if (onScan) try { onScan(row, list.filter(d => !d.gone && macs.has(d.id)).map(d => ({mac: macs.get(d.id), kind: d.kind, label: d.label}))); } catch {}
 }
 let onScan = null, onBeat = null;
+// Données de chaque appareil : quand les téléphones passent par le partage de connexion du PC (« Point d'accès mobile »
+// de Windows), tout leur trafic traverse le PC. Le fichier PC compte alors, pour chaque adresse du partage, les octets
+// reçus et envoyés (il lit seulement la taille et l'adresse de chaque paquet, jamais son contenu) et envoie ces compteurs.
+// Guardian en tire le total depuis le début et le débit du moment. Rien n'est gardé en base.
+const bytes = v => v !== null && v !== '' && v !== undefined && Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.min(Math.round(Number(v)), 1e15) : null;
+function usageSave(p, usage, count, now = Date.now()) {
+  p.count = ['on', 'admin', 'error'].includes(count) ? count : null;
+  if (!Array.isArray(usage) || !p.scan) return;
+  const byIp = new Map(); for (const d of p.devices.values()) if (!d.gone && d.kind !== 'pc') byIp.set(d.ip, d);
+  const seen = new Set();
+  for (const u of usage.slice(0, MAX_DEVICES)) {
+    const ip = lanIp(u?.ip), down = bytes(u?.down), up = bytes(u?.up), d = ip && byIp.get(ip);
+    if (!d || down === null || up === null || seen.has(d.id)) continue;
+    seen.add(d.id);
+    const m = d.meter;
+    if (m && down >= m.down && up >= m.up) {
+      const dd = down - m.down, du = up - m.up, dt = (now - m.at) / 1000;
+      d.down += dd; d.up += du;
+      if (dt > 0) d.mbps = Math.round((dd + du) * 8 / dt / 1e4) / 100;
+    } else if (!m) { d.down = down; d.up = up; d.mbps = 0; } // premiers chiffres : tout ce que le PC a compté pour cet appareil
+    // (compteurs remis à zéro, fichier PC relancé : on garde les totaux et on repart de ces nouveaux chiffres)
+    d.meter = {down, up, at: now};
+  }
+  // Un appareil sans trafic depuis le dernier envoi : débit nul.
+  for (const d of byIp.values()) if (d.meter && !seen.has(d.id) && now - d.meter.at > 6000) d.mbps = 0;
+  p.usageAt = now;
+}
 // Un PC branché en ce moment sur l'un des liens de ce compte (écran Appareils de l'application).
 function pcLive(s, uid, now = Date.now()) {
   return s.all('SELECT token_hash FROM speed_links WHERE user_id=? AND expires>?', uid, now).some(r => { const p = PC.get(r.token_hash); return !!p && now - p.at < LIVE_MS; });
@@ -279,11 +306,21 @@ function pcLive(s, uid, now = Date.now()) {
 // Ce que la page affiche : les appareils là maintenant, ceux partis il y a peu, et les dernières arrivées et départs.
 function devicesView(p, now = Date.now()) {
   if (!p?.scan) return {devices: [], gone: [], events: [], scan: null};
-  const show = d => ({id: d.id, kind: d.kind, label: d.label, vendor: d.vendor, ip: d.ip, mac: d.mac, random: d.random, since: d.initial ? null : now - d.first});
+  const show = d => ({id: d.id, kind: d.kind, label: d.label, vendor: d.vendor, ip: d.ip, mac: d.mac, random: d.random, since: d.initial ? null : now - d.first,
+    down: d.meter ? d.down : null, up: d.meter ? d.up : null, mbps: d.meter ? d.mbps ?? 0 : null});
   const all = [...p.devices.values()].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.first - b.first);
   return {devices: all.filter(d => !d.gone).map(show), gone: all.filter(d => d.gone).slice(-5).map(d => ({...show(d), ago: now - d.left})),
     events: p.events.slice(-6).reverse().map(e => ({type: e.type, ago: now - e.at, label: p.devices.get(e.id)?.label || 'Un appareil'})),
-    scan: {...p.scan, age: now - p.scan.at}};
+    scan: {...p.scan, age: now - p.scan.at, counting: p.count || null}};
+}
+// Écran Appareils de l'application : les appareils vus en ce moment par le PC branché sur ce compte, avec leurs données.
+function pcDevices(s, uid, now = Date.now()) {
+  for (const r of s.all('SELECT token_hash FROM speed_links WHERE user_id=? AND expires>? ORDER BY created DESC', uid, now)) {
+    const p = PC.get(r.token_hash); if (!p || !(now - p.at < LIVE_MS) || !p.scan) continue;
+    const v = devicesView(p, now);
+    return {medium: p.scan.medium, counting: p.count || null, devices: v.devices.filter(d => !['box', 'partage', 'pc'].includes(d.kind)).map(({id, kind, label, down, up, mbps, since}) => ({id, kind, label, down, up, mbps, since}))};
+  }
+  return null;
 }
 // Ce que Guardian dit d'une opération, en mots simples, à partir de ce que le PC a mesuré.
 function opText(op, r, before = []) {
@@ -327,6 +364,7 @@ function wifiSave(row, d) {
   p.w = error ? {error} : {ssid: text(unmangle(d?.ssid), 64), signal: int(d?.signal, 0, 100), channel: int(d?.channel, 0, 200), band: text(d?.band, 20), radio: text(unmangle(d?.radio), 30), rxMbps: int(d?.rxMbps, 0, 100000), txMbps: int(d?.txMbps, 0, 100000), auth: text(unmangle(d?.auth), 40), computer: text(d?.computer, 40)};
   p.at = now;
   if (d?.scan) scanSave(row, p, d.scan, now);
+  usageSave(p, d?.usage, d?.count, now);
   // Surveillance du Wi-Fi (veille-wifi.cjs) : le PC est vivant ; avec le tour du réseau, sa mesure d'Internet.
   if (onBeat) try { onBeat(row, {net: d?.net && typeof d.net === 'object' ? {ms: int(d.net.ms, 0, 60000), lost: int(d.net.lost, 0, 10), n: int(d.net.n, 1, 10)} : null}); } catch {}
   // Une opération en attente part avec la réponse ; le PC ne sait faire que celles de la liste.
@@ -368,6 +406,7 @@ function agent(origin, token) {
     "Write-Host '  tester la box, tester Internet, réparer le DNS, reconnecter le Wi-Fi.'",
     "Write-Host '  Si « Me prévenir sur WhatsApp » est activé, Guardian vous écrit quand un nouvel appareil arrive'",
     "Write-Host '  ou quand Internet coupe. Toutes les 20 secondes, il mesure aussi Internet (3 petits signaux).'",
+    "Write-Host '  Si ce PC partage sa connexion (Point d''accès mobile), il compte aussi les données de chaque appareil connecté à lui.'",
     "Write-Host '  Laissez cette fenêtre ouverte. Fermez-la pour arrêter.'",
     "Write-Host ''",
     "function Field($text, $pattern) { $m = [regex]::Match($text, '(?mi)^\\s*(' + $pattern + ')[^:\\r\\n]*:\\s*(.+?)\\s*$'); if ($m.Success) { $m.Groups[2].Value } else { $null } }",
@@ -394,11 +433,56 @@ function agent(origin, token) {
     // Le tour du réseau : une sonde à chaque adresse, puis la table des voisins de Windows (lecture seule). Un appareil compte
     // s'il a répondu à la sonde, si Windows vient de le joindre (Reachable), ou s'il était là au tour précédent ; les
     // entrées anciennes (Stale) seules ne comptent pas, pour ne pas montrer d'appareils fantômes.
+    // Partage de connexion de Windows (« Point d'accès mobile ») : sa carte virtuelle prend l'adresse 192.168.137.1.
+    // Quand il est allumé, Guardian regarde les appareils connectés AU PC (le PC joue le rôle de la box) et compte leurs données.
+    "function Hotspot-Info {",
+    "  try {",
+    "    $a = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $_.IPAddress -like '192.168.137.*' } | Select-Object -First 1",
+    "    if (-not $a) { $v = Get-NetAdapter -IncludeHidden -ErrorAction Stop | Where-Object { $_.Status -eq 'Up' -and $_.InterfaceDescription -match 'Wi-Fi Direct|Hosted Network' } | Select-Object -First 1; if ($v) { $a = Get-NetIPAddress -InterfaceIndex $v.ifIndex -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $_.IPAddress -notlike '169.254.*' } | Select-Object -First 1 } }",
+    "    if (-not $a) { return $null }",
+    "    $up = Get-NetAdapter -InterfaceIndex $a.InterfaceIndex -IncludeHidden -ErrorAction SilentlyContinue; if (-not $up -or $up.Status -ne 'Up') { return $null }",
+    "    @{ nic = $a.InterfaceIndex; ip = [string]$a.IPAddress; len = [int]$a.PrefixLength }",
+    "  } catch { return $null }",
+    "}",
+    // Le compteur : un petit programme C# (compilé par Windows, rien à installer) écoute la carte du partage et additionne,
+    // pour chaque adresse du partage, la taille des paquets reçus et envoyés. Il ne lit que l'en-tête (adresses, taille).
+    // Windows exige les droits administrateur pour cette écoute : sans eux, la fenêtre explique comment relancer (clic droit).
+    "$script:countCode = @'",
+    'using System; using System.Net; using System.Net.Sockets; using System.Threading; using System.Collections.Generic;',
+    'public static class GuardianCount {',
+    '  static Socket s; static readonly object L = new object(); static Dictionary<uint, long[]> c = new Dictionary<uint, long[]>(); static uint net, mask;',
+    '  static uint U(byte[] b, int o) { return ((uint)b[o] << 24) | ((uint)b[o + 1] << 16) | ((uint)b[o + 2] << 8) | b[o + 3]; }',
+    '  public static bool Start(string ip, int len) {',
+    '    try { mask = len <= 0 ? 0u : 0xFFFFFFFFu << (32 - len); net = U(IPAddress.Parse(ip).GetAddressBytes(), 0) & mask;',
+    '      s = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.IP); s.ReceiveBufferSize = 1 << 22;',
+    '      s.Bind(new IPEndPoint(IPAddress.Parse(ip), 0)); s.IOControl(IOControlCode.ReceiveAll, BitConverter.GetBytes(1), new byte[4]);',
+    '      Thread t = new Thread(Loop); t.IsBackground = true; t.Start(); return true; } catch { return false; } }',
+    '  static void Loop() { byte[] b = new byte[65536]; while (true) { int n; try { n = s.Receive(b); } catch { return; }',
+    '    if (n < 20 || (b[0] >> 4) != 4) continue; long size = (b[2] << 8) | b[3]; uint src = U(b, 12), dst = U(b, 16);',
+    '    bool si = (src & mask) == net, di = (dst & mask) == net; if (si == di) continue;',
+    '    lock (L) { uint k = di ? dst : src; long[] v; if (!c.TryGetValue(k, out v)) { if (c.Count >= 64) continue; v = new long[2]; c[k] = v; } v[di ? 0 : 1] += size; } } }',
+    '  public static string Snapshot() { lock (L) { List<string> o = new List<string>(); foreach (KeyValuePair<uint, long[]> kv in c) { uint k = kv.Key; o.Add(((k >> 24) & 255) + "." + ((k >> 16) & 255) + "." + ((k >> 8) & 255) + "." + (k & 255) + "=" + kv.Value[0] + "/" + kv.Value[1]); } return string.Join(";", o.ToArray()); } }',
+    '}',
+    "'@",
+    "$script:admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)",
+    "$script:counting = $false; $script:countTried = $false; $script:countNote = $null",
+    "function Start-Count($hs) {",
+    "  if ($script:counting -or $script:countTried) { return }; $script:countTried = $true",
+    "  if (-not $script:admin) {",
+    "    $script:countNote = 'admin'",
+    "    Write-Host ''; Write-Host '  Ce PC partage sa connexion. Pour compter les données de chaque appareil, Guardian a besoin des droits administrateur :' -ForegroundColor Yellow",
+    "    Write-Host '  fermez cette fenêtre, faites un clic droit sur Guardian-Wi-Fi.cmd, puis « Exécuter en tant qu''administrateur », et répondez Oui.' -ForegroundColor Yellow",
+    "    Write-Host '  En attendant, Guardian continue sans compter les données.' -ForegroundColor DarkGray",
+    "    return",
+    "  }",
+    "  try { if (-not ('GuardianCount' -as [type])) { Add-Type -TypeDefinition $script:countCode -Language CSharp -ErrorAction Stop }; if ([GuardianCount]::Start($hs.ip, $hs.len)) { $script:counting = $true; $script:countNote = 'on'; Write-Host '  Guardian compte maintenant les données de chaque appareil connecté à ce PC.' -ForegroundColor Green } else { $script:countNote = 'error' } } catch { $script:countNote = 'error' }",
+    "  if ($script:countNote -eq 'error') { Write-Host '  Guardian n''a pas pu compter les données sur ce PC (le pare-feu ou l''antivirus bloque peut-être l''écoute).' -ForegroundColor DarkGray }",
+    "}",
     "$script:prev = @{}",
     "function Scan-Lan {",
     "  try {",
-    "    $n = Net-Info; if (-not $n) { return $null }",
-    "    $nic = $n.nic; $gw = $n.gateway",
+    "    $hs = Hotspot-Info",
+    "    if ($hs) { $nic = $hs.nic; $gw = $hs.ip; $medium = 'hotspot'; Start-Count $hs } else { $n = Net-Info; if (-not $n) { return $null }; $nic = $n.nic; $gw = $n.gateway; $medium = $n.medium }",
     "    $addr = Get-NetIPAddress -InterfaceIndex $nic -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $_.IPAddress -notlike '169.254.*' } | Select-Object -First 1",
     "    if (-not $addr) { return $null }",
     "    $ip = [string]$addr.IPAddress; $len = [int]$addr.PrefixLength; if ($len -lt 24) { $len = 24 }; if ($len -gt 30) { $len = 30 }",
@@ -408,10 +492,10 @@ function agent(origin, token) {
     "    try { [Threading.Tasks.Task]::WaitAll($tasks.ToArray(), 2500) | Out-Null } catch {}",
     "    $ok = @{}; foreach ($t in $tasks) { try { if ($t.Status -eq 'RanToCompletion' -and $t.Result.Status -eq 'Success') { $ok[[string]$t.Result.Address] = $true } } catch {} }",
     "    Start-Sleep -Milliseconds 1000",
-    "    $self = $null; try { $self = [string](Get-NetAdapter -InterfaceIndex $nic -ErrorAction Stop).MacAddress } catch {}",
+    "    $self = $null; try { $self = [string](Get-NetAdapter -InterfaceIndex $nic -IncludeHidden -ErrorAction Stop).MacAddress } catch {}",
     "    $now = @{}; $list = @(Get-NetNeighbor -InterfaceIndex $nic -AddressFamily IPv4 -ErrorAction Stop | Where-Object { $a = [string]$_.IPAddress; $a.StartsWith($base + '.') -and $_.LinkLayerAddress -and [string]$_.LinkLayerAddress -ne '00-00-00-00-00-00' -and ([string]$_.State -eq 'Reachable' -or $ok.ContainsKey($a) -or $script:prev.ContainsKey($a)) } | Select-Object -First 80 | ForEach-Object { if ([string]$_.State -eq 'Reachable' -or $ok.ContainsKey([string]$_.IPAddress)) { $now[[string]$_.IPAddress] = $true }; @{ ip = [string]$_.IPAddress; mac = [string]$_.LinkLayerAddress } })",
     "    $script:prev = $now",
-    "    return @{ ip = $ip; prefix = $len; gateway = $gw; mac = $self; medium = $n.medium; devices = $list }",
+    "    return @{ ip = $ip; prefix = $len; gateway = $gw; mac = $self; medium = $medium; devices = $list }",
     "  } catch { return $null }",
     "}",
     "$labels = @{ box = 'Tester la box'; internet = 'Tester Internet'; dns = 'Réparer le DNS'; wifi = 'Reconnecter le Wi-Fi' }",
@@ -420,7 +504,7 @@ function agent(origin, token) {
     // La fenêtre n'écrit le nombre d'appareils que s'il change (ou toutes les 20 secondes), pour rester lisible.
     "$clock = [Diagnostics.Stopwatch]::StartNew(); $nextScan = 0; $nextNet = 0; $nextSay = 0; $lastCount = -1; $scan = $null",
     "while ($true) {",
-    "  if ($clock.ElapsedMilliseconds -ge $nextScan) { $nextScan = $clock.ElapsedMilliseconds + 5000; $fresh = Scan-Lan; if ($fresh) { $scan = $fresh; $count = @($fresh.devices).Count; if ($count -ne $lastCount -or $clock.ElapsedMilliseconds -ge $nextSay) { $where = 'ce Wi-Fi'; if ($fresh.medium -eq 'cable') { $where = 'ce réseau' }; $color = 'Gray'; if ($lastCount -ge 0 -and $count -gt $lastCount) { $color = 'Green' }; Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + $count + ' appareils vus sur ' + $where) -ForegroundColor $color; $lastCount = $count; $nextSay = $clock.ElapsedMilliseconds + 20000 } } }",
+    "  if ($clock.ElapsedMilliseconds -ge $nextScan) { $nextScan = $clock.ElapsedMilliseconds + 5000; $fresh = Scan-Lan; if ($fresh) { $scan = $fresh; $count = @($fresh.devices).Count; if ($count -ne $lastCount -or $clock.ElapsedMilliseconds -ge $nextSay) { $where = 'ce Wi-Fi'; if ($fresh.medium -eq 'cable') { $where = 'ce réseau' }; if ($fresh.medium -eq 'hotspot') { $where = 'le partage de ce PC' }; $color = 'Gray'; if ($lastCount -ge 0 -and $count -gt $lastCount) { $color = 'Green' }; Write-Host ('  ' + (Get-Date -Format 'HH:mm:ss') + '  ' + $count + ' appareils vus sur ' + $where) -ForegroundColor $color; $lastCount = $count; $nextSay = $clock.ElapsedMilliseconds + 20000 } } }",
     "  $out = (netsh wlan show interfaces) | Out-String",
     "  $ssid = Field $out 'SSID'",
     "  if ($ssid) {",
@@ -428,6 +512,8 @@ function agent(origin, token) {
     "  } elseif ($out -match 'location|localisation|emplacement') { $body = @{ error = 'location' } }",
     "  elseif ($out -match 'wlansvc|not running|pas en cours') { $body = @{ error = 'netsh' } }",
     "  else { $body = @{ error = 'no-wifi' } }",
+    "  if ($script:counting) { $u = @(); foreach ($part in ([GuardianCount]::Snapshot()).Split(';')) { $kv = $part.Split('='); if ($kv.Count -eq 2) { $b = $kv[1].Split('/'); $u += @{ ip = $kv[0]; down = [long]$b[0]; up = [long]$b[1] } } }; $body.usage = $u }",
+    "  if ($script:countNote) { $body.count = $script:countNote }",
     "  if ($scan) { $body.scan = $scan; if ($clock.ElapsedMilliseconds -ge $nextNet) { $nextNet = $clock.ElapsedMilliseconds + 20000; $body.net = Ping-Host '8.8.8.8' 3; $body.net.n = 3 } }",
     "  try {",
     "    $resp = Send $body; $scan = $null",
@@ -464,5 +550,5 @@ function info(s, row) {
     scenarios: Object.entries(SCENARIOS).map(([id, f]) => ({id, label: f.label, hint: f.hint, down: f.down ?? 0, add: f.add ?? 0, jitter: f.jitter ?? 0, loss: f.loss ?? 100, cut: !!f.cut, signal: f.signal ?? 1}))};
 }
 
-module.exports = {unmangle, place, pcLive, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
+module.exports = {unmangle, place, pcLive, pcDevices, usageSave, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
   setVendorFetch: f => { vendorFetch = f || ((...a) => fetch(...a)); VENDOR_QUEUE.length = 0; vendorLast = 0; }, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};

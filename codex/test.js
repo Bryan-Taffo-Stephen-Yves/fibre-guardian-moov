@@ -194,11 +194,13 @@
  // On compte les appareils reliés à la box (la box elle-même est dans la liste, pas dans le compte), partout pareil.
  const linked=list=>(list||[]).filter(d=>d.kind!=='box'&&d.kind!=='partage').length;
  const plural=(n,word)=>n+' '+word+(n>1?'s':'');
+ // Données comptées par le PC quand l'appareil passe par son partage de connexion.
+ const vol=b=>{const f=v=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:1}).format(v);return b>=1e9?f(b/1e9)+' Go':b>=1e6?f(b/1e6)+' Mo':f(b/1e3)+' Ko';};
  function devicesView(){
-  const list=lan.devices||[],ev=(lan.events||[]).find(e=>e.ago<180000),n=linked(list),cable=lan.scan?.medium==='cable';
-  return [el('div',{class:'vt-devices-head'},el('h3',{text:cable?'Sur ce réseau en ce moment':'Sur ce Wi-Fi en ce moment'}),el('span',{class:'vt-count',text:plural(n,'connecté')})),
+  const list=lan.devices||[],ev=(lan.events||[]).find(e=>e.ago<180000),n=linked(list),cable=lan.scan?.medium==='cable',hot=lan.scan?.medium==='hotspot';
+  return [el('div',{class:'vt-devices-head'},el('h3',{text:hot?'Connectés au partage de ce PC':cable?'Sur ce réseau en ce moment':'Sur ce Wi-Fi en ce moment'}),el('span',{class:'vt-count',text:plural(n,'connecté')})),
    ev?el('p',{class:'vt-dev-event '+(ev.type==='arrive'?'in':'out'),role:'status',text:ev.label+(ev.type==='arrive'?' vient d’arriver':' vient de partir')+', il y a '+ago(ev.ago)+'.'}):null,
-   el('ul',{class:'vt-dev-list'},...list.map(d=>el('li',{class:'vt-dev'},devIcon(d.kind),el('div',{class:'vt-dev-text'},el('b',{text:d.label}),el('small',{text:[d.ip,d.mac,d.random?'adresse privée':null].filter(Boolean).join(' · ')})),d.since==null?null:el('span',{class:'vt-dev-since',text:'arrivé il y a '+ago(d.since)})))),
+   el('ul',{class:'vt-dev-list'},...list.map(d=>el('li',{class:'vt-dev'},devIcon(d.kind),el('div',{class:'vt-dev-text'},el('b',{text:d.label}),el('small',{text:[d.ip,d.mac,d.random?'adresse privée':null].filter(Boolean).join(' · ')}),d.down==null?null:el('small',{class:'vt-dev-data',text:'Reçu '+vol(d.down)+' · envoyé '+vol(d.up)+' · '+String(d.mbps||0).replace('.',',')+' Mb/s'})),d.since==null?null:el('span',{class:'vt-dev-since',text:'arrivé il y a '+ago(d.since)})))),
    el('p',{class:'vt-devices-note',text:'Le PC regarde '+(cable?'le réseau':'le Wi-Fi')+' toutes les 5 secondes, sans lire le nom des appareils. Sous chaque appareil : son adresse dans la maison et la fin du numéro de sa carte Wi-Fi. « Adresse privée » : un téléphone qui cache son vrai numéro pour ne pas être suivi. Un téléphone en veille peut disparaître quelques minutes.'})].filter(Boolean);
  }
 
