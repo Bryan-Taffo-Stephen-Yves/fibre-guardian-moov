@@ -128,7 +128,24 @@ async function deliver(s, cfg, uid, alert, {fetchImpl = fetch, now = Date.now()}
   if (alert.kind === 'nouveau' && !fresh.on) return {channel};
   fresh.log.push({kind: alert.kind, text: alert.text, at: alert.at || now, channel});
   save(s, uid, fresh);
+  inApp(s, uid, alert, now);
   return {channel};
+}
+
+// La même alerte arrive aussi dans l'application : cloche, « Mes messages » et liste « Récents » de l'accueil.
+// L'application la montre en bandeau, et en notification du téléphone si le client l'a autorisé (écran Appareils).
+// La version du parcours ne change pas : une action en cours du client n'est jamais refusée à cause d'une alerte.
+const TITLES = {nouveau: 'Nouvel appareil sur votre Wi-Fi', coupure: 'Votre connexion semble coupée', retour: 'Votre connexion est revenue', instable: 'Votre connexion est instable', conso: 'Un appareil consomme beaucoup'};
+function inApp(s, uid, alert, now = Date.now()) {
+  try {
+    const J = require('./journey-store.cjs'), st = J.get(s, uid);
+    if (!st || !Array.isArray(st.notifications)) return;
+    const at = alert.at || now;
+    st.notifications.unshift({key: 'wifi:' + alert.kind + ':' + at + ':' + crypto.randomBytes(3).toString('hex'), home: 'home-1', at, kind: 'wifi', page: 'devices',
+      title: TITLES[alert.kind] || 'Alerte de votre Wi-Fi', body: String(alert.text || '').split('\n')[0], read: false});
+    st.notifications = st.notifications.slice(0, 100);
+    J.put(s, uid, st);
+  } catch {} // l'alerte est déjà notée dans la surveillance : l'application la retrouvera dans l'écran Appareils
 }
 
 // Branché sur le tour du Wi-Fi du PC (vrai-test.cjs) : nouveaux appareils → alertes, envoyées sans bloquer le PC.
@@ -222,4 +239,4 @@ async function regieHeavy(s, cfg, adminUid, copy, {fetchImpl = fetch, now = Date
   return {device: device.label, text: alert.text, phones: users.length, whatsapp};
 }
 
-module.exports = {beat, check, beatHook, textDown, textBack, textUnstable, SILENT_MS, BEATS, regieHeavy, migrate, view, toggle, mine, scan, heavy, heavyDevice, deliver, hook, keepLink, isOn, phoneOf, textNew, textHeavy, wid, LEARN_MS, HOUR_MAX};
+module.exports = {inApp, TITLES, beat, check, beatHook, textDown, textBack, textUnstable, SILENT_MS, BEATS, regieHeavy, migrate, view, toggle, mine, scan, heavy, heavyDevice, deliver, hook, keepLink, isOn, phoneOf, textNew, textHeavy, wid, LEARN_MS, HOUR_MAX};

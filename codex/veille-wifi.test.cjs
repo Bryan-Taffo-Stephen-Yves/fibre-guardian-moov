@@ -121,6 +121,34 @@ test('Surveillance du Wi-Fi : le message part sur le WhatsApp déjà relié au c
   } finally { t.close(); }
 });
 
+test('Surveillance du Wi-Fi : chaque alerte arrive aussi dans l’application (cloche, Mes messages), sans changer la version du parcours', async () => {
+  const t = await setup();
+  try {
+    const J = require('./journey-store.cjs');
+    J.put(t.store, t.awa, J.seed());
+    const before = J.get(t.store, t.awa), version = before.version, count = before.notifications.length;
+    VW.toggle(t.store, t.awa, true, {now: Date.now() - VW.LEARN_MS - 1000});
+    const [alert] = VW.scan(t.store, t.awa, [{mac: 'c6:00:00:00:00:02', kind: 'mobile', label: 'Téléphone ou tablette 4'}]);
+    assert.equal((await VW.deliver(t.store, null, t.awa, alert)).channel, 'app');
+    let st = J.get(t.store, t.awa);
+    assert.equal(st.notifications.length, count + 1);
+    const n = st.notifications[0];
+    assert.equal(n.kind, 'wifi'); assert.equal(n.home, 'home-1'); assert.equal(n.read, false); assert.equal(n.page, 'devices');
+    assert.equal(n.title, 'Nouvel appareil sur votre Wi-Fi');
+    assert.match(n.body, /^Un nouvel appareil vient de se connecter à votre Wi-Fi à .*« Téléphone ou tablette 4 »\.$/, 'la première phrase seulement');
+    assert.equal(st.version, version, 'une action en cours du client n’est pas refusée à cause d’une alerte');
+    // Coupure et retour : aussi dans l'application, avec leur propre titre.
+    await VW.deliver(t.store, null, t.awa, {kind: 'coupure', text: VW.textDown(Date.now() - 60000), at: Date.now()});
+    await VW.deliver(t.store, null, t.awa, {kind: 'retour', text: VW.textBack(Date.now() - 120000, Date.now()), at: Date.now()});
+    st = J.get(t.store, t.awa);
+    assert.deepEqual(st.notifications.slice(0, 2).map(x => x.title), ['Votre connexion est revenue', 'Votre connexion semble coupée']);
+    assert.equal(new Set(st.notifications.map(x => x.key)).size, st.notifications.length, 'chaque alerte a sa propre clé');
+    // Sans parcours (compte jamais ouvert) : rien n'est créé, l'alerte reste dans l'écran Appareils.
+    await VW.deliver(t.store, null, t.chef, {kind: 'conso', text: 'x', at: Date.now()});
+    assert.equal(J.get(t.store, t.chef), null);
+  } finally { t.close(); }
+});
+
 test('Surveillance du Wi-Fi : depuis l’écran Appareils (session), et « grosse consommation » réservée à l’administrateur dans la Régie', async () => {
   const t = await setup();
   try {
