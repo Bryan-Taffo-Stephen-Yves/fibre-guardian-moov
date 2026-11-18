@@ -55,8 +55,35 @@
     h('button',{type:'button',role:'switch','aria-checked':!!w.on,'aria-labelledby':'du-watch-title',className:'du-switch',disabled:busy,onClick:()=>send({on:!w.on})},h('i'))),
    w.pending?.length>0&&h('ul',{className:'du-watch-list','aria-label':'Nouveaux appareils'},w.pending.slice(0,3).map(p=>h('li',{key:p.id},h('span',null,h('strong',null,p.label),h('small',null,'Arrivé à '+clock(p.at)+(p.night?', en pleine nuit':''))),button('C’est à moi',()=>send({mine:p.id}),{disabled:busy})))),
    last&&h('p',{className:'du-watch-last'+(['conso','coupure','instable'].includes(last.kind)?' heavy':''),role:'status'},h('strong',null,(last.whatsapp?'Envoyé sur WhatsApp à ':'Alerte de ')+clock(last.at)),' ',last.text.split('\n')[0]),
+   w.on&&h(PhoneAlerts),
    error?h('p',{role:'alert',className:'j-error'},error):null,
    h('small',{className:'du-watch-note'},'Guardian ne lit jamais ce que font vos appareils : seulement leur arrivée et la quantité de données.'));
+ }
+ // Les alertes Wi-Fi arrivent aussi dans l'application : un bandeau en haut de l'écran (12 secondes), et une notification
+ // du téléphone si le client l'a autorisé, tant que l'application est ouverte (même en arrière-plan).
+ // Sur iPhone, Safari ne le permet qu'à l'application ajoutée à l'écran d'accueil : la carte le dit simplement.
+ const canNotify=()=>typeof window!=='undefined'&&'Notification' in window;
+ async function showPhone(n){
+  try{if(!canNotify()||Notification.permission!=='granted')return false;
+   const opts={body:n.body,tag:n.key,icon:'pwa/icon-192.png',badge:'pwa/icon-192.png',data:{page:n.page||'devices'}};
+   const reg=navigator.serviceWorker?await Promise.race([navigator.serviceWorker.getRegistration(),new Promise(r=>setTimeout(()=>r(null),1500))]):null;
+   if(reg?.showNotification){await reg.showNotification(n.title,opts);return true;}
+   new Notification(n.title,opts);return true;}catch{return false;}
+ }
+ function PhoneAlerts(){
+  const [perm,PM]=S(()=>canNotify()?Notification.permission:'absent');
+  if(perm==='granted')return h('p',{className:'du-phone on'},h(Icon,{name:'check'}),'Les alertes s’affichent aussi sur ce téléphone.');
+  if(perm==='absent')return h('p',{className:'du-phone'},'Sur iPhone : ajoutez Fibre Guardian à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil ») pour recevoir aussi les alertes sur le téléphone.');
+  if(perm==='denied')return h('p',{className:'du-phone'},'Les notifications sont bloquées pour Fibre Guardian. Autorisez-les dans les réglages du téléphone.');
+  return h('div',{className:'du-phone ask'},h('span',null,'Recevoir aussi les alertes sur ce téléphone'),button('Activer',async()=>{try{const p=await Notification.requestPermission();PM(p);if(p==='granted')showPhone({key:'wifi-essai',title:'Notifications activées',body:'Guardian vous préviendra ici aussi.'});}catch{}},{className:'j-button primary'}));
+ }
+ function Banner({alert,onOpen,onClose}){
+  const close=R(onClose);close.current=onClose;
+  E(()=>{const t=setTimeout(()=>close.current(),12000);return()=>clearTimeout(t);},[alert.key]);
+  return h('div',{className:'du-banner',role:'alert'},h('span',{className:'du-device-icon'},h(Icon,{name:'shield'})),
+   h('div',{className:'du-banner-text'},h('strong',null,alert.title),h('p',null,alert.body)),
+   button('Voir',onOpen,{className:'j-button primary du-banner-open'}),
+   button(h(Icon,{name:'close'}),onClose,{className:'du-banner-close','aria-label':'Fermer l’alerte'}));
  }
  function View({api,state,busy,onAction,onAsk,onConfirm}){
   const [period,P]=S('24h'),[data,D]=S(null),[error,X]=S(''),[loading,L]=S(true),[query,Q]=S(''),[selected,SEL]=S(null),[manage,MG]=S(null),apiRef=R(api);apiRef.current=api;
@@ -79,5 +106,5 @@
    chosen&&h('p',{className:'j-sr','aria-live':'polite'},'Graphique filtré sur '+chosen.name),
    (()=>{const d=devices.find(x=>x.id===manage&&x.present!==false);return d&&h(Manage,{device:d,actual:detail(d),busy,onClose:()=>MG(null),onAction,onConfirm});})());
  }
- window.FGDevices={View,Icon};
+ window.FGDevices={View,Icon,Banner,showPhone};
 })();

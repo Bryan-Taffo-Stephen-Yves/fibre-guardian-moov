@@ -199,7 +199,7 @@
   return [el('div',{class:'vt-devices-head'},el('h3',{text:cable?'Sur ce réseau en ce moment':'Sur ce Wi-Fi en ce moment'}),el('span',{class:'vt-count',text:plural(n,'connecté')})),
    ev?el('p',{class:'vt-dev-event '+(ev.type==='arrive'?'in':'out'),role:'status',text:ev.label+(ev.type==='arrive'?' vient d’arriver':' vient de partir')+', il y a '+ago(ev.ago)+'.'}):null,
    el('ul',{class:'vt-dev-list'},...list.map(d=>el('li',{class:'vt-dev'},devIcon(d.kind),el('div',{class:'vt-dev-text'},el('b',{text:d.label}),el('small',{text:[d.ip,d.mac,d.random?'adresse privée':null].filter(Boolean).join(' · ')})),d.since==null?null:el('span',{class:'vt-dev-since',text:'arrivé il y a '+ago(d.since)})))),
-   el('p',{class:'vt-devices-note',text:'Le PC regarde '+(cable?'le réseau':'le Wi-Fi')+' toutes les 20 secondes, sans lire le nom des appareils. Sous chaque appareil : son adresse dans la maison et la fin du numéro de sa carte Wi-Fi. « Adresse privée » : un téléphone qui cache son vrai numéro pour ne pas être suivi. Un téléphone en veille peut disparaître quelques minutes.'})].filter(Boolean);
+   el('p',{class:'vt-devices-note',text:'Le PC regarde '+(cable?'le réseau':'le Wi-Fi')+' toutes les 5 secondes, sans lire le nom des appareils. Sous chaque appareil : son adresse dans la maison et la fin du numéro de sa carte Wi-Fi. « Adresse privée » : un téléphone qui cache son vrai numéro pour ne pas être suivi. Un téléphone en veille peut disparaître quelques minutes.'})].filter(Boolean);
  }
 
  // ---------- Copie du Wi-Fi : 20 secondes de mesures (et ce que le PC lit), gardées par Guardian sans le mot de passe ----------

@@ -2,7 +2,7 @@
    Les pages et fichiers passent d'abord par le réseau (jamais de version périmée en ligne),
    le cache ne sert qu'en secours. Les données (/api/) ne sont jamais mises en cache. */
 'use strict';
-const CACHE = 'fibre-guardian-v34';
+const CACHE = 'fibre-guardian-v35';
 const SHELL = ['./', './index.html', './offline.html', './bootstrap.js', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png', '../vendor/fonts.css', './moov-theme.css', './moov-brand.css', './fonts.css', './refonte.css', './guardian-chat.css', './live-trip.css', './landing.css','./client-home.css','./tech-view.css','./avatars.css', './plan-view.css', './survie.css', './essentiel.css', './accueil.css'];
 
 self.addEventListener('install', event => {
@@ -37,4 +37,16 @@ self.addEventListener('fetch', event => {
     if (response.ok) { const copy = response.clone(); caches.open(CACHE).then(cache => cache.put(request, copy)); }
     return response;
   }).catch(() => caches.match(request, { ignoreSearch: true }).then(hit => hit || Response.error())));
+});
+
+// Toucher une notification de Guardian (alerte Wi-Fi) : l'application s'ouvre sur l'écran Appareils.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const page = (event.notification.data && event.notification.data.page) || 'devices';
+  const target = new URL('./?section=' + encodeURIComponent(page), self.location.href).href;
+  event.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then(list => {
+    const open = list.find(c => c.url.startsWith(new URL('./', self.location.href).href));
+    if (open) return open.focus().then(c => (c || open).navigate ? (c || open).navigate(target) : null).catch(() => null);
+    return self.clients.openWindow(target);
+  }));
 });
