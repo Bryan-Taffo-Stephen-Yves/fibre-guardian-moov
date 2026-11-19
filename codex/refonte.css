@@ -571,10 +571,11 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
 .oc-command .oc-zone-tile small{font-size:12px;color:var(--moov-text-muted)}
 .oc-command .oc-zone-tile i{position:absolute;left:0;right:0;bottom:0;height:5px;border-radius:999px;background:var(--moov-neutral-150);overflow:hidden}
 .oc-command .oc-zone-tile i::after{content:'';position:absolute;inset:0 auto 0 0;width:var(--w);border-radius:inherit;background:var(--moov-primary);transition:width 1s var(--fg-ease)}
-.oc-command .oc-zone-tile--1 span,.oc-command .oc-zone-tile--1 i::after{color:var(--moov-success);background:var(--moov-success)}
-.oc-command .oc-zone-tile--1 span{background:none}
-.oc-command .oc-zone-tile--2 span{color:var(--moov-accent)}
-.oc-command .oc-zone-tile--2 i::after{background:var(--moov-accent)}
+/* Couleur de la tuile = état du quartier : vert tout va bien, orange à surveiller, rouge en panne. */
+.oc-command .oc-zone-tile--ok span{color:var(--moov-success)}
+.oc-command .oc-zone-tile--ok i::after{background:var(--moov-success)}
+.oc-command .oc-zone-tile--watch span{color:var(--moov-accent-text)}
+.oc-command .oc-zone-tile--watch i::after{background:var(--moov-accent)}
 
 .oc-command .oc-bars{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;align-items:end;height:190px;padding-top:24px}
 .oc-command .oc-bar{position:relative;display:grid;grid-template-rows:1fr auto;justify-items:center;gap:8px;height:100%}
@@ -675,5 +676,5 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
 }
 @media(prefers-reduced-motion:reduce){.oc-command .oc-curve-line,.oc-command .oc-curve-area,.oc-command .oc-bar span,.oc-command .oc-gauge-arc line.on,.oc-command .oc-ai-orb,.oc-command .oc-big,.oc-widgets,.oc-widgets-backdrop{animation:none}.oc-command .oc-curve-line{stroke-dasharray:none}}
 
-.oc-command .oc-zone-tile--3 span{color:var(--moov-danger)}
-.oc-command .oc-zone-tile--3 i::after{background:var(--moov-danger)}
+.oc-command .oc-zone-tile--down span{color:var(--moov-danger)}
+.oc-command .oc-zone-tile--down i::after{background:var(--moov-danger)}
