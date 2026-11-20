@@ -132,6 +132,31 @@ Un numéro qui n’est pas relié ne reçoit aucune réponse : une personne qui 
 
 **Rien n’arrive sur WhatsApp ?** L’offre gratuite « Developer » de Green API permet d’écrire à **3 discussions par mois** ; elle repart à zéro le 1er de chaque mois, et les 3 premiers numéros du mois prennent les places. Quand elles sont prises, Green API refuse les autres numéros (erreur 466, « The tariff quota has been exceeded » si vous essayez « Send text » dans la console). La Régie affiche alors « WhatsApp en pause jusqu’au 1er du mois », la carte « Messages WhatsApp » de la page Superviseur le dit, et le formulaire du jury ne propose plus de numéro. Pour garder les places à la démonstration : une puce réservée à Guardian (jamais un numéro personnel, sans contacts ni groupes), et, dès le 1er du mois ou dès qu’une nouvelle instance est reliée, écrivez « Bonjour » à Guardian depuis votre téléphone relié dans `WHATSAPP_CLIENTS` : sa réponse prend la première place. « Remettre la démo à zéro » garde l’état « en pause » ; sur Render gratuit, la base repart de zéro à chaque réveil, et la pause réapparaît au premier message refusé. 
 
+## Rapport du matin par mail (facultatif, gratuit, sans carte bancaire)
+
+Chaque matin à 7 h (heure d'Abidjan), Guardian envoie **un seul mail** à la Direction : le point des dernières 24 heures en 5 lignes (pannes, foyers coupés, appels évités, interventions, ce qui attend une décision) et les **clients à garder** (agent anti-départ : raison et geste proposé ; un conseiller décide, Guardian ne contacte personne seul). Le même rapport est visible dans le **Superviseur**, onglet Réseau, avec un bouton **« Envoyer maintenant »** pour la démo.
+
+Render gratuit bloque l'envoi par Gmail (SMTP). Guardian passe donc par l'API web d'un service de mail gratuit :
+
+**Le plus simple : Resend** (3 000 mails par mois, sans carte, vers votre propre adresse)
+1. Allez sur resend.com, cliquez **Sign up** et créez le compte **avec votre adresse Gmail**.
+2. Menu **API Keys** → **Create API Key** → nom `fibre-guardian` → **Add**. Copiez la clé (elle commence par `re_`). Ne la collez nulle part ailleurs que dans Render.
+3. Dans Render : votre service → **Environment** → **Add Environment Variable**, et ajoutez :
+   - `RESEND_API_KEY` = la clé copiée ;
+   - `RAPPORT_MAIL_A` = votre adresse Gmail (la même que le compte Resend).
+4. **Save Changes**. Render redémarre. Dans **Logs**, vous devez lire « Rapport du matin : un mail chaque jour à 07 h 00 … par Resend ».
+5. Ouvrez le Superviseur (compte Direction) → bloc « Rapport du matin » → **Envoyer maintenant**. Le mail arrive en moins d'une minute (regardez aussi dans « Spam » la première fois).
+
+Sans nom de domaine, Resend n'envoie qu'à l'adresse du compte. Pour plusieurs destinataires (jurés, directeur) :
+
+**Brevo** (300 mails par jour, sans carte, vers n'importe quelle adresse)
+1. brevo.com → **Sign up free**, puis confirmez votre adresse.
+2. **Expéditeurs** (Senders) → **Ajouter un expéditeur** avec votre Gmail : Brevo envoie un code pour la vérifier.
+3. **SMTP & API** → onglet **Clés API** → **Générer une nouvelle clé API**. Copiez-la (elle commence par `xkeysib-`).
+4. Dans Render : `BREVO_API_KEY` = la clé, `RAPPORT_MAIL_DE` = votre Gmail vérifié, `RAPPORT_MAIL_A` = les adresses séparées par des virgules (10 au plus).
+
+Réglages facultatifs : `RAPPORT_HEURE` (par défaut `7:00`, par exemple `6:30`) ; `RAPPORT_MAIL=0` arrête l'envoi. Si les deux clés sont présentes, Brevo est utilisé. Un envoi automatique par jour au plus, dans les 3 heures après l'heure prévue (trois essais en cas d'échec) ; le bouton « Envoyer maintenant » est limité à 6 envois par heure.
+
 ## Tester une vraie connexion (aucun réglage)
 
 - Dans l'application client, le bouton « Tester ma connexion » ouvre `/codex/test.html` avec un lien personnel valable 30 minutes.

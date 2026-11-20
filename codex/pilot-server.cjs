@@ -66,6 +66,9 @@ function createGuardianServer(options={}){
  const AV=require('./avis.cjs');AV.migrate(store);
  // Retention Score (thème 6) : appel du conseiller et offre de rétention (retention.cjs).
  require('./retention.cjs').migrate(store);
+ // Rapport du matin + agent anti-départ : un mail par jour pour la Direction, et « Envoyer maintenant » dans le Superviseur (rapport-matin.cjs).
+ const RM=require('./rapport-matin.cjs');RM.migrate(store);const rapportCfg=RM.config(options.env||process.env);
+ RM.start(store,rapportCfg,{origin:options.origin||'',onError:e=>options.onError?options.onError(e):console.warn(e.message)});
  // Données personnelles (loi n°2013-450) : « Mes données » du client, choix de l'IA, effacement automatique de ce qui ne sert plus (donnees.cjs).
  const DP=require('./donnees.cjs');DP.migrate(store);try{DP.purge(store);}catch(e){options.onError?.(e);}
  const dpTimer=setInterval(()=>{try{DP.purge(store);}catch(e){options.onError?.(e);}},6*3600000);dpTimer.unref();
@@ -229,6 +232,9 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/superviseur'&&method==='GET')return json(res,require('./superviseur.cjs').bilan(store,user.id,{whatsapp:WA.status(store,whatsapp.cfg)}));
     // Retention Score (thème 6) : clients à risque de départ, équipe Moov seulement (retention.cjs).
     if(route==='/api/noc/retention'&&method==='GET'){const r=require('./retention.cjs').scores(store,user.id);DP.seen(store,user.id,'retention');return json(res,r);}
+    // Rapport du matin : responsable de supervision et direction seulement (vérifié dans rapport-matin.cjs).
+    if(route==='/api/noc/rapport'&&method==='GET'){const r=RM.view(store,user.id,rapportCfg);DP.seen(store,user.id,'retention');return json(res,r);}
+    if(route==='/api/noc/rapport/envoyer'&&method==='POST'){await body(req,256);return json(res,await RM.sendNow(store,user.id,rapportCfg,{origin}));}
     if(route==='/api/noc/retention'&&method==='POST')return json(res,require('./retention.cjs').act(store,user.id,await body(req,1024)));
     if(route==='/api/noc/superviseur/ask'&&method==='POST')return json(res,await require('./superviseur.cjs').ask(store,user.id,await body(req,2048),{whatsapp:WA.status(store,whatsapp.cfg),log:m=>options.onError?options.onError(new Error(m)):console.warn(m)}));
     if(route==='/api/noc/superviseur/signal'&&method==='POST')return json(res,require('./superviseur.cjs').signal(store,user.id,await body(req,1024),{whatsapp:WA.status(store,whatsapp.cfg)}));

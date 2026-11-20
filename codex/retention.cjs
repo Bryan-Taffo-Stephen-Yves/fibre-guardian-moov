@@ -47,8 +47,10 @@ function actionFor(f){
 }
 
 const hasTable=s=>!!s.get("SELECT 1 AS x FROM sqlite_master WHERE type='table' AND name='retention_suivis'");
-function scores(s,uid,now=Date.now()){
- O.requireOperator(s,uid);
+// Lecture réservée à l'équipe Moov (rôle vérifié ici). Le rapport du matin (rapport-matin.cjs) appelle compute
+// directement : il part du serveur vers la Direction, sans compte connecté.
+function scores(s,uid,now=Date.now()){O.requireOperator(s,uid);return compute(s,now);}
+function compute(s,now=Date.now()){
  const staff=new Set([...s.all('SELECT user_id FROM operator_grants'),...s.all('SELECT user_id FROM noc_field_accounts')].map(r=>r.user_id));
  const members=s.all('SELECT m.user_id AS id,m.segment_id AS segment,u.name,g.zone FROM noc_members m JOIN users u ON u.id=m.user_id LEFT JOIN noc_segments g ON g.id=m.segment_id').filter(c=>!staff.has(c.id));
  const data={incidents:s.all("SELECT id,segment_id,status,created,updated FROM noc_incidents WHERE mode='demo' AND created>=? AND status NOT IN ('false_alarm','rejected')",now-WINDOW),
@@ -104,4 +106,4 @@ function act(s,uid,d,now=Date.now()){
   return scores(s,uid,now);
  });
 }
-module.exports={migrate,scores,factorsFor,actionFor,offerFor,act,OUTCOMES,LEAVE,fold,WINDOW};
+module.exports={migrate,scores,compute,factorsFor,actionFor,offerFor,act,OUTCOMES,LEAVE,fold,WINDOW};

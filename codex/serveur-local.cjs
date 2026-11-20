@@ -25,6 +25,8 @@ if (require.main === module) {
   console.log(wa ? 'WhatsApp : vrais messages par ' + ({twilio: 'Twilio', greenapi: 'Green API', meta: 'Meta'})[wa.provider] + ' vers ' + new Set([...wa.list, ...wa.clients].map(n => n.phone)).size + ' téléphone(s).' : 'WhatsApp : messages affichés dans le Simulateur seulement (pas de réglage GREENAPI_*, TWILIO_* ni WHATSAPP_*).');
   const bot = require('./whatsapp-bot.cjs').config(env);
   if (bot) console.log(bot.secret.length >= 16 ? 'Guardian sur WhatsApp : branché (Green API' + (bot.groq ? ', notes vocales comprises' : '') + '). Adresse à donner à Green API : ' + (env.GUARDIAN_ORIGIN || 'http://127.0.0.1:' + port) + '/api/whatsapp/entrant' : 'Guardian sur WhatsApp : fermé, GREENAPI_WEBHOOK_TOKEN manque (16 caractères ou plus).');
+  const rapport = require('./rapport-matin.cjs').config(env);
+  console.log(rapport.ready ? 'Rapport du matin : un mail chaque jour à ' + String(rapport.hour).padStart(2, '0') + ' h ' + String(rapport.minute).padStart(2, '0') + ' (Abidjan) vers ' + rapport.to.length + ' adresse(s), par ' + ({brevo: 'Brevo', resend: 'Resend'})[rapport.provider] + '.' : 'Rapport du matin : pas de mail (il faut BREVO_API_KEY ou RESEND_API_KEY, RAPPORT_MAIL_A et, pour Brevo, RAPPORT_MAIL_DE ; voir DEPLOIEMENT.md).');
   const prises = require('./branchements.cjs').config(env), ouvertes = ['reseau', 'clients', 'ussd', 'sms'].filter(p => prises[p]);
   console.log('Réseau Moov : ' + (ouvertes.length ? 'prises branchées : ' + ouvertes.join(', ') + '.' : 'simulateur (aucune prise branchée, voir BRANCHEMENTS.md).'));
   pilot.on('error', e => { console.error(e.message); process.exitCode = 1; });

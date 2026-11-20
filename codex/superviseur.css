@@ -196,3 +196,26 @@
 .gs-parr-list{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
 .gs-parr-list li{display:grid;gap:2px;font-size:14px;color:var(--moov-ink)}
 .gs-parr-list small{font-size:12.5px;color:var(--moov-neutral-500)}
+/* Rapport du matin + agent anti-départ (rapport-matin.cjs) */
+.gs-rm-hour{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary-700);font-size:12.5px;font-weight:650;font-variant-numeric:tabular-nums}
+.gs-rm-lines{display:grid;gap:0;margin:0}
+.gs-rm-lines>div{display:grid;grid-template-columns:112px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--moov-neutral-100)}
+.gs-rm-lines>div:last-child{border-bottom:0}
+.gs-rm-lines dt{font-size:12.5px;font-weight:700;color:var(--moov-primary-600)}
+.gs-rm-lines dd{margin:0;font-size:14px;line-height:1.45;color:var(--moov-ink)}
+.gs-rm-keep{display:grid;gap:8px;padding:12px;border-radius:14px;background:var(--moov-neutral-25)}
+.gs-rm-keep>strong{display:flex;align-items:center;justify-content:space-between;font-size:14px}
+.gs-rm-keep>strong em{min-width:24px;padding:1px 8px;border-radius:999px;background:var(--moov-accent-100);color:var(--moov-accent-700);font-size:12px;font-style:normal;text-align:center}
+.gs-rm-keep ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.gs-rm-keep li{display:grid;gap:2px;padding-left:10px;border-left:3px solid var(--moov-accent-500)}
+.gs-rm-keep li.is-eleve{border-left-color:var(--moov-danger-700)}
+.gs-rm-keep li b{font-size:14px}
+.gs-rm-keep li span{font-size:13px;color:var(--moov-neutral-600)}
+.gs-rm-keep li small{font-size:13px;color:var(--moov-ink)}
+.gs-rm-keep p{margin:0;font-size:13.5px;color:var(--moov-neutral-600)}
+.gs-rm-foot{display:grid;gap:8px}
+.gs-rm-status{margin:0;font-size:13px;line-height:1.45;color:var(--moov-text-muted);overflow-wrap:anywhere}
+.gs-rm-note{margin:0;padding:8px 12px;border-radius:10px;font-size:13.5px}
+.gs-rm-note.is-ok{background:var(--gs-ok-bg);color:var(--gs-ok-ink)}
+.gs-rm-note.is-bad{background:var(--gs-bad-bg);color:var(--gs-bad-ink)}
+.gs-rm-send{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}

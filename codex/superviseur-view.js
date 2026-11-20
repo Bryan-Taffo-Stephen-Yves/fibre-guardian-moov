@@ -135,6 +135,37 @@
               c.suivi && c.suivi.offerAt ? null : h('button', {type: 'button', className: 'gs-ret-btn', disabled: busy, onClick: () => act(c.id, 'offre')}, 'Envoyer l’offre : ' + c.offer.label)))))));
   }
 
+  // Rapport du matin + agent anti-départ : le mail que reçoit la Direction chaque matin, et « Envoyer maintenant ».
+  // Les gestes sont des propositions : le conseiller agit dans l'onglet Clients et offres.
+  function Rapport({api}) {
+    const [r, setR] = S(null), [busy, setBusy] = S(false), [note, setNote] = S(null), alive = R(true);
+    E(() => { alive.current = true; const load = () => { if (!document.hidden) api('/noc/rapport').then(x => alive.current && setR(x)).catch(() => {}); }; load(); const t = setInterval(load, 30000); return () => { alive.current = false; clearInterval(t); }; }, []);
+    if (!r) return null;
+    async function send() {
+      setBusy(true); setNote(null);
+      try { const x = await api('/noc/rapport/envoyer', 'POST', {}); if (alive.current) { setR(x); setNote({ok: true, text: 'Mail envoyé à ' + x.mail.to.length + (x.mail.to.length > 1 ? ' adresses.' : ' adresse.')}); } }
+      catch (e) { if (alive.current) setNote({ok: false, text: e.message || 'Le mail n’est pas parti.'}); }
+      finally { if (alive.current) setBusy(false); }
+    }
+    const a = r.antiDepart, m = r.mail, last = m.last;
+    const day = at => new Date(at).toLocaleDateString('fr-FR', {weekday: 'short', day: 'numeric', month: 'short'});
+    return h('section', {className: 'gs-block gs-rm', 'aria-labelledby': 'gs-rm-title'},
+      h('div', {className: 'gs-block-head'}, h('h3', {id: 'gs-rm-title'}, 'Rapport du matin'), h('span', {className: 'gs-rm-hour'}, h(Icon, {name: 'send', size: 14}), m.hour)),
+      h('p', {className: 'gs-note'}, 'Le mail de la Direction : le point des dernières 24 heures et les clients à garder.'),
+      h('dl', {className: 'gs-rm-lines'}, r.morning.lines.map(l => h('div', {key: l.key}, h('dt', null, l.label), h('dd', null, l.text)))),
+      h('div', {className: 'gs-rm-keep'},
+        h('strong', null, 'Clients à garder', h('em', null, a.high + a.watch)),
+        a.clients.length
+          ? h('ul', null, a.clients.slice(0, 3).map(c => h('li', {key: c.id, className: 'is-' + c.level}, h('b', null, c.name), h('span', null, c.reason), h('small', null, 'Geste proposé : ' + c.gesture))))
+          : h('p', null, 'Aucun client à risque de départ sur 30 jours.')),
+      h('div', {className: 'gs-rm-foot'},
+        h('p', {className: 'gs-rm-status'}, m.ready
+          ? (last ? (last.ok ? 'Dernier envoi ' : 'Dernier essai sans succès ') + day(last.at) + ' à ' + clock(last.at) + '. ' : '') + 'Chaque jour à ' + m.hour + ' vers ' + m.to.join(', ') + '.'
+          : 'Le mail partira chaque matin dès que l’adresse de la Direction sera enregistrée.'),
+        note && h('p', {className: 'gs-rm-note ' + (note.ok ? 'is-ok' : 'is-bad'), role: note.ok ? 'status' : 'alert'}, note.text),
+        h('button', {type: 'button', className: 'gs-ret-btn is-main gs-rm-send', disabled: busy || !m.ready, onClick: send}, h(Icon, {name: 'send', size: 16}), busy ? 'Envoi…' : 'Envoyer maintenant')));
+  }
+
   function Agents({b}) {
     return h('section', {className: 'gs-block', 'aria-labelledby': 'gs-a-title'},
       h('div', {className: 'gs-block-head'}, h('h3', {id: 'gs-a-title'}, 'Les agents que je supervise'), h('span', {className: 'gs-count'}, b.agents.length)),
@@ -189,7 +220,7 @@
           h(Bulletin, {b, error, onAsk: askAbout}),
           h('div', {className: 'gs-grid'},
             h('div', {className: 'gs-main'}, h(Ask, {api, onBilan: setB, request}), h(Findings, {b, api, onBilan: setB, onNavigate})),
-            h('div', {className: 'gs-side'}, h(Agents, {b}), h(Journal, {b})))));
+            h('div', {className: 'gs-side'}, h(Rapport, {api}), h(Agents, {b}), h(Journal, {b})))));
   }
 
   root.FGSuperviseur = {View};
