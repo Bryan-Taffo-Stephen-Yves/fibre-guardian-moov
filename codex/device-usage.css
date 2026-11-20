@@ -27,3 +27,11 @@
 .du-real-rate{display:grid;justify-items:end;line-height:1.1}.du-real-rate strong{font-size:17px;font-variant-numeric:tabular-nums;color:var(--moov-neutral-800)}.du-real-rate small{font-size:11px;color:var(--moov-neutral-600)}.du-real-rate.busy strong{color:var(--moov-primary-700)}
 .du-real .du-watch-head{grid-template-columns:auto minmax(0,1fr)}
 @media(max-width:600px){.du-real{padding:16px 14px}.du-real .du-watch-head{grid-template-columns:minmax(0,1fr)}.du-real .du-watch-head .du-device-icon{display:none}}
+.du-advice{display:grid;gap:14px;padding:18px 20px;background:var(--moov-primary-25);border-color:var(--moov-primary-100)}
+.du-advice-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}.du-advice-head small{display:block;font-size:12px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--moov-primary-700);margin-bottom:4px}.du-advice-head p{margin:0;font-size:15px;line-height:1.5;color:var(--moov-neutral-800)}
+.du-advice-art{flex:none}
+.du-advice-bars{display:grid;gap:8px;margin:0;padding:0;list-style:none}.du-advice-bars li{display:grid;grid-template-columns:minmax(0,9rem) minmax(0,1fr) 3.2rem;align-items:center;gap:10px;font-size:13px}
+.du-advice-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--moov-neutral-700)}.du-advice-bar{height:8px;border-radius:99px;background:var(--moov-primary-50);overflow:hidden}.du-advice-bar i{display:block;height:100%;border-radius:inherit;background:var(--moov-primary)}
+.du-advice-bars strong{text-align:right;font-variant-numeric:tabular-nums;color:var(--moov-neutral-800)}
+.du-advice .du-advice-cta{justify-self:start;min-height:44px!important}
+@media(max-width:600px){.du-advice{padding:16px 14px}.du-advice-bars li{grid-template-columns:minmax(0,7rem) minmax(0,1fr) 2.8rem}.du-advice .du-advice-cta{justify-self:stretch}}
