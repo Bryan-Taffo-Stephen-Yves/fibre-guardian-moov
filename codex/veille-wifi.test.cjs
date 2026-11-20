@@ -101,6 +101,42 @@ test('Surveillance du Wi-Fi : un nouvel appareil est signalé au tour suivant, 5
   } finally { t.close(); VT.setVendorFetch(null); }
 });
 
+test('Données de chaque appareil : le PC qui partage sa connexion envoie ses compteurs, Guardian en tire total et débit', async () => {
+  VT.setVendorFetch(async () => ({ok: false, status: 404, text: async () => ''}));
+  const t = await setup();
+  try {
+    const l = VT.link(t.store, t.awa);
+    const hot = {ip: '192.168.137.1', prefix: 24, gateway: '192.168.137.1', mac: '3E-22-FB-11-22-33', medium: 'hotspot', devices: [
+      {ip: '192.168.137.20', mac: 'DA-11-22-33-44-55'}, {ip: '192.168.137.21', mac: '7E-11-22-33-44-66'}]};
+    // Avant le compteur : pas de chiffres, et Guardian sait que le PC partage sa connexion.
+    await t.page('wifi', l.token, {...WIFI, scan: hot, count: 'admin'});
+    let w = (await t.page('wifi', l.token)).data;
+    assert.equal(w.scan.medium, 'hotspot'); assert.equal(w.scan.counting, 'admin');
+    assert.equal(w.devices.find(d => d.ip === '192.168.137.20').down, null, 'rien de compté sans compteur');
+    // Compteur lancé : premiers chiffres, puis 10 secondes plus tard 12,5 Mo de plus reçus par le premier téléphone.
+    await later(5000, () => t.page('wifi', l.token, {...WIFI, scan: hot, count: 'on', usage: [{ip: '192.168.137.20', down: 2000000, up: 300000}, {ip: '8.8.8.8', down: 5, up: 5}]}));
+    await later(15000, () => t.page('wifi', l.token, {...WIFI, scan: hot, count: 'on', usage: [{ip: '192.168.137.20', down: 14500000, up: 300000}, {ip: '192.168.137.21', down: 1000, up: 500}]}));
+    w = await later(15000, async () => (await t.page('wifi', l.token)).data);
+    const a = w.devices.find(d => d.ip === '192.168.137.20'), b = w.devices.find(d => d.ip === '192.168.137.21');
+    assert.equal(a.down, 14500000); assert.equal(a.up, 300000);
+    assert.equal(a.mbps, 10, '12,5 Mo en 10 secondes = 10 Mb/s');
+    assert.equal(b.down, 1000); assert.equal(b.mbps, 0);
+    assert.equal(w.scan.counting, 'on');
+    assert.ok(!w.devices.some(d => d.ip === '8.8.8.8'), 'une adresse hors du partage n’est jamais un appareil');
+    // Fichier PC relancé : compteurs remis à zéro, les totaux sont gardés.
+    await later(20000, () => t.page('wifi', l.token, {...WIFI, scan: hot, count: 'on', usage: [{ip: '192.168.137.20', down: 100, up: 0}]}));
+    await later(25000, () => t.page('wifi', l.token, {...WIFI, scan: hot, count: 'on', usage: [{ip: '192.168.137.20', down: 1000100, up: 0}]}));
+    const pc = await later(25000, () => VT.pcDevices(t.store, t.awa));
+    assert.equal(pc.medium, 'hotspot'); assert.equal(pc.counting, 'on');
+    assert.equal(pc.devices.find(d => d.label && d.down === 15500000)?.up, 300000, 'totaux gardés après la remise à zéro');
+    assert.ok(pc.devices.every(d => !('ip' in d) && !('mac' in d)), 'l’application ne reçoit ni adresse ni MAC');
+    // L'écran Appareils de l'application reçoit ces chiffres.
+    const awa = await t.login(DEMO.client.email, DEMO.client.fallback);
+    const v = await later(25000, async () => (await t.call(awa, '/veille')).data);
+    assert.equal(v.pcDevices.devices.length, 2);
+  } finally { t.close(); VT.setVendorFetch(null); }
+});
+
 test('Surveillance du Wi-Fi : le message part sur le WhatsApp déjà relié au compte, 6 par heure au plus', async () => {
   const t = await setup();
   try {

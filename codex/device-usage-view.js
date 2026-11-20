@@ -50,14 +50,30 @@
    :w.learning?'Guardian apprend vos appareils habituels… encore '+w.learnLeft+' s.'
    :'Surveillance active · '+w.usual+' appareil'+(w.usual>1?'s':'')+' habituel'+(w.usual>1?'s':'')+'.';
   const last=w.log?.[0];
-  return h('section',{className:'du-card du-watch','aria-labelledby':'du-watch-title'},
+  return h(React.Fragment,null,h('section',{className:'du-card du-watch','aria-labelledby':'du-watch-title'},
    h('div',{className:'du-watch-head'},h('span',{className:'du-device-icon'},h(Icon,{name:'shield'})),h('div',null,h('h2',{id:'du-watch-title'},'Me prévenir sur WhatsApp'),h('p',null,state)),
     h('button',{type:'button',role:'switch','aria-checked':!!w.on,'aria-labelledby':'du-watch-title',className:'du-switch',disabled:busy,onClick:()=>send({on:!w.on})},h('i'))),
    w.pending?.length>0&&h('ul',{className:'du-watch-list','aria-label':'Nouveaux appareils'},w.pending.slice(0,3).map(p=>h('li',{key:p.id},h('span',null,h('strong',null,p.label),h('small',null,'Arrivé à '+clock(p.at)+(p.night?', en pleine nuit':''))),button('C’est à moi',()=>send({mine:p.id}),{disabled:busy})))),
    last&&h('p',{className:'du-watch-last'+(['conso','coupure','instable'].includes(last.kind)?' heavy':''),role:'status'},h('strong',null,(last.whatsapp?'Envoyé sur WhatsApp à ':'Alerte de ')+clock(last.at)),' ',last.text.split('\n')[0]),
    w.on&&h(PhoneAlerts),
    error?h('p',{role:'alert',className:'j-error'},error):null,
-   h('small',{className:'du-watch-note'},'Guardian ne lit jamais ce que font vos appareils : seulement leur arrivée et la quantité de données.'));
+   h('small',{className:'du-watch-note'},'Guardian ne lit jamais ce que font vos appareils : seulement leur arrivée et la quantité de données.')),
+   w.pcDevices&&h(RealUsage,{pc:w.pcDevices}));
+ }
+ // Données de chaque appareil, comptées pour de vrai par le PC quand les téléphones passent par son partage de connexion
+ // (« Point d'accès mobile » de Windows). Sinon, la carte explique comment l'allumer.
+ function RealUsage({pc}){
+  const hot=pc.medium==='hotspot',on=hot&&pc.counting==='on',list=on?[...pc.devices].sort((a,b)=>((b.down||0)+(b.up||0))-((a.down||0)+(a.up||0))):[];
+  const note=!hot?'Pour voir les données de chaque appareil : sur le PC, allumez « Point d’accès mobile » (Paramètres, Réseau et Internet), puis connectez vos téléphones au Wi-Fi du PC.'
+   :pc.counting==='admin'?'Le PC partage sa connexion, mais Windows n’a pas donné l’autorisation de compter. Fermez la fenêtre noire, faites un clic droit sur Guardian-Wi-Fi.cmd, « Exécuter en tant qu’administrateur », et répondez Oui.'
+   :pc.counting==='error'?'Le PC partage sa connexion, mais il n’a pas réussi à compter les données (le pare-feu ou l’antivirus bloque peut-être Guardian).'
+   :!on?'Le PC partage sa connexion. Guardian prépare le compteur…'
+   :list.length?'Comptées par le PC depuis le lancement de Guardian. Mises à jour toutes les 2 secondes.':'Aucun appareil connecté au partage du PC pour le moment.';
+  return h('section',{className:'du-card du-real','aria-labelledby':'du-real-title'},
+   h('div',{className:'du-watch-head'},h('span',{className:'du-device-icon'},h(Icon,{name:'download'})),h('div',null,h('h2',{id:'du-real-title'},'Données de chaque appareil'),h('p',null,note))),
+   list.length>0&&h('ul',{className:'du-real-list'},list.map(d=>h('li',{key:d.id},h('span',{className:'du-device-icon'},h(Icon,{name:deviceIcon({name:d.kind==='mobile'?'téléphone':d.label})})),
+    h('span',{className:'du-real-name'},h('strong',null,d.label),h('small',null,'Reçu '+volume(d.down||0)+' · envoyé '+volume(d.up||0))),
+    h('span',{className:'du-real-rate'+((d.mbps||0)>=1?' busy':'')},h('strong',null,n(d.mbps||0)),h('small',null,'Mb/s'))))));
  }
  // Les alertes Wi-Fi arrivent aussi dans l'application : un bandeau en haut de l'écran (12 secondes), et une notification
  // du téléphone si le client l'a autorisé, tant que l'application est ouverte (même en arrière-plan).

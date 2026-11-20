@@ -21,3 +21,9 @@
 @media(prefers-reduced-motion:reduce){.du-banner{animation:none}}
 @media(max-width:600px){.du-banner{grid-template-columns:minmax(0,1fr) auto;gap:8px}.du-banner .du-device-icon{display:none}.du-banner .du-banner-open{grid-column:1;justify-self:start;grid-row:2}.du-banner-close{grid-column:2;grid-row:1}}
 .du-watch>p.du-watch-last,.du-watch>p.du-phone{margin:0}
+.du-real{display:grid;gap:14px;padding:18px 20px}.du-real .du-device-icon{color:var(--moov-primary-700);background:var(--moov-primary-50)}.du-real-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.du-real-list li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 14px 10px 10px;border-radius:14px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-150)}
+.du-real-name strong{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.du-real-name small{font-size:12px;color:var(--moov-neutral-600)}
+.du-real-rate{display:grid;justify-items:end;line-height:1.1}.du-real-rate strong{font-size:17px;font-variant-numeric:tabular-nums;color:var(--moov-neutral-800)}.du-real-rate small{font-size:11px;color:var(--moov-neutral-600)}.du-real-rate.busy strong{color:var(--moov-primary-700)}
+.du-real .du-watch-head{grid-template-columns:auto minmax(0,1fr)}
+@media(max-width:600px){.du-real{padding:16px 14px}.du-real .du-watch-head{grid-template-columns:minmax(0,1fr)}.du-real .du-watch-head .du-device-icon{display:none}}
