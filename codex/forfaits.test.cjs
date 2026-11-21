@@ -3,6 +3,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {createGuardianServer}=require('./pilot-server.cjs');
 const J=require('./journey-store.cjs');
+// Montant attendu, calculé ici à la main : différence × jours restants (aujourd'hui compris) ÷ jours du mois.
+function attendu(diff,at=new Date()){const d=new Date(at),mois=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return Math.round(diff*(mois-d.getDate()+1)/mois);}
 
 async function client(){
  const server=createGuardianServer({db:':memory:'});
@@ -13,7 +15,7 @@ async function client(){
  const request=async(path,body)=>{const r=await fetch(base+'/api'+path,{method:body?'POST':'GET',headers:{Cookie:cookie,'Content-Type':'application/json','X-CSRF-Token':user.csrf},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};};
  let state=(await request('/journey/start',{})).data.state;
  const action=async data=>{const r=await request('/journey/action',{version:state.version,...data});if(r.status===200)state=r.data.state;return r;};
- return {server,request,action,get state(){return state;}};
+ return {server,request,action,user,get state(){return state;}};
 }
 
 test('La grille suit les prix publics de la fibre Moov, du moins cher au plus cher',()=>{
@@ -28,11 +30,13 @@ test('Forfait plus rapide : le serveur calcule le complément et ne change rien 
   assert.equal((await c.action({type:'plan-quote',to:'demo-inconnu'})).status,400);
   assert.equal((await c.action({type:'plan-quote',to:'demo-50'})).status,409,'un forfait moins cher ne se paie pas');
   await c.action({type:'plan-quote',to:'demo-300'});
-  const q=c.state.upgrade;assert.equal(q.amount,10000);assert.equal(q.to.mbps,300);assert.equal(q.source,'compte');assert.equal(c.state.plan.mbps,100);
+  const q=c.state.upgrade;assert.equal(q.diff,10000);assert.equal(q.amount,attendu(10000,q.at));assert.equal(q.to.mbps,300);
+  assert.equal(q.nextBilling,J.nextMonth(q.at));assert.equal(c.state.upgradeCosts['demo-300'].diff,10000);assert.equal(q.source,'compte');assert.equal(c.state.plan.mbps,100);
   assert.equal((await c.action({type:'upgrade-pay',id:q.id})).status,400,'paiement sans accord refusé');
   await c.action({type:'upgrade-pay',id:q.id,confirm:true});
-  assert.equal(c.state.plan.mbps,300);assert.equal(c.state.capacity,300);assert.equal(c.state.payment.amount,10000);assert.equal(c.state.upgrade,null);
-  assert.ok(c.state.notifications.some(n=>n.title==='Nouveau forfait actif'));
+  assert.equal(c.state.plan.mbps,300);assert.equal(c.state.capacity,300);assert.equal(c.state.payment.amount,attendu(10000,q.at));assert.equal(c.state.upgrade,null);
+  const n=c.state.notifications.find(n=>n.title==='Nouveau forfait actif');assert.ok(n);
+  assert.ok(n.body.includes(q.amount.toLocaleString('fr-FR')+' FCFA reçu'),'la notification dit le montant payé');assert.match(n.body,/À partir du 1er .+, votre forfait coûte 30.000 FCFA par mois/);
   await c.action({type:'upgrade-pay',id:q.id,confirm:true});
   assert.equal(c.state.audit.filter(a=>a.action==='upgrade.activated').length,1,'paiement idempotent');
  }finally{c.server.close();}
@@ -74,4 +78,27 @@ test('Le forfait choisi devient actif quand son mois commence',()=>{
  J.applyNextPlan(st,now);assert.equal(st.plan.mbps,100);
  J.applyNextPlan(st,J.nextMonth(now));assert.equal(st.plan.mbps,50);assert.equal(st.capacity,50);assert.equal(st.nextPlan,null);
  assert.equal(new Date(J.nextMonth(Date.UTC(2026,11,15))).getMonth(),0,'décembre passe à janvier');
+});
+
+test('Complément au prorata des jours restants du mois, aujourd’hui compris',()=>{
+ const p=J.prorata(10000,new Date(2026,10,21,10).getTime());
+ assert.deepEqual([p.diff,p.daysLeft,p.daysInMonth,p.amount],[10000,10,30,3333],'25 000 → 35 000 F le 21 novembre : 10 000 × 10 ÷ 30');
+ assert.equal(new Date(p.nextBilling).getDate(),1);assert.equal(new Date(p.nextBilling).getMonth(),11,'prix complet dès le 1er décembre');
+ const first=J.prorata(10000,new Date(2026,10,1,0,0,1).getTime());assert.equal(first.daysLeft,30);assert.equal(first.amount,10000,'le 1er du mois : différence entière');
+ const last=J.prorata(10000,new Date(2026,10,30,23,59).getTime());assert.equal(last.daysLeft,1);assert.equal(last.amount,333,'dernier jour : 1 jour sur 30');
+ const leap=J.prorata(10000,new Date(2028,1,15,12).getTime());assert.deepEqual([leap.daysLeft,leap.daysInMonth,leap.amount],[15,29,5172],'février bissextile : 29 jours');
+ assert.equal(J.prorata(10000,new Date(2028,1,29,12).getTime()).amount,345,'29 février : 1 jour sur 29');
+ assert.equal(J.prorata(10000,new Date(2027,1,28,12).getTime()).daysInMonth,28,'février ordinaire : 28 jours');
+ assert.equal(new Date(J.prorata(5000,new Date(2026,11,31,12).getTime()).nextBilling).getFullYear(),2027,'31 décembre : 1 jour, puis janvier');
+});
+
+test('Un devis fait avant minuit se paie au montant annoncé, un montant modifié est refusé',async()=>{
+ const c=await client(),s=c.server.guardianStore;
+ try{
+  await c.action({type:'plan-quote',to:'demo-300'});let raw=J.get(s,c.user.id);raw.upgrade.amount+=1;J.put(s,c.user.id,raw);
+  assert.equal((await c.action({type:'upgrade-pay',id:raw.upgrade.id,confirm:true})).status,409,'montant qui ne suit pas la règle refusé');
+  // Devis du 30 novembre (dernier jour), payé plus tard : le serveur vérifie avec les jours notés dans le devis.
+  raw=J.get(s,c.user.id);Object.assign(raw.upgrade,J.prorata(10000,new Date(2026,10,30,23,59).getTime()));J.put(s,c.user.id,raw);
+  await c.action({type:'upgrade-pay',id:raw.upgrade.id,confirm:true});assert.equal(c.state.payment.amount,333);assert.equal(c.state.plan.mbps,300);
+ }finally{c.server.close();}
 });

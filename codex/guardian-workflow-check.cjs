@@ -1,6 +1,8 @@
 'use strict';
 // Scénarios intégrés sur une base en mémoire et des comptes fictifs.
 const A=require('node:assert/strict'),{createGuardianServer}=require('./pilot-server.cjs'),J=require('./journey-store.cjs'),O=require('./operator-store.cjs');
+// Complément attendu de 100 à 200 Mbps (5 000 F de différence), au prorata des jours restants du mois du devis.
+const attendu=at=>{const d=new Date(at),mois=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return Math.round(5000*(mois-d.getDate()+1)/mois);};
 (async()=>{const errors=[],server=createGuardianServer({db:':memory:',onError:e=>errors.push(e.message)});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,s=server.guardianStore;
 try {
  async function account(name,role){await s.register({email:name+'@example.test',password:'workflow-password-123',name});if(role)O.grant(s,name+'@example.test',role);const r=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:name+'@example.test',password:'workflow-password-123'})});const d=await r.json();return {id:d.user.id,csrf:d.user.csrf,cookie:r.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ')};}
@@ -12,9 +14,9 @@ try {
  const baseline=s.get('SELECT count(*) n FROM noc_events').n;await req(admin,'/guardian/chat',{portal:'noc',page:'settings',text:'Qui peut approuver ?'});A.equal(s.get('SELECT count(*) n FROM noc_events').n,baseline);console.log('PASS copilote authentifié, rôle NOC, CSRF et lecture sans commande implicite');
  await action({type:'chat',text:'Un meilleur forfait ?'});A.equal(state.upgrade,null);await action({type:'chat',text:'Je veux 500 Mbps'});A.equal(state.upgrade,null);
  await action({type:'scenario',value:'slow'});await action({type:'chat',text:'Je veux 200 Mbps'});A.ok(!state.upgrade);
- await action({type:'scenario',value:'normal'});await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade.amount,5000);A.equal(state.upgrade.to.price,25000);const quote=state.upgrade.id;
+ await action({type:'scenario',value:'normal'});await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade.diff,5000);A.equal(state.upgrade.amount,attendu(state.upgrade.at));A.equal(state.upgrade.to.price,25000);const quote=state.upgrade.id,due=state.upgrade.amount;
  await action({type:'upgrade-pay',id:quote},400);
- await action({type:'upgrade-pay',id:quote,confirm:true});A.equal(state.capacity,200);A.equal(state.payment.amount,5000);A.equal(state.plan.price,25000);
+ await action({type:'upgrade-pay',id:quote,confirm:true});A.equal(state.capacity,200);A.equal(state.payment.amount,due);A.equal(state.plan.price,25000);
  await action({type:'upgrade-pay',id:quote,confirm:true});A.equal(state.audit.filter(v=>v.action==='upgrade.activated').length,1);A.equal((await req(client,'/journey/state')).state.capacity,200);
  await action({type:'chat',text:'Je veux un meilleur forfait'});A.equal(state.upgrade,null);console.log('PASS offre justifiée, complément exact, confirmation, persistance et paiement simulé idempotent');
  await action({type:'reset'});await action({type:'chat',text:'Je veux 200 Mbps'});await action({type:'upgrade-decline'});await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade,null);
@@ -39,7 +41,7 @@ try {
  await req(admin,'/noc/action',{type:'simulate',segment:'YOP-07',scenario:'normal'});await noc('verify');
  await req(client,'/noc/feedback',{id:incident.id,rating:6},400);await req(client,'/noc/feedback',{id:incident.id,rating:5,comment:'Suivi clair'});
  await req(client,'/noc/feedback',{id:incident.id,rating:4,comment:'Avis mis à jour'});A.equal(s.get('SELECT count(*) n FROM noc_feedback').n,1);A.equal((await req(client,'/noc/client')).incidents[0].feedback.rating,4);
- await req(other,'/noc/feedback',{id:incident.id,rating:5},404);await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade.amount,5000);console.log('PASS réparation vérifiée, avis propriétaire persistant, aucun doublon ni accès croisé et reprise après incident');
+ await req(other,'/noc/feedback',{id:incident.id,rating:5},404);await action({type:'chat',text:'Je veux 200 Mbps'});A.equal(state.upgrade.amount,attendu(state.upgrade.at));console.log('PASS réparation vérifiée, avis propriétaire persistant, aucun doublon ni accès croisé et reprise après incident');
  A.deepEqual(errors,[]);console.log('PASS aucune erreur serveur');
 }finally{await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});
 

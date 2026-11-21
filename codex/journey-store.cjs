@@ -29,6 +29,16 @@ const PLANS=[{id:'demo-50',name:'Fibre 50',mbps:50,price:15000},{id:'demo-100',n
 const planOf=id=>PLANS.find(p=>p.id===id)||null;
 // Le 1er du mois suivant à minuit : date à laquelle un forfait moins cher prend la place de l'actuel.
 function nextMonth(now){const d=new Date(now);return new Date(d.getFullYear(),d.getMonth()+1,1).getTime();}
+// Forfait plus cher : on ne paie que la différence de prix pour les jours restants du mois (aujourd'hui compris, 1 jour au moins).
+// Exemple : 25 000 → 35 000 F le 21 novembre = 10 000 × 10 ÷ 30 = 3 333 F. Le nouveau prix complet s'applique dès le 1er du mois suivant.
+const prorataAmount=(diff,daysLeft,daysInMonth)=>Math.round(diff*daysLeft/daysInMonth);
+function prorata(diff,at=Date.now()){const d=new Date(at),daysInMonth=new Date(d.getFullYear(),d.getMonth()+1,0).getDate(),daysLeft=Math.max(1,daysInMonth-d.getDate()+1);
+ return {diff,daysLeft,daysInMonth,amount:prorataAmount(diff,daysLeft,daysInMonth),nextBilling:nextMonth(at)};}
+// Devis de passage à un forfait plus cher : tout ce que l'écran affiche est calculé ici, une seule fois.
+function upgradeQuote(from,to,now,extra={}){return {id:id(),from,to,...prorata(to.price-from.price,now),at:now,expires:now+300000,...extra};}
+const firstOf=at=>new Date(at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}).replace(/^1 /,'1er ');
+const monthOf=at=>new Date(at).toLocaleDateString('fr-FR',{month:'long'});
+const fcfa=n=>n.toLocaleString('fr-FR')+' FCFA';
 // Un forfait moins cher choisi plus tôt devient actif quand son mois commence.
 function applyNextPlan(st,now=Date.now()){const next=st.nextPlan;if(!next||now<next.at)return;st.plan=next.plan;st.capacity=next.plan.mbps;st.nextPlan=null;}
 function seed(){return {version:0,mode:'simulation',created:Date.now(),scenario:'normal',usual:4,capacity:100,plan:{...PLANS[1]},zone:'Yopougon · Niangon',segment:'YOP-07',selectedHome:'home-1',devices:[
@@ -128,9 +138,9 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   if(plan.mbps>=200)return {message:'Vous avez déjà '+plan.mbps+' Mbps. Pour aller plus haut, ouvrez « Changer de forfait » dans votre compte : toutes les offres y sont, avec leur prix.',facts};
   if(requested>200)return {message:'Pour plus de 200 Mbps, ouvrez « Changer de forfait » dans votre compte : vous y voyez les offres 300 et 500 Mbps, avec leur prix. Vérifiez d’abord votre Wi-Fi : il limite souvent le débit avant la fibre.',facts};
   if(requested<=plan.mbps&&snap.metrics.used<snap.metrics.capacity*.9)return {message:'Vos mesures ne justifient pas un achat : votre forfait suffit pour l’instant. Dites-moi le débit dont vous avez besoin.',facts};
-  const to=planOf('demo-200'),quote={id:id(),from:plan,to,amount:to.price-plan.price,expires:Date.now()+300000};
+  const to=planOf('demo-200'),quote=upgradeQuote(plan,to,Date.now());
   st.upgrade=quote;
-  return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mbps : complément unique de '+quote.amount.toLocaleString('fr-FR')+' FCFA, puis '+to.price.toLocaleString('fr-FR')+' FCFA par mois. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
+  return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mbps. Ce mois-ci, vous payez seulement '+(quote.daysLeft>1?'les '+quote.daysLeft+' jours restants':'le dernier jour')+' : '+fcfa(quote.amount)+'. Puis '+fcfa(to.price)+' par mois à partir du '+firstOf(quote.nextBilling)+'. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
  }
  if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
   return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
@@ -179,7 +189,9 @@ const TRIP=['dispatched','en_route','on_site'];
 function sharedFault(s,uid){const noc=require('./noc-store.cjs'),jury=require('./jury-store.cjs');const list=noc.client(s,uid).incidents.filter(i=>noc.isOpen(i)&&!jury.hidden(s,uid,i));return list.find(i=>i.technician&&TRIP.includes(i.status))||list[0]||null;}
 // Incident de quartier réparé dans les dernières 24 h : l'accueil le signale au client.
 function zoneNews(s,uid,now=Date.now()){const noc=require('./noc-store.cjs');const i=noc.client(s,uid).incidents.filter(x=>x.status==='resolved'&&x.restorationVerified&&x.events?.length).map(x=>({segment:x.segment,zone:x.zone,start:x.events[0].at,end:x.events.at(-1).at})).filter(x=>now-x.end<24*3600000).sort((a,b)=>b.end-a.end)[0];return i||null;}
-function snapshotFor(s,uid,st){applyNextPlan(st);const result={...snapshot(st),plans:PLANS,usageContext:st.usageContext||'home',sharedIncident:sharedFault(s,uid),zoneNews:zoneNews(s,uid),homeZone:require('./noc-store.cjs').memberZone(s,uid)};usage.observe(s,uid,result);return result;}
+// Ce que coûterait aujourd'hui chaque forfait plus cher : l'écran « Changer de forfait » l'affiche sans rien recalculer.
+function upgradeCosts(st,now=Date.now()){const plan=st.plan||PLANS[1];return Object.fromEntries(PLANS.filter(p=>p.price>plan.price).map(p=>[p.id,prorata(p.price-plan.price,now)]));}
+function snapshotFor(s,uid,st){applyNextPlan(st);const result={...snapshot(st),plans:PLANS,upgradeCosts:upgradeCosts(st),usageContext:st.usageContext||'home',sharedIncident:sharedFault(s,uid),zoneNews:zoneNews(s,uid),homeZone:require('./noc-store.cjs').memberZone(s,uid)};usage.observe(s,uid,result);return result;}
 function openIncident(st,now,{zone,description,photo=null,lat,lon,kind,channel='app'}){const incident={id:id(),reference:'FG-'+String(st.incidents.length+1).padStart(3,'0'),segment:st.segment,zone,description,photo,lat,lon,status:'reported',created:now,events:[{at:now,label:LABELS[0]}],confirmations:['home-1'],electrical:kind==='pole',kind,channel};st.incidents.unshift(incident);audit(st,'report',incident.reference+(channel==='ussd'?' · code court sans internet':''));return incident;}
 // Mode survie : signalement fait depuis le menu USSD (ussd.cjs), sans internet, donc sans photo ni position.
 // Mêmes règles que l'application : un seul incident ouvert par tronçon, 15 au plus par parcours.
@@ -223,13 +235,13 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   audit(st,'qos.confirm',p.usage+' · 30 minutes · simulation');st.proposal=null;
   }else if(d.type==='upgrade-decline'){st.upgrade=null;st.declinedUntil=now+86400000;audit(st,'upgrade.declined','Offres suspendues pendant 24 heures');
  }else if(d.type==='plan-quote'){
-  // Le client choisit lui-même un forfait plus rapide dans son compte : le serveur calcule le complément à payer.
+  // Le client choisit lui-même un forfait plus rapide dans son compte : le serveur calcule le complément à payer (au prorata du mois).
   const to=planOf(d.to),plan=st.plan||PLANS[1];insist(to,'Forfait inconnu.');
   insist(to.price>plan.price,'Ce forfait n’est pas plus cher que le vôtre : il se choisit sans paiement.',409);
   insist(!active(st)&&!sharedFault(s,uid),'Une panne est en cours dans votre quartier : un forfait plus rapide ne la réglerait pas. Réessayez quand internet sera revenu.',409);
   insist(st.scenario!=='slow','Votre débit est anormalement bas : un forfait plus rapide ne réglerait pas ce souci. Redémarrez d’abord votre box.',409);
-  st.proposal=null;st.upgrade={id:id(),from:plan,to,amount:to.price-plan.price,expires:now+300000,source:'compte'};
-  audit(st,'plan.quote',plan.mbps+' → '+to.mbps+' Mbps · complément '+st.upgrade.amount+' FCFA');
+  st.proposal=null;st.upgrade=upgradeQuote(plan,to,now,{source:'compte'});
+  audit(st,'plan.quote',plan.mbps+' → '+to.mbps+' Mbps · complément '+st.upgrade.amount+' FCFA ('+st.upgrade.daysLeft+' j sur '+st.upgrade.daysInMonth+')');
  }else if(d.type==='plan-cancel'){if(st.upgrade?.source==='compte')st.upgrade=null; // Le client referme le paiement : l'offre disparaît, sans bloquer Guardian 24 h.
  }else if(d.type==='plan-change'){
   // Forfait moins cher : rien à payer, il commence le mois prochain. Choisir son forfait actuel annule le changement prévu.
@@ -250,11 +262,14 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
    const q=st.upgrade;insist(q&&q.id===d.id&&q.expires>now,'Offre expirée ou introuvable.',409);
    insist(!active(st)&&!sharedFault(s,uid),'Incident de zone en cours : aucun achat proposé.',409);
    const from=planOf(q.from.id),to=planOf(q.to.id);
-   insist(st.scenario!=='slow'&&from&&to&&(st.plan?.id||'demo-100')===from.id&&q.to.price===to.price&&q.amount===to.price-from.price&&q.amount>0,'Offre modifiée ou devenue inapplicable.',409);
+   // Le montant est recalculé avec les jours notés dans le devis : un paiement fait juste après minuit garde le prix annoncé.
+   const days=Number.isInteger(q.daysInMonth)&&q.daysInMonth>=28&&q.daysInMonth<=31&&Number.isInteger(q.daysLeft)&&q.daysLeft>=1&&q.daysLeft<=q.daysInMonth;
+   insist(st.scenario!=='slow'&&from&&to&&days&&(st.plan?.id||'demo-100')===from.id&&q.to.price===to.price&&q.diff===to.price-from.price&&q.diff>0&&q.amount===prorataAmount(q.diff,q.daysLeft,q.daysInMonth)&&q.amount>0,'Offre modifiée ou devenue inapplicable.',409);
    st.plan={...to};st.capacity=to.mbps;st.nextPlan=null;st.payment={quoteId:q.id,amount:q.amount,at:now,mode:'simulation'};st.upgrade=null;
    const paid=q.amount.toLocaleString('fr-FR')+' FCFA';
    audit(st,'upgrade.activated','Paiement simulé '+paid+' · '+to.mbps+' Mbps · aucun débit réel');
-   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Nouveau forfait actif',body:'Paiement Moov Money de '+paid+' reçu. Vous avez maintenant '+to.mbps+' Mbps, pour '+to.price.toLocaleString('fr-FR')+' FCFA par mois.',read:false});st.notifications=st.notifications.slice(0,100);
+   const rest=q.daysLeft>1?'les '+q.daysLeft+' jours restants de '+monthOf(q.at||now):'le dernier jour de '+monthOf(q.at||now);
+   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Nouveau forfait actif',body:'Paiement Moov Money de '+paid+' reçu pour '+rest+'. Vous avez maintenant '+to.mbps+' Mbps. À partir du '+firstOf(q.nextBilling)+', votre forfait coûte '+fcfa(to.price)+' par mois.',read:false});st.notifications=st.notifications.slice(0,100);
    st.messages.push({id:id(),role:'assistant',text:'Paiement confirmé : '+paid+'. Votre forfait '+to.mbps+' Mbps est actif.'});
   }
  }else if(d.type==='reboot'){
@@ -314,4 +329,4 @@ function boxPhoto(s,uid,d,reading){return s.transaction(()=>{const st=get(s,uid)
  st.messages.push({id:id(),role:'user',text:'Voici une photo de ma box.',photo:true},{id:id(),role:'assistant',text:r.message,facts:r.facts,action:r.action,verdict:r.verdict,concord:r.concord,...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  audit(st,'photo.read',(reading.source==='claude'?'Lecture Guardian':'Lecture sur le téléphone')+' · '+(r.verdict||'à reprendre')+' · photo non conservée');st.version++;put(s,uid,st);return snapshotFor(s,uid,st);});}
 function refine(s,uid,messageId,text){const st=get(s,uid);if(!st)return null;const m=st.messages.find(x=>x.id===messageId&&x.role==='assistant');if(!m)return snapshotFor(s,uid,st);m.text=text;put(s,uid,st);return snapshotFor(s,uid,st);}
-module.exports={PLANS,applyNextPlan,nextMonth,intent,optical,migrate,seed,get,put,snapshot,snapshotFor,active,sharedFault,TRIP,reportByCode,STEPS,LABELS,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};
+module.exports={PLANS,applyNextPlan,nextMonth,prorata,upgradeCosts,intent,optical,migrate,seed,get,put,snapshot,snapshotFor,active,sharedFault,TRIP,reportByCode,STEPS,LABELS,refine,boxPhoto,requestOtp,verifyOtp,act,reportReal,realReports,respondReal};

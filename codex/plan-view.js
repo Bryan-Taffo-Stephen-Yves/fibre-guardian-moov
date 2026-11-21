@@ -1,7 +1,8 @@
 /* Changer de forfait (onglet Compte) : la grille des offres fibre, le conseil de Guardian d'après les mesures de la box,
    puis un récapitulatif à confirmer. Plus rapide : complément payé avec Moov Money, actif tout de suite.
    « Quel forfait pour moi ? » (SmartOffer, smart-offer.js) : le client coche ses usages, Guardian conseille le forfait qui suffit.
-   Moins cher : rien à payer, actif le 1er du mois suivant. Prix et complément sont recalculés par le serveur (journey-store.cjs). */
+   Moins cher : rien à payer, actif le 1er du mois suivant. Prix et complément sont recalculés par le serveur (journey-store.cjs).
+   Le complément d'un forfait plus cher est au prorata des jours restants du mois : state.upgradeCosts le donne déjà calculé. */
 (function(){
  'use strict';
  const h=React.createElement,{useState:S,useEffect:E,useRef:R}=React;
@@ -82,7 +83,7 @@
 
  function View({api,lab,state,user,busy,onUpgrade,onDowngrade,onKeep,onBack}){
   const plans=state.plans||[],current=state.plan||plans[1]||{},next=state.nextPlan,tip=advice(state,plans);
-  const [pick,P]=S(null),[verdict,VD]=S(null),[form,FM]=S(FORM),smart=window.FGSmartOffer?FGSmartOffer.recommend({...form,plans}):null,tipId=smart?smart.plan.id:['monter','baisser','ok'].includes(verdict)?null:tip?.plan.id,review=R(null),sel=pick&&pick.id!==current.id?plans.find(p=>p.id===pick.id):null,up=sel&&sel.price>current.price;
+  const [pick,P]=S(null),[verdict,VD]=S(null),[form,FM]=S(FORM),smart=window.FGSmartOffer?FGSmartOffer.recommend({...form,plans}):null,tipId=smart?smart.plan.id:['monter','baisser','ok'].includes(verdict)?null:tip?.plan.id,review=R(null),sel=pick&&pick.id!==current.id?plans.find(p=>p.id===pick.id):null,up=sel&&sel.price>current.price,cost=up?(state.upgradeCosts||{})[sel.id]||null:null,due=cost?cost.amount:up?sel.price-current.price:0;
   E(()=>{if(sel&&matchMedia('(max-width:760px)').matches)review.current?.scrollIntoView({behavior:'smooth',block:'nearest'});},[pick]);
   const tipText=tip&&(tip.plan.id===current.id?'Votre forfait actuel vous suffit.':tip.plan.mbps>current.mbps?'Passer à '+tip.plan.mbps+' Mb/s vous donnerait de la marge.':tip.plan.mbps+' Mb/s suffiraient pour vos usages du moment.');
   return h('div',{className:'pv'},
@@ -109,10 +110,11 @@
    sel?h('section',{ref:review,className:'pv-review','aria-labelledby':'pv-review-title'},
     h('h2',{id:'pv-review-title'},'Passer à '+sel.mbps+' Mb/s'),
     h('dl',null,
-     h('div',null,h('dt',null,'Aujourd’hui'),h('dd',null,up?F(sel.price-current.price):'0 F',h('small',null,up?'Complément pour ce mois':'Rien à payer'))),
-     h('div',null,h('dt',null,'Ensuite, chaque mois'),h('dd',null,F(sel.price))),
+     h('div',null,h('dt',null,'Aujourd’hui'),h('dd',null,up?F(due):'0 F',h('small',null,!up?'Rien à payer':cost?'Pour '+(cost.daysLeft>1?'les '+cost.daysLeft+' jours restants':'le dernier jour')+' du mois':'Complément pour ce mois'))),
+     h('div',null,h('dt',null,'Ensuite, chaque mois'),h('dd',null,F(sel.price),cost&&h('small',null,'À partir du '+day(cost.nextBilling)))),
      h('div',null,h('dt',null,'Nouveau débit'),h('dd',null,up?'Tout de suite':'Le '+day(nextMonth()),!up&&h('small',null,'Vous gardez '+current.mbps+' Mb/s jusque-là')))),
-    up?h('button',{type:'button',className:'pv-cta mm',onClick:()=>onUpgrade(sel),disabled:busy},h('span',{className:'pv-mm','aria-hidden':true},'M'),'Payer '+F(sel.price-current.price)+' avec Moov Money'):
+    cost&&window.FGPay&&FGPay.prorata&&h('p',{className:'pv-prorata'},FGPay.prorata(cost,sel.price)+'.'),
+    up?h('button',{type:'button',className:'pv-cta mm',onClick:()=>onUpgrade(sel),disabled:busy},h('span',{className:'pv-mm','aria-hidden':true},'M'),'Payer '+F(due)+' avec Moov Money'):
      h('button',{type:'button',className:'pv-cta',onClick:()=>onDowngrade(sel).then(()=>P(null)),disabled:busy},'Confirmer le passage à '+sel.mbps+' Mb/s'),
     h('button',{type:'button',className:'pv-cancel',onClick:()=>P(null)},'Annuler')):
    h('p',{className:'pv-hint'},h(Icon,{d:I.gift,size:18}),'Choisissez une offre pour voir ce que vous payez. Rien ne change sans votre accord.'));
