@@ -1,8 +1,7 @@
 /* Accueil client, simple comme pour un enfant.
    1. Un grand voyant : vert, ça marche ; orange, c'est lent ; rouge, panne. Une phrase, un bouton.
-   2. Quatre gros boutons avec un dessin : parler, tester, signaler, appeler.
-   3. Deux cartes au plus, seulement si elles concernent le client maintenant.
-   Les offres, la fidélité et le parrainage vivent dans « Mon compte ». */
+   2. Une grille « Services » : toutes les fonctions en tuiles, la suite derrière « Voir tout ».
+   3. Deux cartes au plus, seulement si elles concernent le client maintenant. */
 (function(){
  'use strict';
  const h=React.createElement;
@@ -44,43 +43,74 @@
  function when(at){const d=new Date(at),now=new Date();return d.toDateString()===now.toDateString()?d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}).replace(':',' h '):d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});}
  function kind(n){const t=String(n.title||'').toLowerCase();return /répar|rétabli|revenu|terminé/.test(t)?{icon:P.check,tone:'ok'}:/technicien|équipe|route|place/.test(t)?{icon:P.truck,tone:'info'}:/panne|coupure|lent|baisse|alerte|inconnu/.test(t)?{icon:P.alert,tone:'warn'}:{icon:P.bell,tone:'info'};}
 
- // Accueil façon application bancaire épurée : un en-tête bleu arrondi avec le chiffre clé et deux gros boutons,
- // un bandeau qui dit ce qui se passe, quatre actions rapides en tuiles, puis les derniers messages.
+ // Accueil façon « super-app » d'opérateur : bonjour, une carte sombre « Ma fibre » (offre, débit, voyant),
+ // puis la grille « Services » bien en avant : chaque tuile ouvre un écran qui existe déjà.
+ // Le bandeau d'état n'apparaît que s'il se passe quelque chose ; la bannière orange propose un forfait plus rapide.
+ const S={
+  gauge:P.gauge,
+  chat:'M20 11.5a8 8 0 0 1-11.8 7L4 20l1.3-4A8 8 0 1 1 20 11.5ZM8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01',
+  devices:P.devices,
+  map:'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2ZM9 4v14M15 6v14',
+  up:'M5 19h14M12 15V5M8 9l4-4 4 4',
+  alert:P.alert,
+  folder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 13l2.5 2.5L16 10',
+  sms:P.sms,
+  gift:'M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7S10 3 7.5 4 9 7 12 7m0 0s2-4 4.5-3S15 7 12 7',
+  shield:'m12 3 8 3v6c0 6-8 9-8 9s-8-3-8-9V6Zm-4 9 3 3 5-6',
+  user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0',
+  chevron:'m9 6 6 6-6 6',
+  eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6'
+ };
  function Home({state,user,fault,busy,on,call,cards,recent=[],bell=0,demo}){
-  const s=status({state,fault}),m=state.metrics||{},extra=Math.max(0,(m.connected||0)-(state.usual||0)),plan=state.plan?.mbps||100;
+  const s=status({state,fault}),m=state.metrics||{},extra=Math.max(0,(m.connected||0)-(state.usual||0)),plan=state.plan?.mbps||100,price=state.plan?.price;
+  const [all,setAll]=React.useState(false);
   const run=k=>({track:on.track,guardian:on.guardian,reboot:on.reboot,devices:on.devices})[k];
   const shown=(cards||[]).filter(Boolean).slice(0,2),cut=s.tone==='down',got=cut?0:Math.round(m.capacity||0);
-  const alertAction=s.action||(s.tone==='ok'&&'devices'),alertLabel=s.action?s.actionLabel:extra?extra+' appareil'+(extra>1?'s':'')+' inconnu'+(extra>1?'s':''):(m.connected||0)+' appareil'+((m.connected||0)>1?'s':'')+' connecté'+((m.connected||0)>1?'s':'');
-  const tile=(icon,label,onClick,more)=>h('button',{type:'button',className:'ac-quick-tile',onClick,...more},h(Icon,{d:icon,size:26}),h('span',null,label));
-  return h('div',{className:'ac'},
-   h('header',{className:'ac-hero'},
-    h('div',{className:'ac-top'},
-     h('span',{className:'ac-face'},window.FGAvatar?h(FGAvatar.Face,{name:user.name,size:48,role:'client'}):first(user.name).slice(0,1)),
-     h('div',{className:'ac-hi'},h('small',null,'Bonjour !'),h('strong',null,user.name)),
-     h('div',{className:'ac-top-actions'},demo,h('button',{type:'button',className:'ac-round',onClick:on.bell,'aria-label':'Mes messages'+(bell?' : '+bell+' à lire':'')},h(Icon,{d:P.bell,size:22}),bell>0&&h('i',{className:'ac-round-dot','aria-hidden':true})))),
-    h('div',{className:'ac-key'},
-     h('span',null,cut?'Votre connexion':'Débit reçu par votre box'),
-     h('strong',null,got,h('small',null,' Mb/s')),
-     h('p',null,'Offre '+plan+' Mb/s'+(state.homeZone?' · '+state.homeZone.zone:''))),
-    h('div',{className:'ac-hero-actions'},
-     h('button',{type:'button',className:'ac-hero-btn',onClick:on.voice},h(Icon,{d:P.mic,size:20}),'Parler à Guardian'),
-     on.test&&h('button',{type:'button',className:'ac-hero-btn',onClick:on.test,disabled:busy},h(Icon,{d:P.gauge,size:20}),'Tester ma connexion'))),
-   h('section',{className:'ac-alert ac-'+s.tone,role:'status','aria-live':'polite'},
+  const go=k=>on.go?()=>on.go(k):undefined;
+  const tile=(icon,label,onClick,{tone='blue',badge,aria,disabled}={})=>h('button',{type:'button',key:label,className:'ac-svc ac-svc--'+tone,onClick,disabled,'aria-label':aria||label},
+   h('span',{className:'ac-svc-ico','aria-hidden':true},h(Icon,{d:icon,size:24}),badge?h('b',{className:'ac-svc-badge'},badge):null),h('span',{className:'ac-svc-txt'},label));
+  const main=[
+   tile(S.gauge,'Tester ma connexion',on.test,{disabled:busy||!on.test}),
+   tile(S.chat,'Guardian',on.voice,{tone:'orange',aria:'Parler à Guardian'}),
+   tile(S.devices,'Appareils connectés',on.devices,{tone:'green',badge:extra||null,aria:'Appareils connectés'+(extra?' : '+extra+' inconnu'+(extra>1?'s':''):'')}),
+   tile(S.map,'Voir le réseau',go('ville'),{tone:'sky'}),
+   tile(S.up,'Changer de forfait',go('forfait'),{tone:'orange'}),
+   tile(S.alert,'Signaler une panne',on.report,{tone:'red'}),
+   tile(S.folder,'Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}),
+   tile(S.sms,'Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'})];
+  const more=[call,tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
+  const promo=!cut&&!fault&&plan<500&&on.go;
+  return h('div',{className:'ac ac--svc'},
+   h('header',{className:'ac-head'},
+    h('div',{className:'ac-hi'},h('small',null,'Bienvenue,'),h('strong',null,first(user.name)||user.name)),
+    h('div',{className:'ac-top-actions'},demo,
+     h('button',{type:'button',className:'ac-round',onClick:on.bell,'aria-label':'Mes messages'+(bell?' : '+bell+' à lire':'')},h(Icon,{d:P.bell,size:22}),bell>0&&h('i',{className:'ac-round-dot','aria-hidden':true})),
+     h('button',{type:'button',className:'ac-face',onClick:go('compte'),'aria-label':'Mon compte'},window.FGAvatar?h(FGAvatar.Face,{name:user.name,size:44,role:'client'}):first(user.name).slice(0,1)))),
+   h('section',{className:'ac-card ac-'+s.tone,'aria-label':'Ma fibre'},
+    h('div',{className:'ac-card-main'},
+     h('p',{className:'ac-card-plan'},h('span',{className:'ac-card-dot','aria-hidden':true}),'Ma fibre · Offre '+plan+' Mb/s'),
+     h('p',{className:'ac-card-num'},h('strong',null,got),h('small',null,' Mb/s reçus')),
+     h('p',{className:'ac-card-state'},s.title),
+     on.go&&h('button',{type:'button',className:'ac-card-link',onClick:go('compte'),'aria-label':'Mon compte'+(price?' : '+price.toLocaleString('fr-FR')+' F par mois':'')},price?price.toLocaleString('fr-FR')+' F par mois':'Mon compte',h(Icon,{d:S.chevron,size:16}))),
+    h('button',{type:'button',className:'ac-card-test',onClick:on.test,disabled:busy||!on.test},
+     h('span',{className:'ac-card-test-ico','aria-hidden':true},h(Icon,{d:S.gauge,size:34,stroke:1.8})),
+     h('span',null,'Tester ma connexion'))),
+   s.tone!=='ok'&&h('section',{className:'ac-alert ac-'+s.tone,role:'status','aria-live':'polite'},
     h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:s.icon,size:26,stroke:2.3})),
     h('div',null,h('h2',null,s.title),h('p',null,s.text)),
-    (alertAction||s.second)&&h('div',{className:'ac-alert-actions'},
-     alertAction&&h('button',{type:'button',className:'ac-go'+(s.tone==='ok'?' soft'+(extra?' warn':''):''),onClick:run(alertAction),disabled:busy&&alertAction!=='devices'},s.tone==='ok'&&h(Icon,{d:P.devices,size:18}),alertLabel),
+    (s.action||s.second)&&h('div',{className:'ac-alert-actions'},
+     s.action&&h('button',{type:'button',className:'ac-go',onClick:run(s.action),disabled:busy},s.actionLabel),
      s.second&&h('button',{type:'button',className:'ac-go ghost',onClick:run(s.second),disabled:busy},s.secondLabel))),
    shown.length>0&&h('div',{className:'ac-cards'},shown),
-   h('section',{className:'ac-quick','aria-labelledby':'ac-quick-title'},
-    h('h2',{id:'ac-quick-title'},'Actions rapides'),
-    h('div',{className:'ac-quick-row'},
-     tile(P.alert,'Signaler',on.report),
-     call,
-     tile(P.sms,'*144#',on.survie,{'aria-label':'Sans internet : composez *144#'}),
-     tile(P.devices,'Appareils',on.devices))),
+   h('section',{className:'ac-services','aria-labelledby':'ac-svc-title'},
+    h('div',{className:'ac-services-head'},h('h2',{id:'ac-svc-title'},'Services'),
+     more.length>0&&h('button',{type:'button',className:'ac-more','aria-expanded':all,'aria-controls':'ac-svc-grid',onClick:()=>setAll(v=>!v)},all?'Moins':'Voir tout',h(Icon,{d:S.chevron,size:16}))),
+    h('div',{className:'ac-svc-grid',id:'ac-svc-grid'},main,all&&more)),
+   promo&&h('button',{type:'button',className:'ac-promo',onClick:go('forfait')},
+    h('span',{className:'ac-promo-txt'},h('small',null,'Jeux, films, télétravail'),h('strong',null,'Plus de débit ? Passez au forfait supérieur'),h('span',null,'Vous payez juste la différence. Voir les forfaits')),
+    h('span',{className:'ac-promo-ico','aria-hidden':true},h(Icon,{d:S.up,size:30,stroke:2.2}))),
    h('section',{className:'ac-recent','aria-labelledby':'ac-recent-title'},
-    h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-round small',onClick:on.bell,'aria-label':'Voir tous mes messages'},h(Icon,{d:P.list,size:18}))),
+    h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-more',onClick:on.bell},'Tout voir',h(Icon,{d:S.chevron,size:16}))),
     recent.length?h('ul',null,recent.filter((n,i,all)=>all.findIndex(x=>x.title===n.title&&x.body===n.body)===i).slice(0,3).map(n=>{const k=kind(n);return h('li',{key:n.key||n.id||n.at},h('button',{type:'button',onClick:on.bell},
      h('span',{className:'ac-recent-ico '+k.tone,'aria-hidden':true},h(Icon,{d:k.icon,size:20})),
      h('span',{className:'ac-recent-txt'},h('b',null,n.title),h('small',null,when(n.at))),

@@ -122,7 +122,7 @@
     const o = data.order && data.order.status !== 'annule' ? data.order : null;
     const title = !o ? 'La fibre Moov chez vous' : o.step === 'bienvenue' ? 'Votre fibre est là' : 'Votre installation';
     return h('div', {className: 'fw-page'},
-      h('header', {className: 'fw-head'}, h('p', {className: 'fw-kicker'}, 'NOUVEL ABONNEMENT'), h('h1', null, title),
+      h('header', {className: 'fw-head'}, h('p', {className: 'fw-kicker'}, 'SUIVRE LE DOSSIER DE MA FIBRE'), h('h1', null, title),
         h('p', null, !o ? 'Commandez en deux minutes. Guardian vous suit jusqu’au premier surf.' : o.plan.name + ' · ' + o.commune + ', ' + o.quartier)),
       o && h(Steps, {order: o}),
       error && h('p', {className: 'fw-error', role: 'alert'}, error),
