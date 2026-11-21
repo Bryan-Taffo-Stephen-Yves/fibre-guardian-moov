@@ -33,7 +33,7 @@
           h('span', null, short(q.zone)), h('small', null, q.online + '/' + q.total),
           h('i', {'aria-hidden': true, style: {'--gs-fill': (q.online / q.total * 100) + '%'}}))))),
       h('dl', {className: 'gs-numbers'},
-        [['Box en ligne', n.online + ' / ' + n.total], ['Dossiers ouverts', n.open], ['À valider', n.pending, n.pending > 0], ['Techniciens libres', n.free + ' / ' + n.technicians, n.free === 0], ['Appels évités · 24 h', n.avoided]]
+        [['Box en ligne', n.online + ' / ' + n.total], ['Pannes réseau en cours', n.open], ['À valider', n.pending, n.pending > 0], ['Techniciens libres', n.free + ' / ' + n.technicians, n.free === 0], ['Appels évités · 24 h', n.avoided]]
           .map(([label, value, hot]) => h('div', {key: label, className: hot ? 'is-hot' : ''}, h('dt', null, label), h('dd', null, value)))));
   }
 
