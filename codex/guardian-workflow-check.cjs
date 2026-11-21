@@ -2,7 +2,7 @@
 // Scénarios intégrés sur une base en mémoire et des comptes fictifs.
 const A=require('node:assert/strict'),{createGuardianServer}=require('./pilot-server.cjs'),J=require('./journey-store.cjs'),O=require('./operator-store.cjs');
 // Complément attendu de 100 à 200 Mbps (5 000 F de différence), au prorata des jours restants du mois du devis.
-const attendu=at=>{const d=new Date(at),mois=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return Math.round(5000*(mois-d.getDate()+1)/mois);};
+const attendu=at=>{const d=new Date(at),mois=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();return Math.round(5000*(mois-d.getUTCDate()+1)/mois);};
 (async()=>{const errors=[],server=createGuardianServer({db:':memory:',onError:e=>errors.push(e.message)});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,s=server.guardianStore;
 try {
  async function account(name,role){await s.register({email:name+'@example.test',password:'workflow-password-123',name});if(role)O.grant(s,name+'@example.test',role);const r=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:name+'@example.test',password:'workflow-password-123'})});const d=await r.json();return {id:d.user.id,csrf:d.user.csrf,cookie:r.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ')};}

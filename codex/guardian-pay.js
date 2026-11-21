@@ -13,7 +13,9 @@
  const wait=ms=>new Promise(r=>setTimeout(r,reduced()?Math.min(ms,300):ms));
  const ref=()=>'MM'+Date.now().toString(36).toUpperCase().slice(-6)+Math.floor(Math.random()*90+10);
  const F=n=>Number(n||0).toLocaleString('fr-FR')+' F';
- const firstOf=at=>new Date(at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}).replace(/^1 /,'1er\u00a0');
+ // Les mois se comptent à l'heure d'Abidjan (UTC), comme sur le serveur.
+ const firstOf=at=>new Date(at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}).replace(/^1 /,'1er\u00a0');
+ const monthOf=at=>new Date(at).toLocaleDateString('fr-FR',{month:'long',timeZone:'UTC'});
  // « 10 000 F × 10 jours restants ÷ 30 = 3 333 F aujourd’hui, puis 35 000 F par mois à partir du 1er décembre »
  function prorata(q,price){
   if(!q||!q.daysLeft||!q.daysInMonth)return '';
@@ -47,7 +49,7 @@
      h('div',{className:'mm-merchant'},h('span',{className:'mm-merchant-ico','aria-hidden':true},h(Icon,{d:I.wifi,size:22})),h('div',null,h('small',null,'Payer à'),h('strong',null,'Moov Africa · Fibre'))),
      h('h2',{id:'mm-title',className:'mm-amount'},fcfa(amount)),
      h('p',{className:'mm-what'},quote.label||'Passage au forfait Fibre '+plan.mbps+' Mbps'),
-     quote.daysLeft&&h('p',{className:'mm-prorata'},h('strong',null,'Vous payez seulement les jours restants de ce mois.'),' '+prorata(quote,plan.price)+'.'),
+     quote.daysLeft&&h('p',{className:'mm-prorata'},h('strong',null,quote.daysLeft>=quote.daysInMonth?'Vous payez la différence pour tout le mois de '+monthOf(quote.nextBilling-1)+'.':'Vous payez seulement les jours restants de ce mois.'),' '+prorata(quote,plan.price)+'.'),
      h('dl',{className:'mm-recap'},
       h('div',null,h('dt',null,'Compte fibre'),h('dd',null,account)),
       h('div',null,h('dt',null,'Titulaire'),h('dd',null,customer?.name||'')),
@@ -80,5 +82,5 @@
     h('button',{type:'button',className:'mm-pay',ref:first,onClick:onDiscover},'Voir ma connexion'),
     h('button',{type:'button',className:'mm-cancel',onClick:onClose},closeLabel)));
  }
- window.FGPay={Checkout,Success,prorata};
+ window.FGPay={Checkout,Success,prorata,monthOf};
 })();

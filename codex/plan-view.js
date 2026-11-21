@@ -8,8 +8,9 @@
  const h=React.createElement,{useState:S,useEffect:E,useRef:R}=React;
  const F=n=>Number(n||0).toLocaleString('fr-FR')+' F';
  const USES={50:'Pour 1 ou 2 personnes : WhatsApp, réseaux sociaux, vidéos.',100:'Pour la famille : plusieurs écrans, télétravail, visio.',200:'Pour les grands foyers : vidéo 4K et jeux en ligne.',300:'Pour beaucoup d’appareils en même temps.',500:'Pour travailler à la maison et envoyer de gros fichiers.'};
- const day=at=>new Date(at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}).replace(/^1 /,'1er ');
- const nextMonth=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,1).getTime();};
+ // Les mois se comptent à l'heure d'Abidjan (UTC), comme sur le serveur.
+ const day=at=>new Date(at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}).replace(/^1 /,'1er ');
+ const nextMonth=()=>{const d=new Date();return Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1);};
  function Icon({d,size=20}){return h('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,focusable:false},h('path',{d}));}
  const I={home:'M4 11 12 4l8 7v9H4zM10 20v-5h4v5',wifi:'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',game:'M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4zM7 11v3M5.5 12.5h3M16 12h.01M18 13.5h.01',pin:'M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5',users:'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 20v-1.5a3.5 3.5 0 0 0-2.5-3.3M15.5 4.2a3.5 3.5 0 0 1 0 6.6',back:'m15 6-6 6 6 6',check:'m5 12 5 5 9-10',spark:'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18',calendar:'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',gift:'M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7S10 3 7.5 4 9 7 12 7m0 0s2-4 4.5-3S15 7 12 7'};
 
@@ -83,7 +84,7 @@
 
  function View({api,lab,state,user,busy,onUpgrade,onDowngrade,onKeep,onBack}){
   const plans=state.plans||[],current=state.plan||plans[1]||{},next=state.nextPlan,tip=advice(state,plans);
-  const [pick,P]=S(null),[verdict,VD]=S(null),[form,FM]=S(FORM),smart=window.FGSmartOffer?FGSmartOffer.recommend({...form,plans}):null,tipId=smart?smart.plan.id:['monter','baisser','ok'].includes(verdict)?null:tip?.plan.id,review=R(null),sel=pick&&pick.id!==current.id?plans.find(p=>p.id===pick.id):null,up=sel&&sel.price>current.price,cost=up?(state.upgradeCosts||{})[sel.id]||null:null,due=cost?cost.amount:up?sel.price-current.price:0;
+  const [pick,P]=S(null),[verdict,VD]=S(null),[form,FM]=S(FORM),smart=window.FGSmartOffer?FGSmartOffer.recommend({...form,plans}):null,tipId=smart?smart.plan.id:['monter','baisser','ok'].includes(verdict)?null:tip?.plan.id,review=R(null),sel=pick&&pick.id!==current.id?plans.find(p=>p.id===pick.id):null,up=sel&&sel.price>current.price,cost=up?(state.upgradeCosts||{})[sel.id]||null:null;
   E(()=>{if(sel&&matchMedia('(max-width:760px)').matches)review.current?.scrollIntoView({behavior:'smooth',block:'nearest'});},[pick]);
   const tipText=tip&&(tip.plan.id===current.id?'Votre forfait actuel vous suffit.':tip.plan.mbps>current.mbps?'Passer à '+tip.plan.mbps+' Mb/s vous donnerait de la marge.':tip.plan.mbps+' Mb/s suffiraient pour vos usages du moment.');
   return h('div',{className:'pv'},
@@ -110,11 +111,11 @@
    sel?h('section',{ref:review,className:'pv-review','aria-labelledby':'pv-review-title'},
     h('h2',{id:'pv-review-title'},'Passer à '+sel.mbps+' Mb/s'),
     h('dl',null,
-     h('div',null,h('dt',null,'Aujourd’hui'),h('dd',null,up?F(due):'0 F',h('small',null,!up?'Rien à payer':cost?'Pour '+(cost.daysLeft>1?'les '+cost.daysLeft+' jours restants':'le dernier jour')+' du mois':'Complément pour ce mois'))),
+     h('div',null,h('dt',null,'Aujourd’hui'),h('dd',null,!up?'0 F':cost?F(cost.amount):'—',h('small',null,!up?'Rien à payer':!cost?'Montant calculé au paiement':cost.daysLeft>=cost.daysInMonth?'Pour tout le mois de '+new Date(cost.nextBilling-1).toLocaleDateString('fr-FR',{month:'long',timeZone:'UTC'}):'Pour '+(cost.daysLeft>1?'les '+cost.daysLeft+' jours restants':'le dernier jour')+' du mois'))),
      h('div',null,h('dt',null,'Ensuite, chaque mois'),h('dd',null,F(sel.price),cost&&h('small',null,'À partir du '+day(cost.nextBilling)))),
      h('div',null,h('dt',null,'Nouveau débit'),h('dd',null,up?'Tout de suite':'Le '+day(nextMonth()),!up&&h('small',null,'Vous gardez '+current.mbps+' Mb/s jusque-là')))),
     cost&&window.FGPay&&FGPay.prorata&&h('p',{className:'pv-prorata'},FGPay.prorata(cost,sel.price)+'.'),
-    up?h('button',{type:'button',className:'pv-cta mm',onClick:()=>onUpgrade(sel),disabled:busy},h('span',{className:'pv-mm','aria-hidden':true},'M'),'Payer '+F(due)+' avec Moov Money'):
+    up?h('button',{type:'button',className:'pv-cta mm',onClick:()=>onUpgrade(sel),disabled:busy},h('span',{className:'pv-mm','aria-hidden':true},'M'),(cost?'Payer '+F(cost.amount):'Payer')+' avec Moov Money'):
      h('button',{type:'button',className:'pv-cta',onClick:()=>onDowngrade(sel).then(()=>P(null)),disabled:busy},'Confirmer le passage à '+sel.mbps+' Mb/s'),
     h('button',{type:'button',className:'pv-cancel',onClick:()=>P(null)},'Annuler')):
    h('p',{className:'pv-hint'},h(Icon,{d:I.gift,size:18}),'Choisissez une offre pour voir ce que vous payez. Rien ne change sans votre accord.'));
