@@ -63,7 +63,9 @@
  };
  function Home({state,user,fault,busy,on,call,cards,recent=[],bell=0,demo}){
   const s=status({state,fault}),m=state.metrics||{},extra=Math.max(0,(m.connected||0)-(state.usual||0)),plan=state.plan?.mbps||100,price=state.plan?.price;
-  const [all,setAll]=React.useState(false);
+  const [all,setAll]=React.useState(false),[order,setOrder]=React.useState(false);
+  // « Dossier de ma fibre » seulement s'il existe un dossier d'installation (nouvel abonné) ; sinon « Mon compte » prend sa place.
+  React.useEffect(()=>{let alive=true;fetch('/api/welcome',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(r=>{if(alive)setOrder(!!(r&&r.order&&r.order.status!=='annule'));}).catch(()=>{});return()=>{alive=false;};},[user.id]);
   const run=k=>({track:on.track,guardian:on.guardian,reboot:on.reboot,devices:on.devices})[k];
   const shown=(cards||[]).filter(Boolean).slice(0,2),cut=s.tone==='down',got=cut?0:Math.round(m.capacity||0);
   const go=k=>on.go?()=>on.go(k):undefined;
@@ -76,9 +78,9 @@
    tile(S.map,'Voir le réseau',go('ville'),{tone:'sky'}),
    tile(S.up,'Changer de forfait',go('forfait'),{tone:'orange'}),
    tile(S.alert,'Signaler une panne',on.report,{tone:'red'}),
-   tile(S.folder,'Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}),
+   order?tile(S.folder,'Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}):tile(S.user,'Mon compte',go('compte'),{tone:'blue'}),
    tile(S.sms,'Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'})];
-  const more=[!cut&&call,tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
+  const more=[!cut&&call,tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),order&&tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
   const promo=s.tone==='ok'&&!fault&&!state.sharedIncident&&plan<500&&on.go;
   // Tout marche mais des appareils inconnus sont sur le Wi-Fi : le bandeau le dit en toutes lettres.
   const a=s.tone==='ok'&&extra?{tone:'slow',icon:P.devices,title:extra+' appareil'+(extra>1?'s':'')+' inconnu'+(extra>1?'s':'')+' sur votre Wi-Fi',text:'Vérifiez que vous les connaissez. Vous pouvez les bloquer en un geste.',action:'devices',actionLabel:'Voir mes appareils'}:s;

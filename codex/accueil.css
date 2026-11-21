@@ -29,8 +29,8 @@
 .ac-fibre.ac-wait{--tone:var(--moov-primary-300)}
 .ac-fibre-main{display:grid;gap:6px;align-content:center;min-width:0}
 .ac-fibre-main p{margin:0}
-.ac-fibre-plan{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:color-mix(in srgb,var(--moov-white) 82%,transparent)}
-.ac-fibre-dot{width:9px;height:9px;border-radius:50%;background:var(--tone);box-shadow:0 0 0 4px color-mix(in srgb,var(--tone) 25%,transparent)}
+.ac-fibre-plan{display:flex;align-items:flex-start;gap:8px;line-height:1.4;font-size:14px;font-weight:600;color:color-mix(in srgb,var(--moov-white) 82%,transparent)}
+.ac-fibre-dot{flex:none;margin-top:6px;width:9px;height:9px;border-radius:50%;background:var(--tone);box-shadow:0 0 0 4px color-mix(in srgb,var(--tone) 25%,transparent)}
 .ac-fibre-num strong{font:700 40px/1 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.04em;font-variant-numeric:tabular-nums}
 .ac-fibre-num small{font-size:15px;font-weight:600;color:color-mix(in srgb,var(--moov-white) 72%,transparent)}
 .ac-fibre-state{font-size:14.5px;font-weight:600;color:var(--tone)}
