@@ -70,7 +70,7 @@
   const tile=(icon,label,onClick,{tone='blue',badge,aria,disabled}={})=>h('button',{type:'button',key:label,className:'ac-svc ac-svc--'+tone,onClick,disabled,'aria-label':aria||label},
    h('span',{className:'ac-svc-ico','aria-hidden':true},h(Icon,{d:icon,size:24}),badge?h('b',{className:'ac-svc-badge'},badge):null),h('span',{className:'ac-svc-txt'},label));
   const main=[
-   tile(S.gauge,'Tester ma connexion',on.test,{disabled:busy||!on.test}),
+   tile(S.gauge,'Tester ma connexion',on.test,{disabled:busy||!on.test||s.tone==='wait'}),
    tile(S.chat,'Guardian',on.voice,{tone:'orange',aria:'Parler à Guardian'}),
    tile(S.devices,'Appareils connectés',on.devices,{tone:'green',badge:extra||null,aria:'Appareils connectés'+(extra?' : '+extra+' inconnu'+(extra>1?'s':''):'')}),
    tile(S.map,'Voir le réseau',go('ville'),{tone:'sky'}),
@@ -78,29 +78,32 @@
    tile(S.alert,'Signaler une panne',on.report,{tone:'red'}),
    tile(S.folder,'Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}),
    tile(S.sms,'Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'})];
-  const more=[call,tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
-  const promo=!cut&&!fault&&plan<500&&on.go;
+  const more=[!cut&&call,tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
+  const promo=s.tone==='ok'&&!fault&&!state.sharedIncident&&plan<500&&on.go;
+  // Tout marche mais des appareils inconnus sont sur le Wi-Fi : le bandeau le dit en toutes lettres.
+  const a=s.tone==='ok'&&extra?{tone:'slow',icon:P.devices,title:extra+' appareil'+(extra>1?'s':'')+' inconnu'+(extra>1?'s':'')+' sur votre Wi-Fi',text:'Vérifiez que vous les connaissez. Vous pouvez les bloquer en un geste.',action:'devices',actionLabel:'Voir mes appareils'}:s;
   return h('div',{className:'ac ac--svc'},
-   h('header',{className:'ac-head'},
+   h('header',{className:'ac-hello'},
     h('div',{className:'ac-hi'},h('small',null,'Bienvenue,'),h('strong',null,first(user.name)||user.name)),
     h('div',{className:'ac-top-actions'},demo,
      h('button',{type:'button',className:'ac-round',onClick:on.bell,'aria-label':'Mes messages'+(bell?' : '+bell+' à lire':'')},h(Icon,{d:P.bell,size:22}),bell>0&&h('i',{className:'ac-round-dot','aria-hidden':true})),
      h('button',{type:'button',className:'ac-face',onClick:go('compte'),'aria-label':'Mon compte'},window.FGAvatar?h(FGAvatar.Face,{name:user.name,size:44,role:'client'}):first(user.name).slice(0,1)))),
-   h('section',{className:'ac-card ac-'+s.tone,'aria-label':'Ma fibre'},
-    h('div',{className:'ac-card-main'},
-     h('p',{className:'ac-card-plan'},h('span',{className:'ac-card-dot','aria-hidden':true}),'Ma fibre · Offre '+plan+' Mb/s'),
-     h('p',{className:'ac-card-num'},h('strong',null,got),h('small',null,' Mb/s reçus')),
-     h('p',{className:'ac-card-state'},s.title),
-     on.go&&h('button',{type:'button',className:'ac-card-link',onClick:go('compte'),'aria-label':'Mon compte'+(price?' : '+price.toLocaleString('fr-FR')+' F par mois':'')},price?price.toLocaleString('fr-FR')+' F par mois':'Mon compte',h(Icon,{d:S.chevron,size:16}))),
-    h('button',{type:'button',className:'ac-card-test',onClick:on.test,disabled:busy||!on.test},
-     h('span',{className:'ac-card-test-ico','aria-hidden':true},h(Icon,{d:S.gauge,size:34,stroke:1.8})),
+   h('section',{className:'ac-fibre ac-'+s.tone,'aria-label':'Ma fibre'},
+    h('div',{className:'ac-fibre-main'},
+     h('p',{className:'ac-fibre-plan'},h('span',{className:'ac-fibre-dot','aria-hidden':true}),'Ma fibre · Offre '+plan+' Mb/s'+(state.homeZone?.zone?' · '+state.homeZone.zone:'')),
+     h('p',{className:'ac-fibre-num'},h('strong',null,got),h('small',null,' Mb/s reçus')),
+     h('p',{className:'ac-fibre-state',role:'status','aria-live':'polite'},s.title),
+     on.go&&h('button',{type:'button',className:'ac-fibre-link',onClick:go('compte'),'aria-label':'Mon compte'+(price?' : '+price.toLocaleString('fr-FR')+' F par mois':'')},price?price.toLocaleString('fr-FR')+' F par mois':'Mon compte',h(Icon,{d:S.chevron,size:16}))),
+    h('button',{type:'button',className:'ac-fibre-test',onClick:on.test,disabled:busy||!on.test||s.tone==='wait'},
+     h('span',{className:'ac-fibre-test-ico','aria-hidden':true},h(Icon,{d:S.gauge,size:34,stroke:1.8})),
      h('span',null,'Tester ma connexion'))),
-   s.tone!=='ok'&&h('section',{className:'ac-alert ac-'+s.tone,role:'status','aria-live':'polite'},
-    h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:s.icon,size:26,stroke:2.3})),
-    h('div',null,h('h2',null,s.title),h('p',null,s.text)),
-    (s.action||s.second)&&h('div',{className:'ac-alert-actions'},
-     s.action&&h('button',{type:'button',className:'ac-go',onClick:run(s.action),disabled:busy},s.actionLabel),
-     s.second&&h('button',{type:'button',className:'ac-go ghost',onClick:run(s.second),disabled:busy},s.secondLabel))),
+   a.tone!=='ok'&&h('section',{className:'ac-alert ac-'+a.tone},
+    h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:a.icon,size:26,stroke:2.3})),
+    h('div',null,h('h2',null,a.title),h('p',null,a.text)),
+    (a.action||a.second||cut&&call)&&h('div',{className:'ac-alert-actions'},
+     a.action&&h('button',{type:'button',className:'ac-go',onClick:run(a.action),disabled:busy&&a.action!=='devices'},a.actionLabel),
+     a.second&&h('button',{type:'button',className:'ac-go ghost',onClick:run(a.second),disabled:busy},a.secondLabel),
+     cut&&call)),
    shown.length>0&&h('div',{className:'ac-cards'},shown),
    h('section',{className:'ac-services','aria-labelledby':'ac-svc-title'},
     h('div',{className:'ac-services-head'},h('h2',{id:'ac-svc-title'},'Services'),

@@ -7,7 +7,7 @@
  display:grid;gap:18px;max-width:1120px;padding-bottom:12px}
 
 /* En-tête : bonjour à gauche ; Démo, cloche et avatar à droite */
-.ac-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:calc(6px + env(safe-area-inset-top));animation:ac-in .45s var(--ac-ease) both}
+.ac-hello{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:calc(6px + env(safe-area-inset-top));animation:ac-in .45s var(--ac-ease) both}
 .ac-hi{display:grid;gap:1px;min-width:0}
 .ac-hi small{font-size:14.5px;color:var(--moov-text-muted)}
 .ac-hi strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 24px/1.2 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.02em;color:var(--moov-ink)}
@@ -20,26 +20,26 @@
 .ac-face{display:grid;place-items:center;width:46px;height:46px;padding:0;border:0;border-radius:50%;background:var(--moov-accent-100);box-shadow:0 0 0 2px var(--moov-accent-500);overflow:hidden;font-weight:700;color:var(--moov-accent-700);cursor:pointer}
 
 /* Carte sombre « Ma fibre » : l'offre, le débit, le voyant ; à droite, le gros bouton « Tester » */
-.ac-card{--tone:var(--moov-success-300);position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:stretch;
+.ac-fibre{--tone:var(--moov-success-300);position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:stretch;
  padding:18px 16px 18px 20px;border-radius:24px;color:var(--moov-white);background:linear-gradient(150deg,var(--moov-neutral-800) 0%,var(--moov-neutral-900) 70%);
  box-shadow:0 22px 40px -26px color-mix(in srgb,var(--moov-neutral-900) 90%,transparent);animation:ac-in .5s .04s var(--ac-ease) both}
-.ac-card::before{content:'';position:absolute;inset:auto auto -60% -20%;width:300px;height:300px;z-index:-1;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--moov-primary-500) 45%,transparent),transparent 70%)}
-.ac-card.ac-slow{--tone:var(--moov-accent-500)}
-.ac-card.ac-down{--tone:var(--moov-danger-300)}
-.ac-card.ac-wait{--tone:var(--moov-primary-300)}
-.ac-card-main{display:grid;gap:6px;align-content:center;min-width:0}
-.ac-card-main p{margin:0}
-.ac-card-plan{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:color-mix(in srgb,var(--moov-white) 82%,transparent)}
-.ac-card-dot{width:9px;height:9px;border-radius:50%;background:var(--tone);box-shadow:0 0 0 4px color-mix(in srgb,var(--tone) 25%,transparent)}
-.ac-card-num strong{font:700 40px/1 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.04em;font-variant-numeric:tabular-nums}
-.ac-card-num small{font-size:15px;font-weight:600;color:color-mix(in srgb,var(--moov-white) 72%,transparent)}
-.ac-card-state{font-size:14.5px;font-weight:600;color:var(--tone)}
-.ac-card-link{justify-self:start;display:inline-flex;align-items:center;gap:4px;min-height:36px;margin-top:2px;padding:0;border:0;background:none;color:var(--moov-accent-500);font:600 14px var(--fg-font,inherit);cursor:pointer}
-.ac-card-test{display:grid;justify-items:center;align-content:center;gap:8px;width:112px;padding:12px 8px;border:0;border-radius:18px;background:none;color:var(--moov-white);font:600 13px/1.2 var(--fg-font,inherit);text-align:center;cursor:pointer}
-.ac-card-test-ico{display:grid;place-items:center;width:84px;height:84px;border:3px solid var(--moov-accent-500);border-radius:20px;background:var(--moov-surface);color:var(--moov-primary-700);transition:transform .15s}
-.ac-card-test:hover .ac-card-test-ico{transform:scale(1.03)}
-.ac-card-test:active .ac-card-test-ico{transform:scale(.96)}
-.ac-card-test:disabled{opacity:.6;cursor:default}
+.ac-fibre::before{content:'';position:absolute;inset:auto auto -60% -20%;width:300px;height:300px;z-index:-1;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--moov-primary-500) 45%,transparent),transparent 70%)}
+.ac-fibre.ac-slow{--tone:var(--moov-accent-500)}
+.ac-fibre.ac-down{--tone:var(--moov-danger-300)}
+.ac-fibre.ac-wait{--tone:var(--moov-primary-300)}
+.ac-fibre-main{display:grid;gap:6px;align-content:center;min-width:0}
+.ac-fibre-main p{margin:0}
+.ac-fibre-plan{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:color-mix(in srgb,var(--moov-white) 82%,transparent)}
+.ac-fibre-dot{width:9px;height:9px;border-radius:50%;background:var(--tone);box-shadow:0 0 0 4px color-mix(in srgb,var(--tone) 25%,transparent)}
+.ac-fibre-num strong{font:700 40px/1 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.ac-fibre-num small{font-size:15px;font-weight:600;color:color-mix(in srgb,var(--moov-white) 72%,transparent)}
+.ac-fibre-state{font-size:14.5px;font-weight:600;color:var(--tone)}
+.ac-fibre-link{justify-self:start;display:inline-flex;align-items:center;gap:4px;min-height:36px;margin-top:2px;padding:0;border:0;background:none;color:var(--moov-accent-500);font:600 14px var(--fg-font,inherit);cursor:pointer}
+.ac-fibre-test{display:grid;justify-items:center;align-content:center;gap:8px;width:112px;padding:12px 8px;border:0;border-radius:18px;background:none;color:var(--moov-white);font:600 13px/1.2 var(--fg-font,inherit);text-align:center;cursor:pointer}
+.ac-fibre-test-ico{display:grid;place-items:center;width:84px;height:84px;border:3px solid var(--moov-accent-500);border-radius:20px;background:var(--moov-surface);color:var(--moov-primary-700);transition:transform .15s}
+.ac-fibre-test:hover .ac-fibre-test-ico{transform:scale(1.03)}
+.ac-fibre-test:active .ac-fibre-test-ico{transform:scale(.96)}
+.ac-fibre-test:disabled{opacity:.6;cursor:default}
 
 /* Services : la grille mise en avant */
 .ac-services{display:grid;gap:12px;animation:ac-in .5s .1s var(--ac-ease) both}
@@ -85,6 +85,7 @@
 .ac-alert h2{margin:0;font:700 17.5px/1.25 var(--fg-font,inherit);letter-spacing:-.01em;color:var(--moov-ink)}
 .ac-alert p{margin:3px 0 0;font-size:14.5px;line-height:1.45;color:var(--moov-text-muted,var(--moov-neutral-600))}
 .ac-alert-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.journey .ac .ac-alert-actions .ap-call-button{flex:1 1 auto;display:inline-flex;flex-direction:row;min-height:48px;padding:0 16px;border:0;border-radius:14px;background:var(--tone-soft);color:var(--tone-ink);font:600 15.5px var(--fg-font,inherit);cursor:pointer}
 .ac-go{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 16px;border:0;border-radius:14px;background:var(--tone);color:var(--ac-white);font:600 15.5px var(--fg-font,inherit);cursor:pointer;transition:filter .15s,transform .15s}
 .ac-slow .ac-go:not(.ghost){color:var(--moov-on-accent,var(--moov-neutral-900))}
 .ac-go:hover{filter:brightness(1.05)}
@@ -113,23 +114,23 @@
 .ac-recent-tag{font-size:12.5px;font-weight:600;color:var(--moov-neutral-500)}
 .ac-recent-tag.new{padding:4px 9px;border-radius:999px;background:var(--moov-accent-100);color:var(--moov-accent-800)}
 .ac-recent-empty{margin:0;padding:6px 4px 12px;font-size:14.5px;line-height:1.45;color:var(--moov-text-muted,var(--moov-neutral-600))}
-.ac :is(.ac-round,.ac-face,.ac-go,.ac-svc,.ap-call-button,.ac-more,.ac-card-link,.ac-card-test,.ac-promo,.ac-recent li>button,.fg-demo-badge):focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:3px}
-.ac-card :is(.ac-card-link,.ac-card-test):focus-visible{outline-color:var(--moov-white)}
+.ac :is(.ac-round,.ac-face,.ac-go,.ac-svc,.ap-call-button,.ac-more,.ac-fibre-link,.ac-fibre-test,.ac-promo,.ac-recent li>button,.fg-demo-badge):focus-visible{outline:3px solid var(--moov-focus,var(--moov-primary-200));outline-offset:3px}
+.ac-fibre :is(.ac-fibre-link,.ac-fibre-test):focus-visible{outline-color:var(--moov-white)}
 
 /* Plus de boule flottante sur l'accueil : Guardian est une tuile des Services */
 .journey:has(.ac) .j-dock{display:none}
 
 @media(max-width:760px){
  /* L'en-tête « Bienvenue » remplace la barre du haut sur l'accueil */
- .journey:has(.ac-head) .j-header{display:none}
+ .journey:has(.ac-hello) .j-header{display:none}
 }
-@media(max-width:370px){.ac-svc-grid{gap:7px}.journey .ac .ac-svc{font-size:11.5px}.ac-card-test{width:96px}.ac-card-test-ico{width:72px;height:72px}.ac-card-num strong{font-size:34px}}
+@media(max-width:370px){.ac-svc-grid{gap:7px}.journey .ac .ac-svc{font-size:11.5px}.ac-fibre-test{width:96px}.ac-fibre-test-ico{width:72px;height:72px}.ac-fibre-num strong{font-size:34px}}
 @media(min-width:761px){
  .ac{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);grid-auto-flow:row dense;gap:20px 26px;align-items:start}
- .ac-head{grid-column:1/-1}
+ .ac-hello{grid-column:1/-1}
  .ac-hi strong{font-size:28px}
- .ac-card{grid-column:1;padding:24px 22px 24px 26px;border-radius:28px}
- .ac-card-num strong{font-size:52px}
+ .ac-fibre{grid-column:1;padding:24px 22px 24px 26px;border-radius:28px}
+ .ac-fibre-num strong{font-size:52px}
  .ac-alert,.ac-promo{grid-column:1}
  .ac-services{grid-column:2;grid-row:2/span 2}
  .ac-top-actions{display:none}
@@ -138,7 +139,7 @@
  .journey .ac .ac-svc,.journey .ac .ac-svc-grid .ap-call-button{min-height:122px;font-size:14px;gap:10px}
  .ac-svc-ico,.journey .ac .ac-svc-grid .ap-call-button>svg{width:54px;height:54px}
 }
-@media(prefers-reduced-motion:reduce){.ac-head,.ac-card,.ac-alert,.ac-services,.ac-promo,.ac-recent{animation:none}.ac-svc,.ac-card-test-ico,.ac-go{transition:none}}
+@media(prefers-reduced-motion:reduce){.ac-hello,.ac-fibre,.ac-alert,.ac-services,.ac-promo,.ac-recent{animation:none}.ac-svc,.ac-fibre-test-ico,.ac-go{transition:none}}
 
 
 /* Mes appareils : la liste d'abord, l'historique et les conseils repliés */
