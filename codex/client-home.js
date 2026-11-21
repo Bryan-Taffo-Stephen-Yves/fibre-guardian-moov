@@ -163,10 +163,12 @@
    h('section',{className:'ch-profile'},h(Face,{name:user.name,size:72,role:'client'}),h('div',null,h('h1',null,user.name),h('p',null,zone?'Fibre Moov · '+zone:'Client Moov Fibre')),
     plan&&h('div',{className:'ch-plan'},h('div',null,h('small',null,'Votre offre'),h('strong',null,plan.mbps+' Mb/s')),h('div',null,h('small',null,'Chaque mois'),h('strong',null,(plan.price||0).toLocaleString('fr-FR')+' F')),h('button',{type:'button',className:'ch-chip strong',onClick:()=>go('forfait')},'Changer de forfait'),state?.nextPlan&&h('p',{className:'ch-plan-next'},'À partir du '+new Date(state.nextPlan.at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}).replace(/^1 /,'1er ')+' : '+state.nextPlan.plan.mbps+' Mb/s pour '+(state.nextPlan.plan.price||0).toLocaleString('fr-FR')+' F par mois.'))),
    // « Mes avantages » : tout ce que Moov offre au client est rangé ici, pas sur l'accueil (fidélité, parrainage, offres solidaires). WhatsApp vient ensuite, seulement s'il est disponible.
-   h('h2',{className:'ch-section-title'},'Mes avantages'),
+   // « Mes offres » : un seul écran à trois onglets (Forfait, Fidélité avec le parrainage, Solidaire). Ici, juste la carte des points et l'entrée.
+   h('h2',{className:'ch-section-title'},'Mes offres'),
    api&&window.FGFidelite&&h(FGFidelite.Entry,{api,onOpen:()=>go('fidelite')}),
-   api&&h(ParrainageCard,{api}),
-   window.FGAcces&&h(FGAcces.Entry,{onOpen:()=>go('acces')}),
+   h('section',{className:'ch-group'},
+    row('gift','Parrainer un proche','Un mois offert pour vous et pour lui',()=>go('fidelite')),
+    window.FGAcces&&row('wallet','Offres solidaires','Étudiants, voisins, payer en plusieurs fois',()=>go('acces'))),
    api&&h(WhatsAppCard,{api,go}),
    h('section',{className:'ch-group'},h('h2',null,'Mon suivi'),
     row('bell','Mes messages',bell?bell+' message'+(bell>1?'s':'')+' à lire':'Tout est lu',()=>go('notifications')),
