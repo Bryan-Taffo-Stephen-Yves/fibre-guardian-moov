@@ -86,3 +86,8 @@
 .ac-thumb{width:100%;max-width:320px;aspect-ratio:16/10;object-fit:cover;border-radius:10px;background:var(--moov-neutral-100)}
 .ac-select{min-height:42px;font-size:13.5px;flex:1 1 200px;width:auto}
 .ac-join .ac-btn{flex:none;white-space:nowrap}
+
+/* Les classes ac-top, ac-go et ac-cards existent aussi dans l'accueil (accueil.css) : dans cette page, ce sont celles d'ici qui comptent. */
+.ac-page .ac-top{display:block}
+.ac-page .ac-go{flex:none;display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:50px;padding:0 18px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font:inherit;font-size:16px;font-weight:650;cursor:pointer}
+.ac-page .ac-cards{gap:10px}
