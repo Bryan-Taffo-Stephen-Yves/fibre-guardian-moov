@@ -273,7 +273,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
    insist(Number.isFinite(q.nextBilling)&&now<q.nextBilling,'Le mois a changé : le prix a été recalculé. Réessayez.',409);
    const days=Number.isInteger(q.daysInMonth)&&q.daysInMonth>=28&&q.daysInMonth<=31&&Number.isInteger(q.daysLeft)&&q.daysLeft>=1&&q.daysLeft<=q.daysInMonth;
    insist(st.scenario!=='slow'&&from&&to&&days&&(st.plan?.id||'demo-100')===from.id&&q.to.price===to.price&&q.diff===to.price-from.price&&q.diff>0&&q.amount===prorataAmount(q.diff,q.daysLeft,q.daysInMonth)&&q.amount>0,'Offre modifiée ou devenue inapplicable.',409);
-   st.plan={...to};st.capacity=to.mbps;st.nextPlan=null;st.payment={quoteId:q.id,amount:q.amount,at:now,fromPrice:from.price,nextBilling:q.nextBilling,mode:'simulation'};st.upgrade=null;
+   st.plan={...to};st.capacity=to.mbps;st.nextPlan=null;st.payment={quoteId:q.id,amount:q.amount,at:now,fromPrice:st.payment&&Number.isFinite(st.payment.fromPrice)&&now<st.payment.nextBilling?st.payment.fromPrice:from.price,nextBilling:q.nextBilling,mode:'simulation'};st.upgrade=null;
    const paid=q.amount.toLocaleString('fr-FR')+' FCFA';
    audit(st,'upgrade.activated','Paiement simulé '+paid+' · '+to.mbps+' Mbps · aucun débit réel');
    const rest=periodOf(q);

@@ -40,6 +40,9 @@ test('Forfait plus rapide : le serveur calcule le complément et ne change rien 
   assert.ok(n.body.includes(q.amount.toLocaleString('fr-FR')+' FCFA reçu'),'la notification dit le montant payé');assert.match(n.body,/À partir du 1er .+, votre forfait coûte 30.000 FCFA par mois/);
   await c.action({type:'upgrade-pay',id:q.id,confirm:true});
   assert.equal(c.state.audit.filter(a=>a.action==='upgrade.activated').length,1,'paiement idempotent');
+  // Deuxième passage le même mois : la facture du mois garde le prix d'avant le premier passage.
+  await c.action({type:'plan-quote',to:'demo-500'});const q2=c.state.upgrade;assert.equal(q2.diff,30000);await c.action({type:'upgrade-pay',id:q2.id,confirm:true});
+  assert.equal(c.state.plan.mbps,500);assert.equal(J.monthPrice(c.state,Date.now()),20000,'toujours l’ancien prix ce mois-ci');assert.equal(J.monthPrice(c.state,q2.nextBilling),60000);
  }finally{c.server.close();}
 });
 
