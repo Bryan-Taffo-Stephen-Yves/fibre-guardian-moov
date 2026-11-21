@@ -54,6 +54,8 @@ function validatePhoto(value){insist(typeof value==='string'&&value.length<48000
 const INTENTS=[
  ['resiliation',/resili|(annuler|arreter|stopper) (mon |l')?abonnement|quitter moov/],
  ['upgrade',/forfait (plus|superieur)|meilleur forfait|changer de forfait|plus de debit|plus rapide|augmenter (mon )?debit|upgrade|\b\d+ ?(mbps|megabits)/],
+ // « Qui consomme le plus ? » : le conseiller conso (forfait-bilan.cjs) répond avec les vrais chiffres de la maison.
+ ['conso',/qui (consomme|utilise|prend|bouffe) (le plus|tout|beaucoup)|consomm|combien de (data|donnees|go|mo)\b|\bdata\b|quel appareil (prend|utilise|consomme)/],
  ['prix',/combien|prix|tarif|facture|payer|forfait|abonnement/],
  ['voyants',/voyant|clignot|lumiere (rouge|orange)|\blos\b|\bpon\b|box (est )?(rouge|orange)|\bled\b/],
  ['reboot',/redemarr|reboot|relancer (la|ma) box|rallum|eteindre (la|ma) box|debranch/],
@@ -74,6 +76,11 @@ function intent(text){
  const hit=INTENTS.find(([k,re])=>!['merci','salut'].includes(k)&&re.test(t));
  if(hit)return hit[0]==='usage'?'usage':hit[0];
  return INTENTS.find(x=>x[0]==='salut')[1].test(t)?'salut':'inconnu';
+}
+// Conseiller conso dans la conversation : l'appareil qui prend le plus de données et le forfait qui va, avec les chiffres.
+function consoReply(s,uid,st){
+ const c=require('./forfait-bilan.cjs').conso(s,uid,{...st,sharedIncident:sharedFault(s,uid)},PLANS,{pc:require('./vrai-test.cjs').pcDevices(s,uid)});
+ return {message:c.text,facts:c.devices.map(d=>({label:d.name,value:d.share+' % des données'})),action:'devices'};
 }
 // Pendant une panne, Guardian dit la même chose que le serveur vocal « Appeler Moov » : lieu, cause, étape, heure de retour.
 function faultMessage(fault,st){
@@ -207,7 +214,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
  }else if(d.type==='chat'){
   // d.meaning est ajouté par le serveur (langues.cjs ou Claude), jamais accepté tel quel du navigateur (voir pilot-server).
   const text=paragraph(d.text,'Message',1200),meaning=d.meaning&&['fr','nouchi','dioula','autre'].includes(d.meaning.lang)?{lang:d.meaning.lang,french:String(d.meaning.french||'').slice(0,300)}:null,fault=sharedFault(s,uid);
-  const reply=diagnostic(st,meaning?.french?text+' '+meaning.french:text,fault);
+  const said=meaning?.french?text+' '+meaning.french:text,reply=intent(said)==='conso'&&!fault?consoReply(s,uid,st):diagnostic(st,said,fault);
   const voice=meaning?.lang==='dioula'?langues.voice(langues.voiceKey({fault,action:reply.action,state:snapshot(st).metrics.state,greeting:/^\s*(bonjour|salut|i ni|a ni)/i.test(text)&&text.length<40})):null;
   st.messages.push({id:id(),role:'user',text,...(meaning&&meaning.lang!=='fr'?{lang:meaning.lang,meaning:meaning.french||null}:{})},{id:id(),role:'assistant',text:reply.message,facts:reply.facts,action:reply.action,...(reply.proof?{proof:reply.proof}:{}),...(voice?{voice}:{})});st.messages=st.messages.slice(-30);
  }else if(d.type==='apply'){
