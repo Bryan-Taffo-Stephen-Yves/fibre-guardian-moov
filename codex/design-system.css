@@ -220,6 +220,43 @@ body:has(.journey[data-espace=client]),.journey[data-espace=client]{background:v
 :root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .journey .j-sidebar-note small{color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
 :root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button.active{color:var(--moov-primary-300)}
 
+
+/* ============ Espace Moov (Centre d'opérations, Superviseur, Simulateur, Impact) ============
+   Même langage que l'app client, en plus sobre : outil de travail, on garde la densité. Toujours en clair. */
+body:has(.noc),.noc{background:var(--ds-canvas)}
+.noc :is(.oc-card,.oc-metric:not(.oc-metric--accent),.n-panel,.gs-block,.oc-zone,.oc-widget){border-color:transparent;border-radius:var(--ds-r-lg);box-shadow:var(--ds-shadow-1)}
+.noc .oc-metric{transition:transform var(--ds-t2) var(--ds-spring),box-shadow var(--ds-t2) var(--ds-ease)}
+.noc .oc-metric:hover{border-color:transparent;box-shadow:var(--ds-shadow-2);transform:translateY(-2px)}
+.noc .oc-metric--accent{border:0;border-radius:var(--ds-r-lg);background:var(--ds-grad-brand)!important;box-shadow:var(--ds-glow-brand)}
+.noc .oc-metric:not(.oc-metric--accent) .oc-metric-icon{border:0;border-radius:12px;background:linear-gradient(145deg,var(--moov-primary-50),var(--moov-primary-100));color:var(--moov-primary-600)}
+.noc .oc-metric>strong{font-weight:700;letter-spacing:-.04em}
+.noc :is(.oc-button.primary,.n-button.primary,.gs-btn.primary){border:0;background:var(--ds-grad-brand);color:var(--ds-white);box-shadow:var(--ds-glow-brand);transition:transform var(--ds-t2) var(--ds-spring),box-shadow var(--ds-t2) var(--ds-ease)}
+.noc :is(.oc-button.primary,.n-button.primary,.gs-btn.primary):active{transform:scale(.97)}
+.noc .oc-button:not(.primary):not(.subtle){border-color:transparent;box-shadow:var(--ds-shadow-1)}
+/* Le bandeau du Superviseur : bleu nuit en relief au lieu d'un aplat */
+.noc .gs-bulletin{background:linear-gradient(140deg,var(--moov-primary-800) 0%,var(--moov-primary-900) 70%);box-shadow:var(--ds-shadow-3)}
+.noc .gs-tabs{background:color-mix(in srgb,var(--moov-primary-100) 55%,var(--moov-surface))}
+/* Carte de l'utilisateur en bas du menu */
+.noc .n-sidebar-bottom{border-radius:var(--ds-r-md);background:var(--ds-grad-brand);box-shadow:var(--ds-glow-brand)}
+
+/* ============ App technicien (« Mes missions ») ============ */
+.tv{background:var(--ds-canvas)}
+.tv-card{border-radius:var(--ds-r-lg);box-shadow:var(--ds-shadow-1)}
+.tv-btn{border-radius:var(--ds-r-sm);transition:transform var(--ds-t2) var(--ds-spring),box-shadow var(--ds-t2) var(--ds-ease)}
+.tv-btn.primary{background:var(--ds-grad-brand);color:var(--ds-white);box-shadow:var(--ds-glow-brand)}
+.tv-btn.big{border-radius:var(--ds-r-md)}
+.tv-btn:active:not(:disabled){transform:scale(.96)}
+.tv-me-stats div{background:linear-gradient(145deg,var(--moov-primary-50),color-mix(in srgb,var(--moov-primary-100) 60%,var(--moov-primary-50)))}
+.tv-me-stats strong{font-size:24px;letter-spacing:-.03em;color:var(--moov-primary-800)}
+.tv-empty-icon{background:linear-gradient(145deg,var(--moov-primary-50),var(--moov-primary-100));box-shadow:0 8px 16px -10px color-mix(in srgb,var(--moov-primary-500) 60%,transparent)}
+@media(max-width:760px){
+ .tv-head{padding:14px 16px 18px;border:0;border-radius:0 0 26px 26px;background:var(--ds-grad-brand);color:var(--ds-white);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--ds-glow-brand)}
+ .tv-head :is(.tv-who small){color:color-mix(in srgb,var(--ds-white) 80%,transparent)}
+ .tv-head .tv-who strong{color:var(--ds-white)}
+ .tv-head .tv-icon-btn{border:0;background:color-mix(in srgb,var(--ds-white) 20%,transparent);color:var(--ds-white)}
+ .tv-head .fg-demo-badge{border:1px solid color-mix(in srgb,var(--ds-white) 40%,transparent);background:color-mix(in srgb,var(--ds-white) 14%,transparent);color:var(--ds-white)}
+}
+
 /* ---- Focus visible partout dans l'app client ---- */
 .journey[data-espace=client] :is(button,a,summary,input,select,textarea):focus-visible{outline:3px solid var(--moov-primary-300);outline-offset:3px}
 
