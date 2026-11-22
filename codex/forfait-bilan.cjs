@@ -37,15 +37,48 @@ function compute(s,uid,st,plans,now=Date.now()){
 // « soir » : la maison sature chaque soir ; « calme » : peu d'usage. Les relevés restent marqués comme venant du simulateur.
 function seed(s,uid,st,profile,now=Date.now()){
  const capacity=(st.plan||{}).mbps||st.capacity||100,devices=(st.devices||[]).filter(d=>!d.blocked).slice(0,4);
- const share=devices.length?1/devices.length:1,start=Math.floor(now/MINUTE)*MINUTE-7*DAY;
+ // Comme dans une vraie maison, les appareils ne se partagent pas le débit à parts égales : la télé et la console d'abord.
+ const weights=devices.map(d=>/tv|télé/i.test(d.name)?5:/ps5|console|xbox/i.test(d.name)?2.5:/pc|mac|ordinateur/i.test(d.name)?1.5:1),sum=weights.reduce((a,w)=>a+w,0)||1,start=Math.floor(now/MINUTE)*MINUTE-7*DAY;
  s.run('DELETE FROM journey_usage_minutes WHERE user_id=? AND at>=?',uid,start);
  const ins=s.db.prepare('INSERT OR REPLACE INTO journey_usage_minutes VALUES(?,?,?,?,?)');
  for(let at=start;at<now;at+=5*MINUTE){
   const hour=new Date(at).getUTCHours(),night=hour<7,eve=EVENING.includes(hour);
   const level=profile==='soir'?(eve?.97:night?.05:.3):(eve?.18:night?.02:.08);
   const mbps=capacity*level,body={};
-  for(const d of devices)body[d.id]={id:d.id,name:d.name,bytes:mbps*share*125000*60,observedMs:MINUTE};
+  devices.forEach((d,i)=>{body[d.id]={id:d.id,name:d.name,bytes:mbps*weights[i]/sum*125000*60,observedMs:MINUTE};});
   ins.run(uid,at,MINUTE,level>=.9?MINUTE:0,JSON.stringify(body));
  }
 }
-module.exports={compute,seed,EVENING,MIN_OBSERVED};
+// Conseiller conso : quel appareil prend le plus de données, et quel forfait va à la maison, en deux phrases.
+// Les chiffres viennent du PC qui partage sa connexion s'il compte en ce moment (comptés pour de vrai, depuis le lancement
+// de Guardian), sinon des 7 derniers jours mesurés à la box. Le forfait vient du bilan ci-dessus : un seul avis, jamais deux.
+const MIN_BYTES=5e6;
+const volume=b=>{const f=v=>String(Math.round(v*10)/10).replace('.',',');return b>=1e9?f(b/1e9)+' Go':b>=1e6?f(b/1e6)+' Mo':f(b/1e3)+' Ko';};
+const price=v=>v.toLocaleString('fr-FR').replace(/ | /g,' ')+' F';
+function conso(s,uid,st,plans,{pc=null,now=Date.now()}={}){
+ const bilan=compute(s,uid,st,plans,now),plan=st.plan||plans[1];
+ let source='box',period='ces 7 derniers jours',list=[];
+ const real=pc&&pc.counting==='on'?(pc.devices||[]).map(d=>({name:d.label,bytes:(d.down||0)+(d.up||0)})).filter(d=>d.bytes>0):[];
+ if(real.reduce((a,d)=>a+d.bytes,0)>=MIN_BYTES){source='pc';period='depuis le lancement de Guardian';list=real;}
+ else{
+  const by=new Map();
+  for(const r of s.all('SELECT body FROM journey_usage_minutes WHERE user_id=? AND at>=?',uid,now-7*DAY))
+   for(const d of Object.values(JSON.parse(r.body))){const v=by.get(d.id)||{name:d.name,bytes:0};v.name=d.name||v.name;v.bytes+=d.bytes||0;by.set(d.id,v);}
+  list=[...by.values()].filter(d=>d.bytes>0);
+ }
+ const total=list.reduce((a,d)=>a+d.bytes,0);
+ const base={title:'Le conseil de Guardian',verdict:bilan.verdict,plan,to:bilan.to||null,extra:bilan.extra||0,saving:bilan.saving||0};
+ if(total<MIN_BYTES)return {...base,source:null,devices:[],text:'Guardian n’a pas encore assez de mesures pour dire quel appareil consomme le plus. Revenez dans quelques heures.'};
+ const devices=list.sort((a,b)=>b.bytes-a.bytes).slice(0,4).map(d=>({name:String(d.name||'Appareil').slice(0,60),bytes:Math.round(d.bytes),share:Math.round(100*d.bytes/total)}));
+ const top=devices[0];
+ let text='« '+top.name+' » a pris '+top.share+' % des données de la maison '+period+' ('+volume(top.bytes)+').';
+ if(top.share>=50)text+=' C’est lui qui remplit le plus votre ligne.';
+ const to=bilan.to;
+ if(bilan.verdict==='monter'&&to)text+=' Le soir, votre maison manque de débit : le forfait '+to.mbps+' Mb/s vous irait mieux (+ '+price(bilan.extra)+' par mois). Vous pouvez aussi limiter « '+top.name+' » aux heures chargées, avec « Gérer ».';
+ else if(bilan.verdict==='baisser'&&to)text+=' Pourtant, votre maison n’utilise pas tout son débit : le forfait '+to.mbps+' Mb/s vous suffirait, et vous économiseriez '+price(bilan.saving)+' par mois.';
+ else if(bilan.verdict==='ok')text+=' Votre forfait '+plan.mbps+' Mb/s vous va bien : rien à changer.';
+ else if(bilan.verdict==='incident')text+=' Une panne touche votre quartier : Guardian refera le point sur votre forfait après la réparation.';
+ else text+=' Pour vous conseiller un forfait, Guardian a encore besoin de quelques jours de mesures.';
+ return {...base,source,period,devices,text,total:Math.round(total)};
+}
+module.exports={compute,seed,conso,EVENING,MIN_OBSERVED};
