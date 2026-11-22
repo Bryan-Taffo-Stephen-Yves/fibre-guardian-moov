@@ -161,7 +161,7 @@ body:has(.journey[data-espace=client]),.journey[data-espace=client]{background:v
    (Sombre, ou Automatique avec un téléphone en sombre). L'espace Moov et l'app technicien restent clairs.
    On inverse l'échelle des gris, on assombrit les pastels. En sombre, le bleu Moov devient le bleu clair
    (texte lisible sur fond sombre) et les boutons bleus prennent un texte bleu nuit. */
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen){
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)){
  --dk-base:color-mix(in srgb,var(--moov-primary-900) 78%,var(--moov-black));
  --dk-page:color-mix(in srgb,var(--moov-primary-900) 55%,var(--moov-black));
  --dk-surface:color-mix(in srgb,var(--moov-white) 7%,var(--dk-base));
@@ -196,24 +196,24 @@ body:has(.journey[data-espace=client]),.journey[data-espace=client]{background:v
  --ds-shadow-up:0 -10px 30px -12px color-mix(in srgb,var(--moov-black) 60%,transparent);
  --ds-glow-brand:0 20px 36px -18px color-mix(in srgb,var(--moov-primary-500) 55%,transparent),0 6px 12px -6px color-mix(in srgb,var(--moov-black) 50%,transparent);
 }
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) body,:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .loading-screen{background:var(--dk-page);color:var(--moov-ink)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) body,:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .loading-screen{background:var(--dk-page);color:var(--moov-ink)}
 /* Les fonds blancs deviennent des cartes sombres ; le blanc reste blanc sur le bleu, l'orange, le rouge et la maquette de téléphone */
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) :is(.journey,.fg-demo-sheet,.mm-overlay,.skip-link){--moov-white:var(--dk-surface)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) :is(.ac-fibre,.ac-promo,.ch-profile,.du-heading,.du-metric.featured,.j-header,.j-navigation,.ch-live,.mm-overlay:has(.mm-success),.ac-where-go,.j-button.primary,.rf-submit,.ch-cta,.mm-pay,.ac-svc-badge,.ac-face,.fp,.pv-tag.plus,.j-robot,.sv-phone){--moov-white:var(--ds-white)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .ac{--ac-white:var(--ds-white)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .journey .du-metric.featured :is(>div:first-child,strong,svg){color:var(--ds-white)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .fp .fp-btn.is-main{color:var(--moov-primary-500)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .skip-link{background:var(--dk-surface);color:var(--moov-ink)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .sv-phone{--moov-neutral-900:var(--moov-black);--moov-neutral-800:color-mix(in srgb,var(--ds-white) 18%,var(--moov-black));--moov-neutral-700:color-mix(in srgb,var(--ds-white) 30%,var(--moov-black))}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .ac-promo :is(small,strong,.ac-promo-txt>span){color:var(--moov-primary-900)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) :is(.ac-promo-ico,.ac-fibre-test-ico){background:var(--ds-white);color:var(--moov-primary-500)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) :is(.journey[data-view=compte] .ch-plan .ch-chip.strong,.mm-overlay .mm-success .mm-pay){background:var(--ds-white);color:var(--moov-primary-500)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .ac-svc-ico{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 10%,transparent)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .rb-bar{--moov-neutral-900:color-mix(in srgb,var(--ds-white) 12%,var(--dk-base));--moov-primary:var(--moov-primary-500);--moov-on-primary:var(--ds-white)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .journey .j-sidebar-note{background:var(--ds-grad-brand)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .journey .j-sidebar-note :is(strong,svg){color:var(--ds-white)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .journey .j-sidebar-note small{color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
-:root[data-mode=dark]:has(.journey[data-espace=client],#root>.loading-screen) .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button.active{color:var(--moov-primary-300)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) :is(.journey,.fg-demo-sheet,.mm-overlay,.skip-link){--moov-white:var(--dk-surface)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) :is(.ac-fibre,.ac-promo,.ch-profile,.du-heading,.du-metric.featured,.j-header,.j-navigation,.ch-live,.mm-overlay:has(.mm-success),.ac-where-go,.j-button.primary,.rf-submit,.ch-cta,.mm-pay,.ac-svc-badge,.ac-face,.fp,.pv-tag.plus,.j-robot,.sv-phone){--moov-white:var(--ds-white)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .ac{--ac-white:var(--ds-white)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .journey .du-metric.featured :is(>div:first-child,strong,svg){color:var(--ds-white)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .fp .fp-btn.is-main{color:var(--moov-primary-500)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .skip-link{background:var(--dk-surface);color:var(--moov-ink)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .sv-phone{--moov-danger-100:var(--moov-danger-300);--moov-neutral-200:color-mix(in srgb,var(--ds-white) 70%,var(--moov-black));--moov-neutral-900:var(--moov-black);--moov-neutral-800:color-mix(in srgb,var(--ds-white) 18%,var(--moov-black));--moov-neutral-700:color-mix(in srgb,var(--ds-white) 30%,var(--moov-black))}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .ac-promo :is(small,strong,.ac-promo-txt>span){color:var(--moov-primary-900)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) :is(.ac-promo-ico,.ac-fibre-test-ico){background:var(--ds-white);color:var(--moov-primary-500)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) :is(.journey[data-view=compte] .ch-plan .ch-chip.strong,.mm-overlay .mm-success .mm-pay){background:var(--ds-white);color:var(--moov-primary-500)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .ac-svc-ico{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 10%,transparent)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .rb-bar{--moov-neutral-900:color-mix(in srgb,var(--ds-white) 12%,var(--dk-base));--moov-primary:var(--moov-primary-500);--moov-on-primary:var(--ds-white)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .journey .j-sidebar-note{background:var(--ds-grad-brand)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .journey .j-sidebar-note :is(strong,svg){color:var(--ds-white)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .journey .j-sidebar-note small{color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
+:root[data-mode=dark]:is(:has(.journey[data-espace=client]),:not([data-portail=moov]):has(#root>.loading-screen)) .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button.active{color:var(--moov-primary-300)}
 
 /* ---- Focus visible partout dans l'app client ---- */
 .journey[data-espace=client] :is(button,a,summary,input,select,textarea):focus-visible{outline:3px solid var(--moov-primary-300);outline-offset:3px}

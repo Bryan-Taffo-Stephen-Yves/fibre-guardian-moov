@@ -10,6 +10,8 @@
  // data-theme = le choix (light, dark, auto) ; data-mode = ce qui s'affiche vraiment (light ou dark).
  function mode(v){return v==='dark'||(v==='auto'&&!!(media&&media.matches))?'dark':'light';}
  function apply(v){v=valid(v);try{var r=document.documentElement;r.setAttribute('data-theme',v);r.setAttribute('data-mode',mode(v));}catch(_){}return v;}
+ // Espace Moov : l'écran de chargement reste clair, comme l'espace lui-même.
+ try{if(/[?&]portal=moov(&|$)/.test(location.search))document.documentElement.setAttribute('data-portail','moov');}catch(_){}
  function save(v){v=valid(v);try{localStorage.setItem(KEY,v);}catch(_){}return apply(v);}
  window.FGApparence={KEY:KEY,CHOICES:CHOICES,read:read,save:save,apply:apply,mode:mode};
  // Automatique : on suit le téléphone s'il change de mode pendant que l'app est ouverte.
