@@ -201,6 +201,9 @@ body:has(.journey[data-espace=client]),.journey[data-espace=client]{background:v
 :root[data-theme=dark]:has(.journey[data-espace=client]) .journey[data-view=compte] .ch-plan .ch-chip.strong,:root[data-theme=dark]:has(.journey[data-espace=client]) .mm-overlay .mm-success .mm-pay{background:var(--moov-white);color:var(--moov-primary-500)}
 :root[data-theme=dark]:has(.journey[data-espace=client]) .ac-svc-ico{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--moov-white) 10%,transparent)}
 :root[data-theme=dark]:has(.journey[data-espace=client]) body{background:var(--dk-page)}
+:root[data-theme=dark]:has(.journey[data-espace=client]) .rb-bar{--moov-neutral-900:color-mix(in srgb,var(--moov-white) 12%,var(--dk-base))}
+:root[data-theme=dark]:has(.journey[data-espace=client]) .journey .j-sidebar-note{background:var(--ds-sheen),var(--ds-grad-brand)}
+:root[data-theme=dark]:has(.journey[data-espace=client]) .journey .j-sidebar-note small{color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
 /* Les fonds blancs deviennent des cartes sombres ; le blanc reste blanc sur le bleu, l'orange et le rouge */
 :root[data-theme=dark]:has(.journey[data-espace=client]) :is(.journey,.fg-demo-sheet,.mm-overlay){--moov-white:var(--dk-surface);--moov-primary:var(--moov-primary-400)}
 :root[data-theme=dark]:has(.journey[data-espace=client]) :is(.ac-fibre,.ac-promo,.ch-profile,.du-heading,.du-metric.featured,.j-header,.j-navigation,.ch-live,.mm-overlay:has(.mm-success),.ac-go,.ac-where-go,.j-button.primary,.rf-submit,.ch-cta,.mm-pay,.j-bubble.user,.j-user-message,[class*=primary]:is(button,a),.ac-svc-badge,.ac-face,.fp,.j-robot){--moov-white:var(--ds-white)}
@@ -244,6 +247,9 @@ body:has(.journey[data-espace=client]),.journey[data-espace=client]{background:v
 :root[data-theme=auto]:has(.journey[data-espace=client]) .journey[data-view=compte] .ch-plan .ch-chip.strong,:root[data-theme=auto]:has(.journey[data-espace=client]) .mm-overlay .mm-success .mm-pay{background:var(--moov-white);color:var(--moov-primary-500)}
 :root[data-theme=auto]:has(.journey[data-espace=client]) .ac-svc-ico{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--moov-white) 10%,transparent)}
 :root[data-theme=auto]:has(.journey[data-espace=client]) body{background:var(--dk-page)}
+:root[data-theme=auto]:has(.journey[data-espace=client]) .rb-bar{--moov-neutral-900:color-mix(in srgb,var(--moov-white) 12%,var(--dk-base))}
+:root[data-theme=auto]:has(.journey[data-espace=client]) .journey .j-sidebar-note{background:var(--ds-sheen),var(--ds-grad-brand)}
+:root[data-theme=auto]:has(.journey[data-espace=client]) .journey .j-sidebar-note small{color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
 /* Les fonds blancs deviennent des cartes sombres ; le blanc reste blanc sur le bleu, l'orange et le rouge */
 :root[data-theme=auto]:has(.journey[data-espace=client]) :is(.journey,.fg-demo-sheet,.mm-overlay){--moov-white:var(--dk-surface);--moov-primary:var(--moov-primary-400)}
 :root[data-theme=auto]:has(.journey[data-espace=client]) :is(.ac-fibre,.ac-promo,.ch-profile,.du-heading,.du-metric.featured,.j-header,.j-navigation,.ch-live,.mm-overlay:has(.mm-success),.ac-go,.ac-where-go,.j-button.primary,.rf-submit,.ch-cta,.mm-pay,.j-bubble.user,.j-user-message,[class*=primary]:is(button,a),.ac-svc-badge,.ac-face,.fp,.j-robot){--moov-white:var(--ds-white)}
