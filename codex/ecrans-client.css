@@ -1,0 +1,64 @@
+/* Écrans client au style de l'accueil (téléphone) : Ma réparation, Signaler, Carte des pannes.
+   Même langage que l'accueil : la carte sombre pour l'essentiel, des cartes blanches très arrondies
+   avec un fin liseré, des boutons pleins arrondis. Couleurs Moov uniquement ; grand écran inchangé. */
+@media(max-width:760px){
+ /* ---- Ma réparation ---- */
+ .journey[data-view=tracking] .n-client-feed{display:grid;gap:14px;padding:4px 0 0;border:0;background:none;box-shadow:none}
+ .journey[data-view=tracking] .n-client-feed>.n-row{align-items:center}
+ .journey[data-view=tracking] .n-client-feed>.n-row h2{margin:0;font:700 22px/1.2 var(--fg-font-display,var(--fg-font,inherit));letter-spacing:-.02em;color:var(--moov-ink)}
+ .journey[data-view=tracking] .n-client-feed>p{margin:-8px 0 0;font-size:15px;color:var(--moov-text-muted,var(--moov-neutral-600))}
+ .journey[data-view=tracking] .n-client-feed>.n-feed-update{margin-top:-10px;font-size:13px;color:var(--moov-neutral-500)}
+ .journey[data-view=tracking] .n-client-feed .n-button{border-radius:14px;font-size:14.5px;font-weight:600}
+ .journey[data-view=tracking] .n-client-empty .n-button{border:0;background:var(--moov-primary);color:var(--moov-on-primary)}
+ .journey[data-view=tracking] .n-client-feed>.n-row .n-button{border:0;background:var(--moov-primary-50);color:var(--moov-primary-700)}
+ .journey[data-view=tracking] :is(.n-client-incident,.n-client-empty,.n-zone-pick){margin:0;padding:18px;border:0;border-radius:24px;background:var(--moov-surface);box-shadow:0 0 0 1px var(--moov-neutral-100)}
+ .journey[data-view=tracking] .n-client-history{display:grid;gap:12px;margin:6px 0 0;padding:0;border:0}
+ .journey[data-view=tracking] .n-client-history>h3{margin:0;padding:0 4px;font:700 17px/1.3 var(--fg-font,inherit);color:var(--moov-ink);border:0}
+ .journey[data-view=tracking] .n-client-incident h3{margin:4px 0 0;font:700 18px/1.3 var(--fg-font,inherit);color:var(--moov-ink)}
+ .journey[data-view=tracking] .n-client-incident .n-badge{padding:4px 10px;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary-700);font-size:12.5px;font-weight:600}
+ .journey[data-view=tracking] .n-client-incident small{font-size:13px}
+ /* L'essentiel (où en est la réparation) dans la carte sombre, comme « Ma fibre » sur l'accueil. */
+ .journey[data-view=tracking] .n-client-next{position:relative;isolation:isolate;overflow:hidden;padding:18px 20px;border:0;border-radius:22px;color:var(--moov-white);
+  background:linear-gradient(150deg,var(--moov-neutral-800) 0%,var(--moov-neutral-900) 70%);box-shadow:0 22px 40px -26px color-mix(in srgb,var(--moov-neutral-900) 90%,transparent)}
+ .journey[data-view=tracking] .n-client-next::before{content:'';position:absolute;inset:auto auto -90% -30%;width:260px;height:260px;z-index:-1;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--moov-primary-500) 45%,transparent),transparent 70%)}
+ .journey[data-view=tracking] .n-client-next h4{margin:0 0 6px;font:700 18px/1.3 var(--fg-font,inherit);color:var(--moov-white)}
+ .journey[data-view=tracking] .n-client-next p{margin:0;font-size:15px;line-height:1.45;color:color-mix(in srgb,var(--moov-white) 80%,transparent)}
+ .journey[data-view=tracking] .n-tracking-steps li{font-size:15px;color:var(--moov-ink)}
+ .journey[data-view=tracking] .n-tracking-steps li>span{flex:none}
+ .journey[data-view=tracking] .n-technician-profile{border:0;border-radius:18px;background:var(--moov-primary-25,var(--moov-primary-50))}
+ .journey[data-view=tracking] details{border:0;border-radius:18px;background:var(--moov-neutral-25,var(--moov-neutral-50));box-shadow:0 0 0 1px var(--moov-neutral-100)}
+ .journey[data-view=tracking] summary{display:flex;align-items:center;min-height:48px;padding:0 16px;font-size:15px;font-weight:600;color:var(--moov-ink)}
+ .journey[data-view=tracking] summary::-webkit-details-marker{display:none}
+ .journey[data-view=tracking] summary::after{content:'';flex:none;width:9px;height:9px;margin-left:auto;padding-left:0;border-right:2px solid var(--moov-neutral-500);border-bottom:2px solid var(--moov-neutral-500);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+ .journey[data-view=tracking] details[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+ .journey[data-view=tracking] summary{gap:12px;cursor:pointer}
+ .journey[data-view=tracking] .n-zone-pick{padding:0;background:var(--moov-surface)}
+ .journey[data-view=tracking] .n-zone-pick>:not(summary){margin-inline:16px}
+ .journey[data-view=tracking] .n-zone-pick form{display:grid;gap:12px;margin-bottom:16px}
+ .journey[data-view=tracking] .n-zone-pick .j-button{min-height:44px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:15px;font-weight:600}
+
+ .journey[data-view=tracking] details li{font-size:13.5px;line-height:1.45}
+
+ /* ---- Signaler ---- */
+ .journey[data-view=report] .j-report{padding:4px 0 0;border:0;background:none;box-shadow:none}
+ .journey[data-view=report] .j-report>h1{display:none}
+ .journey[data-view=report] .j-report>p{font-size:15px}
+ .journey[data-view=report] .sv-report-hint{padding:14px 16px;border-radius:18px;background:var(--moov-primary-50)}
+ .journey[data-view=report] .rf-form .rf-card{padding:18px;border:0;border-radius:24px;box-shadow:0 0 0 1px var(--moov-neutral-100)}
+ .journey[data-view=report] .rf-form .rf-section-head p{font-size:14px;line-height:1.45}
+ .journey[data-view=report] .rf-form .rf-number{font-size:13px}
+ .journey[data-view=report] .rf-form .rf-submit-bar{border:0;border-radius:24px;background:var(--moov-surface);box-shadow:0 0 0 1px var(--moov-neutral-100)}
+ .journey[data-view=report] .rf-form .rf-submit{align-self:stretch;justify-content:center;min-height:50px;border:0;border-radius:16px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:15.5px;font-weight:600}
+ .journey[data-view=report] :is(.g-map-control,.rf-gps){min-width:44px;min-height:44px}
+ .journey[data-view=report] .g-map-badge{font-size:11px}
+ .journey[data-view=report] .rf-form input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--moov-primary)}
+
+ /* ---- Carte des pannes ---- */
+ .journey[data-view=ville] .vl-verdict{border:0;border-radius:24px;box-shadow:0 0 0 1px var(--moov-neutral-100)}
+ .journey[data-view=ville] .vl-verdict.is-down{box-shadow:0 0 0 1px var(--moov-danger-100,var(--moov-danger-50))}
+ .journey[data-view=ville] .vl-verdict.is-warn{box-shadow:0 0 0 1px var(--moov-accent-100,var(--moov-accent-50))}
+ .journey[data-view=ville] .vl-verdict .j-button{width:100%;justify-content:center;min-height:48px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:15px;font-weight:600;box-shadow:none}
+ .journey[data-view=ville] .vl-page>:is(section,.j-card){border-radius:24px}
+ /* Barre du bas : libellés lisibles (12 px au lieu de 11). */
+ .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button span{font-size:12px}
+}
