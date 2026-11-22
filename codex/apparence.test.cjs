@@ -34,3 +34,8 @@ test('Mon compte propose Clair, Sombre et Automatique',()=>{
  assert.match(src,/\['light','Clair'\],\['dark','Sombre'\],\['auto','Automatique'\]/);
  assert.match(src,/h\(Apparence\)/);
 });
+test('data-mode dit ce qui s’affiche : Automatique suit le téléphone',()=>{
+ const run=(choice,dark)=>{const attrs={},ctx={window:{matchMedia:()=>({matches:dark,addEventListener(){}})},document:{documentElement:{setAttribute(k,v){attrs[k]=v;}}},localStorage:memory({'fg-apparence':choice})};ctx.window.matchMedia=ctx.window.matchMedia;ctx.matchMedia=ctx.window.matchMedia;vm.runInNewContext(read('apparence.js'),ctx);return attrs['data-mode'];};
+ assert.equal(run('light',true),'light');assert.equal(run('dark',false),'dark');
+ assert.equal(run('auto',true),'dark');assert.equal(run('auto',false),'light');
+});
