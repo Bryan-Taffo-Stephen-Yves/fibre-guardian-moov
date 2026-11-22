@@ -2,7 +2,9 @@
    Checkout : une page de paiement aux couleurs de Moov Money (compte, montant, numéro, code secret),
    puis Success : la fenêtre « Vous avez pris le forfait Fibre 200 Mbps ».
    Le code secret saisi ne quitte jamais le téléphone : il n'est ni envoyé ni gardé.
-   Le montant et le forfait sont contrôlés par le serveur (journey-store.cjs, action upgrade-pay). */
+   Le montant et le forfait sont contrôlés par le serveur (journey-store.cjs, action upgrade-pay).
+   Forfait plus cher : le devis du serveur donne la différence, les jours restants et le 1er du mois suivant ;
+   prorata() les met en une phrase, reprise par la page « Changer de forfait » et par Guardian. */
 (function(){
  'use strict';
  const h=React.createElement,{useState:S,useEffect:E,useRef:R}=React;
@@ -10,6 +12,15 @@
  const reduced=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
  const wait=ms=>new Promise(r=>setTimeout(r,reduced()?Math.min(ms,300):ms));
  const ref=()=>'MM'+Date.now().toString(36).toUpperCase().slice(-6)+Math.floor(Math.random()*90+10);
+ const F=n=>Number(n||0).toLocaleString('fr-FR')+' F';
+ // Les mois se comptent à l'heure d'Abidjan (UTC), comme sur le serveur.
+ const firstOf=at=>new Date(at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'UTC'}).replace(/^1 /,'1er\u00a0');
+ const monthOf=at=>new Date(at).toLocaleDateString('fr-FR',{month:'long',timeZone:'UTC'});
+ // « 10 000 F × 10 jours restants ÷ 30 = 3 333 F aujourd’hui, puis 35 000 F par mois à partir du 1er décembre »
+ function prorata(q,price){
+  if(!q||!q.daysLeft||!q.daysInMonth)return '';
+  return F(q.diff)+' × '+q.daysLeft+(q.daysLeft>1?' jours restants':' jour restant')+' ÷ '+q.daysInMonth+' = '+F(q.amount)+' aujourd’hui'+(price?', puis '+F(price)+' par mois à partir du '+firstOf(q.nextBilling):'');
+ }
  function Icon({d,size=20,width=1.9}){return h('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:width,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,focusable:false},h('path',{d}));}
  const I={close:'m6 6 12 12M18 6 6 18',lock:'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z',check:'m5 12 5 5 9-10',wifi:'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',back:'m15 6-6 6 6 6'};
 
@@ -38,10 +49,11 @@
      h('div',{className:'mm-merchant'},h('span',{className:'mm-merchant-ico','aria-hidden':true},h(Icon,{d:I.wifi,size:22})),h('div',null,h('small',null,'Payer à'),h('strong',null,'Moov Africa · Fibre'))),
      h('h2',{id:'mm-title',className:'mm-amount'},fcfa(amount)),
      h('p',{className:'mm-what'},quote.label||'Passage au forfait Fibre '+plan.mbps+' Mbps'),
+     quote.daysLeft&&h('p',{className:'mm-prorata'},h('strong',null,quote.daysLeft>=quote.daysInMonth?'Vous payez la différence pour tout le mois de '+monthOf(quote.nextBilling-1)+'.':'Vous payez seulement les jours restants de ce mois.'),' '+prorata(quote,plan.price)+'.'),
      h('dl',{className:'mm-recap'},
       h('div',null,h('dt',null,'Compte fibre'),h('dd',null,account)),
       h('div',null,h('dt',null,'Titulaire'),h('dd',null,customer?.name||'')),
-      quote.period?h('div',null,h('dt',null,'Facture'),h('dd',null,quote.period)):h('div',null,h('dt',null,'Nouveau forfait'),h('dd',null,plan.mbps+' Mbps · '+fcfa(plan.price)+'/mois')),
+      quote.period?h('div',null,h('dt',null,'Facture'),h('dd',null,quote.period)):h('div',null,h('dt',null,'Nouveau forfait'),h('dd',null,plan.mbps+' Mbps · '+fcfa(plan.price)+'/mois',quote.nextBilling&&h('small',null,'à partir du '+firstOf(quote.nextBilling)))),
       h('div',null,h('dt',null,'Frais'),h('dd',null,'0 FCFA'))),
      h('label',{className:'mm-field'},h('span',null,'Numéro Moov Money'),h('input',{type:'tel',inputMode:'tel',autoComplete:'tel',value:phone,onChange:e=>PH(e.target.value),placeholder:'07 00 00 00 00',required:true})),
      h('label',{className:'mm-field'},h('span',null,'Code secret'),h('input',{className:'mm-pin',type:'password',inputMode:'numeric',autoComplete:'off',maxLength:4,pattern:'[0-9]{4}',value:pin,onChange:e=>P(e.target.value.replace(/\D/g,'').slice(0,4)),placeholder:'••••','aria-describedby':'mm-pin-help'}),h('small',{id:'mm-pin-help'},'4 chiffres. Votre code reste sur ce téléphone.')),
@@ -50,7 +62,7 @@
      h('button',{type:'button',className:'mm-cancel',onClick:onClose},h(Icon,{d:I.back,size:16}),backLabel))));
  }
 
- function Success({plan,amount,account,onClose,onDiscover,closeLabel='Continuer avec Guardian'}){
+ function Success({plan,amount,account,nextBilling,onClose,onDiscover,closeLabel='Continuer avec Guardian'}){
   const first=R(null),[code]=S(ref),when=new Date().toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
   useDialog(onClose,first);
   return h('div',{className:'mm-overlay mm-overlay--center',role:'dialog','aria-modal':'true','aria-labelledby':'mm-ok-title'},
@@ -62,7 +74,7 @@
     h('p',null,'Votre nouveau débit est déjà actif. Profitez-en !'),
     h('dl',{className:'mm-recap'},
      h('div',null,h('dt',null,'Débit'),h('dd',null,plan.mbps+' Mbps')),
-     h('div',null,h('dt',null,'Prix mensuel'),h('dd',null,fcfa(plan.price))),
+     h('div',null,h('dt',null,'Prix mensuel'),h('dd',null,fcfa(plan.price),nextBilling&&h('small',null,'dès le '+firstOf(nextBilling)))),
      h('div',null,h('dt',null,'Montant payé'),h('dd',null,fcfa(amount))),
      h('div',null,h('dt',null,'Compte fibre'),h('dd',null,account)),
      h('div',null,h('dt',null,'Référence'),h('dd',null,code)),
@@ -70,5 +82,5 @@
     h('button',{type:'button',className:'mm-pay',ref:first,onClick:onDiscover},'Voir ma connexion'),
     h('button',{type:'button',className:'mm-cancel',onClick:onClose},closeLabel)));
  }
- window.FGPay={Checkout,Success};
+ window.FGPay={Checkout,Success,prorata,monthOf};
 })();
