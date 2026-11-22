@@ -101,7 +101,19 @@
    button('Voir',onOpen,{className:'j-button primary du-banner-open'}),
    button(h(Icon,{name:'close'}),onClose,{className:'du-banner-close','aria-label':'Fermer l’alerte'}));
  }
- function View({api,state,busy,onAction,onAsk,onConfirm}){
+ // Conseiller conso : l'appareil qui prend le plus de données, et le forfait qui va à la maison (forfait-bilan.cjs).
+ function Advice({api,onNavigate}){
+  const [c,C]=S(null),apiRef=R(api);apiRef.current=api;
+  E(()=>{let alive=true;const load=()=>apiRef.current('/journey/conso').then(v=>{if(alive)C(v);}).catch(()=>{});load();const t=setInterval(load,20000);return()=>{alive=false;clearInterval(t);};},[]);
+  if(!c)return null;
+  return h('section',{className:'du-card du-advice','aria-labelledby':'du-advice-title'},
+   h('div',{className:'du-advice-head'},h('span',{className:'j-chat-avatar du-advice-art','aria-hidden':true},h('i'),h('i'),h('b')),
+    h('div',null,h('small',{id:'du-advice-title'},c.title),h('p',null,c.text))),
+   c.devices.length>0&&h('ul',{className:'du-advice-bars','aria-label':'Part des données de chaque appareil'},c.devices.map((d,i)=>h('li',{key:i},
+    h('span',{className:'du-advice-name'},d.name),h('span',{className:'du-advice-bar','aria-hidden':true},h('i',{style:{width:Math.max(2,d.share)+'%'}})),h('strong',null,d.share+' %')))),
+   c.to&&onNavigate&&button(c.verdict==='baisser'?'Voir le forfait '+c.to.mbps+' Mb/s':'Voir le forfait '+c.to.mbps+' Mb/s',()=>onNavigate('forfait'),{className:'j-button primary du-advice-cta'}));
+ }
+ function View({api,state,busy,onAction,onAsk,onConfirm,onNavigate}){
   const [period,P]=S('24h'),[data,D]=S(null),[error,X]=S(''),[loading,L]=S(true),[query,Q]=S(''),[selected,SEL]=S(null),[manage,MG]=S(null),apiRef=R(api);apiRef.current=api;
   E(()=>{let alive=true,pending=false;D(null);L(true);async function fetchUsage(){if(pending)return;pending=true;try{const d=await apiRef.current('/journey/usage?window='+period);if(alive){D(d);X('');}}catch(e){if(alive)X(e.message);}finally{pending=false;if(alive)L(false);}}fetchUsage();const timer=setInterval(fetchUsage,5000);return()=>{alive=false;clearInterval(timer);};},[period,state?.version]);
   const summary=data?.summary||{},devices=(data?.devices||state.devices.map(d=>({...d,currentMbps:d.mbps,bytes:null}))),visible=devices.filter(d=>d.name.toLowerCase().includes(query.toLowerCase())),chosen=devices.find(d=>d.id===selected),current=summary.currentMbps??state.metrics.used,capacity=summary.capacityMbps??state.metrics.capacity,ratio=Math.min(100,Math.round(current/Math.max(capacity,1)*100));
@@ -109,6 +121,7 @@
   return h('div',{className:'device-usage'},h('header',{className:'du-heading'},h('div',null,h('h1',null,'Mes appareils'),h('p',null,'Qui utilise votre Wi-Fi en ce moment. Touchez « Gérer » pour limiter ou bloquer un appareil.'))),
    error&&h('p',{role:'alert',className:'j-error'},error),
    h('div',{className:'du-metrics'},[[h(Icon,{name:'activity'}),'Utilisé en ce moment',n(current),'Mb/s','Sur '+capacity+' Mb/s reçus par la box'],[h(Icon,{name:'devices'}),'Appareils connectés',summary.connected??devices.filter(d=>!d.blocked).length,'','D’habitude : '+state.usual]].map(([icon,label,value,unit,note],i)=>h('section',{className:'du-metric '+(i===0?'featured':''),key:label},h('div',null,h('span',null,label),icon),h('strong',null,value,h('small',null,unit)),i===0&&h('div',{className:'du-capacity','aria-label':ratio+' % de capacité utilisée'},h('i',{style:{width:ratio+'%'}})),h('p',null,note)))),
+   h(Advice,{api,onNavigate}),
    h(Watch,{api}),
    h('section',{className:'du-card du-device-section'},h('div',{className:'du-section-heading'},h('div',null,h('h2',null,'Vos appareils'),h('p',null,'Le débit de chaque appareil, en ce moment.')),h('label',{className:'du-search'},h('span',{className:'j-sr'},'Rechercher un appareil'),h('input',{type:'search',placeholder:'Rechercher un appareil…',value:query,onChange:e=>Q(e.target.value)}))),
     h('div',{className:'du-list-head','aria-hidden':true},h('span',null,'APPAREIL'),h('span',null,'MAINTENANT'),h('span',null,'SUR LA PÉRIODE'),h('span',null,'GESTION')),

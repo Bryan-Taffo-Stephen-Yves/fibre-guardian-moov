@@ -183,7 +183,7 @@ function etat(b){
  return [
   'Heure à Abidjan : '+clock(b.at),
   'Box en ligne : '+n.online+' sur '+n.total+' ; quartiers surveillés : '+n.quartiers+' ; quartiers touchés : '+n.touched,
-  'Dossiers ouverts : '+n.open+' ; plans à valider : '+n.pending,
+  'Pannes réseau en cours : '+n.open+' ; plans à valider : '+n.pending,
   'Techniciens disponibles : '+n.free+' sur '+n.technicians,
   'Appels évités sur 24 heures : '+n.avoided+' ; clients rassurés par le serveur vocal : '+n.reassured,
   'Bulletin : '+b.headline.text,
