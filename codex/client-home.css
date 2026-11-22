@@ -171,3 +171,26 @@
 .ch-theme-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .ch-theme-seg .ch-chip{min-width:0;padding:0 4px;font-size:13.5px}
 .ch-theme-seg .ch-chip[aria-pressed=true]{border-color:var(--moov-primary);background:var(--moov-primary-50);color:var(--moov-primary)}
+
+/* « Mes paiements » : une ligne par paiement, qui s'ouvre sur son reçu. */
+.ch-pay-list{display:grid;margin:0;padding:0;list-style:none}
+.ch-pay-list li+li{border-top:1px solid var(--moov-neutral-100)}
+.ch-pay summary{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;min-height:60px;padding:8px 12px;border-radius:14px;cursor:pointer;list-style:none}
+.ch-pay summary::-webkit-details-marker{display:none}
+.ch-pay summary:hover{background:var(--moov-neutral-25)}
+.ch-pay summary b{display:block;font-size:15px;font-weight:600;color:var(--moov-ink)}
+.ch-pay summary small{display:block;font-size:13px;color:var(--moov-text-muted)}
+.ch-pay-amount{font-size:15px;font-weight:650;color:var(--moov-ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ch-pay-detail{display:grid;gap:10px;padding:2px 12px 14px 62px}
+.ch-pay-detail p{margin:0;font-size:13.5px;color:var(--moov-text-muted)}
+.ch-pay-detail p b{color:var(--moov-ink);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.ch-pay-empty{margin:4px 12px 12px;font-size:14px;color:var(--moov-text-muted)}
+.ch-pay-more{min-height:44px;margin:2px 4px 4px;border:0;border-radius:12px;background:var(--moov-primary-50);color:var(--moov-primary);font:600 14.5px var(--fg-font,inherit);cursor:pointer}
+.ch-pay .mm-receipt{justify-content:flex-start}
+@media(max-width:420px){.ch-pay-detail{padding-left:12px}}
+
+/* « Attention aux arnaques » : une règle simple, dans l'aide. */
+.ch-scam{display:grid;grid-template-columns:auto 1fr;align-items:start;gap:12px;padding:12px;border-top:1px solid var(--moov-neutral-100)}
+.ch-scam .ch-row-icon{background:var(--moov-accent-50);color:var(--moov-accent-text)}
+.ch-scam b{display:block;font-size:15.5px;font-weight:600;color:var(--moov-ink)}
+.ch-scam small{display:block;margin-top:2px;font-size:13px;line-height:1.45;color:var(--moov-text-muted)}

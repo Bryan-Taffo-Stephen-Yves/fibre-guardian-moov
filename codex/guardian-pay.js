@@ -22,11 +22,53 @@
   return F(q.diff)+' × '+q.daysLeft+(q.daysLeft>1?' jours restants':' jour restant')+' ÷ '+q.daysInMonth+' = '+F(q.amount)+' aujourd’hui'+(price?', puis '+F(price)+' par mois à partir du '+firstOf(q.nextBilling):'');
  }
  function Icon({d,size=20,width=1.9}){return h('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:width,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,focusable:false},h('path',{d}));}
- const I={close:'m6 6 12 12M18 6 6 18',lock:'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z',check:'m5 12 5 5 9-10',wifi:'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',back:'m15 6-6 6 6 6'};
+ const I={close:'m6 6 12 12M18 6 6 18',lock:'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z',check:'m5 12 5 5 9-10',wifi:'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01',back:'m15 6-6 6 6 6',share:'M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6',download:'M12 3v12M8 11l4 4 4-4M5 21h14'};
 
  // Garde le focus dans la fenêtre et ferme avec Échap.
  function useDialog(onClose,first){E(()=>{const prev=document.activeElement;first.current?.focus();const k=e=>{if(e.key==='Escape')onClose();};addEventListener('keydown',k);return()=>{removeEventListener('keydown',k);prev?.focus?.();};},[]);}
 
+ // Reçu d'un paiement : le même pour l'écran « Paiement réussi » et pour « Mes paiements » (Mon compte).
+ // receipt = {title, amount, ref, at, account, name, lines:[[libellé, valeur]]}
+ const dateOf=at=>new Date(at).toLocaleString('fr-FR',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+ function receiptText(r){
+  return ['Reçu Moov Money · Moov Africa Fibre',r.title,'Montant payé : '+fcfa(r.amount)].concat((r.lines||[]).map(([k,v])=>k+' : '+v),[
+   'Compte fibre : '+r.account,'Référence : '+r.ref,'Date : '+dateOf(r.at)]).join('\n');
+ }
+ // Image PNG du reçu, dessinée aux couleurs de la marque (variables --moov-*).
+ function receiptImage(r){
+  const css=getComputedStyle(document.documentElement),c=k=>css.getPropertyValue(k).trim(),W=720,rows=[['Montant payé',fcfa(r.amount)]].concat(r.lines||[],[['Compte fibre',r.account],['Titulaire',r.name||''],['Référence',r.ref],['Date',dateOf(r.at)]]).filter(x=>x[1]);
+  const H=330+rows.length*64,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d'),font=w=>w+' system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+  g.fillStyle=c('--moov-white');g.fillRect(0,0,W,H);
+  g.fillStyle=c('--moov-primary');g.fillRect(0,0,W,150);
+  g.fillStyle=c('--moov-white');g.font=font('700 36px');g.fillText('Moov Money',48,70);g.font=font('500 24px');g.fillText('Reçu de paiement · Moov Africa Fibre',48,110);
+  g.fillStyle=c('--moov-success');g.font=font('700 26px');g.fillText('✓ Paiement réussi',48,205);
+  g.fillStyle=c('--moov-ink');g.font=font('700 30px');g.fillText(String(r.title).slice(0,40),48,250);
+  rows.forEach(([k,v],i)=>{const y=310+i*64;g.fillStyle=c('--moov-line');g.fillRect(48,y-40,W-96,1);
+   g.fillStyle=c('--moov-text-muted');g.font=font('500 24px');g.fillText(k,48,y);
+   g.fillStyle=c('--moov-ink');g.font=font('650 24px');g.textAlign='right';g.fillText(String(v),W-48,y);g.textAlign='left';});
+  g.fillStyle=c('--moov-text-muted');g.font=font('500 20px');g.fillText('Gardez ce reçu : la référence prouve votre paiement.',48,H-36);
+  return cv;
+ }
+ function ReceiptActions({receipt,className=''}){
+  const [note,N]=S(''),[file,FI]=S(null),name='recu-moov-'+receipt.ref+'.png',text=receiptText(receipt);
+  const canShare=typeof navigator!=='undefined'&&typeof navigator.share==='function';
+  // L'image est préparée à l'avance : sur iPhone, le partage doit partir tout de suite après le toucher.
+  E(()=>{if(!canShare||typeof File!=='function')return;let alive=true;try{receiptImage(receipt).toBlob(b=>{if(alive&&b)FI(new File([b],name,{type:'image/png'}));},'image/png');}catch{}return()=>{alive=false;};},[receipt.ref]);
+  function download(){
+   try{const a=document.createElement('a');a.href=receiptImage(receipt).toDataURL('image/png');a.download=name;document.body.appendChild(a);a.click();a.remove();N('Reçu prêt. Gardez l’image sur votre téléphone.');}
+   catch{N('Le reçu n’a pas pu être préparé. Faites une capture d’écran.');}
+  }
+  function share(){
+   const data=file&&navigator.canShare&&navigator.canShare({files:[file]})?{files:[file],title:'Reçu Moov Money',text}:{title:'Reçu Moov Money',text};
+   navigator.share(data).catch(e=>{if(e&&e.name!=='AbortError')N('Le partage n’a pas marché. Utilisez « Télécharger ».');});
+  }
+  const shareInner=[h(Icon,{key:'i',d:I.share,size:18}),'Partager le reçu'];
+  return h('div',{className:'mm-receipt '+className},
+   canShare?h('button',{type:'button',className:'mm-receipt-btn',onClick:share},shareInner):
+    h('a',{className:'mm-receipt-btn',href:'https://wa.me/?text='+encodeURIComponent(text),target:'_blank',rel:'noopener'},shareInner),
+   h('button',{type:'button',className:'mm-receipt-btn',onClick:download},h(Icon,{d:I.download,size:18}),'Télécharger'),
+   note&&h('p',{className:'mm-receipt-note',role:'status'},note));
+ }
  function Checkout({quote,customer,account,onPay,onDone,onClose,backLabel='Retour à Guardian'}){
   const [step,ST]=S('review'),[pin,P]=S(''),[phone,PH]=S(customer?.phone||''),[error,X]=S(''),first=R(null);
   useDialog(()=>{if(step!=='processing')onClose();},first);
@@ -36,7 +78,7 @@
    if(phone.replace(/\D/g,'').length<8){X('Entrez votre numéro Moov Money.');return;}
    if(!/^\d{4}$/.test(pin)){X('Entrez votre code secret à 4 chiffres.');return;}
    ST('processing');P('');
-   try{await Promise.all([onPay(),wait(1800)]);onDone();}catch(err){ST('review');X(err?.message||'Le paiement n’a pas abouti. Réessayez.');}
+   try{const [r]=await Promise.all([onPay(),wait(1800)]);onDone(r);}catch(err){ST('review');X(err?.message||'Le paiement n’a pas abouti. Réessayez.');}
   }
   return h('div',{className:'mm-overlay',role:'dialog','aria-modal':'true','aria-labelledby':'mm-title'},
    h('section',{className:'mm-sheet'},
@@ -56,14 +98,14 @@
       quote.period?h('div',null,h('dt',null,'Facture'),h('dd',null,quote.period)):h('div',null,h('dt',null,'Nouveau forfait'),h('dd',null,plan.mbps+' Mb/s · '+fcfa(plan.price)+'/mois',quote.nextBilling&&h('small',null,'à partir du '+firstOf(quote.nextBilling)))),
       h('div',null,h('dt',null,'Frais'),h('dd',null,'0 FCFA'))),
      h('label',{className:'mm-field'},h('span',null,'Numéro Moov Money'),h('input',{type:'tel',inputMode:'tel',autoComplete:'tel',value:phone,onChange:e=>PH(e.target.value),placeholder:'07 00 00 00 00',required:true})),
-     h('label',{className:'mm-field'},h('span',null,'Code secret'),h('input',{className:'mm-pin',type:'password',inputMode:'numeric',autoComplete:'off',maxLength:4,pattern:'[0-9]{4}',value:pin,onChange:e=>P(e.target.value.replace(/\D/g,'').slice(0,4)),placeholder:'••••','aria-describedby':'mm-pin-help'}),h('small',{id:'mm-pin-help'},'4 chiffres. Votre code reste sur ce téléphone.')),
+     h('label',{className:'mm-field'},h('span',null,'Code secret'),h('input',{className:'mm-pin',type:'password',inputMode:'numeric',autoComplete:'off',maxLength:4,pattern:'[0-9]{4}',value:pin,onChange:e=>P(e.target.value.replace(/\D/g,'').slice(0,4)),placeholder:'••••','aria-describedby':'mm-pin-help'}),h('small',{id:'mm-pin-help'},'4 chiffres. Votre code reste sur ce téléphone. Moov ne vous le demandera jamais, ni par appel, ni par SMS, ni sur WhatsApp.')),
      error&&h('p',{className:'mm-error',role:'alert'},error),
      h('button',{className:'mm-pay',type:'submit'},'Payer '+fcfa(amount)),
      h('button',{type:'button',className:'mm-cancel',onClick:onClose},h(Icon,{d:I.back,size:16}),backLabel))));
  }
 
- function Success({plan,amount,account,nextBilling,onClose,onDiscover,closeLabel='Continuer avec Guardian'}){
-  const first=R(null),[code]=S(ref),when=new Date().toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+ function Success({plan,amount,account,name,nextBilling,paidAt,reference,onClose,onDiscover,closeLabel='Continuer avec Guardian'}){
+  const first=R(null),[code]=S(()=>reference||ref()),[at]=S(()=>paidAt||Date.now()),when=new Date(at).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
   useDialog(onClose,first);
   return h('div',{className:'mm-overlay mm-overlay--center',role:'dialog','aria-modal':'true','aria-labelledby':'mm-ok-title'},
    h('section',{className:'mm-success'},
@@ -79,8 +121,9 @@
      h('div',null,h('dt',null,'Compte fibre'),h('dd',null,account)),
      h('div',null,h('dt',null,'Référence'),h('dd',null,code)),
      h('div',null,h('dt',null,'Date'),h('dd',null,when))),
+    h(ReceiptActions,{receipt:{title:'Passage à '+plan.mbps+' Mb/s',amount,ref:code,at,account,name,lines:[['Nouveau forfait',plan.mbps+' Mb/s · '+fcfa(plan.price)+'/mois']]}}),
     h('button',{type:'button',className:'mm-pay',ref:first,onClick:onDiscover},'Voir ma connexion'),
     h('button',{type:'button',className:'mm-cancel',onClick:onClose},closeLabel)));
  }
- window.FGPay={Checkout,Success,prorata,monthOf};
+ window.FGPay={Checkout,Success,ReceiptActions,receiptText,prorata,monthOf};
 })();

@@ -154,6 +154,11 @@ body:has(.journey[data-espace=client]),.journey[data-espace=client]{background:v
 .mm-overlay .mm-success .mm-pay{background:var(--ds-white);background-image:none;color:var(--ds-deep);animation:ds-rise .55s .54s var(--ds-ease) both;box-shadow:0 16px 30px -14px color-mix(in srgb,var(--moov-primary-900) 70%,transparent)}
 .mm-overlay .mm-success .mm-cancel{min-height:44px;color:var(--ds-white);animation:ds-rise .55s .6s var(--ds-ease) both}
 .mm-overlay .mm-success .mm-burst i{background:var(--ds-white)}
+/* Reçu à partager (Mes paiements, Paiement réussi) : boutons en verre clair sur le bleu */
+.mm-overlay .mm-success .mm-receipt{animation:ds-rise .55s .5s var(--ds-ease) both}
+.mm-overlay .mm-success .mm-receipt-btn{border-color:color-mix(in srgb,var(--ds-white) 40%,transparent);background:color-mix(in srgb,var(--ds-white) 16%,transparent);color:var(--ds-white)}
+.mm-overlay .mm-success .mm-receipt-btn:hover{background:color-mix(in srgb,var(--ds-white) 26%,transparent)}
+.mm-overlay .mm-success .mm-receipt-note{color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
 
 
 /* ============ Mode sombre de l'app client ============
@@ -220,5 +225,5 @@ body:has(.journey[data-espace=client]),.journey[data-espace=client]{background:v
 
 @media(prefers-reduced-motion:reduce){
  .ac-fibre-test-ico,.journey .ac .ac-svc,.ac-promo,.ac-go,.journey[data-espace=client] .j-nav-button svg,.mm-overlay .mm-pay{transition:none}
- .mm-overlay .mm-success :is(.mm-check,h2,p,.mm-recap,.mm-pay,.mm-cancel),.mm-overlay .mm-success .mm-check::before,.mm-overlay .mm-success .mm-check::after{animation:none}
+ .mm-overlay .mm-success :is(.mm-check,h2,p,.mm-recap,.mm-pay,.mm-cancel,.mm-receipt),.mm-overlay .mm-success .mm-check::before,.mm-overlay .mm-success .mm-check::after{animation:none}
 }
