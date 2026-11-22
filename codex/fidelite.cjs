@@ -42,9 +42,10 @@ function history(s,uid,{months=11,agence=[],late=[]}={},now=Date.now()){
 }
 
 // La facture du mois en cours existe dès que le client ouvre sa page.
+// Après un passage à un forfait plus cher ce mois-ci, elle garde l'ancien prix : la différence a déjà été payée au prorata.
 function bill(s,uid,now){
  const m=monthOf(now);
- s.run('INSERT OR IGNORE INTO fidelite_factures(user_id,month,amount,due) VALUES(?,?,?,?)',uid,m,planOf(s,uid).price,dueOf(m));
+ s.run('INSERT OR IGNORE INTO fidelite_factures(user_id,month,amount,due) VALUES(?,?,?,?)',uid,m,J().monthPrice(J().get(s,uid),now),dueOf(m));
  return s.get('SELECT * FROM fidelite_factures WHERE user_id=? AND month=?',uid,m);
 }
 

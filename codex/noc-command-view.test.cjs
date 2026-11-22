@@ -11,13 +11,14 @@ function fixture(){
  const ticket={...common,key:'ticket:T1',id:'T1',kind:'ticket',title:'Connexion lente au bureau',segment:null,mode:'local',status:'submitted',statusLabel:'À prendre en charge',nextRole:'agent',allowed:{claim:true,note:true,notify:true,ticketStatus:true},ticketStatuses:[{id:'in_progress',label:'En cours'},{id:'waiting_customer',label:'Retour client attendu'},{id:'resolved',label:'Clôturer le dossier'}]};
  return {role:'admin',roleLabel:'Directeur technique',scope:'all',paused:false,capabilities:{canManageTeam:true,canApprove:true},counts:{total:2,unassigned:2,awaitingApproval:1,activeMissions:0,sharedTickets:1},queue:[incident,ticket],team:[{id:'U1',name:'Awa',role:'admin',roleLabel:'Directeur technique',activeCases:0}],hierarchy:[{role:'agent',label:'Conseiller support',responsibility:'Qualifier et suivre.'}],technicians:[{id:'awa',name:'Awa',team:'Équipe A'}],network:{segments:[{id:'YOP-07',online:16,total:20}],incidents:[{id:'I1',segment_id:'YOP-07',status:'proposed'}],technicians:[]},source:'Données locales'};
 }
-function harness(data=fixture(),respond){
+function harness(data=fixture(),respond,saved='[]'){
  const state=[data,false,false,'','',null,'open','','note','','',null,null,'actions',''];
  const refs=[],effects=[],pending=[],calls=[],intervals=[],selectedCalls=[],navigation=[];let si=0,ri=0,ei=0,tree,props;
  const React={Fragment:'fragment',createElement:(type,props,...children)=>({type,props:props||{},children}),useState:initial=>{const i=si++;if(!(i in state))state[i]=initial;return [state[i],value=>{state[i]=typeof value==='function'?value(state[i]):value;}];},useRef:initial=>{const i=ri++;return refs[i]||(refs[i]={current:initial});},useEffect:(fn,deps)=>{const i=ei++,old=effects[i];if(!old||deps.some((v,n)=>v!==old.deps[n])||deps.length!==old.deps.length)pending.push(()=>{old?.cleanup?.();effects[i]={deps,cleanup:fn(),runs:(old?.runs||0)+1};});}};
  const api=async(route,method,body)=>{calls.push({route,method,body});return respond?respond(route,method,body):state[0];};
  const document={activeElement:{focus(){},isConnected:true},addEventListener(){},removeEventListener(){}};
- const context={React,window:{FGMap:{View:'map'},FGAbidjan:{Map:'map',Legend:'legend'}},document,FormData:class {constructor(form){this.entries=Object.entries(form.values||{});}*[Symbol.iterator](){yield* this.entries;}},requestAnimationFrame:fn=>fn(),setInterval:fn=>{intervals.push(fn);return intervals.length;},clearInterval(){},Date};
+ const stored={'fg-oc-widgets':saved},localStorage={getItem:k=>k in stored?stored[k]:null,setItem:(k,v)=>{stored[k]=String(v);}};
+ const context={React,window:{FGMap:{View:'map'},FGAbidjan:{Map:'map',Legend:'legend'}},document,localStorage,FormData:class {constructor(form){this.entries=Object.entries(form.values||{});}*[Symbol.iterator](){yield* this.entries;}},requestAnimationFrame:fn=>fn(),setInterval:fn=>{intervals.push(fn);return intervals.length;},clearInterval(){},Date};
  vm.runInNewContext(source,context);
  props={api,user:{id:'U1',name:'Awa Koné'},onNavigate:page=>navigation.push(page),onIncident:(id,page)=>navigation.push([id,page]),onAskGuardian:key=>navigation.push(['guardian',key]),onSelectionChange:key=>selectedCalls.push(key)};
  function render(extra={}){props={...props,...extra};si=0;ri=0;ei=0;tree=context.window.FGCommand.View(props);while(pending.length)pending.shift()();return tree;}
@@ -209,6 +210,16 @@ test('Le tableau de bord montre raccourcis, équipe terrain, quartiers et activi
  for(const part of ['Shortcuts','Crew','Zones','Activity'])assert.ok(names(h.tree).includes(part),part);
  const data=fixture();data.scope='assigned';data.role='technician';data.capabilities={};
  assert.ok(!names(harness(data).tree).includes('Shortcuts'));
+});
+
+test('Sans choix enregistré, le Centre d’opérations reste court : les blocs en double sont rangés dans « Ajouter un widget »',()=>{
+ const names=tree=>nodes(tree,n=>typeof n.type==='function').map(n=>n.type.name),text=tree=>JSON.stringify(tree);
+ const short=harness(fixture(),undefined,null).tree;
+ for(const part of ['Shortcuts','Zones','Activity','Week'])assert.ok(!names(short).includes(part),part+' caché par défaut');
+ assert.ok(names(short).includes('Crew'),'l’équipe terrain reste');
+ assert.doesNotMatch(text(short),/Le réseau et les équipes/,'la carte du bas est cachée par défaut');
+ assert.match(text(short),/File opérationnelle/,'la file reste');
+ const all=harness().tree;assert.ok(names(all).includes('Shortcuts')&&names(all).includes('Zones'),'tout revient si on l’a choisi');
 });
 
 test('Les raccourcis respectent les droits et l’équipe terrain suit la mission en route',()=>{

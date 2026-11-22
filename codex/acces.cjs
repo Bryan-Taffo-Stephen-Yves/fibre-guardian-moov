@@ -46,7 +46,8 @@ function state(s,uid,now=Date.now()){
  const student=st?{school:st.school,until:st.until,status:st.until<now&&st.status==='valide'?'expire':st.status,note:st.note||'',deadline:st.deadline}:null;
  const active=student?.status==='valide';
  const e=s.get('SELECT * FROM acces_echeances WHERE user_id=? AND month=?',uid,month);
- const price=active?round50(plan.price*(100-STUDENT)/100):plan.price;
+ // Le mois en cours se paie au prix facturé (l'ancien prix après un passage à un forfait plus cher ce mois-ci).
+ const base=J().monthPrice(J().get(s,uid),now),price=active?round50(base*(100-STUDENT)/100):base;
  return {plan:{mbps:plan.mbps,price:plan.price},price,student,studentPrice:round50(plan.price*(100-STUDENT)/100),studentDiscount:STUDENT,
   pack:packView(s,uid),packs:PACKS.map(p=>({...p,share:round50(p.price/p.homes),mbpsEach:Math.round(p.mbps/p.homes)})),commune:communeOf(s,uid),
   split:e?{month:monthName(e.month),amount:e.amount,parts:JSON.parse(e.parts)}:null,splitMonth:monthName(month),splitAmount:price};

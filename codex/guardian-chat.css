@@ -93,6 +93,9 @@
 .mm-merchant strong{font-size:16px;font-weight:650;letter-spacing:-.014em;color:var(--moov-ink)}
 .mm-overlay .mm-amount{margin:4px 0 0;font-family:var(--fg-font-display);font-size:40px;font-weight:700;letter-spacing:-.035em;line-height:1.05;color:var(--moov-ink);font-variant-numeric:tabular-nums}
 .mm-what{margin:-8px 0 0;font-size:15px;color:var(--moov-text-muted)}
+.mm-prorata{margin:0;padding:10px 12px;border-radius:12px;font-size:13.5px;line-height:1.45;color:var(--moov-ink);background:var(--moov-primary-50);font-variant-numeric:tabular-nums}
+.mm-prorata strong{display:block;font-weight:650}
+.mm-recap dd small{display:block;font-size:12px;font-weight:500;color:var(--moov-text-muted)}
 .mm-recap{display:grid;gap:0;margin:0;padding:4px 14px;border-radius:16px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100)}
 .mm-recap>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--moov-neutral-100);font-size:14px}
 .mm-recap>div:last-child{border-bottom:0}
@@ -138,3 +141,13 @@
   .mm-spinner{animation-duration:2.4s}
 }
 .journey .j-chat .j-chat-done{background:var(--moov-success-50);color:var(--moov-success-700)}
+
+/* Une seule page Guardian : « Écrire » ou « Parler » (journey.js, guardianPage). */
+.journey .j-guardian-page{display:grid;gap:12px;width:100%;max-width:820px;margin:0 auto}
+.journey .j-guardian-modes{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;background:var(--moov-neutral-100,var(--moov-canvas));border:1px solid var(--moov-neutral-150,var(--moov-neutral-200))}
+.journey .j-guardian-modes button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border:0;border-radius:12px;background:none;color:var(--moov-neutral-700);font:inherit;font-size:15px;font-weight:650;cursor:pointer;transition:background-color .18s ease,color .18s ease}
+.journey .j-guardian-modes button.is-on{background:var(--moov-surface,var(--moov-white));color:var(--moov-primary);box-shadow:0 2px 8px color-mix(in srgb,var(--moov-primary-900) 10%,transparent)}
+.journey .j-guardian-modes button:focus-visible{outline:2px solid var(--moov-focus);outline-offset:2px}
+.journey .j-guardian-page .j-chat.j-chat-page{height:min(700px,calc(100dvh - 200px))}
+@media(max-width:760px){.journey .j-guardian-page .j-chat.j-chat-page{height:calc(100dvh - 232px - var(--rb-h,0px) - env(safe-area-inset-bottom));min-height:420px}}
+@media(prefers-reduced-motion:reduce){.journey .j-guardian-modes button{transition:none}}
