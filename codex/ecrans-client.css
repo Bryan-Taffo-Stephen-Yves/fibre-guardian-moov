@@ -28,10 +28,14 @@
  .journey[data-view=tracking] .n-technician-profile{border:0;border-radius:18px;background:var(--moov-primary-25,var(--moov-primary-50))}
  .journey[data-view=tracking] details{border:0;border-radius:18px;background:var(--moov-neutral-25,var(--moov-neutral-50));box-shadow:0 0 0 1px var(--moov-neutral-100)}
  .journey[data-view=tracking] summary{display:flex;align-items:center;min-height:48px;padding:0 16px;font-size:15px;font-weight:600;color:var(--moov-ink)}
+ .journey[data-view=tracking] summary::-webkit-details-marker{display:none}
+ .journey[data-view=tracking] summary::after{content:'';flex:none;width:9px;height:9px;margin-left:auto;padding-left:0;border-right:2px solid var(--moov-neutral-500);border-bottom:2px solid var(--moov-neutral-500);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+ .journey[data-view=tracking] details[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+ .journey[data-view=tracking] summary{gap:12px;cursor:pointer}
  .journey[data-view=tracking] .n-zone-pick{padding:0;background:var(--moov-surface)}
  .journey[data-view=tracking] .n-zone-pick>:not(summary){margin-inline:16px}
  .journey[data-view=tracking] .n-zone-pick form{display:grid;gap:12px;margin-bottom:16px}
- .journey[data-view=tracking] .n-zone-pick .j-button{border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:15px;font-weight:600}
+ .journey[data-view=tracking] .n-zone-pick .j-button{min-height:44px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font-size:15px;font-weight:600}
 
  .journey[data-view=tracking] details li{font-size:13.5px;line-height:1.45}
 
