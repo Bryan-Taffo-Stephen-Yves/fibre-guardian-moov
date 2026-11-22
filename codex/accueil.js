@@ -59,18 +59,28 @@
   shield:'m12 3 8 3v6c0 6-8 9-8 9s-8-3-8-9V6Zm-4 9 3 3 5-6',
   user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0',
   chevron:'m9 6 6 6-6 6',
-  eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6'
+  eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
+  star:'m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z'
  };
  function Home({state,user,fault,busy,on,call,cards,recent=[],bell=0,demo}){
   const s=status({state,fault}),m=state.metrics||{},extra=Math.max(0,(m.connected||0)-(state.usual||0)),plan=state.plan?.mbps||100,price=state.plan?.price;
-  const [all,setAll]=React.useState(false),[order,setOrder]=React.useState(false);
+  const [all,setAll]=React.useState(false),[order,setOrder]=React.useState(false),[edit,setEdit]=React.useState(false);
+  // Raccourcis préférés : le client met jusqu'à 4 services en tête de la grille (gardés sur ce téléphone).
+  const KEY='fg-favoris:'+user.id;
+  const [fav,setFav]=React.useState(()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v.slice(0,4):[];}catch{return [];}});
+  // Services proposés à ce client (le dossier de la fibre n'existe que pour un nouvel abonné) : un favori qui n'est plus proposé ne garde pas sa place.
+  const offered=['Tester ma connexion','Guardian','Appareils connectés','Voir le réseau','Changer de forfait','Signaler une panne','Sans internet','Mes avantages','Mes données','Mon compte'].concat(order?['Dossier de ma fibre']:[]);
+  const live=fav.filter(id=>offered.includes(id));
+  const toggle=id=>{const next=live.includes(id)?live.filter(x=>x!==id):live.length<4?live.concat(id):live;try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}setFav(next);};
   // « Dossier de ma fibre » seulement s'il existe un dossier d'installation (nouvel abonné) ; sinon « Mon compte » prend sa place.
   React.useEffect(()=>{let alive=true;fetch('/api/welcome',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(r=>{if(alive)setOrder(!!(r&&r.order&&r.order.status!=='annule'));}).catch(()=>{});return()=>{alive=false;};},[user.id]);
   const run=k=>({track:on.track,guardian:on.guardian,reboot:on.reboot,devices:on.devices})[k];
   const shown=(cards||[]).filter(Boolean).slice(0,2),cut=s.tone==='down',got=cut?0:Math.round(m.capacity||0);
   const go=k=>on.go?()=>on.go(k):undefined;
-  const tile=(icon,label,onClick,{tone='blue',badge,aria,disabled}={})=>h('button',{type:'button',key:label,className:'ac-svc ac-svc--'+tone,onClick,disabled,'aria-label':aria||label},
-   h('span',{className:'ac-svc-ico','aria-hidden':true},h(Icon,{d:icon,size:24}),badge?h('b',{className:'ac-svc-badge'},badge):null),h('span',{className:'ac-svc-txt'},label));
+  // En mode « Modifier », toucher une tuile l'épingle ou la retire (étoile) au lieu d'ouvrir le service.
+  const tile=(icon,label,onClick,{tone='blue',badge,aria,disabled}={})=>{const pinned=live.includes(label),full=!pinned&&live.length>=4;
+   return h('button',{type:'button',key:label,'data-id':label,className:'ac-svc ac-svc--'+tone+(edit?' is-edit':'')+(edit&&pinned?' is-fav':'')+(edit&&full?' is-full':''),onClick:edit?()=>{if(!full)toggle(label);}:onClick,disabled:edit?undefined:disabled,'aria-disabled':edit&&full?true:undefined,'aria-pressed':edit?pinned:undefined,'aria-label':edit?label:aria||label},
+    h('span',{className:'ac-svc-ico','aria-hidden':true},h(Icon,{d:icon,size:24}),badge&&!edit?h('b',{className:'ac-svc-badge'},badge):null,edit&&h('i',{className:'ac-svc-star','aria-hidden':true},h(Icon,{d:S.star,size:13,stroke:2.2}))),h('span',{className:'ac-svc-txt'},label));};
   const main=[
    tile(S.gauge,'Tester ma connexion',on.test,{disabled:busy||!on.test||s.tone==='wait'}),
    tile(S.chat,'Guardian',on.voice,{tone:'orange',aria:'Parler à Guardian'}),
@@ -80,7 +90,13 @@
    tile(S.alert,'Signaler une panne',on.report,{tone:'red'}),
    order?tile(S.folder,'Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}):tile(S.user,'Mon compte',go('compte'),{tone:'blue'}),
    tile(S.sms,'Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'})];
-  const more=[!cut&&call,tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),order&&tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
+  const extraTiles=[tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),order&&tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
+  // Les favoris passent devant ; la grille garde 8 tuiles, le reste va dans « Voir tout ».
+  // « Signaler une panne » et « Sans internet » restent toujours dans les 8 tuiles visibles : ce sont celles d'une coupure.
+  const pool=main.concat(extraTiles),pins=live.map(id=>pool.find(t=>t.key===id)).filter(Boolean),ordered=pins.concat(pool.filter(t=>!live.includes(t.key)));
+  const KEEP=['Signaler une panne','Sans internet'],top=ordered.slice(0,8),rest=ordered.slice(8);
+  for(const k of KEEP){const i=rest.findIndex(t=>t.key===k);if(i<0)continue;let j=top.length-1;while(j>=0&&(KEEP.includes(top[j].key)||live.includes(top[j].key)))j--;if(j<0)continue;rest.splice(i,1,top[j]);top.splice(j,1);top.push(pool.find(t=>t.key===k));}
+  const grid=edit?ordered:top,more=edit?[]:[!cut&&call].concat(rest).filter(Boolean);
   const promo=s.tone==='ok'&&!fault&&!state.sharedIncident&&plan<500&&on.go;
   // Tout marche mais des appareils inconnus sont sur le Wi-Fi : le bandeau le dit en toutes lettres.
   const a=s.tone==='ok'&&extra?{tone:'slow',icon:P.devices,title:extra+' appareil'+(extra>1?'s':'')+' inconnu'+(extra>1?'s':'')+' sur votre Wi-Fi',text:'Vérifiez que vous les connaissez. Vous pouvez les bloquer en un geste.',action:'devices',actionLabel:'Voir mes appareils'}:s;
@@ -109,8 +125,11 @@
    shown.length>0&&h('div',{className:'ac-cards'},shown),
    h('section',{className:'ac-services','aria-labelledby':'ac-svc-title'},
     h('div',{className:'ac-services-head'},h('h2',{id:'ac-svc-title'},'Services'),
-     more.length>0&&h('button',{type:'button',className:'ac-more','aria-expanded':all,'aria-controls':'ac-svc-grid',onClick:()=>setAll(v=>!v)},all?'Moins':'Voir tout',h(Icon,{d:S.chevron,size:16}))),
-    h('div',{className:'ac-svc-grid',id:'ac-svc-grid'},main,all&&more)),
+     h('div',{className:'ac-services-tools'},
+      on.go&&h('button',{type:'button',className:'ac-more'+(edit?' is-done':''),'aria-pressed':edit,onClick:()=>{setEdit(v=>!v);setAll(false);}},edit?'Terminé':'Modifier'),
+      !edit&&more.length>0&&h('button',{type:'button',className:'ac-more','aria-expanded':all,'aria-controls':'ac-svc-grid',onClick:()=>setAll(v=>!v)},all?'Moins':'Voir tout',h(Icon,{d:S.chevron,size:16})))),
+    edit&&h('p',{className:'ac-svc-hint',role:'status'},'Touchez jusqu’à 4 services pour les mettre en premier. '+live.length+' sur 4 choisis'+(live.length>=4?' : touchez une étoile pour en changer.':'.')),
+    h('div',{className:'ac-svc-grid',id:'ac-svc-grid'},grid,all&&more)),
    promo&&h('button',{type:'button',className:'ac-promo',onClick:go('forfait')},
     h('span',{className:'ac-promo-txt'},h('small',null,'Jeux, films, télétravail'),h('strong',null,'Plus de débit ? Passez au forfait supérieur'),h('span',null,'Vous payez juste la différence. Voir les forfaits')),
     h('span',{className:'ac-promo-ico','aria-hidden':true},h(Icon,{d:S.up,size:30,stroke:2.2}))),

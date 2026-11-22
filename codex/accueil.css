@@ -252,3 +252,16 @@ details.fc-graph:not([open]){padding:0;background:none;border:0;box-shadow:none}
  html:has(.j-navigation[data-open=true]) .rb-bar:not(.is-open),
  html:has(.j-chat:not(.j-chat-page)) .rb-bar:not(.is-open){display:none}
 }
+
+/* Raccourcis préférés : « Modifier » montre une étoile sur chaque tuile ; jusqu'à 4 passent en tête de la grille. */
+.ac-services-tools{display:flex;align-items:center;gap:6px}
+.ac-more.is-done{padding:0 14px;border-radius:999px;background:var(--moov-primary);color:var(--moov-on-primary)}
+.ac-svc-hint{margin:-2px 0 2px;font-size:13.5px;color:var(--moov-text-muted)}
+.ac-svc-star{position:absolute;top:-6px;right:-8px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--moov-surface);color:var(--moov-neutral-600);box-shadow:0 0 0 1.5px var(--moov-neutral-300)}
+.journey .ac .ac-svc.is-edit{border-style:dashed}
+.journey .ac .ac-svc.is-fav{border-style:solid;border-color:var(--moov-accent-500);background:var(--moov-accent-25)}
+.ac-svc.is-fav .ac-svc-star{background:var(--moov-accent-500);color:var(--moov-on-accent);box-shadow:none}
+.ac-svc.is-fav .ac-svc-star svg{fill:currentColor}
+@media (prefers-reduced-motion:no-preference){.journey .ac .ac-svc.is-edit .ac-svc-ico{animation:ac-wiggle .5s ease-out 1}}
+@keyframes ac-wiggle{30%{transform:rotate(-4deg)}60%{transform:rotate(3deg)}}
+.journey .ac .ac-svc.is-full{opacity:.55;cursor:not-allowed}

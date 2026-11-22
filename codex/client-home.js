@@ -156,6 +156,25 @@
    err&&h('p',{className:'ch-wa-error',role:'alert'},err),done&&h('p',{className:'ch-parr-done',role:'status'},done));
  }
 
+ // « Mes paiements » : factures, parts et forfaits payés (paiements.cjs). Chaque ligne s'ouvre sur son reçu,
+ // à partager sur WhatsApp ou à télécharger (FGPay.ReceiptActions). Trois lignes, puis « Voir tout ».
+ function PaymentsCard({api,user}){
+  const [d,D]=S(null),[all,A]=S(false);
+  E(()=>{let alive=true;api('/paiements').then(r=>{if(alive)D(r);}).catch(()=>{});return()=>{alive=false;};},[]);
+  if(!d)return null;
+  const F=n=>Number(n||0).toLocaleString('fr-FR')+' F',day=at=>new Date(at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+  const how=p=>p.channel==='agence'?'En agence':'Moov Money',list=all?d.items:d.items.slice(0,3);
+  return h('section',{className:'ch-group ch-pay','aria-labelledby':'ch-pay-title'},h('h2',{id:'ch-pay-title'},'Mes paiements'),
+   !d.items.length?h('p',{className:'ch-pay-empty'},'Aucun paiement pour l’instant. Vos reçus apparaîtront ici.'):
+   h('ul',{className:'ch-pay-list'},list.map(p=>h('li',{key:p.ref},h('details',null,
+    h('summary',null,h('span',{className:'ch-row-icon'},h(Icon,{name:'wallet',size:19})),h('span',null,h('b',null,p.label),h('small',null,day(p.at)+' · '+how(p))),h('strong',{className:'ch-pay-amount'},F(p.amount))),
+    h('div',{className:'ch-pay-detail'},
+     h('p',null,'Référence ',h('b',null,p.ref)),
+     p.channel==='agence'?h('p',{className:'ch-pay-note'},'Payé en agence : demandez le reçu papier à votre agence Moov.'):
+      window.FGPay&&h(FGPay.ReceiptActions,{receipt:{title:p.label,amount:p.amount,ref:p.ref,at:p.at,account:d.account,name:user.name}})))))),
+   d.items.length>3&&h('button',{type:'button',className:'ch-pay-more','aria-expanded':all,onClick:()=>A(v=>!v)},all?'Voir moins':d.total>d.items.length?'Voir mes '+d.items.length+' derniers paiements':'Voir tous mes paiements ('+d.items.length+')'));
+ }
+
  function Account({api,user,state,bell,go,onAbout,onLogout,busy}){
   const plan=state?.plan,zone=state?.homeZone?.zone;
   const row=(icon,label,hint,onClick,extra)=>h('button',{type:'button',className:'ch-row',onClick},h('span',{className:'ch-row-icon'},h(Icon,{name:icon,size:19})),h('span',null,h('b',null,label),hint&&h('small',null,hint)),extra,h(Icon,{name:'chevron',size:18}));
@@ -169,6 +188,7 @@
    h('section',{className:'ch-group'},
     row('gift','Parrainer un proche','Un mois offert pour vous et pour lui',()=>go('fidelite')),
     window.FGAcces&&row('wallet','Offres solidaires','Étudiants, voisins, payer en plusieurs fois',()=>go('acces'))),
+   api&&h(PaymentsCard,{api,user}),
    api&&h(WhatsAppCard,{api,go}),
    h('section',{className:'ch-group'},h('h2',null,'Mon suivi'),
     row('bell','Mes messages',bell?bell+' message'+(bell>1?'s':'')+' à lire':'Tout est lu',()=>go('notifications')),
@@ -178,8 +198,10 @@
    // « Mes données » : voir, télécharger ou effacer ce que l'application garde (loi n°2013-450).
    window.FGDonnees&&h(FGDonnees.Entry,{onOpen:()=>go('donnees')}),
    h('section',{className:'ch-group'},h('h2',null,'Aide'),
-    row('info','À propos de la démo','Comment fonctionne cette démonstration',onAbout)),
+    row('info','À propos de la démo','Comment fonctionne cette démonstration',onAbout),
+    // Contre les arnaques au code secret : la règle à retenir, sans écran de plus.
+    h('div',{className:'ch-scam',role:'note'},h('span',{className:'ch-row-icon'},h(Icon,{name:'alert',size:19})),h('span',null,h('b',null,'Attention aux arnaques'),h('small',null,'Moov ne vous demandera jamais votre code secret Moov Money, ni par appel, ni par SMS, ni sur WhatsApp. Si on vous le demande, raccrochez.')))),
    h('button',{type:'button',className:'ch-logout',onClick:onLogout,disabled:busy},h(Icon,{name:'logout',size:19}),'Se déconnecter'));
  }
- window.FGClientHome={LiveTrip,ReportHero,Account,WhatsAppCard,ParrainageCard,Icon};
+ window.FGClientHome={LiveTrip,ReportHero,Account,WhatsAppCard,ParrainageCard,PaymentsCard,Icon};
 })();

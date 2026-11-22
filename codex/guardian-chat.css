@@ -151,3 +151,11 @@
 .journey .j-guardian-page .j-chat.j-chat-page{height:min(700px,calc(100dvh - 200px))}
 @media(max-width:760px){.journey .j-guardian-page .j-chat.j-chat-page{height:calc(100dvh - 232px - var(--rb-h,0px) - env(safe-area-inset-bottom));min-height:420px}}
 @media(prefers-reduced-motion:reduce){.journey .j-guardian-modes button{transition:none}}
+
+/* Reçu : partager ou télécharger (écran « Paiement réussi » et « Mes paiements »). */
+.mm-receipt{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.mm-receipt-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 13px;border:1px solid var(--moov-primary-100);border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary);font:inherit;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer}
+.mm-receipt-btn:hover{background:var(--moov-primary-100)}
+.mm-receipt-note{flex-basis:100%;margin:0;font-size:13px;text-align:center;color:var(--moov-text-muted)}
+.mm-success .mm-receipt{margin:2px 0 4px}
+.mm-receipt-btn{text-decoration:none}
