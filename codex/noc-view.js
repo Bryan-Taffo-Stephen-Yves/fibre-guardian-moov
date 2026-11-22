@@ -56,7 +56,7 @@ function ClientIncident({api,incident:i,onSaved}){
   closed:['Dossier clôturé, connexion non vérifiée','Il s’agit d’une clôture administrative du support, pas d’une confirmation de réparation. Si le problème persiste, contactez le support.']
  }[i.status]||['Le support suit votre dossier','Consultez la chronologie pour connaître la dernière décision.'];
  return h('article',{className:'n-client-incident'+(closed?' n-client-incident--closed':'')+(live?' n-client-incident--live':''),'data-status':i.status},
-  h('div',{className:'n-row'},h('span',{className:'n-badge'},labels[i.status]||i.status),h('small',null,(i.zone||i.segment||'Votre signalement')+' · '+(i.mode==='demo'?'Incident de zone':'Dossier support'))),
+  h('div',{className:'n-row'},h('span',{className:'n-badge'},({reported:'Signalement reçu',proposed:'Intervention en préparation'})[i.status]||labels[i.status]||i.status),h('small',null,(i.zone||i.segment||'Votre signalement')+' · '+(i.mode==='demo'?'Incident de zone':'Dossier support'))),
   h('h3',null,i.title),
   h('div',{className:'n-client-next'},h('h4',null,nextStep[0]),h('p',null,nextStep[1])),
   window.FGAppel&&!closed&&h(window.FGAppel.Restore,{restore:i.restore}),

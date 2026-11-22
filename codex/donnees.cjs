@@ -52,7 +52,7 @@ function choose(s, uid, d) {
 function protege(s, uid) {
   const u = s.get('SELECT email FROM users WHERE id=?', uid);
   if (!u) return 'Compte introuvable.';
-  if (u.email.endsWith(DEMO_DOMAIN)) return 'Ce compte ne peut pas être effacé depuis l’application.';
+  if (u.email.endsWith(DEMO_DOMAIN)) return 'Ce compte ne peut pas être effacé depuis l’application : il sert de compte de présentation. Vous pouvez quand même tout télécharger.';
   if (count(s, 'operator_grants', 'user_id=?', uid) || count(s, 'noc_field_accounts', 'user_id=?', uid)) return 'Les comptes de l’équipe Moov s’effacent par la direction, pas depuis l’application.';
   return null;
 }
