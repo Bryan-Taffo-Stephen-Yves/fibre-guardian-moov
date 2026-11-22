@@ -210,5 +210,3 @@ details.fc-graph:not([open]){padding:0;background:none;border:0;box-shadow:none}
 .ac-where-go{flex:1 1 auto;border:0;background:var(--moov-primary);color:var(--moov-on-primary)}
 .ac-where-ok{flex:0 1 auto;border:1px solid var(--moov-primary-100);background:var(--moov-surface);color:var(--moov-primary-700)}
 .ac-where-go:disabled{opacity:.6;cursor:default}
-/* Grand écran : l'en-tête de la page montre déjà « Démo » et la cloche ; on ne les répète pas dans la carte bleue. */
-@media(min-width:761px){.ac-top-actions{visibility:hidden}}
