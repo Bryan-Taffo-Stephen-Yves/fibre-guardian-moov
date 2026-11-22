@@ -156,6 +156,17 @@
    err&&h('p',{className:'ch-wa-error',role:'alert'},err),done&&h('p',{className:'ch-parr-done',role:'status'},done));
  }
 
+ // « Apparence » : Clair (par défaut), Sombre ou Automatique (suit le téléphone). Le choix est gardé par FGApparence (apparence.js).
+ const THEMES=[['light','Clair'],['dark','Sombre'],['auto','Automatique']];
+ function Apparence(){
+  const A=window.FGApparence,[v,V]=S(()=>A?A.read():'light');
+  const pick=t=>V(A?A.save(t):t);
+  return h('section',{className:'ch-group'},h('h2',null,'Affichage'),
+   h('div',{className:'ch-row ch-theme',role:'group','aria-labelledby':'ch-theme-title'},
+    h('span',null,h('b',{id:'ch-theme-title'},'Apparence'),h('small',null,v==='auto'?'Suit le réglage de votre téléphone':'Choisissez l’affichage qui vous convient')),
+    h('div',{className:'ch-theme-seg'},THEMES.map(([k,label])=>h('button',{key:k,type:'button',className:'ch-chip'+(v===k?' strong':''),'aria-pressed':v===k,onClick:()=>pick(k)},label)))));
+  }
+
  // « Mes paiements » : factures, parts et forfaits payés (paiements.cjs). Chaque ligne s'ouvre sur son reçu,
  // à partager sur WhatsApp ou à télécharger (FGPay.ReceiptActions). Trois lignes, puis « Voir tout ».
  function PaymentsCard({api,user}){
@@ -197,6 +208,7 @@
    // Signaler et *144# sont déjà en gros boutons sur l'accueil : pas de doublon ici.
    // « Mes données » : voir, télécharger ou effacer ce que l'application garde (loi n°2013-450).
    window.FGDonnees&&h(FGDonnees.Entry,{onOpen:()=>go('donnees')}),
+   h(Apparence),
    h('section',{className:'ch-group'},h('h2',null,'Aide'),
     row('info','À propos de la démo','Comment fonctionne cette démonstration',onAbout),
     // Contre les arnaques au code secret : la règle à retenir, sans écran de plus.
