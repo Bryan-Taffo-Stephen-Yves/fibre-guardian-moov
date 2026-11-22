@@ -31,8 +31,8 @@ test('Verdict : des règles simples, des chiffres réels, et l’honnêteté sur
   assert.equal(v({downloadMbps: 20, latencyMs: 300, lossPct: 60}).level, 'instable');
   assert.equal(v({downloadMbps: null, latencyMs: null, lossPct: 100}).level, 'coupe');
   const good = v({downloadMbps: 85.4, latencyMs: 210, lossPct: 0, network: 'hotspot'});
-  assert.match(good.text, /85 Mbps/); assert.match(good.text, /partage de connexion/, 'le client sait que le test n’est pas passé par la box');
-  assert.ok(good.facts.some(f => f.label === 'Débit mesuré' && f.value === '85 Mbps'));
+  assert.match(good.text, /85 Mb\/s/); assert.match(good.text, /partage de connexion/, 'le client sait que le test n’est pas passé par la box');
+  assert.ok(good.facts.some(f => f.label === 'Débit mesuré' && f.value === '85 Mb/s'));
   assert.ok(good.facts.some(f => f.label === 'Où' && /serveur de Guardian/.test(f.value)), 'Guardian dit où le test a été fait');
   assert.deepEqual(VT.clean({downloadMbps: -4, latencyMs: 'x', lossPct: 400, network: 'satellite'}), {downloadMbps: null, uploadMbps: null, latencyMs: null, jitterMs: null, lossPct: 100, network: null}, 'valeurs absurdes écartées');
   assert.match(VT.verdict(VT.clean({downloadMbps: 50, latencyMs: 200}), {fault: {zone: 'Niangon'}}).text, /^Une panne est en cours/);
@@ -54,8 +54,8 @@ test('Depuis l’application : lien personnel, sondes, 2 Mo réels, résultat da
     const d = await r.json();
     assert.equal(r.status, 200); assert.equal(d.level, 'bonne'); assert.equal(d.whatsapp, false);
     const st = journey.get(t.s, t.user.id), said = st.messages.at(-1);
-    assert.equal(st.messages.at(-2).text, 'J’ai testé ma connexion.'); assert.equal(said.verdict, 'test-bonne'); assert.match(said.text, /64 Mbps/);
-    assert.ok(said.facts.some(f => f.label === 'Votre forfait' && f.value === '100 Mbps'));
+    assert.equal(st.messages.at(-2).text, 'J’ai testé ma connexion.'); assert.equal(said.verdict, 'test-bonne'); assert.match(said.text, /64 Mb\/s/);
+    assert.ok(said.facts.some(f => f.label === 'Votre forfait' && f.value === '100 Mb/s'));
   } finally { t.close(); }
 });
 
@@ -98,7 +98,7 @@ test('Sur WhatsApp : « Tester ma connexion » donne le lien, et le résultat re
     const info = await (await t.page('info', link[1])).json(); assert.equal(info.whatsapp, true);
     const d = await (await t.page('result', link[1], {metrics: {downloadMbps: 2.1, latencyMs: 450, lossPct: 0, network: 'wifi'}})).json();
     assert.equal(d.level, 'lente'); assert.equal(d.whatsapp, true); await t.until(2);
-    assert.match(t.sent[1].message, /Résultat de votre test de connexion/); assert.match(t.sent[1].message, /Débit mesuré : 2,1 Mbps/);
+    assert.match(t.sent[1].message, /Résultat de votre test de connexion/); assert.match(t.sent[1].message, /Débit mesuré : 2,1 Mb\/s/);
     assert.deepEqual(t.sent[1].labels, ['Mon Wi-Fi capte mal', 'Redémarrer ma box', 'Parler à un conseiller']);
     await t.post(t.msg({typeMessage: 'textMessage', textMessageData: {textMessage: '3'}})); await t.until(3);
     assert.match(t.sent[2].message, /111|conseiller/, '« 3 » après le résultat : le conseiller');
@@ -166,7 +166,7 @@ test('En direct : petits échantillons, débit d’envoi compté puis oublié, e
     const down = await VT.network('41.66.1.2', {fetchImpl: async () => { throw new Error('hors ligne'); }});
     assert.equal(down.ip, '41.66.1.2'); assert.equal(down.operator, null, 'service indisponible : l’adresse seule');
     const r = await t.page('result', l.token, {metrics: {downloadMbps: 30, uploadMbps: 8.4, latencyMs: 150, lossPct: 0}});
-    assert.ok((await r.json()).facts.some(f => f.label === 'Débit d’envoi' && f.value === '8,4 Mbps'));
+    assert.ok((await r.json()).facts.some(f => f.label === 'Débit d’envoi' && f.value === '8,4 Mb/s'));
   } finally { t.close(); }
 });
 

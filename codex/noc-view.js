@@ -38,25 +38,25 @@ function TrackingSteps({incident:i}){
  if(i.status==='resolved'&&!restorationVerified(i))return h('p',{className:'n-caution'},'La preuve de rétablissement manque : le parcours ne peut pas être affiché comme terminé.');
  const stages=['dispatched','en_route','on_site','verifying','resolved'],index=stages.indexOf(i.status);
  if(index<0)return null;
- return h('ol',{className:'n-tracking-steps','aria-label':'Étapes de l’intervention'},stages.map((v,k)=>h('li',{key:v,className:k<=index?'done':'','aria-current':v===i.status?'step':undefined},h('span',null,k<index?'✓':k+1),labels[v])));
+ return h('ol',{className:'n-tracking-steps','aria-label':'Étapes de l’intervention'},stages.map((v,k)=>h('li',{key:v,className:k<=index?'done':'','aria-current':v===i.status?'step':undefined},h('span',null,k<index||(k===index&&restorationVerified(i))?'✓':k+1),labels[v])));
 }
 function ClientIncident({api,incident:i,onSaved}){
  // Affecté, en route ou sur place : suivi du technicien en direct (live-trip.js).
  const closed=i.status==='closed',verified=restorationVerified(i),live=!!window.FGLiveTrip&&['dispatched','en_route','on_site'].includes(i.status)&&!!i.technician;
  const nextStep={
   reported:['Votre signalement est reçu','Le support doit examiner le dossier avant toute affectation.'],
-  proposed:['Le plan attend une validation','Un responsable habilité doit approuver les vérifications et l’intervention proposées.'],
+  proposed:['Notre équipe prépare l’intervention','Un responsable la valide, puis un technicien part chez vous.'],
   approved:['Le plan est approuvé',i.technician?'L’équipe prépare son intervention.':'Le support organise la prochaine étape. Aucune équipe n’est encore en route.'],
   rejected:['Le dossier est réexaminé','Le plan doit être corrigé avant une nouvelle décision.'],
   dispatched:['Une équipe est affectée','Le départ n’a pas encore été confirmé. L’estimation d’arrivée apparaîtra pendant le trajet.'],
   en_route:['Votre équipe est en route','Suivez son approche ci-dessous.'],
   on_site:['L’équipe est sur place','L’intervention est en cours. Sa position n’est plus partagée pendant les travaux.'],
   verifying:['La réparation est en vérification','Le dossier ne sera marqué résolu qu’après contrôle du retour du service.'],
-  resolved:verified?['Le rétablissement est vérifié','Les mesures du scénario confirment le retour du service. Vous pouvez maintenant donner votre avis.']:['Vérification à confirmer','Aucune preuve de rétablissement n’est disponible dans ce dossier.'],
+  resolved:verified?['Le rétablissement est vérifié','Votre connexion est revenue, nos mesures le confirment. Vous pouvez maintenant donner votre avis.']:['Vérification à confirmer','Aucune preuve de rétablissement n’est disponible dans ce dossier.'],
   closed:['Dossier clôturé, connexion non vérifiée','Il s’agit d’une clôture administrative du support, pas d’une confirmation de réparation. Si le problème persiste, contactez le support.']
  }[i.status]||['Le support suit votre dossier','Consultez la chronologie pour connaître la dernière décision.'];
  return h('article',{className:'n-client-incident'+(closed?' n-client-incident--closed':'')+(live?' n-client-incident--live':''),'data-status':i.status},
-  h('div',{className:'n-row'},h('span',{className:'n-badge'},labels[i.status]||i.status),h('small',null,(i.zone||i.segment||'Votre signalement')+' · '+(i.mode==='demo'?'Incident de zone':'Dossier support'))),
+  h('div',{className:'n-row'},h('span',{className:'n-badge'},({reported:'Signalement reçu',proposed:'Intervention en préparation'})[i.status]||labels[i.status]||i.status),h('small',null,(i.zone||i.segment||'Votre signalement')+' · '+(i.mode==='demo'?'Incident de zone':'Dossier support'))),
   h('h3',null,i.title),
   h('div',{className:'n-client-next'},h('h4',null,nextStep[0]),h('p',null,nextStep[1])),
   window.FGAppel&&!closed&&h(window.FGAppel.Restore,{restore:i.restore}),
@@ -64,7 +64,7 @@ function ClientIncident({api,incident:i,onSaved}){
   !closed&&!live&&h(TrackingSteps,{incident:i}),
   !closed&&!live&&i.status!=='en_route'&&i.technician&&h('div',{className:'n-technician-profile'},h('span',{className:'n-user'},i.technician.name[0]),h('div',null,h('strong',null,i.technician.name),h('p',null,i.technician.team+' · '+labels[i.status]))),
   verified&&h(Feedback,{api,incident:i,onSaved}),
-  h('details',null,h('summary',null,'Chronologie du dossier · '+(i.events?.length||0)+' événement(s)'),h('ol',{className:'n-timeline'},(i.events||[]).map(e=>h('li',{key:e.id},h('small',null,time(e.at)),e.public_text))))
+  h('details',null,h('summary',null,'Chronologie du dossier · '+(n=>n+' événement'+(n>1?'s':''))(i.events?.length||0)),h('ol',{className:'n-timeline'},(i.events||[]).map(e=>h('li',{key:e.id},h('small',null,time(e.at)),e.public_text))))
  );
 }
 function ClientFeed({api,onReport}){

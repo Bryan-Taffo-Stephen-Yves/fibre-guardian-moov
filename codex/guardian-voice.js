@@ -15,7 +15,7 @@
  function stop(){try{audio?.pause();}catch(_){}audio=null;try{window.speechSynthesis?.cancel();}catch(_){}speakingId=null;notify();}
  function tts(text,id){
   if(!window.speechSynthesis||!window.SpeechSynthesisUtterance)return false;
-  const u=new SpeechSynthesisUtterance(String(text).replace(/\bMbps\b/g,'mégabits par seconde').replace(/\bFCFA\b/g,'francs CFA').replace(/\bWi-Fi\b/gi,'wifi'));
+  const u=new SpeechSynthesisUtterance(String(text).replace(/\bMb\/s|\bMbps\b/g,'mégabits par seconde').replace(/\bFCFA\b/g,'francs CFA').replace(/\bWi-Fi\b/gi,'wifi'));
   u.lang='fr-FR';u.rate=1.02;const v=frenchVoice();if(v)u.voice=v;
   u.onend=u.onerror=()=>{if(speakingId===id){speakingId=null;notify();}};
   window.speechSynthesis.speak(u);return true;

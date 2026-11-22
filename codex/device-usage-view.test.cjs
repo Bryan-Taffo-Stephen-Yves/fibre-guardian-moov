@@ -48,7 +48,7 @@ const article=(root,name)=>tag(root,'article').find(node=>text(node).includes(na
 
 test('Les appareils absents conservent leur volume sans proposer de commande',async()=>{
  const app=harness();await app.settle();const row=article(app.tree,'Ancien appareil invité');assert.ok(row,'L’appareil historique doit rester visible');
- assert.match(text(row),/historique conservé/);assert.match(text(row),/250 Mo/);assert.match(text(row),/— Mbps/);
+ assert.match(text(row),/historique conservé/);assert.match(text(row),/250 Mo/);assert.match(text(row),/— Mb\/s/);
  assert.equal(namedButton(row,'Gérer'),undefined);assert.equal(namedButton(row,'Rétablir'),undefined);assert.equal(namedButton(row,'Reconnaître'),undefined);
  namedButton(row,'Détails de Ancien appareil invité').props.onClick();await app.settle();assert.match(text(app.tree),/Graphique filtré sur Ancien appareil invité/);assert.equal(app.actions.length,0);assert.equal(app.confirmations.length,0);
 });
@@ -57,7 +57,7 @@ test('Un appareil protégé peut être limité, mais jamais bloqué ni retiré',
  namedButton(row,'Détails de iPhone protégé').props.onClick();await app.settle();assert.match(text(article(app.tree,'iPhone protégé')),/jamais être coupé ni retiré/);assert.equal(app.actions.length,0);
  namedButton(article(app.tree,'iPhone protégé'),'Gérer').props.onClick();await app.settle();const sheet=all(app.tree,node=>node.props.role==='dialog')[0];assert.ok(sheet,'La fiche Gérer s’ouvre');
  assert.match(text(sheet),/jamais coupé ni retiré/);assert.doesNotMatch(text(sheet),/Bloquer|Retirer de mon réseau/);
- const option=tag(sheet,'button').find(node=>text(node).startsWith('10 Mbps'));option.props.onClick();await app.settle();assert.equal(app.actions.at(-1)[0],'device');assert.equal(app.actions.at(-1)[1].action,'limit');assert.equal(app.actions.at(-1)[1].mbps,10);
+ const option=tag(sheet,'button').find(node=>text(node).startsWith('10 Mb/s'));option.props.onClick();await app.settle();assert.equal(app.actions.at(-1)[0],'device');assert.equal(app.actions.at(-1)[1].action,'limit');assert.equal(app.actions.at(-1)[1].mbps,10);
 });
 test('Un volume absent reste inconnu, le graphique ne le transforme pas en zéro',async()=>{
  const data=fixture();data.summary.bytes=null;data.summary.observedMs=0;data.summary.coverageRatio=0;data.buckets=[data.buckets[0]];
@@ -87,7 +87,7 @@ test('Gérer un appareil actif ouvre sa fiche, jamais une coupure implicite',asy
 });
 test('La fiche limite le débit au choix du client et retire un appareil après confirmation',async()=>{
  const app=harness();await app.settle();namedButton(article(app.tree,'LG TV du salon'),'Gérer').props.onClick();await app.settle();
- const option=tag(sheet(app.tree),'button').find(node=>text(node).startsWith('10 Mbps'));option.props.onClick();
+ const option=tag(sheet(app.tree),'button').find(node=>text(node).startsWith('10 Mb/s'));option.props.onClick();
  assert.deepEqual([app.actions[0][0],app.actions[0][1].action,app.actions[0][1].mbps,app.actions[0][1].confirm],['device','limit',10,true]);
  namedButton(sheet(app.tree),'Retirer de mon réseau').props.onClick();await app.settle();assert.equal(app.actions.length,1,'Le retrait attend la confirmation');assert.match(app.confirmations[0].body,/mot de passe Wi-Fi/);
  app.confirmations[0].run();assert.equal(app.actions[1][1].action,'remove');assert.equal(app.actions[1][1].confirm,true);

@@ -20,7 +20,7 @@
       h('span',{className:'eyebrow'},'FOYER SIMULÉ · MÊME SOURCE, MÊMES PREUVES'),
       h('h2',null,available?d.title:'Observation en attente'),
       h('p',null,available?d.explanation:'Reprenez les relevés pour observer le foyer. Aucune valeur n’est remplacée par une mesure de ligne inventée.'),
-      h('div',{className:'fg-shared-metrics'}, [['Capacité Internet',m.capacityMbps,'Mbps'],['Trafic du foyer',m.usageMbps,'Mbps'],['Temps de réponse',m.latencyMs,'ms'],['Pertes',m.lossPct,'%'],['Appareils connectés',m.connected,'']].map(([label,value,unit])=>h('div',{key:label},h('span',null,label),h('strong',null,number(value),' ',h('small',null,unit))))),
+      h('div',{className:'fg-shared-metrics'}, [['Capacité Internet',m.capacityMbps,'Mb/s'],['Trafic du foyer',m.usageMbps,'Mb/s'],['Temps de réponse',m.latencyMs,'ms'],['Pertes',m.lossPct,'%'],['Appareils connectés',m.connected,'']].map(([label,value,unit])=>h('div',{key:label},h('span',null,label),h('strong',null,number(value),' ',h('small',null,unit))))),
       h('div',{className:'notice'},'La capacité du lien n’est pas la consommation. Le signal optique et la cause exacte d’une coupure ne sont pas mesurés par ce simulateur de foyer.'),
       paused&&h('p',null,'Les mesures sont en pause : ce diagnostic ne décrit pas une nouvelle observation.'),
       h('div',{className:'fg-source-actions'},h('button',{type:'button',className:'btn primary',onClick:onIncidents},'Résoudre et vérifier'),h('button',{type:'button',className:'btn',onClick:onHousehold},'Examiner les appareils')));

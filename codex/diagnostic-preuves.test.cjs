@@ -26,7 +26,7 @@ test('Wi-Fi : Guardian ne conclut pas sans mesure, il dit ce qu’il mesure et l
   const a=await c.ask('Mon wifi ne marche pas dans la chambre');
   assert.match(a.text,/je ne peux pas encore conclure/);
   assert.doesNotMatch(a.text,/Le souci vient du Wi-Fi/,'plus d’affirmation sans preuve');
-  assert.equal(label(a.proof,'Débit qui arrive à votre box'),'100 Mbps (forfait 100 Mbps)');
+  assert.equal(label(a.proof,'Débit qui arrive à votre box'),'100 Mb/s (forfait 100 Mb/s)');
   assert.equal(label(a.proof,'Temps de réponse de la ligne'),'18 ms');
   assert.match(label(a.proof,'Lumière de la fibre à la box'),/dBm \(normale\)/);
   assert.match(label(a.proof,'Signal Wi-Fi dans vos pièces'),/Non mesuré/,'ce qui n’est pas mesuré est dit');
@@ -40,7 +40,7 @@ test('Connexion lente : mesures d’abord, cause supposée ensuite, et le test q
  const c=await client();
  try{
   const calm=await c.ask('Ma connexion est lente');
-  assert.match(calm.text,/100 Mbps arrivent à votre box et le temps de réponse est de 18 ms/);
+  assert.match(calm.text,/100 Mb\/s arrivent à votre box et le temps de réponse est de 18 ms/);
   assert.match(calm.text,/je ne peux pas encore conclure/);
   assert.equal(calm.action,'usage');
   // Maison saturée : la supposition change (partage du débit), le test aussi (pause du gros usage).
@@ -58,7 +58,7 @@ test('Débit anormalement bas : le redémarrage est le test, et le résultat dit
   await c.action({type:'scenario',value:'slow'});
   const a=await c.ask('C’est lent');
   assert.equal(a.action,'reboot');
-  assert.equal(label(a.proof,'Débit qui arrive à votre box'),'12 Mbps (forfait 100 Mbps)');
+  assert.equal(label(a.proof,'Débit qui arrive à votre box'),'12 Mb/s (forfait 100 Mb/s)');
   assert.ok(a.proof.confirms.some(v=>/transmets la panne à Moov/.test(v)));
  }finally{c.server.close();}
 });

@@ -139,9 +139,9 @@
         }
         else if (action.type === 'limit') {
             if (action.mbps !== null && (!Number.isFinite(action.mbps) || action.mbps < 1 || action.mbps > 100))
-                throw Error('Choisissez une limite de 1 à 100 Mbps.');
+                throw Error('Choisissez une limite de 1 à 100 Mb/s.');
             device.limit = action.mbps;
-            log(s, device.name + ' : ' + (action.mbps === null ? 'limite retirée' : action.mbps + ' Mbps maximum') + ' (simulation).');
+            log(s, device.name + ' : ' + (action.mbps === null ? 'limite retirée' : action.mbps + ' Mb/s maximum') + ' (simulation).');
         }
         else if (action.type === 'pause' || action.type === 'block') {
             device.connected = false;
@@ -224,13 +224,13 @@
         if (s.rebootUntil > s.virtualAt) return result('reboot', 'La box virtuelle redémarre. Le test reprendra au retour de la connexion.');
         if (!elapsed) return result('waiting', 'Test lancé. Premier relevé dans une seconde simulée.');
         if (s.scenario === 'cut') return result('cut', 'Coupure simulée : débit Internet nul. Les appareils restent associés au Wi-Fi.');
-        if (s.scenario === 'slow') return result('slow', 'Capacité totale réduite à 12 Mbps, partagée entre les appareils. Ce n’est pas une coupure Wi-Fi.');
+        if (s.scenario === 'slow') return result('slow', 'Capacité totale réduite à 12 Mb/s, partagée entre les appareils. Ce n’est pas une coupure Wi-Fi.');
         if (s.scenario === 'normal') return result('normal', 'Demande normale rétablie. Vos limites, blocages et emplacements restent conservés.');
         if (device.blocked || !device.connected) return result('offline', 'La console est '+(device.blocked?'bloquée':'suspendue')+'. Elle ne peut pas télécharger. Vos réglages ont été conservés.');
-        if (s.total >= 25 && share > 60) return result(s.scenarioAlertAt != null ? 'alerted' : 'counting', s.scenarioAlertAt != null ? 'Alerte déclenchée pour ce test. Limitez la console à 10 Mbps pour réduire son usage.' : 'Usage dominant détecté. Alerte après 10 relevés consécutifs ; la progression repart à zéro si le seuil n’est plus atteint.');
-        if (device.limit !== null) return result('limited', 'La console est limitée à '+device.limit+' Mbps : elle ne dépasse pas le seuil d’alerte. La limitation fonctionne ; aucune alerte n’est attendue tant que le seuil reste sous contrôle.');
+        if (s.total >= 25 && share > 60) return result(s.scenarioAlertAt != null ? 'alerted' : 'counting', s.scenarioAlertAt != null ? 'Alerte déclenchée pour ce test. Limitez la console à 10 Mb/s pour réduire son usage.' : 'Usage dominant détecté. Alerte après 10 relevés consécutifs ; la progression repart à zéro si le seuil n’est plus atteint.');
+        if (device.limit !== null) return result('limited', 'La console est limitée à '+device.limit+' Mb/s : elle ne dépasse pas le seuil d’alerte. La limitation fonctionne ; aucune alerte n’est attendue tant que le seuil reste sous contrôle.');
         if (signal(device.room, s.router).dbm <= -60) return result('wifi', 'Le signal Wi-Fi de la console limite son débit. Le téléchargement est actif, mais pas dominant. Préparez le test pour la placer près de la box.');
-        return result('below', 'Téléchargement actif, mais seuil non atteint : il faut plus de 60 % du débit total et au moins 25 Mbps dans le foyer. Aucune alerte artificielle ne sera créée.');
+        return result('below', 'Téléchargement actif, mais seuil non atteint : il faut plus de 60 % du débit total et au moins 25 Mb/s dans le foyer. Aucune alerte artificielle ne sera créée.');
     }
     const api = { scenarioStatus, analytics, createSession, tick, command, signal, allocate, dayBytes, monthBytes, recommend, ROOMS, NAMES };
     root.FGHouse = api;

@@ -8,7 +8,7 @@
   const ICONS = {compte: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0', whatsapp: 'M4 20l1.4-4A8 8 0 1 1 8 18.6zM9 10c0 3 2 5 5 5l1-1.5-2-1-1 1c-1 0-2-1-2-2l1-1-1-2z', box: 'M3 14h18v5H3zM7 17h.01M11 17h.01M8 14l-2-6M16 14l2-6', veille: 'M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01', copies: 'M8 8h11v12H8zM5 16V4h11', photos: 'M4 7h3l2-3h6l2 3h3v12H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', lieu: 'M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0ZM14 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0', avis: 'm12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z'};
   const SAFE = [
     ['Mot de passe protégé', 'Il est transformé avant d’être gardé : personne chez Moov ne peut le lire.'],
-    ['Connexion chiffrée', 'Tout passe en HTTPS, comme une banque en ligne. Un code à usage unique sert à se connecter par SMS.'],
+    ['Connexion chiffrée', 'Vos échanges avec l’application sont chiffrés, comme sur le site d’une banque. Un code à usage unique, reçu par SMS, sert à vous connecter.'],
     ['Chacun voit sa part', 'Un technicien ne voit que sa mission, un conseiller que ses dossiers. Le serveur le vérifie à chaque geste.'],
     ['Rien sans vous', 'La surveillance du Wi-Fi et les alertes WhatsApp ne s’allument que si vous le demandez.']
   ];
@@ -33,7 +33,7 @@
       d && h('section', {className: 'dp-card'},
         h('h2', null, 'Votre choix'),
         h('div', {className: 'dp-switch-row'},
-          h('div', null, h('b', {id: 'dp-ia'}, 'Réponses rédigées par l’IA'), h('p', null, 'Pour mieux comprendre vos messages, vos photos de box et vos notes vocales, Guardian peut utiliser Claude (Anthropic) et Groq. Ces services sont hors de Côte d’Ivoire. Sans eux, Guardian vous répond quand même, plus simplement.')),
+          h('div', null, h('b', {id: 'dp-ia'}, 'Réponses rédigées par l’IA'), h('p', null, 'Guardian est un assistant IA. Pour comprendre vos messages et vos photos de box, il utilise le service Claude d’Anthropic. Pour écouter vos notes vocales WhatsApp, il utilise le service Groq. Ces services sont hors de Côte d’Ivoire. Sans eux, Guardian vous répond quand même, plus simplement.')),
           h('button', {type: 'button', role: 'switch', 'aria-checked': d.ia, 'aria-labelledby': 'dp-ia', className: 'dp-switch', disabled: busy, onClick: () => ia(!d.ia)}, h('i', {'aria-hidden': true})))),
       h('section', {className: 'dp-card'},
         h('h2', null, 'Comment vos données sont protégées'),

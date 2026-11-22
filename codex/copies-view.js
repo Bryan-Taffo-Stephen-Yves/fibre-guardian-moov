@@ -60,7 +60,7 @@
     if (!c) return h('section', {className: 'cw-detail cw-panel', 'aria-busy': true}, error ? h('p', {className: 'cw-error', role: 'alert'}, error) : h('p', {className: 'cw-muted'}, 'Ouverture de la copie…'));
     const m = c.metrics, w = c.wifi || {}, shown = sim ? sim.metrics : m;
     const facts = [['Client', c.client.name + (c.client.zone ? ' · ' + c.client.zone : '')], ['Réseau utilisé', c.networkLabel], ['Opérateur', [c.operator, c.city].filter(Boolean).join(' · ') || null],
-      ['Canal', [w.channel, w.band].filter(v => v != null).join(' · ') || null], ['Norme Wi-Fi', w.radio], ['Vitesse de liaison', w.rxMbps ? fr(w.rxMbps) + ' Mbps en réception' + (w.txMbps ? ' · ' + fr(w.txMbps) + ' en envoi' : '') : null],
+      ['Canal', [w.channel, w.band].filter(v => v != null).join(' · ') || null], ['Norme Wi-Fi', w.radio], ['Vitesse de liaison', w.rxMbps ? fr(w.rxMbps) + ' Mb/s en réception' + (w.txMbps ? ' · ' + fr(w.txMbps) + ' en envoi' : '') : null],
       ['Sécurité', w.auth], ['Réseau local', c.subnet], ['Nom du Wi-Fi', w.from === 'pc' ? 'lu par Windows sur le PC du client' : w.from === 'tape' ? 'tapé par le client' : null]].filter(f => f[1]);
     const tile = (label, value, unit, before) => h('div', {className: 'cw-tile'}, h('small', null, label), h('strong', null, value), h('span', null, unit), sim && h('em', null, 'avant : ' + before));
     const [tone, verdict] = sim ? LEVEL[sim.level] || ['warn', ''] : [];
@@ -72,7 +72,7 @@
           h('p', {className: 'cw-muted'}, (c.pc ? 'Mêmes chiffres et mêmes appareils' : 'Mêmes chiffres') + ' que le Wi-Fi du client, sans son mot de passe.')),
         h('span', {className: 'cw-pill ' + (c.pc ? 'is-pc' : '')}, h(Icon, {name: c.pc ? 'pc' : 'mobile', size: 15}), c.pc ? 'PC branché' : 'Mesure du téléphone')),
       h('div', {className: 'cw-tiles'},
-        tile('Débit', shown.downloadMbps == null ? (sim ? '0' : '—') : mbps(shown.downloadMbps), 'Mbps', mbps(m.downloadMbps) + ' Mbps'),
+        tile('Débit', shown.downloadMbps == null ? (sim ? '0' : '—') : mbps(shown.downloadMbps), 'Mb/s', mbps(m.downloadMbps) + ' Mb/s'),
         tile('Réponse', shown.latencyMs == null ? (sim ? 'aucune' : '—') : fr(shown.latencyMs), shown.latencyMs == null ? '' : 'ms', m.latencyMs == null ? '—' : fr(m.latencyMs) + ' ms'),
         tile('Stabilité', fr(100 - (shown.lossPct || 0)) + ' %', 'réponses', fr(100 - (m.lossPct || 0)) + ' %'),
         w.signal != null && tile('Signal Wi-Fi', sim ? (sim.signal ? sim.signal + ' %' : 'aucun') : w.signal + ' %', '', w.signal + ' %'),
@@ -123,7 +123,7 @@
           h('ul', null, list.map(c => h('li', {key: c.id}, h('button', {type: 'button', className: 'cw-item' + (sel === c.id ? ' is-on' : ''), 'aria-current': sel === c.id ? 'true' : undefined, onClick: () => setSel(c.id)},
             h('span', {className: 'cw-item-icon' + (c.done ? '' : ' is-rec'), 'aria-hidden': true}, h(Icon, {name: c.pc ? 'pc' : 'mobile', size: 17})),
             h('span', {className: 'cw-item-text'}, h('b', null, c.label), h('small', null, c.client.name + (c.client.zone ? ' · ' + c.client.zone : '') + ' · ' + (!c.done ? 'copie en cours' : c.measured ? ago(now - c.created) : 'arrêtée sans mesure'))),
-            h('span', {className: 'cw-item-nums'}, h('b', null, mbps(c.downloadMbps) + ' Mbps'), c.pc && h('small', null, plural(c.devices, 'appareil')))))))),
+            h('span', {className: 'cw-item-nums'}, h('b', null, mbps(c.downloadMbps) + ' Mb/s'), c.pc && h('small', null, plural(c.devices, 'appareil')))))))),
         sel && h(Detail, {key: sel, api, id: sel, scenarios: data.scenarios})));
   }
   root.FGCopies = {View};

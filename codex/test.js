@@ -39,14 +39,14 @@
  const head=(demo=false)=>{const h=el('header',{class:'vt-head'},back(),el('img',{src:'pwa/icon-192.png',alt:''}),el('div',{},el('strong',{text:'Moov Africa · Fibre'}),el('small',{text:'Tester ma connexion avec Guardian'})));
   if(demo){const b=el('button',{type:'button',class:'vt-demo-badge',id:'vt-demo-badge','aria-expanded':'false','aria-controls':'vt-demo'},'Démo');b.onclick=()=>toggleDemo();h.append(b);}return h;};
 
- // Le cadran : échelle logarithmique de 0 à 1 000 Mbps, pour qu'1 Mbps et 300 Mbps soient lisibles tous les deux.
+ // Le cadran : échelle logarithmique de 0 à 1 000 Mb/s, pour qu'1 Mb/s et 300 Mb/s soient lisibles tous les deux.
  const ARC=Math.PI*120,frac=v=>v==null?0:Math.min(1,Math.log10(1+v)/3);
  function gauge(){
   const s=svg('svg',{viewBox:'0 0 300 184',role:'img','aria-label':'Débit mesuré'}),path='M30 150 A120 120 0 0 1 270 150';
   s.append(svg('path',{d:path,class:'vt-track',fill:'none','stroke-width':18,'stroke-linecap':'round'}),svg('path',{d:path,id:'vt-arc',class:'vt-arc',fill:'none','stroke-width':18,'stroke-linecap':'round','stroke-dasharray':ARC,'stroke-dashoffset':ARC}));
   // Graduations : 10 et 100 au-dessus de l'arc, 0 et 1000 sous ses deux bouts.
   for(const [v,label] of [[0,'0'],[10,'10'],[100,'100'],[1000,'1000']]){const a=Math.PI*(1-frac(v)),end=v===0||v===1000,t=svg('text',{x:end?150+120*Math.cos(a):150+146*Math.cos(a),y:end?178:154-146*Math.sin(a),class:'vt-tick','text-anchor':'middle'});t.textContent=label;s.append(t);}
-  return el('div',{class:'vt-gauge'},s,el('div',{class:'vt-read'},el('strong',{id:'vt-num',text:'—'}),el('span',{text:'Mbps'})));
+  return el('div',{class:'vt-gauge'},s,el('div',{class:'vt-read'},el('strong',{id:'vt-num',text:'—'}),el('span',{text:'Mb/s'})));
  }
  function dial(v,tone=''){const a=document.getElementById('vt-arc'),n=document.getElementById('vt-num');if(a){a.style.strokeDashoffset=String(ARC*(1-frac(v)));a.setAttribute('class','vt-arc '+tone);}if(n)n.textContent=mbps(v);}
  function stage(text,step){const s=document.getElementById('vt-stage');if(s)s.textContent=text;document.querySelectorAll('.vt-steps li').forEach((li,i)=>li.classList.toggle('on',i<step));}
@@ -83,8 +83,8 @@
  function facts(){
   const c=navigator.connection,rows=[['Opérateur du réseau',net?(net.operator||(net.local?'Réseau local':'Non trouvé')):'Recherche…'],['Adresse IP publique',net?(net.ip||'—'):'Recherche…'],['Lieu du réseau',net?([net.city,net.country].filter(Boolean).join(', ')||'—'):'Recherche…'],['Appareil',device()]];
   if(wifi&&!wifi.error){const q=wifi.signal==null?'':wifi.signal>=80?' · très bon':wifi.signal>=60?' · bon':wifi.signal>=40?' · moyen':' · faible';
-   rows.unshift(...[['Signal Wi-Fi',wifi.signal==null?null:wifi.signal+' %'+q+' (≈ '+Math.round(wifi.signal/2-100)+' dBm)'],['Canal',[wifi.channel,wifi.band].filter(v=>v!=null).join(' · ')||null],['Norme Wi-Fi',wifi.radio],['Vitesse de liaison',wifi.rxMbps||wifi.txMbps?[wifi.rxMbps&&fr(wifi.rxMbps)+' Mbps en réception',wifi.txMbps&&fr(wifi.txMbps)+' Mbps en envoi'].filter(Boolean).join(' · '):null],['Sécurité',wifi.auth]].filter(r=>r[1]));}
-  if(c&&(c.downlink||c.effectiveType))rows.push(['Estimation de l’appareil',[c.effectiveType&&c.effectiveType.toUpperCase(),c.downlink?fr(c.downlink,c.downlink<10?1:0)+' Mbps':null,c.rtt?fr(c.rtt)+' ms':null].filter(Boolean).join(' · ')]);
+   rows.unshift(...[['Signal Wi-Fi',wifi.signal==null?null:wifi.signal+' %'+q+' (≈ '+Math.round(wifi.signal/2-100)+' dBm)'],['Canal',[wifi.channel,wifi.band].filter(v=>v!=null).join(' · ')||null],['Norme Wi-Fi',wifi.radio],['Vitesse de liaison',wifi.rxMbps||wifi.txMbps?[wifi.rxMbps&&fr(wifi.rxMbps)+' Mb/s en réception',wifi.txMbps&&fr(wifi.txMbps)+' Mb/s en envoi'].filter(Boolean).join(' · '):null],['Sécurité',wifi.auth]].filter(r=>r[1]));}
+  if(c&&(c.downlink||c.effectiveType))rows.push(['Estimation de l’appareil',[c.effectiveType&&c.effectiveType.toUpperCase(),c.downlink?fr(c.downlink,c.downlink<10?1:0)+' Mb/s':null,c.rtt?fr(c.rtt)+' ms':null].filter(Boolean).join(' · ')]);
   return rows.map(([k,v])=>el('div',{},el('dt',{text:k}),el('dd',{text:v})));
  }
  async function loadNetwork(){try{net=await api('network',null,6000);}catch(e){net={ip:null,operator:null};}const dl=document.getElementById('vt-facts');if(dl)dl.replaceChildren(...facts());where();}
@@ -260,7 +260,7 @@
    kids.push(el('p',{text:'La copie s’est arrêtée avant d’avoir des mesures (page fermée ou mise de côté trop longtemps). Refaites-la : elle ne compte pas dans vos copies.'}),again());
   }else if(v){
    kids.push(el('div',{class:'vt-tiles'},
-    el('div',{class:'vt-tile'},el('small',{text:'Débit'}),el('strong',{text:mbps(m.downloadMbps)}),el('span',{text:'Mbps'})),
+    el('div',{class:'vt-tile'},el('small',{text:'Débit'}),el('strong',{text:mbps(m.downloadMbps)}),el('span',{text:'Mb/s'})),
     el('div',{class:'vt-tile'},el('small',{text:'Réponse'}),el('strong',{text:m.latencyMs==null?'—':fr(m.latencyMs)}),el('span',{text:'ms'})),
     v.wifi?.signal!=null?el('div',{class:'vt-tile'},el('small',{text:'Signal Wi-Fi'}),el('strong',{text:v.wifi.signal+' %'}),el('span',{text:'lu par le PC'})):null,
     v.pc?el('div',{class:'vt-tile'},el('small',{text:'Appareils'}),el('strong',{text:String(v.connected)}),el('span',{text:'reliés à la box'})):el('div',{class:'vt-tile'},el('small',{text:'Stabilité'}),el('strong',{text:fr(100-(m.lossPct||0))+' %'}),el('span',{text:'réponses'}))),
@@ -299,7 +299,7 @@
   const real=stats(),stab=live.hist.length?fr(100-real.lossPct)+' %':'—';
   return [
    el('div',{class:'vt-tile'},el('small',{text:'Réponse'}),el('strong',{text:real.latencyMs==null?(live.hist.length?'aucune':'—'):fr(real.latencyMs)}),el('span',{text:'ms'})),
-   el('div',{class:'vt-tile'},el('small',{text:'Débit'}),el('strong',{text:mbps(real.downloadMbps)}),el('span',{text:'Mbps'})),
+   el('div',{class:'vt-tile'},el('small',{text:'Débit'}),el('strong',{text:mbps(real.downloadMbps)}),el('span',{text:'Mb/s'})),
    el('div',{class:'vt-tile'},el('small',{text:'Stabilité'}),el('strong',{text:stab}),el('span',{text:'réponses'})),
    real.signal!=null?el('div',{class:'vt-tile'},el('small',{text:'Signal Wi-Fi'}),el('strong',{text:real.signal+' %'}),el('span',{text:'lu par le PC'})):null].filter(Boolean);
  }
@@ -377,7 +377,7 @@
     el('div',{class:'vt-twin-side copy'},el('small',{text:'La copie'}),el('b',{text:copy.label}),el('span',{class:'vt-twin-tag'},el('i'),t.label))),
    t.note?el('p',{class:'vt-twin-note',text:t.note}):null,
    el('div',{class:'vt-tiles vt-twin-tiles'},
-    tile('Débit',m.downloadMbps==null?'0':mbps(m.downloadMbps),'Mbps',b.downloadMbps==null?'—':mbps(b.downloadMbps)+' Mbps'),
+    tile('Débit',m.downloadMbps==null?'0':mbps(m.downloadMbps),'Mb/s',b.downloadMbps==null?'—':mbps(b.downloadMbps)+' Mb/s'),
     tile('Réponse',m.latencyMs==null?'aucune':fr(m.latencyMs),m.latencyMs==null?'':'ms',b.latencyMs==null?'—':fr(b.latencyMs)+' ms'),
     tile('Stabilité',stab(m.lossPct),'réponses',stab(b.lossPct)),
     tile('Appareils',t.summary.online+' sur '+t.summary.devices,'avec Internet',t.summary.before+' sur '+t.summary.before),
@@ -408,8 +408,8 @@
   const [tone,label]=LEVEL[last.level]||['slow','Résultat'],m=last.metrics,answered=5-Math.round(m.lossPct/20);
   card.append(el('span',{class:'vt-verdict '+tone},el('i'),label),el('h2',{id:'vt-result-title',class:'vt-sr',text:'Résultat du test'}),
    el('div',{class:'vt-tiles'},
-    el('div',{class:'vt-tile'},el('small',{text:'Réception'}),el('strong',{text:mbps(m.downloadMbps)}),el('span',{text:'Mbps'})),
-    el('div',{class:'vt-tile'},el('small',{text:'Envoi'}),el('strong',{text:mbps(m.uploadMbps)}),el('span',{text:'Mbps'})),
+    el('div',{class:'vt-tile'},el('small',{text:'Réception'}),el('strong',{text:mbps(m.downloadMbps)}),el('span',{text:'Mb/s'})),
+    el('div',{class:'vt-tile'},el('small',{text:'Envoi'}),el('strong',{text:mbps(m.uploadMbps)}),el('span',{text:'Mb/s'})),
     el('div',{class:'vt-tile'},el('small',{text:'Réponse'}),el('strong',{text:m.latencyMs==null?'—':fr(m.latencyMs)}),el('span',{text:'ms'})),
     el('div',{class:'vt-tile'},el('small',{text:'Stabilité'}),el('strong',{text:answered+'/5'}),el('span',{text:'réponses'}))),
    el('div',{class:'vt-guardian'},el('img',{src:'pwa/icon-192.png',alt:''}),el('p',{class:'vt-bubble'},el('b',{text:'Guardian'}),last.text)),

@@ -44,7 +44,7 @@ test('Avec clé : la réponse rédigée remplace le texte, les faits et l’acti
   assert.equal(sent.url,'https://api.anthropic.com/v1/messages');
   assert.equal(sent.init.headers['x-api-key'],KEY);assert.equal(sent.init.headers['anthropic-beta'],'server-side-fallback-2026-07-01');
   assert.equal(sent.body.model,'claude-opus-5-5');assert.equal(sent.body.fallbacks,'default');assert.deepEqual(sent.body.output_config,{effort:'low'});
-  assert.match(sent.body.messages[0].content,/Internet rame ce soir/);assert.match(sent.body.messages[0].content,/Débit disponible : 12 Mbps/);
+  assert.match(sent.body.messages[0].content,/Internet rame ce soir/);assert.match(sent.body.messages[0].content,/Débit disponible : 12 Mb\/s/);
   assert.ok(!JSON.stringify(c.state).includes(KEY),'la clé ne sort jamais du serveur');
   assert.equal((await c.request('/health')).data.assistant,'claude');
  }finally{c.server.close();}
@@ -63,7 +63,7 @@ test('Garde-fous : chiffre inventé, refus, erreur ou délai : repli sur le mote
   ai.setTransport(transport);const c=await client();
   try{
    await c.action({type:'scenario',value:'slow'});const r=await c.action({type:'chat',text:'Ma connexion est lente'});
-   assert.equal(r.status,200);assert.match(c.state.messages.at(-1).text,/^Votre débit est tombé à 12 Mbps/);
+   assert.equal(r.status,200);assert.match(c.state.messages.at(-1).text,/^Votre débit est tombé à 12 Mb\/s/);
   }finally{c.server.close();}
  }
 });

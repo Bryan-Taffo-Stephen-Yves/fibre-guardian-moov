@@ -16,7 +16,7 @@ function compute(s,uid,st,plans,now=Date.now()){
  const rows=s.all('SELECT * FROM journey_usage_minutes WHERE user_id=? AND at>=? ORDER BY at',uid,now-7*DAY);
  const observed=rows.reduce((a,r)=>a+r.covered_ms,0),minutes=Math.round(observed/MINUTE);
  const days=Math.min(7,new Set(rows.map(r=>Math.floor(r.at/DAY))).size);
- if(observed<MIN_OBSERVED)return {verdict:'tot',plan,minutes,days,title:'Guardian apprend vos habitudes',body:'Guardian a observé votre connexion pendant '+minutes+' minute'+(minutes>1?'s':'')+'. Il lui faut un peu plus de temps pour vous dire si votre forfait est le bon.'};
+ if(observed<MIN_OBSERVED)return {verdict:'tot',plan,minutes,days,title:'Guardian apprend vos habitudes',body:(minutes>=1?'Guardian a observé votre connexion pendant '+minutes+' minute'+(minutes>1?'s':'')+'. ':'Guardian commence à mesurer votre connexion. ')+'Il lui faut un peu plus de temps pour vous dire si votre forfait est le bon.'};
  const rates=rows.map(mbpsOf),saturated=rows.reduce((a,r)=>a+r.saturated_ms,0),share=saturated/observed;
  const evening=rows.filter(r=>EVENING.includes(new Date(r.at).getUTCHours()));
  const satDays=Math.min(days,new Set(evening.filter(r=>r.saturated_ms>=r.covered_ms*.5).map(r=>Math.floor(r.at/DAY))).size);
