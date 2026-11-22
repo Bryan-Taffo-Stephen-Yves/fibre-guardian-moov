@@ -210,3 +210,45 @@ details.fc-graph:not([open]){padding:0;background:none;border:0;box-shadow:none}
 .ac-where-go{flex:1 1 auto;border:0;background:var(--moov-primary);color:var(--moov-on-primary)}
 .ac-where-ok{flex:0 1 auto;border:1px solid var(--moov-primary-100);background:var(--moov-surface);color:var(--moov-primary-700)}
 .ac-where-go:disabled{opacity:.6;cursor:default}
+
+/* Mobile « au top » : tous les écrans client partagent l'en-tête de l'accueil.
+   Pas de menu ☰ (la barre du bas et la grille Services suffisent, comme sur l'accueil),
+   boutons ronds de 44 px, un seul titre par écran, et la pastille « Rôle » ne cache plus rien. */
+@media(max-width:760px){
+ .journey[data-espace=client] .j-header{gap:8px}
+ .journey[data-espace=client] .j-header .j-menu-toggle{display:none}
+ .journey[data-espace=client] .j-header :is(.j-bell,.j-back){width:44px;height:44px;min-height:44px;margin:0;flex:none}
+ .journey[data-espace=client] .j-header .j-breadcrumb{min-width:0;gap:10px}
+ .journey[data-espace=client] .j-header .j-breadcrumb strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:19px;letter-spacing:-.01em}
+ .journey[data-espace=client] .j-header .j-actions{gap:8px;flex:none}
+ /* Le badge « Démo » reste discret à l'œil, mais se touche sur 44 px de haut. */
+ .journey .fg-demo-badge,.ac-fibre-link{position:relative}
+ .journey .fg-demo-badge:after,.ac-fibre-link:after{content:'';position:absolute;inset:-8px -2px}
+ .ac-more{min-height:44px}
+ /* Tous les boutons du parcours client se touchent du pouce : 44 px de haut au minimum. */
+ .journey[data-espace=client] .j-main :is(.j-button,.n-button,.fp-btn,summary,.pv button,.gv-play,.fl-btn,.fl-link,.ac-btn,.du-tabs button),
+ .journey[data-espace=client] .j-chat :is(.j-button,.gv-toggle,.j-chat-close){min-height:44px}
+ .journey[data-espace=client] .j-chat :is(.gv-toggle,.j-chat-close){min-width:44px}
+ .journey .du-switch,.journey .dp-switch{position:relative}
+ .journey .du-switch:after,.journey .dp-switch:after{content:'';position:absolute;inset:-9px}
+ /* Bulles de la carte : la flèche utilise déjà ::after, la zone de toucher passe par ::before. */
+ .journey .sm-bubble::before{content:'';position:absolute;inset:-9px;border-radius:inherit}
+ .journey .fv-langs button{min-height:44px}
+ /* Le titre est déjà dans la barre bleue : on ne le répète pas en grand dessous. */
+ .journey[data-espace=client] :is(.pv-head,.fl-head,.vl-head,.ac-top,.dp-top) h1{display:none}
+ .journey[data-espace=client] :is(.pv-head,.fl-head,.vl-head,.ac-top,.dp-top) p{margin-top:0}
+ /* Place réservée en bas pour que la pastille « Rôle » ne recouvre jamais le dernier bouton. */
+ html.has-rolebar .journey[data-espace=client] .j-main{padding-bottom:64px}
+}
+@media(max-width:899px){
+ /* Pastille « Rôle » réduite à un rond de 44 px (le visage du rôle) : elle ne masque presque rien. */
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open){left:10px}
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open) .rb-pill{width:44px;height:44px;min-height:44px;padding:0;justify-content:center;gap:0}
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open) .rb-chevron{display:none}
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open) .rb-pill-text{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ /* Écrire à Guardian : le champ de saisie passe avant la pastille « Rôle ». */
+ html:has(.journey:is([data-view=guardian],[data-view=voix])) .rb-bar:not(.is-open),
+ html:has(.fg-demo-layer) .rb-bar:not(.is-open),
+ html:has(.j-navigation[data-open=true]) .rb-bar:not(.is-open),
+ html:has(.j-chat:not(.j-chat-page)) .rb-bar:not(.is-open){display:none}
+}
