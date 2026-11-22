@@ -86,3 +86,11 @@
 .fl-tiers em{font-style:normal;font-weight:700;text-align:right}
 .fl-ex li{font-size:12.5px;color:var(--moov-text-muted)}
 .fl-ex b{color:var(--moov-neutral-700)}
+
+/* « Mes offres » : Forfait, Fidélité, Solidaire (journey.js, offersPage). */
+.journey .j-offers-page{display:grid;gap:14px;width:100%}
+.journey .j-offers-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:16px;background:var(--moov-neutral-100,var(--moov-canvas));border:1px solid var(--moov-neutral-150,var(--moov-neutral-200));max-width:560px}
+.journey .j-offers-tabs button{min-height:44px;border:0;border-radius:12px;background:none;color:var(--moov-neutral-700);font:inherit;font-size:15px;font-weight:650;cursor:pointer;transition:background-color .18s ease,color .18s ease}
+.journey .j-offers-tabs button.is-on{background:var(--moov-surface,var(--moov-white));color:var(--moov-primary);box-shadow:0 2px 8px color-mix(in srgb,var(--moov-primary-900) 10%,transparent)}
+.journey .j-offers-tabs button:focus-visible{outline:2px solid var(--moov-focus);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.journey .j-offers-tabs button{transition:none}}
