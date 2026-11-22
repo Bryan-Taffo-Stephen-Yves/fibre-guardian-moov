@@ -10,15 +10,15 @@
     unverifiable: { label: 'Non vérifiable', tone: 'neutral' }
   };
   var METRICS = [
-    ['capacityMbps', 'Capacité disponible', 'Mbps', 1],
-    ['usageMbps', 'Trafic utilisé', 'Mbps', 1],
+    ['capacityMbps', 'Capacité disponible', 'Mb/s', 1],
+    ['usageMbps', 'Trafic utilisé', 'Mb/s', 1],
     ['latencyMs', 'Latence', 'ms', 0],
     ['lossPct', 'Pertes de paquets', '%', 1],
     ['connected', 'Appareils connectés', '', 0],
     ['topSharePct', 'Part du plus gros utilisateur', '%', 1]
   ];
   var OPTIONAL_METRICS = [
-    ['localMbps', 'Débit sur l’appareil', 'Mbps', 1],
+    ['localMbps', 'Débit sur l’appareil', 'Mb/s', 1],
     ['wifiDbm', 'Signal Wi-Fi', 'dBm', 1],
     ['opticalDbm', 'Signal optique', 'dBm', 1],
     ['usualConnected', 'Nombre habituel d’appareils', '', 0],

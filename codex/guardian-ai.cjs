@@ -40,8 +40,8 @@ function guard(text,sources){
 
 function context({name,question,draft,facts,proof,action,snapshot,history,meaning}){
  const m=snapshot?.metrics||{},plan=snapshot?.plan||{};
- const devices=(snapshot?.devices||[]).filter(d=>!d.blocked).map(d=>d.name+' : '+d.mbps+' Mbps'+(d.limit?' (limité à '+d.limit+' Mbps)':''));
- const measures=['État de la connexion : '+(m.state||'inconnu'),'Débit disponible : '+(m.capacity??'inconnu')+' Mbps','Débit utilisé : '+(m.used??'inconnu')+' Mbps',m.latency!=null?'Latence : '+m.latency+' ms':'Latence : non mesurable','Appareils connectés : '+(m.connected??'inconnu')+' (habituellement '+(snapshot?.usual??'?')+')',plan.mbps?'Forfait : '+plan.name+', '+plan.mbps+' Mbps, '+plan.price+' FCFA par mois':'',devices.length?'Appareils : '+devices.join(' ; '):''].filter(Boolean);
+ const devices=(snapshot?.devices||[]).filter(d=>!d.blocked).map(d=>d.name+' : '+d.mbps+' Mb/s'+(d.limit?' (limité à '+d.limit+' Mb/s)':''));
+ const measures=['État de la connexion : '+(m.state||'inconnu'),'Débit disponible : '+(m.capacity??'inconnu')+' Mb/s','Débit utilisé : '+(m.used??'inconnu')+' Mb/s',m.latency!=null?'Latence : '+m.latency+' ms':'Latence : non mesurable','Appareils connectés : '+(m.connected??'inconnu')+' (habituellement '+(snapshot?.usual??'?')+')',plan.mbps?'Forfait : '+plan.name+', '+plan.mbps+' Mb/s, '+plan.price+' FCFA par mois':'',devices.length?'Appareils : '+devices.join(' ; '):''].filter(Boolean);
  const lines=[...(facts||[]),...(proof?.measured||[])].map(f=>f.label+' : '+f.value);
  const past=(history||[]).slice(-6).map(x=>(x.role==='user'?'Abonné':'Guardian')+' : '+x.text);
  return {measures,lines,past,
@@ -53,7 +53,7 @@ const SYSTEM='Tu es Guardian, l’assistant de Moov Africa Côte d’Ivoire pour
  'Règles strictes :\n'+
  '1. Français simple, vouvoiement, 2 à 4 phrases courtes, sans liste, sans titre, sans emoji, sans mise en forme.\n'+
  '2. Garde le même conseil et la même action que la réponse validée. N’ajoute aucune autre action, offre, promesse, délai ou remboursement.\n'+
- '3. N’utilise aucun chiffre qui ne figure pas dans les mesures, les points vérifiés ou la réponse validée. Écris les unités en entier si besoin (Mbps, FCFA, minutes).\n'+
+ '3. N’utilise aucun chiffre qui ne figure pas dans les mesures, les points vérifiés ou la réponse validée. Écris les unités en entier si besoin (Mb/s, FCFA, minutes).\n'+
  '4. Explique un mot technique en quelques mots s’il est indispensable.\n'+
  '5. Ne parle jamais de toi comme d’une intelligence artificielle ou d’un programme, et ne cite aucune marque d’assistant.\n'+
  '6. Si la réponse validée dit qu’une cause n’est pas encore prouvée, garde exactement cette prudence et le test proposé : ne présente jamais une supposition comme une certitude.\n'+

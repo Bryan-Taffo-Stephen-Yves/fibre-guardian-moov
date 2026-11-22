@@ -28,7 +28,7 @@ async function client(){
 
 // Message du client → ce que Guardian doit faire. « says » : un bout de la réponse attendue.
 const CALM=[
- ['Bonjour',{intent:'salut',says:/^Bonjour ! J’ai vérifié votre ligne : tout va bien, 100 Mbps/}],
+ ['Bonjour',{intent:'salut',says:/^Bonjour ! J’ai vérifié votre ligne : tout va bien, 100 Mb\/s/}],
  ['Bonsoir Guardian',{intent:'salut',says:/^Bonjour !/}],
  ['Internet est coupé chez moi depuis ce matin',{intent:'coupure',says:/aucune panne n’est signalée dans votre quartier/,action:'reboot'}],
  ['Rien ne marche à la maison',{intent:'coupure',action:'reboot'}],
@@ -41,7 +41,7 @@ const CALM=[
  ['Je veux parler à un conseiller',{intent:'humain',says:/Appeler Moov/,action:'report'}],
  ['Le service client ne répond pas',{intent:'humain',action:'report'}],
  ['Le technicien arrive quand ?',{intent:'suivi',says:/Aucune intervention n’est en cours/}],
- ['C’est combien mon forfait ?',{intent:'prix',says:/100 Mbps pour 20\s000 FCFA par mois/}],
+ ['C’est combien mon forfait ?',{intent:'prix',says:/100 Mb\/s pour 20\s000 FCFA par mois/}],
  ['Je veux résilier mon abonnement',{intent:'resiliation',says:/agence Moov/}],
  ['Merci beaucoup',{intent:'merci',says:/^Avec plaisir/}],
  ['ok merci',{intent:'merci',says:/^Avec plaisir/}],

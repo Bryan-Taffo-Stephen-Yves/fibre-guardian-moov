@@ -41,23 +41,23 @@ function clean(m) {
 // hébergé loin d'Abidjan, donc le débit mesuré peut être plus bas que celui de la fibre.
 function verdict(m, {fault = null, plan = null, wifi = null} = {}) {
   const speed = m.downloadMbps, wait = m.latencyMs, facts = [
-    {label: 'Débit mesuré', value: speed == null ? 'pas de transfert réussi' : fmt(speed, speed < 10 ? 1 : 0) + ' Mbps'},
-    ...(m.uploadMbps == null ? [] : [{label: 'Débit d’envoi', value: fmt(m.uploadMbps, m.uploadMbps < 10 ? 1 : 0) + ' Mbps'}]),
+    {label: 'Débit mesuré', value: speed == null ? 'pas de transfert réussi' : fmt(speed, speed < 10 ? 1 : 0) + ' Mb/s'},
+    ...(m.uploadMbps == null ? [] : [{label: 'Débit d’envoi', value: fmt(m.uploadMbps, m.uploadMbps < 10 ? 1 : 0) + ' Mb/s'}]),
     {label: 'Temps de réponse', value: wait == null ? 'aucune réponse' : fmt(wait) + ' ms'},
     {label: 'Sondes sans réponse', value: Math.round(m.lossPct / 20) + ' sur 5'},
     {label: 'Réseau utilisé', value: NETWORK[m.network] || 'non indiqué par l’appareil'},
     {label: 'Où', value: 'sur votre appareil, jusqu’au serveur de Guardian'}
   ];
-  if (plan) facts.push({label: 'Votre forfait', value: plan.mbps + ' Mbps'});
+  if (plan) facts.push({label: 'Votre forfait', value: plan.mbps + ' Mb/s'});
   if (wifi?.ssid) facts.push({label: 'Wi-Fi lu sur le PC', value: wifi.ssid + (wifi.signal == null ? '' : ' · signal ' + wifi.signal + ' %')});
   const mobile = m.network === 'cellular' ? ' Ce test est passé par les données mobiles, pas par votre box.' : m.network === 'hotspot' ? ' Ce test est passé par le partage de connexion d’un téléphone, pas par votre box.' : '';
   const outage = fault ? 'Une panne est en cours dans votre quartier : Moov s’en occupe déjà. ' : '';
   let level, text;
   if (speed == null && wait == null) { level = 'coupe'; text = 'Je n’ai reçu aucune réponse pendant le test : la connexion de cet appareil ne passe pas en ce moment.'; }
   else if (m.lossPct >= 40) { level = 'instable'; text = 'Votre connexion coupe par moments : ' + Math.round(m.lossPct / 20) + ' sondes sur 5 sont restées sans réponse. Rapprochez-vous de la box et refaites le test.'; }
-  else if (speed != null && speed < 1) { level = 'tres-lente'; text = 'Votre connexion est très lente en ce moment : ' + fmt(speed, 1) + ' Mbps. Une page web aura du mal à s’ouvrir. Refaites le test près de la box : si c’est plus rapide, c’est le Wi-Fi.'; }
-  else if ((speed != null && speed < 5) || (wait != null && wait > 800)) { level = 'lente'; text = 'Votre connexion est lente en ce moment : ' + (speed == null ? '' : fmt(speed, 1) + ' Mbps, ') + 'réponse en ' + fmt(wait) + ' ms. Les vidéos risquent de couper. Refaites le test près de la box pour savoir si c’est le Wi-Fi.'; }
-  else { level = 'bonne'; text = 'Votre connexion marche bien en ce moment : ' + fmt(speed, speed < 10 ? 1 : 0) + ' Mbps, réponse en ' + fmt(wait) + ' ms. Si une application rame, c’est sans doute elle, ou le Wi-Fi de la pièce où vous êtes.'; }
+  else if (speed != null && speed < 1) { level = 'tres-lente'; text = 'Votre connexion est très lente en ce moment : ' + fmt(speed, 1) + ' Mb/s. Une page web aura du mal à s’ouvrir. Refaites le test près de la box : si c’est plus rapide, c’est le Wi-Fi.'; }
+  else if ((speed != null && speed < 5) || (wait != null && wait > 800)) { level = 'lente'; text = 'Votre connexion est lente en ce moment : ' + (speed == null ? '' : fmt(speed, 1) + ' Mb/s, ') + 'réponse en ' + fmt(wait) + ' ms. Les vidéos risquent de couper. Refaites le test près de la box pour savoir si c’est le Wi-Fi.'; }
+  else { level = 'bonne'; text = 'Votre connexion marche bien en ce moment : ' + fmt(speed, speed < 10 ? 1 : 0) + ' Mb/s, réponse en ' + fmt(wait) + ' ms. Si une application rame, c’est sans doute elle, ou le Wi-Fi de la pièce où vous êtes.'; }
   // Le PC branché donne la force du signal Wi-Fi : sous 50 %, Guardian le dit, c'est souvent la vraie cause.
   const weak = wifi?.signal != null && wifi.signal < 50 && level !== 'coupe' ? ' Le signal Wi-Fi de ce PC est faible (' + wifi.signal + ' %) : rapprochez-le de la box.' : '';
   return {level, text: outage + text + mobile + weak, facts};

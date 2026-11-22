@@ -104,7 +104,7 @@ test('les comptes de démo partagés et l’équipe Moov ne peuvent pas être ef
   try {
     await seedDemo(s);
     const awa = s.get("SELECT id FROM users WHERE email='awa.kone@demo.fibre-guardian.ci'").id;
-    assert.throws(() => DP.erase(s, awa, {confirm: true}), /démonstration est partagé/);
+    assert.throws(() => DP.erase(s, awa, {confirm: true}), /ne peut pas être effacé depuis l’application/);
     assert.equal(DP.inventory(s, awa).effacable, false);
     const {user, call} = await signup(base, 'agent@example.test');
     s.run('INSERT INTO operator_grants VALUES(?,?,?)', user.id, 'agent', Date.now());

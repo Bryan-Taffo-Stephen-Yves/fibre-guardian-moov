@@ -24,7 +24,17 @@ function migrate(s) {
 const has = (s, table) => !!s.get("SELECT 1 AS x FROM sqlite_master WHERE type='table' AND name=?", table);
 const count = (s, table, where, ...args) => has(s, table) ? s.get(`SELECT count(*) AS n FROM ${table} WHERE ${where}`, ...args).n : 0;
 const nb = (n, one, many = one + 's') => n + ' ' + (n > 1 ? many : one);
+// « Aucune photo gardée » plutôt que « 0 photo gardée ».
+const nbOuAucun = (n, aucun, one, many) => n ? nb(n, one, many) : aucun;
 const masque = phone => {const d = String(phone || '').replace(/\D/g, ''); return d.length < 6 ? '' : d.slice(0, 2) + ' •• •• ' + d.slice(-4, -2) + ' ' + d.slice(-2);};
+
+// Débit gardé, compté comme le bilan du forfait (forfait-bilan.cjs) : le temps réellement mesuré, pas le nombre de lignes.
+function debit(s, uid) {
+  if (!has(s, 'journey_usage_minutes')) return 'Aucune mesure de débit gardée pour l’instant.';
+  const r = s.get('SELECT count(*) AS n, coalesce(sum(covered_ms),0) AS ms FROM journey_usage_minutes WHERE user_id=?', uid), min = Math.round(r.ms / 60000);
+  if (!r.n) return 'Aucune mesure de débit gardée pour l’instant.';
+  return min < 1 ? 'Moins d’une minute de débit mesurée.' : nb(min, 'minute de débit mesurée', 'minutes de débit mesurées') + '.';
+}
 
 // Le client a-t-il accepté les services d'IA ? Oui tant qu'il n'a pas dit non (il le voit et le change dans « Mes données »).
 function iaAllowed(s, uid) {
@@ -42,7 +52,7 @@ function choose(s, uid, d) {
 function protege(s, uid) {
   const u = s.get('SELECT email FROM users WHERE id=?', uid);
   if (!u) return 'Compte introuvable.';
-  if (u.email.endsWith(DEMO_DOMAIN)) return 'Ce compte de démonstration est partagé avec le jury : il ne peut pas être effacé. Avec votre propre compte, ce bouton efface tout.';
+  if (u.email.endsWith(DEMO_DOMAIN)) return 'Ce compte ne peut pas être effacé depuis l’application.';
   if (count(s, 'operator_grants', 'user_id=?', uid) || count(s, 'noc_field_accounts', 'user_id=?', uid)) return 'Les comptes de l’équipe Moov s’effacent par la direction, pas depuis l’application.';
   return null;
 }
@@ -55,12 +65,12 @@ function inventory(s, uid) {
   const items = [
     {key: 'compte', titre: 'Votre compte', detail: u ? 'Votre nom et votre moyen de connexion.' : '', pourquoi: 'Vous reconnaître quand vous vous connectez.', duree: 'Tant que votre compte existe.', actif: true},
     {key: 'whatsapp', titre: 'Votre WhatsApp', detail: wa ? 'Numéro relié : ' + masque(wa.phone) + '.' : 'Aucun numéro relié.', pourquoi: 'Vous prévenir d’une panne et répondre à vos messages.', duree: 'Jusqu’à ce que vous écriviez « Stop » ou touchiez « Délier ».', actif: !!wa},
-    {key: 'box', titre: 'Votre box et votre connexion', detail: nb(count(s, 'journey_usage_minutes', 'user_id=?', uid), 'relevé') + ' de débit.', pourquoi: 'Trouver la cause d’une panne et vous conseiller le bon forfait.', duree: DUREES.usage + ' jours, puis effacés.', actif: true},
+    {key: 'box', titre: 'Votre box et votre connexion', detail: debit(s, uid), pourquoi: 'Trouver la cause d’une panne et vous conseiller le bon forfait.', duree: DUREES.usage + ' jours, puis effacés.', actif: true},
     {key: 'veille', titre: 'Surveillance de votre Wi-Fi', detail: watch?.on_at ? len(watch.known) + ' appareil' + (len(watch.known) > 1 ? 's' : '') + ' connu' + (len(watch.known) > 1 ? 's' : '') + ', sans leur nom ni leur adresse complète.' : 'Éteinte : rien n’est surveillé.', pourquoi: 'Vous prévenir quand un appareil inconnu se connecte.', duree: 'Tant qu’elle est allumée ; journal effacé après ' + DUREES.veille + ' jours.', actif: !!watch?.on_at},
-    {key: 'copies', titre: 'Copies de votre Wi-Fi', detail: nb(count(s, 'wifi_copies', 'user_id=?', uid), 'copie faite', 'copies faites') + ' pendant un test.', pourquoi: 'Rejouer une panne sans toucher votre vrai Wi-Fi.', duree: DUREES.copies + ' jours, puis effacées.', actif: count(s, 'wifi_copies', 'user_id=?', uid) > 0},
-    {key: 'photos', titre: 'Vos photos', detail: 'La photo de votre box est lue puis oubliée tout de suite. ' + nb(count(s, 'citizen_reports', "user_id=? AND photo<>''", uid), 'photo de signalement gardée', 'photos de signalement gardées') + '.', pourquoi: 'Lire les voyants de la box, montrer un câble abîmé au technicien.', duree: 'Signalements : ' + DUREES.photos + ' jours. Carte d’étudiant et photos d’abonnement : effacées dès la décision du conseiller.', actif: true},
+    {key: 'copies', titre: 'Copies de votre Wi-Fi', detail: nbOuAucun(count(s, 'wifi_copies', 'user_id=?', uid), 'Aucune copie faite', 'copie faite pendant un test', 'copies faites pendant un test') + '.', pourquoi: 'Rejouer une panne sans toucher votre vrai Wi-Fi.', duree: DUREES.copies + ' jours, puis effacées.', actif: count(s, 'wifi_copies', 'user_id=?', uid) > 0},
+    {key: 'photos', titre: 'Vos photos', detail: 'La photo de votre box est lue puis oubliée tout de suite. ' + nbOuAucun(count(s, 'citizen_reports', "user_id=? AND photo<>''", uid), 'Aucune photo de signalement gardée', 'photo de signalement gardée', 'photos de signalement gardées') + '.', pourquoi: 'Lire les voyants de la box, montrer un câble abîmé au technicien.', duree: 'Signalements : ' + DUREES.photos + ' jours. Carte d’étudiant et photos d’abonnement : effacées dès la décision du conseiller.', actif: true},
     {key: 'lieu', titre: 'Votre quartier', detail: 'Votre commune, jamais votre position en continu.', pourquoi: 'Savoir si la panne touche aussi vos voisins.', duree: 'Tant que votre compte existe.', actif: true},
-    {key: 'avis', titre: 'Vos avis et vos questions', detail: nb(count(s, 'noc_feedback', 'user_id=?', uid), 'avis', 'avis') + ', ' + nb(count(s, 'voice_requests', 'user_id=?', uid), 'question', 'questions') + ' à la voix (sujet seulement, jamais le son).', pourquoi: 'Améliorer le service et vous rappeler si vous n’êtes pas satisfait.', duree: 'Questions à la voix : ' + DUREES.voix + ' jours.', actif: true}
+    {key: 'avis', titre: 'Vos avis et vos questions', detail: nbOuAucun(count(s, 'noc_feedback', 'user_id=?', uid), 'Aucun avis', 'avis', 'avis') + ', ' + nbOuAucun(count(s, 'voice_requests', 'user_id=?', uid), 'aucune question', 'question', 'questions') + ' à la voix (sujet seulement, jamais le son).', pourquoi: 'Améliorer le service et vous rappeler si vous n’êtes pas satisfait.', duree: 'Questions à la voix : ' + DUREES.voix + ' jours.', actif: true}
   ];
   return {items, ia: iaAllowed(s, uid), effacable: !protege(s, uid), refus: protege(s, uid), durees: DUREES};
 }

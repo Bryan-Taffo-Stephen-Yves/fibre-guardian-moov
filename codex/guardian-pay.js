@@ -1,6 +1,6 @@
 /* Paiement Moov Money du changement de forfait, proposé par Guardian.
    Checkout : une page de paiement aux couleurs de Moov Money (compte, montant, numéro, code secret),
-   puis Success : la fenêtre « Vous avez pris le forfait Fibre 200 Mbps ».
+   puis Success : la fenêtre « Vous avez pris le forfait Fibre 200 Mb/s ».
    Le code secret saisi ne quitte jamais le téléphone : il n'est ni envoyé ni gardé.
    Le montant et le forfait sont contrôlés par le serveur (journey-store.cjs, action upgrade-pay).
    Forfait plus cher : le devis du serveur donne la différence, les jours restants et le 1er du mois suivant ;
@@ -48,12 +48,12 @@
     h('form',{className:'mm-body',onSubmit:submit},
      h('div',{className:'mm-merchant'},h('span',{className:'mm-merchant-ico','aria-hidden':true},h(Icon,{d:I.wifi,size:22})),h('div',null,h('small',null,'Payer à'),h('strong',null,'Moov Africa · Fibre'))),
      h('h2',{id:'mm-title',className:'mm-amount'},fcfa(amount)),
-     h('p',{className:'mm-what'},quote.label||'Passage au forfait Fibre '+plan.mbps+' Mbps'),
+     h('p',{className:'mm-what'},quote.label||'Passage au forfait Fibre '+plan.mbps+' Mb/s'),
      quote.daysLeft&&h('p',{className:'mm-prorata'},h('strong',null,quote.daysLeft>=quote.daysInMonth?'Vous payez la différence pour tout le mois de '+monthOf(quote.nextBilling-1)+'.':'Vous payez seulement les jours restants de ce mois.'),' '+prorata(quote,plan.price)+'.'),
      h('dl',{className:'mm-recap'},
       h('div',null,h('dt',null,'Compte fibre'),h('dd',null,account)),
       h('div',null,h('dt',null,'Titulaire'),h('dd',null,customer?.name||'')),
-      quote.period?h('div',null,h('dt',null,'Facture'),h('dd',null,quote.period)):h('div',null,h('dt',null,'Nouveau forfait'),h('dd',null,plan.mbps+' Mbps · '+fcfa(plan.price)+'/mois',quote.nextBilling&&h('small',null,'à partir du '+firstOf(quote.nextBilling)))),
+      quote.period?h('div',null,h('dt',null,'Facture'),h('dd',null,quote.period)):h('div',null,h('dt',null,'Nouveau forfait'),h('dd',null,plan.mbps+' Mb/s · '+fcfa(plan.price)+'/mois',quote.nextBilling&&h('small',null,'à partir du '+firstOf(quote.nextBilling)))),
       h('div',null,h('dt',null,'Frais'),h('dd',null,'0 FCFA'))),
      h('label',{className:'mm-field'},h('span',null,'Numéro Moov Money'),h('input',{type:'tel',inputMode:'tel',autoComplete:'tel',value:phone,onChange:e=>PH(e.target.value),placeholder:'07 00 00 00 00',required:true})),
      h('label',{className:'mm-field'},h('span',null,'Code secret'),h('input',{className:'mm-pin',type:'password',inputMode:'numeric',autoComplete:'off',maxLength:4,pattern:'[0-9]{4}',value:pin,onChange:e=>P(e.target.value.replace(/\D/g,'').slice(0,4)),placeholder:'••••','aria-describedby':'mm-pin-help'}),h('small',{id:'mm-pin-help'},'4 chiffres. Votre code reste sur ce téléphone.')),
@@ -70,10 +70,10 @@
     h('span',{className:'mm-burst','aria-hidden':true},Array.from({length:12},(_,k)=>h('i',{key:k,style:{'--k':k}}))),
     h('span',{className:'mm-check','aria-hidden':true},h(Icon,{d:I.check,size:40,width:2.6})),
     h('small',{className:'mm-ok-kicker'},'Paiement réussi'),
-    h('h2',{id:'mm-ok-title'},'Vous avez pris le forfait Fibre '+plan.mbps+' Mbps'),
+    h('h2',{id:'mm-ok-title'},'Vous avez pris le forfait Fibre '+plan.mbps+' Mb/s'),
     h('p',null,'Votre nouveau débit est déjà actif. Profitez-en !'),
     h('dl',{className:'mm-recap'},
-     h('div',null,h('dt',null,'Débit'),h('dd',null,plan.mbps+' Mbps')),
+     h('div',null,h('dt',null,'Débit'),h('dd',null,plan.mbps+' Mb/s')),
      h('div',null,h('dt',null,'Prix mensuel'),h('dd',null,fcfa(plan.price),nextBilling&&h('small',null,'dès le '+firstOf(nextBilling)))),
      h('div',null,h('dt',null,'Montant payé'),h('dd',null,fcfa(amount))),
      h('div',null,h('dt',null,'Compte fibre'),h('dd',null,account)),

@@ -41,6 +41,8 @@ function tones(comment){
 const topicsOf=comment=>tones(comment).map(t=>t.key);
 const shortName=name=>{const p=String(name||'').trim().split(/\s+/).filter(Boolean);return p.length?p[0]+(p[1]?' '+p[1][0].toUpperCase()+'.':''):'Client';};
 const hour=t=>new Date(t).toLocaleTimeString('fr-FR',{timeZone:'Africa/Abidjan',hour:'2-digit',minute:'2-digit'}).replace(':',' h ');
+// Date absolue (« le 22 nov. à 21 h 26 ») : le message reste juste quand le client le lit le lendemain.
+const dayHour=t=>'le '+new Date(t).toLocaleDateString('fr-FR',{timeZone:'Africa/Abidjan',day:'numeric',month:'short'})+' à '+hour(t);
 const TECH=()=>require('./noc-store.cjs').TECHS;
 
 // Tous les avis des 30 derniers jours : interventions après une panne et installations.
@@ -62,7 +64,7 @@ function sync(s,now=Date.now()){
   const due=a.at+DUE;
   s.run('INSERT INTO avis_rappels(id,source,ref,user_id,rating,created,due) VALUES(?,?,?,?,?,?,?)',crypto.randomUUID(),a.source,a.ref,a.userId,a.rating,a.at,due);made++;
   const st=J.get(s,a.userId);if(!st)continue;st.notifications=st.notifications||[];
-  st.notifications.unshift({key:'avis:'+a.source+':'+a.ref,home:'home-1',at:now,title:'Moov vous rappelle',body:'Merci pour votre avis, et pardon pour ce qui n’a pas été. Un conseiller Moov vous appelle avant '+(due-now<DAY/2?'':'demain ')+hour(due)+'.',read:false});
+  st.notifications.unshift({key:'avis:'+a.source+':'+a.ref,home:'home-1',at:now,title:'Moov vous rappelle',body:'Merci pour votre avis, et pardon pour ce qui n’a pas été. Un conseiller Moov vous appelle avant '+dayHour(due)+'.',read:false});
   st.notifications=st.notifications.slice(0,100);J.put(s,a.userId,st);
  }
  return made;

@@ -144,7 +144,7 @@
   }
   var GLOSSARY = [
     ['Fibre et Wi-Fi : quelle différence ?', 'La fibre relie le réseau de Moov à votre box. Le Wi-Fi relie la box à vos appareils. Une bonne fibre peut donc coexister avec un mauvais signal dans une pièce.'],
-    ['Mbps : la vitesse de transfert', 'Les mégabits par seconde indiquent la quantité de données transférées chaque seconde. Plus le nombre est élevé, plus un téléchargement peut être rapide. Le résultat dépend aussi du serveur et de l’appareil.'],
+    ['Mb/s : la vitesse de transfert', 'Les mégabits par seconde indiquent la quantité de données transférées chaque seconde. Plus le nombre est élevé, plus un téléchargement peut être rapide. Le résultat dépend aussi du serveur et de l’appareil.'],
     ['Latence : le temps de réponse', 'La latence est le temps aller-retour d’un échange, en millisecondes (ms). Plus elle est faible, plus les appels vidéo et jeux répondent vite. Une faible latence ne signifie pas automatiquement un débit élevé.'],
     ['Gigue et pertes : la régularité', 'La gigue mesure la variation du temps de réponse. Les pertes sont les données qui n’arrivent pas. Des valeurs élevées peuvent rendre une conversation saccadée, même si le débit semble suffisant.'],
     ['dBm : la puissance du signal', 'Le dBm est une unité de puissance. Pour un signal Wi-Fi reçu, −50 dBm est plus fort que −80 dBm. Le signal optique utilise aussi cette unité, mais ses seuils sont différents : on ne compare pas directement fibre et Wi-Fi.'],

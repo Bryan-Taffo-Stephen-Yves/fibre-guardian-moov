@@ -70,7 +70,7 @@ function validatePhoto(value){insist(typeof value==='string'&&value.length<48000
 // Les demandes de forfait, de jeu, de film ou de visio gardent leurs règles plus bas.
 const INTENTS=[
  ['resiliation',/resili|(annuler|arreter|stopper) (mon |l')?abonnement|quitter moov/],
- ['upgrade',/forfait (plus|superieur)|meilleur forfait|changer de forfait|plus de debit|plus rapide|augmenter (mon )?debit|upgrade|\b\d+ ?(mbps|megabits)/],
+ ['upgrade',/forfait (plus|superieur)|meilleur forfait|changer de forfait|plus de debit|plus rapide|augmenter (mon )?debit|upgrade|\b\d+ ?(mbps|mb\/s|megabits)/],
  // « Qui consomme le plus ? » : le conseiller conso (forfait-bilan.cjs) répond avec les vrais chiffres de la maison.
  ['conso',/qui (consomme|utilise|prend|bouffe) (le plus|tout|beaucoup)|consomm|combien de (data|donnees|go|mo)\b|\bdata\b|quel appareil (prend|utilise|consomme)/],
  ['prix',/combien|prix|tarif|facture|payer|forfait|abonnement/],
@@ -111,10 +111,10 @@ function faultMessage(fault,st){
 // Devant un doute, Guardian dit qu'il ne peut pas encore conclure au lieu d'affirmer une cause qu'il ne mesure pas.
 const hour=at=>{const d=new Date(at);return d.getHours()+' h '+String(d.getMinutes()).padStart(2,'0');};
 function measured(snap,st){const m=snap.metrics,plan=st.plan||PLANS[1],o=snap.optical,up=m.state!=='redémarrage'&&m.state!=='panne';
- return [{label:'Débit qui arrive à votre box',value:up?m.capacity+' Mbps (forfait '+plan.mbps+' Mbps)':'0 Mbps : box '+(m.state==='panne'?'coupée':'en redémarrage')},
+ return [{label:'Débit qui arrive à votre box',value:up?m.capacity+' Mb/s (forfait '+plan.mbps+' Mb/s)':'0 Mb/s : box '+(m.state==='panne'?'coupée':'en redémarrage')},
   {label:'Temps de réponse de la ligne',value:m.latency!=null?m.latency+' ms':'non mesurable pour l’instant'},
   {label:'Lumière de la fibre à la box',value:o&&o.current!=null?dbm(o.current)+' dBm ('+(o.state==='fading'?'en baisse':'normale')+')':'non mesurée'},
-  {label:'Débit utilisé chez vous',value:m.used+' Mbps sur '+m.capacity+' Mbps'},
+  {label:'Débit utilisé chez vous',value:m.used+' Mb/s sur '+m.capacity+' Mb/s'},
   {label:'Panne dans votre quartier',value:'Aucune'},
   {label:'Dernière remontée de la box',value:hour(m.at)},
   {label:'Signal Wi-Fi dans vos pièces',value:'Non mesuré : la box ne le remonte pas'}];}
@@ -129,43 +129,43 @@ function proofFor(kind,snap,st,largest){
   coupure:{assumed:['Un appareil ou le Wi-Fi ne se connecte plus, alors que la ligne marche.'],tests:['Redémarrez la box à distance.','Essayez un autre appareil, ou branchez un câble.'],confirms:['Ça revient : c’était la box ou l’appareil.','Rien ne revient, même avec un câble : signalez la panne, elle part directement à l’équipe Moov.']}}[kind];
  return {measured:measured(snap,st),...p};}
 function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context||active(st),connected=snap.devices.filter(d=>!d.blocked),largest=connected.slice().sort((a,b)=>b.mbps-a.mbps)[0];
- const facts=[{label:'Incident du quartier',value:fault?(fault.zone||fault.segment||fault.reference||st.segment):'Aucun incident ouvert'},{label:'Appareils connectés',value:connected.length+' / '+st.usual+' habituels'},{label:'Plus gros usage',value:largest?largest.name+' · '+largest.mbps+' Mbps':'Aucun appareil actif'}];
+ const facts=[{label:'Incident du quartier',value:fault?(fault.zone||fault.segment||fault.reference||st.segment):'Aucun incident ouvert'},{label:'Appareils connectés',value:connected.length+' / '+st.usual+' habituels'},{label:'Plus gros usage',value:largest?largest.name+' · '+largest.mbps+' Mb/s':'Aucun appareil actif'}];
  const ask=intent(text),hello=ask==='salut'?'Bonjour ! ':'';
  if(fault){st.proposal=null;st.upgrade=null;
   if(ask==='merci')return {message:'Avec plaisir. Je vous préviens dès que votre internet revient.',facts,action:'tracking'};
   return {message:hello+faultMessage(fault,st)+(['upgrade','usage'].includes(ask)?' Un forfait plus rapide ou un partage du débit ne réglerait pas cette coupure.':''),facts,action:'tracking'};}
  if(ask==='merci')return {message:'Avec plaisir. Je reste là si votre connexion fait des siennes.',facts};
  if(ask==='resiliation')return {message:'Je suis désolé que vous en soyez là. Une résiliation se fait en agence Moov ou au service client, pas depuis Guardian. Dites-moi d’abord ce qui ne va pas : je peux peut-être le régler tout de suite.',facts};
- const requested=Number(text.match(/(\d+)\s*(?:mbps|mégabits|megabits)/i)?.[1]||0),plan=st.plan||PLANS[1];
- if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mbps pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Pour en changer, ouvrez « Changer de forfait » dans votre compte : vous y voyez toutes les offres et leur prix.',facts};
+ const requested=Number(text.match(/(\d+)\s*(?:mbps|mb\/s|mégabits|megabits)/i)?.[1]||0),plan=st.plan||PLANS[1];
+ if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mb/s pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Pour en changer, ouvrez « Changer de forfait » dans votre compte : vous y voyez toutes les offres et leur prix.',facts};
  if(ask==='upgrade'||requested>plan.mbps){
   st.proposal=null;st.upgrade=null;
   if(st.scenario==='slow')return {message:'Votre débit est anormalement bas : un forfait plus rapide ne réglerait pas ce souci. Commençons par redémarrer votre box à distance.',facts};
   if(st.declinedUntil>Date.now())return {message:'C’est noté. Je ne vous proposerai pas d’autre offre pendant 24 heures.',facts};
-  if(plan.mbps>=200)return {message:'Vous avez déjà '+plan.mbps+' Mbps. Pour aller plus haut, ouvrez « Changer de forfait » dans votre compte : toutes les offres y sont, avec leur prix.',facts};
-  if(requested>200)return {message:'Pour plus de 200 Mbps, ouvrez « Changer de forfait » dans votre compte : vous y voyez les offres 300 et 500 Mbps, avec leur prix. Vérifiez d’abord votre Wi-Fi : il limite souvent le débit avant la fibre.',facts};
+  if(plan.mbps>=200)return {message:'Vous avez déjà '+plan.mbps+' Mb/s. Pour aller plus haut, ouvrez « Changer de forfait » dans votre compte : toutes les offres y sont, avec leur prix.',facts};
+  if(requested>200)return {message:'Pour plus de 200 Mb/s, ouvrez « Changer de forfait » dans votre compte : vous y voyez les offres 300 et 500 Mb/s, avec leur prix. Vérifiez d’abord votre Wi-Fi : il limite souvent le débit avant la fibre.',facts};
   if(requested<=plan.mbps&&snap.metrics.used<snap.metrics.capacity*.9)return {message:'Vos mesures ne justifient pas un achat : votre forfait suffit pour l’instant. Dites-moi le débit dont vous avez besoin.',facts};
   const to=planOf('demo-200'),quote=upgradeQuote(plan,to,Date.now());
   st.upgrade=quote;
-  return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mbps. '+(quote.daysLeft>=quote.daysInMonth?'Vous payez la différence pour '+periodOf(quote):'Ce mois-ci, vous payez seulement '+periodOf(quote))+' : '+fcfa(quote.amount)+'. Puis '+fcfa(to.price)+' par mois à partir du '+firstOf(quote.nextBilling)+'. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
+  return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mb/s. '+(quote.daysLeft>=quote.daysInMonth?'Vous payez la différence pour '+periodOf(quote):'Ce mois-ci, vous payez seulement '+periodOf(quote))+' : '+fcfa(quote.amount)+'. Puis '+fcfa(to.price)+' par mois à partir du '+firstOf(quote.nextBilling)+'. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
  }
  if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
   return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
    facts:[...facts,{label:'Lumière reçue par la box',value:dbm(f.current)+' dBm (coupure vers '+dbm(f.threshold)+' dBm)'},{label:'Baisse mesurée',value:dbm(Math.abs(f.slope))+' dB par jour sur 7 jours'}]};}}
- if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:hello+'Votre débit est tombé à '+snap.metrics.capacity+' Mbps alors que votre offre prévoit '+plan.mbps+' Mbps. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot',proof:proofFor('box',snap,st,largest)};
+ if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:hello+'Votre débit est tombé à '+snap.metrics.capacity+' Mb/s alors que votre offre prévoit '+plan.mbps+' Mb/s. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot',proof:proofFor('box',snap,st,largest)};
  if(connected.length>st.usual+1)return {message:'Le nombre d’appareils est inhabituel. Un appareil nouveau n’est pas forcément un intrus : vérifiez ceux auxquels vous avez donné le mot de passe avant de les bloquer.',facts,action:'devices'};
  const line=snap.metrics.state==='redémarrage'?null:snap.metrics.capacity;
- if(ask==='coupure')return line?{message:'J’ai vérifié : de notre côté, votre box est en ligne et reçoit '+line+' Mbps, et aucune panne n’est signalée dans votre quartier. Le souci vient sans doute d’un appareil ou du Wi-Fi, mais je ne peux pas encore le prouver. Redémarrer la box à distance règle souvent ce souci. Si rien ne revient ensuite, signalez la panne : elle part directement à l’équipe Moov.',facts,action:'reboot',proof:proofFor('coupure',snap,st,largest)}:{message:'Votre box est en train de redémarrer : internet revient dans quelques secondes.',facts};
+ if(ask==='coupure')return line?{message:'J’ai vérifié : de notre côté, votre box est en ligne et reçoit '+line+' Mb/s, et aucune panne n’est signalée dans votre quartier. Le souci vient sans doute d’un appareil ou du Wi-Fi, mais je ne peux pas encore le prouver. Redémarrer la box à distance règle souvent ce souci. Si rien ne revient ensuite, signalez la panne : elle part directement à l’équipe Moov.',facts,action:'reboot',proof:proofFor('coupure',snap,st,largest)}:{message:'Votre box est en train de redémarrer : internet revient dans quelques secondes.',facts};
  if(ask==='reboot')return line?{message:'Je peux redémarrer votre box à distance. Internet sera coupé quelques secondes, le temps qu’elle redémarre. Appuyez sur le bouton ci-dessous pour confirmer.',facts,action:'reboot'}:{message:'Votre box est déjà en train de redémarrer : internet revient dans quelques secondes.',facts};
- if(ask==='wifi')return {message:'La fibre arrive bien jusqu’à votre box'+(line?' : '+line+' Mbps':'')+'. Je ne mesure pas le Wi-Fi dans vos pièces, donc je ne peux pas encore conclure. Faites ce test : comparez près de la box, puis dans la pièce concernée. Si c’est rapide près de la box et lent dans la pièce, le Wi-Fi passe mal à travers les murs : rapprochez-vous de la box ou placez-la en hauteur, au centre du logement.',facts,proof:proofFor('wifi',snap,st,largest)};
+ if(ask==='wifi')return {message:'La fibre arrive bien jusqu’à votre box'+(line?' : '+line+' Mb/s':'')+'. Je ne mesure pas le Wi-Fi dans vos pièces, donc je ne peux pas encore conclure. Faites ce test : comparez près de la box, puis dans la pièce concernée. Si c’est rapide près de la box et lent dans la pièce, le Wi-Fi passe mal à travers les murs : rapprochez-vous de la box ou placez-la en hauteur, au centre du logement.',facts,proof:proofFor('wifi',snap,st,largest)};
  // « C'est lent » : Guardian dit ce qu'il mesure jusqu'à la box et propose le test qui tranche, sans accuser le Wi-Fi d'office.
  if(ask==='lent'&&line&&/lent|rame|ralenti|\blag|saccad|charge (pas|mal|lentement)/.test(langues.fold(text))&&!['work','developers'].includes(st.usageContext)){const busy=snap.metrics.used>=snap.metrics.capacity*.9;
-  return busy?{message:hello+'J’ai mesuré votre ligne : '+line+' Mbps arrivent à votre box, et la maison en utilise presque tout. '+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mbps. ':'')+'Je pense que le débit est partagé entre trop d’usages, mais je ne peux pas encore le prouver : mettez ce gros usage en pause 2 minutes et dites-moi si ça va mieux.',facts,action:'usage',proof:proofFor('sature',snap,st,largest)}
-   :{message:hello+'J’ai mesuré votre ligne : '+line+' Mbps arrivent à votre box et le temps de réponse est de '+snap.metrics.latency+' ms, c’est normal. '+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mbps. ':'')+'Je ne mesure pas le Wi-Fi dans vos pièces, donc je ne peux pas encore conclure. Faites ce test : comparez près de la box, puis là où ça rame.',facts,action:'usage',proof:proofFor('lent',snap,st,largest)};}
+  return busy?{message:hello+'J’ai mesuré votre ligne : '+line+' Mb/s arrivent à votre box, et la maison en utilise presque tout. '+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mb/s. ':'')+'Je pense que le débit est partagé entre trop d’usages, mais je ne peux pas encore le prouver : mettez ce gros usage en pause 2 minutes et dites-moi si ça va mieux.',facts,action:'usage',proof:proofFor('sature',snap,st,largest)}
+   :{message:hello+'J’ai mesuré votre ligne : '+line+' Mb/s arrivent à votre box et le temps de réponse est de '+snap.metrics.latency+' ms, c’est normal. '+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mb/s. ':'')+'Je ne mesure pas le Wi-Fi dans vos pièces, donc je ne peux pas encore conclure. Faites ce test : comparez près de la box, puis là où ça rame.',facts,action:'usage',proof:proofFor('lent',snap,st,largest)};}
  if(ask==='voyants')return {message:'Envoyez-moi une photo de votre box avec le bouton « Photo de ma box ». Je lis les voyants et je les compare aux mesures de votre ligne pour vous dire d’où vient le souci.',facts};
  if(ask==='humain')return {message:'Vous pouvez appeler Moov à tout moment avec le bouton « Appeler Moov ». J’ai déjà vérifié : votre box est en ligne et aucune panne n’est signalée dans votre quartier. Si quelque chose ne marche pas chez vous, signalez la panne : un technicien de Moov la reçoit directement.',facts,action:'report'};
  if(ask==='suivi')return {message:'Aucune intervention n’est en cours chez vous en ce moment : votre ligne fonctionne et aucune panne n’est signalée dans votre quartier. Si quelque chose ne marche pas, dites-le-moi.',facts};
- if(ask==='salut')return {message:'Bonjour ! J’ai vérifié votre ligne : '+(line?'tout va bien, '+line+' Mbps disponibles.':'votre box redémarre, internet revient dans quelques secondes.')+' Que puis-je faire pour vous ?',facts};
+ if(ask==='salut')return {message:'Bonjour ! J’ai vérifié votre ligne : '+(line?'tout va bien, '+line+' Mb/s disponibles.':'votre box redémarre, internet revient dans quelques secondes.')+' Que puis-je faire pour vous ?',facts};
  if(ask==='inconnu')return {message:'Je m’occupe de votre connexion Moov Fibre. Je peux vérifier votre débit, redémarrer votre box, lire ses voyants sur une photo ou suivre une panne dans votre quartier. Que se passe-t-il avec votre internet ?',facts};
  if(/jeu|gaming|film|visio|meeting|télécharg|download|dévelop|bureau|travail|compil|docker|limite/i.test(text)){
   const usageName=/jeu|gaming/i.test(text)?'gaming':/visio|meeting/i.test(text)?'visioconférence':/film/i.test(text)?'film':/dévelop|bureau|travail|compil|docker/i.test(text)?'travail':'téléchargement';
@@ -181,9 +181,9 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   const limits=others.map(d=>({id:d.id,name:d.name,mbps:usageName==='film'?8:5}));
   if(!limits.length)return {message:'Les autres appareils actifs sont protégés. Je ne peux pas réduire leur débit. Arrêtez un transfert volontairement ou vérifiez le Wi-Fi.',facts};
   st.proposal={id:id(),usage:usageName,target:target.id,limits,minutes:30,expires:Date.now()+300000};
-  return {message:'Pour votre '+usageName+', je propose un partage temporaire pendant 30 minutes. Aucune limite n’est réglée sous 2 Mbps ; les appareils protégés ne sont pas limités. Le débit obtenu dépend de la capacité partagée. Confirmez avant application.',facts,proposal:st.proposal};
+  return {message:'Pour votre '+usageName+', je propose un partage temporaire pendant 30 minutes. Aucune limite n’est réglée sous 2 Mb/s ; les appareils protégés ne sont pas limités. Le débit obtenu dépend de la capacité partagée. Confirmez avant application.',facts,proposal:st.proposal};
  }
- return {message:hello+(snap.metrics.used>=snap.metrics.capacity*.9?'La connexion est très sollicitée. ': 'J’ai vérifié vos mesures. ')+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mbps. ':'')+(['work','developers'].includes(st.usageContext)?'Cet usage peut être nécessaire au travail : un gros volume n’est pas une anomalie. Quelle tâche souhaitez-vous préserver, et quels transferts peuvent attendre ?':'Que souhaitez-vous faire : jouer, regarder un film, télécharger ou participer à une visio ?'),facts,action:'usage'};
+ return {message:hello+(snap.metrics.used>=snap.metrics.capacity*.9?'La connexion est très sollicitée. ': 'J’ai vérifié vos mesures. ')+(largest?largest.name+' utilise actuellement '+largest.mbps+' Mb/s. ':'')+(['work','developers'].includes(st.usageContext)?'Cet usage peut être nécessaire au travail : un gros volume n’est pas une anomalie. Quelle tâche souhaitez-vous préserver, et quels transferts peuvent attendre ?':'Que souhaitez-vous faire : jouer, regarder un film, télécharger ou participer à une visio ?'),facts,action:'usage'};
 }
 // Un client tape souvent son numéro comme sur sa carte SIM : 07 07 07 07 07, ou 225 07…, ou 00225 07….
 function localPhone(v){let p=String(v||'').replace(/[\s().-]/g,'');if(/^00[1-9]/.test(p))p='+'+p.slice(2);else if(/^0\d{9}$/.test(p))p='+225'+p;else if(/^225\d{10}$/.test(p))p='+'+p;return p;}
@@ -248,7 +248,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   insist(!active(st)&&!sharedFault(s,uid),'Une panne est en cours dans votre quartier : un forfait plus rapide ne la réglerait pas. Réessayez quand internet sera revenu.',409);
   insist(st.scenario!=='slow','Votre débit est anormalement bas : un forfait plus rapide ne réglerait pas ce souci. Redémarrez d’abord votre box.',409);
   st.proposal=null;st.upgrade=upgradeQuote(plan,to,now,{source:'compte'});
-  audit(st,'plan.quote',plan.mbps+' → '+to.mbps+' Mbps · complément '+st.upgrade.amount+' FCFA ('+st.upgrade.daysLeft+' j sur '+st.upgrade.daysInMonth+')');
+  audit(st,'plan.quote',plan.mbps+' → '+to.mbps+' Mb/s · complément '+st.upgrade.amount+' FCFA ('+st.upgrade.daysLeft+' j sur '+st.upgrade.daysInMonth+')');
  }else if(d.type==='plan-cancel'){if(st.upgrade?.source==='compte')st.upgrade=null; // Le client referme le paiement : l'offre disparaît, sans bloquer Guardian 24 h.
  }else if(d.type==='plan-change'){
   // Forfait moins cher : rien à payer, il commence le mois prochain. Choisir son forfait actuel annule le changement prévu.
@@ -259,8 +259,8 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
    insist(to.price<plan.price,'Pour un forfait plus rapide, payez le complément avec Moov Money.',409);
    st.nextPlan={plan:to,at:nextMonth(now),chosen:now};st.upgrade=null;
    const when=firstOf(st.nextPlan.at);
-   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Changement de forfait enregistré',body:'Vous passerez à '+to.mbps+' Mbps pour '+to.price.toLocaleString('fr-FR')+' FCFA par mois à partir du '+when+'. D’ici là, vous gardez '+plan.mbps+' Mbps.',read:false});st.notifications=st.notifications.slice(0,100);
-   audit(st,'plan.scheduled',plan.mbps+' → '+to.mbps+' Mbps le '+when+' · simulation');
+   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Changement de forfait enregistré',body:'Vous passerez à '+to.mbps+' Mb/s pour '+to.price.toLocaleString('fr-FR')+' FCFA par mois à partir du '+when+'. D’ici là, vous gardez '+plan.mbps+' Mb/s.',read:false});st.notifications=st.notifications.slice(0,100);
+   audit(st,'plan.scheduled',plan.mbps+' → '+to.mbps+' Mb/s le '+when+' · simulation');
   }
  }else if(d.type==='upgrade-pay'){
   // Paiement purement fictif, idempotent. Montant et forfait contrôlés côté serveur.
@@ -275,10 +275,10 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
    insist(st.scenario!=='slow'&&from&&to&&days&&(st.plan?.id||'demo-100')===from.id&&q.to.price===to.price&&q.diff===to.price-from.price&&q.diff>0&&q.amount===prorataAmount(q.diff,q.daysLeft,q.daysInMonth)&&q.amount>0,'Offre modifiée ou devenue inapplicable.',409);
    st.plan={...to};st.capacity=to.mbps;st.nextPlan=null;st.payment={quoteId:q.id,amount:q.amount,at:now,fromPrice:st.payment&&Number.isFinite(st.payment.fromPrice)&&now<st.payment.nextBilling?st.payment.fromPrice:from.price,nextBilling:q.nextBilling,mode:'simulation'};st.upgrade=null;
    const paid=q.amount.toLocaleString('fr-FR')+' FCFA';
-   audit(st,'upgrade.activated','Paiement simulé '+paid+' · '+to.mbps+' Mbps · aucun débit réel');
+   audit(st,'upgrade.activated','Paiement simulé '+paid+' · '+to.mbps+' Mb/s · aucun débit réel');
    const rest=periodOf(q);
-   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Nouveau forfait actif',body:'Paiement Moov Money de '+paid+' reçu pour '+rest+'. Vous avez maintenant '+to.mbps+' Mbps. À partir du '+firstOf(q.nextBilling)+', votre forfait coûte '+fcfa(to.price)+' par mois.',read:false});st.notifications=st.notifications.slice(0,100);
-   st.messages.push({id:id(),role:'assistant',text:'Paiement confirmé : '+paid+'. Votre forfait '+to.mbps+' Mbps est actif.'});
+   st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Nouveau forfait actif',body:'Paiement Moov Money de '+paid+' reçu pour '+rest+'. Vous avez maintenant '+to.mbps+' Mb/s. À partir du '+firstOf(q.nextBilling)+', votre forfait coûte '+fcfa(to.price)+' par mois.',read:false});st.notifications=st.notifications.slice(0,100);
+   st.messages.push({id:id(),role:'assistant',text:'Paiement confirmé : '+paid+'. Votre forfait '+to.mbps+' Mb/s est actif.'});
   }
  }else if(d.type==='reboot'){
   // Redémarrage à distance demandé par le client : même garde-fou que le laboratoire (rebootGate, 2 fois en 10 minutes).
@@ -296,12 +296,12 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   const dev=st.devices.find(v=>v.id===d.id);insist(dev,'Appareil inconnu.',404);insist(['recognize','block','unblock','limit','unlimit','remove'].includes(d.action),'Action inconnue.');
   if(d.action==='recognize')dev.recognized=true;
   else{insist(!dev.protected||['limit','unlimit'].includes(d.action),'Cet appareil est protégé : vous pouvez réduire son débit, pas le couper ni le retirer.',403);insist(d.confirm===true,'Confirmation obligatoire.');
-   // Limite choisie par le client : reste en place jusqu'à ce qu'il l'enlève (plancher de 2 Mbps conservé).
-   if(d.action==='limit'){insist(DEVICE_LIMITS.includes(d.mbps),'Débit proposé : '+DEVICE_LIMITS.join(', ')+' Mbps.');insist(!dev.blocked,'Débloquez d’abord cet appareil.',409);dev.limit=d.mbps;dev.until=now+MANUAL_LIMIT_MS;dev.manual=true;}
+   // Limite choisie par le client : reste en place jusqu'à ce qu'il l'enlève (plancher de 2 Mb/s conservé).
+   if(d.action==='limit'){insist(DEVICE_LIMITS.includes(d.mbps),'Débit proposé : '+DEVICE_LIMITS.join(', ')+' Mb/s.');insist(!dev.blocked,'Débloquez d’abord cet appareil.',409);dev.limit=d.mbps;dev.until=now+MANUAL_LIMIT_MS;dev.manual=true;}
    else if(d.action==='unlimit'){dev.limit=null;dev.until=null;dev.manual=false;}
    else if(d.action==='remove'){st.devices=st.devices.filter(v=>v.id!==dev.id);if(st.proposal&&(st.proposal.target===dev.id||st.proposal.limits.some(l=>l.id===dev.id)))st.proposal=null;}
    else dev.blocked=d.action==='block';}
-  audit(st,'device.'+d.action,dev.name+(d.action==='limit'?' · '+d.mbps+' Mbps':''));
+  audit(st,'device.'+d.action,dev.name+(d.action==='limit'?' · '+d.mbps+' Mb/s':''));
  }else if(d.type==='usage-context'){
   insist(d.confirm===true,'Confirmez le contexte d’usage.');insist(Object.hasOwn(usage.CONTEXTS,d.value),'Contexte inconnu.');st.usageContext=d.value;st.proposal=null;audit(st,'usage.context',usage.CONTEXTS[d.value].label+' · aucune action sur le débit');
  }else if(d.type==='baseline'){st.usual=snapshot(st).metrics.connected;audit(st,'baseline','Nombre habituel confirmé : '+st.usual);

@@ -99,7 +99,7 @@ test('Un jour normal : Awa écrit « internet est lent », Guardian lui répond 
     assert.deepEqual(t.sent[0].labels, ['Tester ma connexion', 'Mon Wi-Fi capte mal', 'Parler à un conseiller'], 'des boutons pour la suite, comme chez Wave');
     assert.equal(t.sent[0].chatId, AWA + '@c.us');
     assert.match(t.sent[0].message, /^Guardian · Moov Africa Fibre\n\n/);
-    assert.match(t.sent[0].message, /Mbps/, 'Guardian donne la mesure réelle de la ligne');
+    assert.match(t.sent[0].message, /Mb\/s/, 'Guardian donne la mesure réelle de la ligne');
     assert.doesNotMatch(t.sent[0].message, /bouton ci-dessous/, 'pas de bouton sur WhatsApp');
     const app = require('./journey-store.cjs').get(t.s, t.awa.id).messages.map(m => m.text);
     assert.ok(app.includes('Bonjour, internet est lent chez moi'), 'la conversation WhatsApp se retrouve dans l’application d’Awa');
