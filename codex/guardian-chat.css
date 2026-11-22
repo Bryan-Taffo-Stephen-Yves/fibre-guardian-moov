@@ -93,6 +93,9 @@
 .mm-merchant strong{font-size:16px;font-weight:650;letter-spacing:-.014em;color:var(--moov-ink)}
 .mm-overlay .mm-amount{margin:4px 0 0;font-family:var(--fg-font-display);font-size:40px;font-weight:700;letter-spacing:-.035em;line-height:1.05;color:var(--moov-ink);font-variant-numeric:tabular-nums}
 .mm-what{margin:-8px 0 0;font-size:15px;color:var(--moov-text-muted)}
+.mm-prorata{margin:0;padding:10px 12px;border-radius:12px;font-size:13.5px;line-height:1.45;color:var(--moov-ink);background:var(--moov-primary-50);font-variant-numeric:tabular-nums}
+.mm-prorata strong{display:block;font-weight:650}
+.mm-recap dd small{display:block;font-size:12px;font-weight:500;color:var(--moov-text-muted)}
 .mm-recap{display:grid;gap:0;margin:0;padding:4px 14px;border-radius:16px;background:var(--moov-neutral-25);border:1px solid var(--moov-neutral-100)}
 .mm-recap>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--moov-neutral-100);font-size:14px}
 .mm-recap>div:last-child{border-bottom:0}
