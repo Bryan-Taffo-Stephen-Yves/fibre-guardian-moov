@@ -265,6 +265,8 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/avis'&&method==='GET'){const r=AV.stats(store,user.id);DP.seen(store,user.id,'avis');return json(res,r);}
     if(route==='/api/noc/avis'&&method==='POST')return json(res,AV.done(store,user.id,await body(req,1024)));
     if(route==='/api/noc/call'&&method==='POST')return json(res,require('./appels.cjs').call(store,user.id,await body(req,1024)));
+    // « Mes paiements » (Mon compte) : factures, parts et forfaits payés, avec leur reçu (paiements.cjs).
+    if(route==='/api/paiements'&&method==='GET')return json(res,require('./paiements.cjs').list(store,user.id));
     if(route==='/api/fidelite'&&method==='GET')return json(res,FL.state(store,user.id));
     if(route==='/api/fidelite'&&method==='POST'){store.rate('fidelite:'+user.id,30,600000);const d=await body(req,1024);insist(['pay','redeem'].includes(d.action),'Action inconnue.');return json(res,d.action==='pay'?FL.pay(store,user.id,d):FL.redeem(store,user.id,d));}
     if(route==='/api/noc/fidelite'&&method==='GET')return json(res,FL.summary(store,user.id));
