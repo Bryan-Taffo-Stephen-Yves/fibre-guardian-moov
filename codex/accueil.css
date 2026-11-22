@@ -229,8 +229,11 @@ details.fc-graph:not([open]){padding:0;background:none;border:0;box-shadow:none}
  .journey[data-espace=client] .j-main :is(.j-button,.n-button,.fp-btn,summary,.pv button,.gv-play,.fl-btn,.fl-link,.ac-btn,.du-tabs button),
  .journey[data-espace=client] .j-chat :is(.j-button,.gv-toggle,.j-chat-close){min-height:44px}
  .journey[data-espace=client] .j-chat :is(.gv-toggle,.j-chat-close){min-width:44px}
- .journey .sm-bubble,.journey .du-switch,.journey .dp-switch{position:relative}
- .journey .sm-bubble:after,.journey .du-switch:after,.journey .dp-switch:after{content:'';position:absolute;inset:-9px}
+ .journey .du-switch,.journey .dp-switch{position:relative}
+ .journey .du-switch:after,.journey .dp-switch:after{content:'';position:absolute;inset:-9px}
+ /* Bulles de la carte : la flèche utilise déjà ::after, la zone de toucher passe par ::before. */
+ .journey .sm-bubble::before{content:'';position:absolute;inset:-9px;border-radius:inherit}
+ .journey .fv-langs button{min-height:44px}
  /* Le titre est déjà dans la barre bleue : on ne le répète pas en grand dessous. */
  .journey[data-espace=client] :is(.pv-head,.fl-head,.vl-head,.ac-top,.dp-top) h1{display:none}
  .journey[data-espace=client] :is(.pv-head,.fl-head,.vl-head,.ac-top,.dp-top) p{margin-top:0}
@@ -238,6 +241,11 @@ details.fc-graph:not([open]){padding:0;background:none;border:0;box-shadow:none}
  html.has-rolebar .journey[data-espace=client] .j-main{padding-bottom:64px}
 }
 @media(max-width:899px){
+ /* Pastille « Rôle » réduite à un rond de 44 px (le visage du rôle) : elle ne masque presque rien. */
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open){left:10px}
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open) .rb-pill{width:44px;height:44px;min-height:44px;padding:0;justify-content:center;gap:0}
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open) .rb-chevron{display:none}
+ html:has(.journey[data-espace=client]) .rb-bar:not(.is-open) .rb-pill-text{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
  /* Écrire à Guardian : le champ de saisie passe avant la pastille « Rôle ». */
  html:has(.journey:is([data-view=guardian],[data-view=voix])) .rb-bar:not(.is-open),
  html:has(.fg-demo-layer) .rb-bar:not(.is-open),
