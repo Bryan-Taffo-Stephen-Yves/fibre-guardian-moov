@@ -30,16 +30,25 @@
    return()=>{live=false;clearInterval(t);document.removeEventListener('visibilitychange',seen);removeEventListener('fg-rolebar-refresh',refresh);};},[]);
   const active=!!data?.active;
   E(()=>{document.documentElement.classList.toggle('has-rolebar',active);},[active]);
+  const [open,setOpen]=S(false);
+  E(()=>{if(!open)return;const k=e=>{if(e.key==='Escape')setOpen(false);};addEventListener('keydown',k);return()=>removeEventListener('keydown',k);},[open]);
   E(()=>{if(!error)return;const t=setTimeout(()=>setError(''),4000);return()=>clearTimeout(t);},[error]);
   if(!active)return null;
   async function pick(r){
    if(r.current||busy)return;setBusy(r.key);setError('');
+   setOpen(false);
    try{await choose(r);}
    catch(e){setError(e.message);setBusy('');}
   }
-  return h('nav',{className:'rb-bar','aria-label':'Changer de rôle pour la démo'},
+  const now=data.roles.find(r=>r.current)||data.roles[0];
+  // Sur téléphone : un seul petit bouton « rôle » au lieu d'une deuxième barre ; il ouvre la liste des rôles.
+  return h('nav',{className:'rb-bar'+(open?' is-open':''),'aria-label':'Changer de rôle pour la démo'},
    error&&h('p',{className:'rb-error',role:'alert'},error),
-   h('div',{className:'rb-row'},data.roles.map(r=>h('button',{type:'button',key:r.key,className:'rb-role'+(r.current?' is-current':'')+(busy===r.key?' is-busy':''),
+   open&&h('button',{type:'button',className:'rb-backdrop','aria-label':'Fermer',onClick:()=>setOpen(false)}),
+   h('button',{type:'button',className:'rb-pill','aria-expanded':open,'aria-controls':'rb-row',onClick:()=>setOpen(!open)},
+    h('span',{className:'rb-face'},h(Face,{name:now.name,label:now.label,look:LOOK[now.key]})),h('span',{className:'rb-pill-text'},h('small',null,'Rôle'),now.label),
+    h('svg',{className:'rb-chevron',width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2.4,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true},h('path',{d:'m6 15 6-6 6 6'}))),
+   h('div',{className:'rb-row',id:'rb-row'},data.roles.map(r=>h('button',{type:'button',key:r.key,className:'rb-role'+(r.current?' is-current':'')+(busy===r.key?' is-busy':''),
     'aria-current':r.current?'true':undefined,disabled:!r.ready||!!busy,title:(r.name?r.name+' · ':'')+HINT[r.key]+(r.locked?' · mot de passe demandé':''),onClick:()=>pick(r)},
     h('span',{className:'rb-face'},h(Face,{name:r.name,label:r.label,look:LOOK[r.key]}),r.locked&&h(Lock)),h('span',{className:'rb-label'},r.label)))));
  }
@@ -94,6 +103,8 @@
  }
 
  window.FGRoleBar={Bar,Activator,DemoAccounts};
+ // Sur téléphone, les boutons flottants (rôle, Guardian) s'effacent quand on descend dans la page et reviennent quand on remonte : ils ne cachent plus ce qu'on lit.
+ let lastY=0;addEventListener('scroll',()=>{const y=scrollY,root=document.documentElement;if(Math.abs(y-lastY)<8)return;root.classList.toggle('fg-scroll-down',y>lastY&&y>80);lastY=y;},{passive:true});
  const mount=()=>{const el=document.createElement('div');el.id='fg-rolebar';document.body.appendChild(el);ReactDOM.createRoot(el).render(h(Bar));};
  if(document.body)mount();else addEventListener('DOMContentLoaded',mount);
 })();
