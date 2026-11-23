@@ -32,7 +32,8 @@
   const m=state.metrics||{},plan=state.plan?.mbps||100,got=Math.round(m.capacity||0),inc=state.sharedIncident;
   if(m.state==='redémarrage')return {tone:'wait',icon:P.refresh,title:'Votre box redémarre',text:'Internet revient dans quelques secondes. Ne touchez à rien.'};
   if(inc){const tech=first(inc.technician?.name);
-   const text={dispatched:(tech?tech+', technicien Moov,':'Une équipe Moov')+' va partir chez vous.',en_route:(tech||'Le technicien')+' est en route vers votre quartier.',on_site:(tech||'L’équipe')+' est sur place et répare la fibre.',verifying:'C’est réparé. Moov vérifie que tout revient.'}[inc.status]||'Moov l’a vue et s’en occupe. Vous n’avez rien à faire.';
+   const rdv=inc.rdv?.at>Date.now()?inc.rdv.label:null;
+   const text={dispatched:rdv?(tech||'Le technicien')+' passe chez vous '+rdv+', comme vous l’avez choisi.':(tech?tech+', technicien Moov,':'Une équipe Moov')+' va partir chez vous.',en_route:(tech||'Le technicien')+' est en route vers votre quartier.',on_site:(tech||'L’équipe')+' est sur place et répare la fibre.',verifying:'C’est réparé. Moov vérifie que tout revient.'}[inc.status]||'Moov l’a vue et s’en occupe. Vous n’avez rien à faire.';
    return {tone:'down',icon:P.down,title:'Panne dans votre quartier',text,action:'track',actionLabel:'Suivre la réparation'};}
   if(fault)return {tone:'slow',icon:P.truck,title:'Moov s’occupe de votre problème',text:'Votre signalement est bien arrivé. On vous prévient à chaque étape.',action:'track',actionLabel:'Voir où ça en est'};
   if(m.latency===null)return {tone:'down',icon:P.box,title:'Votre box ne répond pas',text:'Vérifiez qu’elle est branchée et que ses lumières sont allumées.',action:'guardian',actionLabel:'Me faire aider par Guardian'};
