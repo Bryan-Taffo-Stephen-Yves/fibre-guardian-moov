@@ -143,6 +143,7 @@ test('Panne du quartier : la cliente, l’équipe Moov et le technicien de la mi
     await PU.tick(t.s, Date.now() + 500);
     assert.ok(got('amina').some(c => /Mission confirmée/.test(c.message.body)), 'Amina reçoit sa mission');
     assert.equal(got('amina')[0].message.title, 'Fibre Guardian · Votre mission');
+    assert.equal(got('chef').length, 0, 'l’équipe ne reçoit que le plan à valider, pas chaque étape (validé, affecté…)');
   } finally { t.close(); }
 });
 
@@ -164,5 +165,29 @@ test('« Mes messages » du client partent aussi sur son téléphone, une fois, 
     const s3 = J.get(t.s, awa.id); s3.notifications.unshift({key: 'old', home: 'home-1', at: now - 10 * 60000, title: 'Ancien', body: '', read: false}); s3.pushMark = 0;
     J.put(t.s, awa.id, s3); await settle();
     assert.equal(t.calls.length, 1);
+    // Application ouverte devant le client : l'alerte est déjà à l'écran, le téléphone ne sonne pas en plus.
+    await t.call(awa, '/journey/state');
+    const s4 = J.get(t.s, awa.id); s4.notifications.unshift({key: 'k4', home: 'home-1', at: Date.now(), title: 'Redémarrage de votre box', body: '', read: false});
+    J.put(t.s, awa.id, s4); await settle();
+    assert.equal(t.calls.length, 1, 'rien pendant que l’application est ouverte');
+    // Un enregistrement annulé n'envoie rien.
+    const real = Date.now; Date.now = () => real() + 20000;
+    try {
+      assert.throws(() => t.s.transaction(() => { const s5 = J.get(t.s, awa.id); s5.notifications.unshift({key: 'k5', home: 'home-1', at: Date.now(), title: 'Annulé', body: '', read: false}); J.put(t.s, awa.id, s5); throw new Error('annulé'); }));
+      await settle();
+      assert.equal(t.calls.length, 1, 'enregistrement annulé : rien ne part');
+    } finally { Date.now = real; }
+  } finally { t.close(); }
+});
+
+test('Se déconnecter arrête les alertes sur ce téléphone ; le message d’essai ne va qu’au téléphone qui vient d’être activé', async () => {
+  const t = await setup();
+  try {
+    const awa = await t.account('awa@example.test');
+    const a = await t.device(awa, 'tel-a'); await t.device(awa, 'tel-b'); t.calls.length = 0;
+    await t.call(awa, '/push/essai', 'POST', {endpoint: a.sub.endpoint});
+    assert.deepEqual(t.calls.map(c => c.url), ['https://push.example.test/tel-a']);
+    assert.equal((await t.call(awa, '/auth/logout', 'POST', {endpoint: a.sub.endpoint})).status, 200);
+    assert.deepEqual(t.s.all('SELECT endpoint FROM push_subs').map(r => r.endpoint), ['https://push.example.test/tel-b'], 'seul le téléphone déconnecté est oublié');
   } finally { t.close(); }
 });

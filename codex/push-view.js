@@ -24,7 +24,9 @@
     return sub;
   }
   // À chaque ouverture : un téléphone déjà autorisé se réinscrit sans rien demander.
-  async function sync(api) {
+  let syncing = null;
+  function sync(api) { return syncing || (syncing = resync(api).finally(() => { syncing = null; })); }
+  async function resync(api) {
     try {
       if (!supported() || Notification.permission !== 'granted') return false;
       const reg = await worker(), sub = await reg.pushManager.getSubscription();
@@ -36,11 +38,12 @@
     // La question du téléphone doit venir tout de suite après le geste (Safari l'exige).
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') return perm;
-    await attach(api, await worker());
-    await api('/push/essai', 'POST', {}).catch(() => {});
+    const sub = await attach(api, await worker());
+    await api('/push/essai', 'POST', {endpoint: sub.endpoint}).catch(() => {});
     return 'on';
   }
   async function disable(api) {
+    if (!supported() || Notification.permission !== 'granted') return 'off';
     const reg = await worker(), sub = await reg.pushManager.getSubscription();
     if (sub) { await api('/push', 'DELETE', {endpoint: sub.endpoint}).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
     return 'off';

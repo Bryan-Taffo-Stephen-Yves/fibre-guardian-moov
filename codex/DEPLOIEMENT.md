@@ -276,6 +276,6 @@ Essai local avec les réglages de l'image, sans Docker (macOS ou Linux) : `PORT=
 1. Sur Render, onglet **Environment**, **Add Environment Variable** : nom `VAPID_PRIVATE_KEY`, puis le bouton **Generate** pour la valeur. Enregistrez (Render redéploie).
 2. Sur Android (Chrome) ou sur ordinateur : ouvrez l'application, **Mon compte** › **Alertes sur ce téléphone** › **Activer**, puis **Autoriser**.
 3. Sur iPhone (iOS 16.4 ou plus récent) : Safari ne le permet qu'à l'application posée sur l'écran d'accueil. Dans Safari, touchez **Partager**, puis **Sur l'écran d'accueil**. Ouvrez Fibre Guardian depuis cette icône, connectez-vous, puis **Mon compte** › **Activer**.
-4. Le téléphone reçoit tout de suite « Alertes activées ». Ensuite : pannes du quartier, technicien en route, « Mes messages » (client) ; missions (technicien) ; plans à valider (équipe Moov). Un téléphone appartient au dernier compte connecté dessus.
+4. Le téléphone reçoit tout de suite « Alertes activées ». Ensuite : pannes du quartier, technicien en route, « Mes messages » (client) ; missions (technicien). Rien n'arrive sur le téléphone tant que l'application est ouverte devant vous (elle affiche déjà l'alerte). Se déconnecter arrête les alertes sur ce téléphone.
 
 Le texte est chiffré pour le seul téléphone (Apple, Google ou Mozilla ne le lisent pas) et le serveur n'écrit qu'à leurs services de notification. Un redémarrage de Render oublie les téléphones inscrits : chacun se réinscrit tout seul à la prochaine ouverture de l'application.

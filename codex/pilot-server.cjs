@@ -31,7 +31,7 @@ function createGuardianServer(options={}){
  // Réglages des alertes, lus aussi par whatsapp-compte.cjs (places WhatsApp partagées, numéros de l'hébergeur).
  store.whatsappAlerts=whatsapp.cfg;
  // Alertes sur le téléphone, application fermée (Web Push) : clé VAPID_PRIVATE_KEY chez l'hébergeur, jamais dans git.
- const PU=require('./push.cjs');PU.start(store,{env:options.env||process.env,fetchImpl:options.pushFetch,hosts:options.pushHosts,onError:e=>options.onError?.(e)});
+ const PU=require('./push.cjs'),pushLoop=PU.start(store,{env:options.env||process.env,fetchImpl:options.pushFetch,hosts:options.pushHosts,onError:e=>options.onError?.(e)});
  // Prises vers le vrai réseau Moov : chacune reste fermée tant que sa clé n'est pas réglée (BRANCHEMENTS.md).
  const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
  // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
@@ -243,7 +243,7 @@ function createGuardianServer(options={}){
     // Copies Wi-Fi des clients : équipe Moov seulement (requireOperator dans copie-wifi.cjs).
     if(route==='/api/noc/copies'&&method==='GET'){if(!url.searchParams.get('id'))return json(res,CW.list(store,user.id));const r=CW.detail(store,user.id,url.searchParams.get('id'));DP.seen(store,user.id,'copies');return json(res,r);}
     if(route==='/api/noc/copies/simulate'&&method==='POST')return json(res,CW.teamSimulate(store,user.id,await body(req,1024)));
-    if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
+    if(route==='/api/noc/workspace'&&method==='GET'){PU.seen(user.id);}if(route==='/api/noc/workspace'&&method==='GET')return json(res,workspace.overview(store,user.id));
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
@@ -284,7 +284,7 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
     // Le réseau d'où vient cet appareil (Wi-Fi de la box Moov ou données mobiles), pour le prévenir sur l'accueil. Rien n'est gardé.
     if(route==='/api/journey/network'&&method==='GET'){store.rate('net:'+user.id,120,600000);const n=await VT.network(ip(req));return json(res,{place:n.place||null,operator:n.operator||null});}
-    if(route==='/api/journey/state'&&method==='GET'){const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
+    if(route==='/api/journey/state'&&method==='GET'){PU.seen(user.id);const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}
     // Conseiller conso (forfait-bilan.cjs) : l'appareil qui prend le plus de données et le forfait qui va à la maison.
     if(route==='/api/journey/conso'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration.',409);return json(res,require('./forfait-bilan.cjs').conso(store,user.id,journey.snapshotFor(store,user.id,state),journey.PLANS,{pc:VT.pcDevices(store,user.id)}));}
@@ -315,7 +315,7 @@ function createGuardianServer(options={}){
     if(route==='/api/push'&&method==='GET')return json(res,PU.view(store,user.id));
     if(route==='/api/push'&&method==='POST'){store.rate('push:'+user.id,30,600000);return json(res,PU.subscribe(store,user.id,await body(req,4096)));}
     if(route==='/api/push'&&method==='DELETE')return json(res,PU.unsubscribe(store,user.id,await body(req,4096)));
-    if(route==='/api/push/essai'&&method==='POST'){store.rate('push-essai:'+user.id,6,600000);return json(res,{sent:await PU.toUser(store,user.id,{title:'Alertes activées',body:'Guardian vous préviendra ici, même quand l’application est fermée.',tag:'fg-essai',url:'./'})});}
+    if(route==='/api/push/essai'&&method==='POST'){store.rate('push-essai:'+user.id,6,600000);const d=await body(req,4096);return json(res,{sent:await PU.toUser(store,user.id,{title:'Alertes activées',body:'Guardian vous préviendra ici, même quand l’application est fermée.',tag:'fg-essai',url:'./'},{endpoint:d.endpoint,always:true})});}
     if(route==='/api/veille'&&method==='GET')return json(res,{...VW.view(store,user.id),pc:VT.pcLive(store,user.id),pcDevices:VT.pcDevices(store,user.id)});
     if(route==='/api/veille'&&method==='POST'){const d=await body(req,512);return json(res,{...(typeof d.mine==='string'?VW.mine(store,user.id,d.mine):VW.toggle(store,user.id,d.on)),pc:VT.pcLive(store,user.id),pcDevices:VT.pcDevices(store,user.id)});}
     if(route==='/api/test/link'&&method==='POST'){store.rate('vt-link:'+user.id,10,600000);return json(res,VT.link(store,user.id,{origin}));}
@@ -343,7 +343,7 @@ function createGuardianServer(options={}){
     const operatorTicket=route.match(/^\/api\/operator\/tickets\/([^/]+)$/);
     if(operatorTicket&&method==='GET')return json(res,operator.detail(store,user.id,operatorTicket[1]));
     if(operatorTicket&&method==='POST'){operator.requireOperator(store,user.id);insist(!store.get('SELECT paused FROM noc_settings WHERE id=1').paused,'Supervision suspendue : le traitement des dossiers est arrêté.',409);return json(res,operator.update(store,user.id,operatorTicket[1],await body(req,8192)));}
-    if(route==='/api/auth/logout'&&method==='POST'){store.run('DELETE FROM sessions WHERE user_id=? AND csrf=?',user.id,user.csrf);cookie(res,'',0);return json(res,{ok:true});}
+    if(route==='/api/auth/logout'&&method==='POST'){const out=await body(req,4096).catch(()=>({}));if(out?.endpoint)PU.unsubscribe(store,user.id,out);store.run('DELETE FROM sessions WHERE user_id=? AND csrf=?',user.id,user.csrf);cookie(res,'',0);return json(res,{ok:true});}
     if(route==='/api/auth/password'&&method==='POST'){const d=await body(req,4096),u=store.get('SELECT * FROM users WHERE id=?',user.id);insist(await passwordMatches(d.current,u.password),'Mot de passe actuel incorrect.',401);const pw=await passwordHash(d.password);store.run('UPDATE users SET password=? WHERE id=?',pw,user.id);store.run('DELETE FROM sessions WHERE user_id=?',user.id);cookie(res,'',0);return json(res,{ok:true});}
     if(route==='/api/homes'&&method==='GET')return json(res,{homes:store.all('SELECT h.id,h.name,m.role FROM homes h JOIN members m ON m.home=h.id WHERE m.user_id=?',user.id)});
     if(route==='/api/homes'&&method==='POST'){const d=await body(req,4096);insist(store.get('SELECT count(*) AS n FROM homes WHERE owner=?',user.id).n<10,'Maximum 10 foyers.');const hid=id();store.transaction(()=>{store.run('INSERT INTO homes VALUES(?,?,?,?,?)',hid,user.id,word(d.name,'Nom du foyer',80),Date.now(),JSON.stringify({usualDevices:5,extraDevices:2}));store.run('INSERT INTO members VALUES(?,?,?)',hid,user.id,'owner');store.event(hid,user.id,'home.create');});return json(res,{id:hid},201);}
@@ -388,6 +388,6 @@ function createGuardianServer(options={}){
    const data=zipped?file.gz:file.raw;headers['Content-Length']=data.length;res.writeHead(200,headers);res.end(method==='HEAD'?undefined:data);
   }catch(e){if(res.headersSent){res.end();return;}json(res,{error:e instanceof Problem?e.message:'Erreur interne. Aucune action confirmée.'},e instanceof Problem?e.status:500);if(!(e instanceof Problem)&&options.onError)options.onError(e);}
  };
- const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const forgetJury=()=>{try{jury.forgetWhatsapp(store);}catch(e){options.onError?.(e);}};forgetJury();const cleanup=setInterval(()=>{store.cleanup();forgetJury();},3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(vwTimer);clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
+ const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.on('close',()=>pushLoop.stop());server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const forgetJury=()=>{try{jury.forgetWhatsapp(store);}catch(e){options.onError?.(e);}};forgetJury();const cleanup=setInterval(()=>{store.cleanup();forgetJury();},3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(vwTimer);clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
 }
 module.exports={createGuardianServer};

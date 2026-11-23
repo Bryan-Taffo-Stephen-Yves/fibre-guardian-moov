@@ -126,7 +126,7 @@
   function playScenario(value){return run(async()=>{SP(value);SE('');try{await action('scenario',{value});requestAnimationFrame(()=>document.querySelector('.j-scenario-result')?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));}catch(e){if(e.status===409)await refresh().catch(()=>{});SE(e.name==='TimeoutError'?'Le serveur met trop de temps à répondre. Vérifiez le scénario actif avant de réessayer.':e.message);requestAnimationFrame(()=>document.querySelector('.j-scenarios .j-error')?.scrollIntoView({block:'center'}));throw e;}finally{SP(null);}});}
   async function start(){const r=await api('/journey/start','POST',{});D(r.state);V('home');M('client');W(true);}
   function ask(text){CH(true);PQ(text);run(async()=>{const start=Date.now();const r=await api('/journey/action','POST',{type:'chat',text,version:stateRef.current.version});const wait=THINKING_MS-(Date.now()-start);if(wait>0)await new Promise(done=>setTimeout(done,wait));D(r.state);stateRef.current=r.state;}).finally(()=>PQ(''));}
-  async function logout(){await api('/auth/logout','POST',{});U(null);D(null);C(null);CH(false);V('home');M('client');}
+  async function logout(){await window.FGPush?.disable(api).catch(()=>{});await api('/auth/logout','POST',{});U(null);D(null);C(null);CH(false);V('home');M('client');}
   const bell=shared+(state?.notifications||[]).filter(n=>n.home===home&&!n.read).length;
   // Alerte Wi-Fi (nouvel appareil, coupure, retour, instable, grosse consommation) : bandeau dans l'application, et notification
   // du téléphone si le client l'a autorisée. Les alertes déjà là à l'ouverture ne sont pas rejouées.
