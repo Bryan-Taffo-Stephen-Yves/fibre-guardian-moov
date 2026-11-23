@@ -22,7 +22,7 @@ test('Sans clé, toutes les prises restent fermées et la démo ne change pas',a
   for(const p of ['reseau','clients','ussd'])await t.prise(p,'x'.repeat(40),{},404);
   const admin=await t.account('director','admin'),client=await t.account('client');
   await t.call(client,'/branchements',null,403);
-  const e=await t.call(admin,'/branchements');assert.deepEqual(e.prises.map(p=>p.mode),['demo','demo','demo','demo']);
+  const e=await t.call(admin,'/branchements');assert.deepEqual(e.prises.map(p=>p.mode),['demo','demo','demo','demo','demo']);
   assert.equal(JSON.stringify(e).includes('rrrr'),false);
   assert.equal(B.config({GUARDIAN_RESEAU_CLE:'trop-courte'}).reseau,null,'Une clé courte n’ouvre rien');
   assert.equal(B.config({GUARDIAN_SMS_CLE:'s'.repeat(40),GUARDIAN_SMS_URL:'http://passerelle'}).sms,null,'Les SMS partent seulement en https');

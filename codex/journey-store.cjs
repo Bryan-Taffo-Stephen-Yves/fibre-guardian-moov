@@ -7,6 +7,7 @@ const usage=require('./journey-usage.cjs');
 const langues=require('./langues.cjs'),boxReading=require('./box-reading.cjs');
 const {rebootGate}=require('./ui-model.js');
 const forecastLib=require('./forecast.cjs');
+const mesuresBox=require('./mesures-box.cjs');
 // Passage préventif : l'équipe fibre du quartier (fiches de noc-store.cjs).
 const PREVENTIVE={'YOP-07':'koffi','COC-03':'yao','MAR-02':'amina'};
 function preventiveTech(segment){const t=require('./noc-store.cjs').TECHS.find(x=>x.id===(PREVENTIVE[segment]||'koffi'));return t?{name:t.name,team:t.team,phone:t.phone}:null;}
@@ -21,7 +22,7 @@ function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS journey_otp(id TEXT PRIMARY KEY,proof TEXT NOT NULL,code TEXT NOT NULL,name TEXT NOT NULL,expires INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,used INTEGER NOT NULL DEFAULT 0);
  CREATE TABLE IF NOT EXISTS journey_state(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,body TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS citizen_reports(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,created INTEGER NOT NULL,zone TEXT NOT NULL,description TEXT NOT NULL,photo TEXT NOT NULL,lat REAL NOT NULL,lon REAL NOT NULL,status TEXT NOT NULL DEFAULT 'received',response TEXT NOT NULL DEFAULT '');
- `);usage.migrate(s);s.run('DELETE FROM journey_otp WHERE expires<?',Date.now());}
+ `);usage.migrate(s);mesuresBox.migrate(s);s.run('DELETE FROM journey_otp WHERE expires<?',Date.now());}
 const DEVICE_LIMITS=[5,10,20],MANUAL_LIMIT_MS=30*86400000;
 // Grille publique de la fibre Moov (mafibremoov.ci, octobre 2026) : débit et prix par mois, installation offerte.
 // Les identifiants « demo-… » restent ceux des parcours déjà enregistrés.
@@ -55,13 +56,17 @@ function seed(){return {version:0,mode:'simulation',created:Date.now(),scenario:
  {id:'ps5',name:'PS5 de Kevin',demand:6,recognized:true}],
  homes:[{id:'home-1',name:'Mon foyer',segment:'YOP-07'},{id:'home-2',name:'Foyer Awa',segment:'YOP-07'},{id:'home-3',name:'Foyer Koné',segment:'YOP-07'},{id:'home-4',name:'Foyer Hady',segment:'YOP-07'},{id:'home-5',name:'Foyer témoin',segment:'YOP-08'}],
  incidents:[],notifications:[],audit:[],messages:[],proposal:null,technicians:TECHS};}
-function get(s,uid){const row=s.get('SELECT body FROM journey_state WHERE user_id=?',uid);return row?JSON.parse(row.body):null;}
+// La vraie mesure de la box (mesures-box.cjs), si elle est branchée et fraîche, voyage avec le parcours sans jamais y être enregistrée.
+function get(s,uid){const row=s.get('SELECT body FROM journey_state WHERE user_id=?',uid);if(!row)return null;const st=JSON.parse(row.body);Object.defineProperty(st,'box',{value:mesuresBox.lecture(s,uid),enumerable:false,writable:true});return st;}
 // Juste avant l'enregistrement : les nouveaux « Mes messages » partent aussi sur le téléphone, application fermée (push.cjs).
 function put(s,uid,state){try{require('./push.cjs').fromJourney(s,uid,state);}catch{}s.run('INSERT INTO journey_state VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET body=excluded.body',uid,JSON.stringify(state));}
 function audit(st,action,detail){st.audit.unshift({id:id(),at:Date.now(),action,detail});st.audit=st.audit.slice(0,100);}
 function notify(st,incident,title){for(const home of st.homes.filter(h=>h.segment===incident.segment)){const key=incident.id+':'+incident.status+':'+home.id;if(!st.notifications.some(n=>n.key===key))st.notifications.unshift({key,home:home.id,at:Date.now(),title,body:'Incident '+incident.reference+' · '+incident.zone,read:false});}st.notifications=st.notifications.slice(0,100);}
 function active(st){return st.incidents.find(i=>i.segment===st.segment&&i.status!=='resolved'&&i.status!=='false_alarm');}
-function snapshot(st){const now=Date.now(),down=!!active(st),rebooting=!down&&st.rebootUntil>now,cap=down||rebooting?0:st.scenario==='slow'?12:st.capacity;
+// La vraie box du client (si elle est lue) reçoit-elle la fibre ? Sans vraie mesure, on ne bloque rien.
+function fibreOk(s,uid){const m=mesuresBox.lecture(s,uid);return !m||m.etat==='Up';}
+function snapshot(st){return mesuresBox.appliquer(simulated(st),st.box);}
+function simulated(st){const now=Date.now(),down=!!active(st),rebooting=!down&&st.rebootUntil>now,cap=down||rebooting?0:st.scenario==='slow'?12:st.capacity;
  const devices=st.devices.map(d=>({...d,limit:d.until>now?d.limit:null,until:d.until>now?d.until:null}));
  const demand=devices.map(d=>d.blocked?0:Math.min(d.demand,d.limit??Infinity)),total=demand.reduce((a,b)=>a+b,0);
  devices.forEach((d,i)=>{d.mbps=Math.round((total>cap?demand[i]*cap/total:demand[i])*10)/10;});
@@ -114,11 +119,15 @@ const hour=at=>{const d=new Date(at);return d.getHours()+' h '+String(d.getMinut
 function measured(snap,st){const m=snap.metrics,plan=st.plan||PLANS[1],o=snap.optical,up=m.state!=='redémarrage'&&m.state!=='panne';
  return [{label:'Débit qui arrive à votre box',value:up?m.capacity+' Mb/s (forfait '+plan.mbps+' Mb/s)':'0 Mb/s : box '+(m.state==='panne'?'coupée':'en redémarrage')},
   {label:'Temps de réponse de la ligne',value:m.latency!=null?m.latency+' ms':'non mesurable pour l’instant'},
-  {label:'Lumière de la fibre à la box',value:o&&o.current!=null?dbm(o.current)+' dBm ('+(o.state==='fading'?'en baisse':'normale')+')':'non mesurée'},
+  {label:'Lumière de la fibre à la box',value:o&&o.current!=null?dbm(o.current)+' dBm ('+(o.state==='fading'?'en baisse':o.state==='low'?'faible':'normale')+')':'non mesurée'},
   {label:'Débit utilisé chez vous',value:m.used+' Mb/s sur '+m.capacity+' Mb/s'},
   {label:'Panne dans votre quartier',value:'Aucune'},
-  {label:'Dernière remontée de la box',value:hour(m.at)},
-  {label:'Signal Wi-Fi dans vos pièces',value:'Non mesuré : la box ne le remonte pas'}];}
+  {label:'Dernière remontée de la box',value:hour(snap.box?.vu??m.at)},
+  {label:'Signal Wi-Fi dans vos pièces',value:'Non mesuré : la box ne le remonte pas'},
+  ...(snap.box?[{label:'Votre box',value:[snap.box.modele,snap.box.uptimeS!=null?'allumée depuis '+duree(snap.box.uptimeS):null].filter(Boolean).join(', ')||'lue à distance par Moov'}]:[])];}
+// 90061 s → « 1 jour et 1 heure » : la durée depuis le dernier redémarrage, en mots simples.
+function duree(sec){const j=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60),p=(n,w)=>n+' '+w+(n>1?'s':'');
+ return j?p(j,'jour')+(h?' et '+p(h,'heure'):''):h?p(h,'heure')+(m?' et '+p(m,'minute'):''):p(Math.max(1,m),'minute');}
 function proofFor(kind,snap,st,largest){
  const wifi={assumed:['Le Wi-Fi est trop faible dans certaines pièces (murs, distance, étage).','Un seul appareil a du mal à se connecter.'],
   tests:['Mesurez près de la box (1 mètre), puis dans la pièce où ça rame.','Essayez un autre téléphone au même endroit.','Si vous pouvez, branchez un ordinateur à la box avec un câble.'],
@@ -137,6 +146,9 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   return {message:hello+faultMessage(fault,st)+(['upgrade','usage'].includes(ask)?' Un forfait plus rapide ou un partage du débit ne réglerait pas cette coupure.':''),facts,action:'tracking'};}
  if(ask==='merci')return {message:'Avec plaisir. Je reste là si votre connexion fait des siennes.',facts};
  if(ask==='resiliation')return {message:'Je suis désolé que vous en soyez là. Une résiliation se fait en agence Moov ou au service client, pas depuis Guardian. Dites-moi d’abord ce qui ne va pas : je peux peut-être le régler tout de suite.',facts};
+ // Vraie box lue à distance : la fibre n'arrive plus, sans panne dans le quartier. Le souci est sans doute chez le client.
+ if(snap.box&&!snap.box.fibre&&!['merci','prix','humain'].includes(ask))return {message:hello+'J’ai lu votre box à distance : la fibre n’arrive plus jusqu’à elle, et aucune panne n’est signalée dans votre quartier. Vérifiez que le petit câble fibre, au connecteur vert, est bien enfoncé et n’est pas plié. Ne regardez jamais le bout de ce câble. Si rien ne change, signalez la panne : elle part directement à l’équipe Moov.',
+  facts:[...facts,{label:'Fibre à votre box',value:'Coupée (lu à '+hour(snap.box.vu)+')'}],action:'report'};
  const requested=Number(text.match(/(\d+)\s*(?:mbps|mb\/s|mégabits|megabits)/i)?.[1]||0),plan=st.plan||PLANS[1];
  if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mb/s pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Pour en changer, ouvrez « Changer de forfait » dans votre compte : vous y voyez toutes les offres et leur prix.',facts};
  if(ask==='upgrade'||requested>plan.mbps){
@@ -150,7 +162,7 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   st.upgrade=quote;
   return {message:'Pour ce besoin, votre forfait peut passer de '+plan.mbps+' à 200 Mb/s. '+(quote.daysLeft>=quote.daysInMonth?'Vous payez la différence pour '+periodOf(quote):'Ce mois-ci, vous payez seulement '+periodOf(quote))+' : '+fcfa(quote.amount)+'. Puis '+fcfa(to.price)+' par mois à partir du '+firstOf(quote.nextBilling)+'. Le gain réel dépend aussi de votre Wi-Fi.',facts,action:'upgrade'};
  }
- if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
+ if(st.scenario==='fading'&&!snap.box){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
   return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
    facts:[...facts,{label:'Lumière reçue par la box',value:dbm(f.current)+' dBm (coupure vers '+dbm(f.threshold)+' dBm)'},{label:'Baisse mesurée',value:dbm(Math.abs(f.slope))+' dB par jour sur 7 jours'}]};}}
  if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:hello+'Votre débit est tombé à '+snap.metrics.capacity+' Mb/s alors que votre offre prévoit '+plan.mbps+' Mb/s. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot',proof:proofFor('box',snap,st,largest)};
@@ -244,7 +256,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   }else if(d.type==='upgrade-decline'){st.upgrade=null;st.declinedUntil=now+86400000;audit(st,'upgrade.declined','Offres suspendues pendant 24 heures');
  }else if(d.type==='plan-quote'){
   // Le client choisit lui-même un forfait plus rapide dans son compte : le serveur calcule le complément à payer (au prorata du mois).
-  const to=planOf(d.to),plan=st.plan||PLANS[1];insist(to,'Forfait inconnu.');
+  const to=planOf(d.to),plan=st.plan||PLANS[1];insist(to,'Forfait inconnu.');insist(fibreOk(s,uid),'Votre box ne reçoit plus la fibre : un forfait plus rapide ne réglerait pas ce souci. Vérifiez le câble fibre ou signalez la panne.',409);
   insist(to.price>plan.price,'Ce forfait n’est pas plus cher que le vôtre : il se choisit sans paiement.',409);
   insist(!active(st)&&!sharedFault(s,uid),'Une panne est en cours dans votre quartier : un forfait plus rapide ne la réglerait pas. Réessayez quand internet sera revenu.',409);
   insist(st.scenario!=='slow','Votre débit est anormalement bas : un forfait plus rapide ne réglerait pas ce souci. Redémarrez d’abord votre box.',409);
@@ -268,7 +280,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   insist(d.confirm===true,'Confirmez le paiement pour continuer.');
   if(st.payment?.quoteId!==d.id){
    const q=st.upgrade;insist(q&&q.id===d.id&&q.expires>now,'Offre expirée ou introuvable.',409);
-   insist(!active(st)&&!sharedFault(s,uid),'Incident de zone en cours : aucun achat proposé.',409);
+   insist(!active(st)&&!sharedFault(s,uid),'Incident de zone en cours : aucun achat proposé.',409);insist(fibreOk(s,uid),'Votre box ne reçoit plus la fibre : aucun achat proposé.',409);
    const from=planOf(q.from.id),to=planOf(q.to.id);
    // Le montant est recalculé avec les jours notés dans le devis : un paiement fait juste après minuit garde le prix annoncé.
    insist(Number.isFinite(q.nextBilling)&&now<q.nextBilling,'Le mois a changé : le prix a été recalculé. Réessayez.',409);
@@ -285,7 +297,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   }
  }else if(d.type==='reboot'){
   // Redémarrage à distance demandé par le client : même garde-fou que le laboratoire (rebootGate, 2 fois en 10 minutes).
-  insist(d.confirm===true,'Confirmez le redémarrage de votre box.');
+  insist(d.confirm===true,'Confirmez le redémarrage de votre box.');insist(fibreOk(s,uid),'Votre box ne reçoit plus la fibre : un redémarrage à distance ne peut pas l’atteindre. Vérifiez le câble fibre ou signalez la panne.',409);
   insist(!active(st)&&!sharedFault(s,uid),'Un incident de zone est en cours : redémarrer votre box ne réglera pas la coupure. Suivez plutôt l’intervention.',409);
   insist(!(st.rebootUntil>now),'Votre box est déjà en train de redémarrer.',409);
   const gate=rebootGate(st.reboots||[],now,true);insist(gate.ok,gate.message,429);
