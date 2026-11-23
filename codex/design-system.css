@@ -301,7 +301,7 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
 /* ---- « Tester ma connexion » : l'aiguille balaie le cadran à l'arrivée, recule quand on appuie ---- */
 .ac-fibre-test-ico{--ico-fill:.14;background:radial-gradient(110% 80% at 30% 10%,var(--ds-white) 0,transparent 60%),linear-gradient(160deg,var(--moov-surface),var(--moov-primary-50))}
 .ac-fibre-test .fgi-a,.ac-fibre-test .fgi-af{transform-box:view-box;transform-origin:12px 16.5px;animation:ds-needle 1.5s .35s var(--ds-spring) both;transition:transform var(--ds-t2) var(--ds-spring)}
-.ac-fibre-test:active .fgi-a{transform:rotate(-70deg)}
+.ac-fibre-test:active .fgi-a{animation:none;transform:rotate(-70deg)}
 @keyframes ds-needle{0%{transform:rotate(-95deg)}55%{transform:rotate(18deg)}100%{transform:rotate(0)}}
 
 /* ---- Bannière forfait : la flèche monte en boucle douce ---- */
@@ -323,6 +323,7 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
 .journey[data-espace=client] .j-main .j-button:not(.primary){box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 70%,transparent),0 1px 2px color-mix(in srgb,var(--moov-primary-900) 8%,transparent),0 6px 14px -10px color-mix(in srgb,var(--moov-primary-900) 30%,transparent);transition:transform var(--ds-t2) var(--ds-spring)}
 .journey[data-espace=client] .j-main .j-button:not(.primary):active{transform:scale(.97)}
 .journey[data-espace=client] .ch-row-icon{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 80%,transparent),inset 0 -2px 4px color-mix(in srgb,var(--moov-primary-500) 12%,transparent),0 6px 10px -8px color-mix(in srgb,var(--moov-primary-500) 55%,transparent)}
+.journey[data-espace=client] .ch-row-icon{--ico-fill:.3}
 .journey[data-espace=client] .ch-row{transition:transform var(--ds-t2) var(--ds-spring),background-color var(--ds-t1)}
 .journey[data-espace=client] .ch-row:active{transform:scale(.985)}
 .journey[data-espace=client] .ch-row:active .ch-row-icon{transform:scale(.9)}
@@ -342,7 +343,7 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
  .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button{--ico-accent:currentColor;--ico-fill:.12}
  .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button.active{--ico-accent:var(--moov-accent);--ico-fill:.22}
  .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button.active:not(:nth-of-type(3)) svg{animation:ds-tab .5s var(--ds-spring)}
- .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button:nth-of-type(3){--ico-accent:var(--moov-accent-300);--ico-fill:.28}
+ .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button:nth-of-type(3){--ico-accent:var(--moov-accent-200);--ico-fill:.28}
  .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button:nth-of-type(3) svg{background:radial-gradient(80% 60% at 35% 15%,color-mix(in srgb,var(--ds-white) 30%,transparent) 0,transparent 60%),var(--ds-grad-brand);animation:ds-breathe 3.6s 1.2s ease-in-out infinite}
 }
 @keyframes ds-tab{0%{transform:scale(.8)}55%{transform:scale(1.14) translateY(-2px)}100%{transform:none}}
@@ -353,6 +354,11 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
 :root[data-mode=dark] .journey[data-espace=client] .ac-svc-ico{background:linear-gradient(150deg,var(--bg) 0%,var(--soft) 100%);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 12%,transparent),0 8px 14px -9px color-mix(in srgb,var(--moov-primary-900) 60%,transparent)}
 :root[data-mode=dark] .journey[data-espace=client] :is(.ch-row-icon,.j-main .j-button:not(.primary)){box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 10%,transparent)}
 :root[data-mode=dark] .journey[data-espace=client] .ac-fibre-test-ico{background:var(--moov-surface)}
+/* Mode sombre : traits d'icône éclaircis pour rester lisibles sur les pastilles foncées. */
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc{--fg:var(--moov-primary-300)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc--green{--fg:var(--moov-success-300)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc--red{--fg:var(--moov-danger-300)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc--orange{--fg:var(--moov-accent-500)}
 
 @media(prefers-reduced-motion:reduce){
  .journey .ac .ac-svc-grid>.ac-svc,.ac-fibre-test .fgi-a,.ac-fibre-test .fgi-af,.ac-promo-ico .fgi-a,.is-tap::after,

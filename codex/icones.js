@@ -48,7 +48,7 @@
  }
  // Onde de lumière au toucher : on note où le doigt a touché, le CSS dessine l'onde (design-system.css, .is-tap).
  const TAP='.ac-svc,.ch-row,.ac-promo';
- try{document.addEventListener('pointerdown',e=>{const b=e.target&&e.target.closest&&e.target.closest(TAP);if(!b||b.disabled)return;const r=b.getBoundingClientRect();
+ try{document.addEventListener('pointerdown',e=>{const b=e.target&&e.target.closest&&e.target.closest(TAP);if(!b||b.disabled||b.getAttribute('aria-disabled')==='true')return;const r=b.getBoundingClientRect();
   b.style.setProperty('--rx',Math.round(e.clientX-r.left)+'px');b.style.setProperty('--ry',Math.round(e.clientY-r.top)+'px');
   b.classList.remove('is-tap');void b.offsetWidth;b.classList.add('is-tap');clearTimeout(b._fgTap);b._fgTap=setTimeout(()=>b.classList.remove('is-tap'),650);},{passive:true});}catch(_){}
  window.FGIcones={Icon,has:n=>!!name(n),names:Object.keys(ICONS)};

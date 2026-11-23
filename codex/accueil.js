@@ -115,7 +115,7 @@
      h('p',{className:'ac-fibre-state',role:'status','aria-live':'polite'},s.title),
      on.go&&h('button',{type:'button',className:'ac-fibre-link',onClick:go('compte'),'aria-label':'Mon compte'+(price?' : '+price.toLocaleString('fr-FR')+' F par mois':'')},price?price.toLocaleString('fr-FR')+' F par mois':'Mon compte',h(Icon,{d:S.chevron,size:16}))),
     h('button',{type:'button',className:'ac-fibre-test',onClick:on.test,disabled:busy||!on.test||s.tone==='wait'},
-     h('span',{className:'ac-fibre-test-ico','aria-hidden':true},h(Ico,{name:'gauge',size:34,stroke:1.8})),
+     h('span',{className:'ac-fibre-test-ico','aria-hidden':true},h(Ico,{name:'gauge',size:44,stroke:1.8})),
      h('span',null,'Tester ma connexion'))),
    a.tone!=='ok'&&h('section',{className:'ac-alert ac-'+a.tone},
     h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:a.icon,size:26,stroke:2.3})),
