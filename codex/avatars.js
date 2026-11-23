@@ -87,12 +87,12 @@
   if(kind==='tools')return h('g',null,arm('M74 90C80 88 84 86 86 82'),h('g',{transform:'rotate(28 88 76)'},h('rect',{x:85,y:56,width:6,height:24,rx:2,fill:V('neutral-400')}),h('path',{d:'M82 57a6 6 0 0 1 12 0l-3-1v-4h-6v4Z',fill:V('neutral-400')})),hand(p,88,80,.95));
   return null;
  }
- function Sticker({name='',size=120,role,pose:kind='wave',say,className=''}){
+ function Sticker({name='',size=120,role,pose:kind='wave',say,className='',bare=false}){
   const p=persona(name,role);
   return h('span',{className:('fg-sticker '+className).trim(),style:{'--s':size+'px'}},
    h('svg',{width:size,height:size,viewBox:'0 -6 100 112',role:'img','aria-label':name?name+' en illustration':'Illustration',focusable:false},
-    h('ellipse',{cx:50,cy:103,rx:34,ry:4,fill:V('neutral-900'),opacity:.08}),
-    h('circle',{cx:50,cy:50,r:46,fill:V(p.bg)}),
+    !bare&&h('ellipse',{cx:50,cy:103,rx:34,ry:4,fill:V('neutral-900'),opacity:.08}),
+    !bare&&h('circle',{cx:50,cy:50,r:46,fill:V(p.bg)}),
     h('g',{className:'fg-sticker-body'},character(p),pose(p,kind))),
    say&&h('span',{className:'fg-sticker-say'},say));
  }

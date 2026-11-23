@@ -132,9 +132,11 @@
       !edit&&more.length>0&&h('button',{type:'button',className:'ac-more','aria-expanded':all,'aria-controls':'ac-svc-grid',onClick:()=>setAll(v=>!v)},all?'Moins':'Voir tout',h(Icon,{d:S.chevron,size:16})))),
     edit&&h('p',{className:'ac-svc-hint',role:'status'},'Touchez jusqu’à 4 services pour les mettre en premier. '+live.length+' sur 4 choisis'+(live.length>=4?' : touchez une étoile pour en changer.':'.')),
     h('div',{className:'ac-svc-grid',id:'ac-svc-grid'},grid,all&&more)),
+   // Des visages : l'équipe Moov de la commune du client (techniciens.js).
+   window.FGTechniciens&&h(FGTechniciens.Strip,{zone:state.homeZone?.zone,onReport:on.report,onGuardian:on.voice}),
    promo&&h('button',{type:'button',className:'ac-promo',onClick:go('forfait')},
     h('span',{className:'ac-promo-txt'},h('small',null,'Jeux, films, télétravail'),h('strong',null,'Plus de débit ? Passez au forfait supérieur'),h('span',null,'Vous payez juste la différence. Voir les forfaits')),
-    h('span',{className:'ac-promo-ico','aria-hidden':true},h(Ico,{name:'up',size:30,stroke:2.2}))),
+    window.FGAvatar?h('span',{className:'ac-promo-human','aria-hidden':true},h(FGAvatar.Sticker,{name:'Koffi N’Guessan',role:'tech',pose:'thumbs',size:118,bare:true})):h('span',{className:'ac-promo-ico','aria-hidden':true},h(Ico,{name:'up',size:30,stroke:2.2}))),
    h('section',{className:'ac-recent','aria-labelledby':'ac-recent-title'},
     h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-more',onClick:on.bell},'Tout voir',h(Icon,{d:S.chevron,size:16}))),
     recent.length?h('ul',null,recent.filter((n,i,all)=>all.findIndex(x=>x.title===n.title&&x.body===n.body)===i).slice(0,3).map(n=>{const k=kind(n);return h('li',{key:n.key||n.id||n.at},h('button',{type:'button',onClick:on.bell},
