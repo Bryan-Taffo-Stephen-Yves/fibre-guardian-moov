@@ -322,6 +322,14 @@ function pcDevices(s, uid, now = Date.now()) {
   }
   return null;
 }
+// Le signal Wi-Fi que le PC branché lit en ce moment (Windows, netsh), pour « Placer ma box ». null sans PC en direct.
+function pcWifi(s, uid, now = Date.now()) {
+  for (const r of s.all('SELECT token_hash FROM speed_links WHERE user_id=? AND expires>? ORDER BY created DESC', uid, now)) {
+    const p = PC.get(r.token_hash); if (!p || !(now - p.at < LIVE_MS) || !p.w || p.w.error || p.w.signal == null) continue;
+    return {signal: p.w.signal, computer: p.w.computer || null, ssid: p.w.ssid || null};
+  }
+  return null;
+}
 // Ce que Guardian dit d'une opération, en mots simples, à partir de ce que le PC a mesuré.
 function opText(op, r, before = []) {
   const ms = r.ms == null ? '' : ' en ' + fmt(r.ms) + ' ms', got = r.lost == null ? '' : ', ' + (4 - r.lost) + ' réponse' + (4 - r.lost > 1 ? 's' : '') + ' sur 4';
@@ -550,5 +558,5 @@ function info(s, row) {
     scenarios: Object.entries(SCENARIOS).map(([id, f]) => ({id, label: f.label, hint: f.hint, down: f.down ?? 0, add: f.add ?? 0, jitter: f.jitter ?? 0, loss: f.loss ?? 100, cut: !!f.cut, signal: f.signal ?? 1}))};
 }
 
-module.exports = {unmangle, place, pcLive, pcDevices, usageSave, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
+module.exports = {unmangle, place, pcLive, pcDevices, pcWifi, usageSave, setOnScan: f => { onScan = f || null; }, setOnBeat: f => { onBeat = f || null; }, migrate, link, open, clean, verdict, record, info, wifiSave, wifiRead, queueOp, opText, OPS, agent, vendorName, VENDORS, MAX_KEPT,
   setVendorFetch: f => { vendorFetch = f || ((...a) => fetch(...a)); VENDOR_QUEUE.length = 0; vendorLast = 0; }, simulate, preview, network, SCENARIOS, NETWORK, POOL, SAMPLE, MAX_UPLOAD, LINK_MS, MAX_TESTS};
