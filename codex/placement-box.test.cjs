@@ -20,6 +20,14 @@ test('Signal : plus fort dans la même pièce, plus faible à travers les murs, 
  assert.equal(PB.level(80),'tres-bon');assert.equal(PB.level(55),'bon');assert.equal(PB.level(40),'moyen');assert.equal(PB.level(20),'faible');
 });
 
+test('Deux endroits qui se valent : pas de faux gagnant ; PC immobile signalé ; répéteur au bon article',()=>{
+ const dev=(id,signal,real=false,room='bureau')=>({id,name:id,signal,real,room});
+ let a=PB.advice([{spot:'salon',min:20,avg:52,devices:[dev('PC X',20,true),dev('tv',84)]},{spot:'chambre',min:20,avg:51,devices:[dev('PC X',20,true),dev('tv',82)]}]);
+ assert.equal(a.tie,true);assert.match(a.title,/Pas de différence nette/);assert.match(a.text,/la box a-t-elle vraiment changé de place/);
+ a=PB.advice([{spot:'salon',min:20,avg:40,devices:[dev('ps5',20)]},{spot:'couloir',min:30,avg:60,devices:[dev('ps5',30)]}]);
+ assert.match(a.text,/un répéteur Wi-Fi dans le bureau/);assert.doesNotMatch(a.text,/la bureau|la salon|la couloir/);
+});
+
 test('Le meilleur endroit sert le mieux l’appareil le plus mal servi, pas seulement la moyenne',()=>{
  const spots=[{spot:'salon',min:30,avg:80,devices:[]},{spot:'couloir',min:60,avg:70,devices:[]}];
  assert.equal(PB.best(spots).spot,'couloir');
@@ -47,13 +55,17 @@ test('Parcours complet : mesurer au salon, déplacer au couloir, Guardian recomm
   const couloir=v.spots.find(s=>s.spot==='couloir');
   assert.ok(couloir.min>salon.min,'au couloir, le moins bien servi reçoit plus');
   assert.match(v.advice.title,/Le meilleur endroit : Couloir/);
-  assert.match(v.advice.text,/^Posez la box au couloir : même « .+ » y reçoit \d+ %, soit \d+ points de plus qu’au salon\./);
+  assert.match(v.advice.text,/^Posez la box dans le couloir : même « .+ » y reçoit \d+ %, soit \d+ points de plus que dans le salon\./);
   // Re-mesurer au même endroit remplace la mesure, sans en ajouter.
   v=(await c('/journey/placement',{action:'measure',spot:'couloir'})).data;assert.equal(v.spots.length,2);
   // Changer la pièce d'un appareil : la prochaine mesure en tient compte.
   v=(await c('/journey/placement',{action:'room',id:'ps5',room:'salon'})).data;
   assert.equal(v.devices.find(d=>d.id==='ps5').room,'salon');
   assert.equal((await c('/journey/placement',{action:'room',id:'inconnu',room:'salon'})).status,400);
+  // Les mots internes de JavaScript ne passent pas pour des pièces ou des appareils.
+  for(const spot of ['valueOf','toString','constructor','__proto__'])assert.equal((await c('/journey/placement',{action:'measure',spot})).status,400,spot);
+  assert.equal((await c('/journey/placement',{action:'room',id:'ps5',room:'constructor'})).status,400);
+  assert.equal((await c('/journey/placement',{action:'room',id:'hasOwnProperty',room:'salon'})).status,400);
   // 4 endroits au plus.
   await c('/journey/placement',{action:'measure',spot:'bureau'});await c('/journey/placement',{action:'measure',spot:'cuisine'});
   assert.equal((await c('/journey/placement',{action:'measure',spot:'chambre'})).status,400);

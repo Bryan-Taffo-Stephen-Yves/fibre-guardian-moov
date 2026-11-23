@@ -13,9 +13,10 @@
 
  function Card({api,version}){
   const [v,V]=S(null),[spot,SP]=S(null),[busy,B]=S(false),[error,X]=S(''),[notice,N]=S(''),apiRef=R(api);apiRef.current=api;
-  const load=()=>apiRef.current('/journey/placement').then(d=>{V(d);X('');SP(s=>s||d.boxAt||'salon');}).catch(e=>X(e.message));
+  const say=e=>e&&e.status?e.message:'Guardian n’arrive pas à joindre le service. Vérifiez votre connexion, puis réessayez.';
+  const load=()=>apiRef.current('/journey/placement').then(d=>{V(d);X('');SP(s=>s||d.boxAt);}).catch(e=>X(say(e)));
   E(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t);},[version]);
-  const send=async body=>{B(true);try{const d=await apiRef.current('/journey/placement','POST',body);V(d);X('');return d;}catch(e){X(e.message);}finally{B(false);}};
+  const send=async body=>{B(true);try{const d=await apiRef.current('/journey/placement','POST',body);V(d);X('');return d;}catch(e){X(say(e));}finally{B(false);}};
   if(!v)return error?h('section',{className:'du-card pb-card'},h('p',{role:'alert',className:'j-error'},error)):null;
   const room=id=>v.rooms.find(r=>r.id===id),shown=v.spots.find(s=>s.spot===spot),sig=id=>shown?.devices.find(d=>d.id===id)?.signal;
   const measure=async()=>{const d=await send({action:'measure',spot});if(d)N('');};
@@ -23,31 +24,31 @@
   return h('section',{className:'du-card pb-card','aria-labelledby':'pb-title'},
    h('div',{className:'du-watch-head'},h('span',{className:'du-device-icon pb-head-icon'},h(BoxIcon)),
     h('div',null,h('h2',{id:'pb-title'},'Placer ma box au meilleur endroit'),h('p',null,'Guardian mesure le signal Wi-Fi de chaque appareil. Déplacez la box, mesurez encore : il vous dit où la poser.'))),
-   h('ol',{className:'pb-steps','aria-label':'Les étapes'},['Touchez la pièce où est la box','Mesurez','Déplacez la box et recommencez'].map((t,i)=>h('li',{key:i,className:i<(v.spots.length?(v.spots.length>1?3:2):0)?'done':''},h('b',null,i+1),t))),
+   h('ol',{className:'pb-steps','aria-label':'Les étapes'},['Touchez la pièce où est la box','Mesurez','Déplacez la box et recommencez'].map((t,i)=>h('li',{key:i,className:i<(v.spots.length>1?3:v.spots.length?2:spot?1:0)?'done':''},h('b',null,i+1),t))),
    h('div',{className:'pb-body'},h('div',{className:'pb-left'},
-   h('div',{className:'pb-plan',role:'group','aria-label':'Plan de la maison. Touchez la pièce où se trouve la box.'},v.rooms.map(r=>{
+   h('div',{className:'pb-plan',role:'radiogroup','aria-label':'Plan de la maison. Touchez la pièce où se trouve la box.'},v.rooms.map(r=>{
     const here=v.devices.filter(d=>d.room===r.id),measured=v.spots.find(s=>s.spot===r.id),isBest=v.best===r.id;
-    return h('button',{type:'button',key:r.id,className:'pb-room'+(spot===r.id?' active':'')+(isBest?' best':''),style:{gridColumn:r.col+1,gridRow:r.row+1},'aria-pressed':spot===r.id,onClick:()=>{SP(r.id);N('');},
+    return h('button',{type:'button',key:r.id,className:'pb-room'+(spot===r.id?' active':'')+(isBest?' best':''),style:{gridColumn:r.col+1,gridRow:r.row+1},role:'radio','aria-checked':spot===r.id,onClick:()=>{SP(r.id);N('');},
       'aria-label':r.label+(spot===r.id?', la box est ici':'')+(measured?', déjà mesuré : le plus faible reçoit '+measured.min+' %':'')+(isBest?', meilleur endroit':'')+(here.length?', '+here.length+' appareil'+(here.length>1?'s':''):'')},
      h('span',{className:'pb-room-name'},r.label),
      isBest&&h('span',{className:'pb-best-tag'},'Le meilleur'),
      spot===r.id&&h('span',{className:'pb-box'},h(BoxIcon),h('span',{className:'pb-pulse','aria-hidden':true})),
-     !isBest&&measured&&spot!==r.id&&h('span',{className:'pb-measured'},measured.min+' %'),
+     !isBest&&measured&&spot!==r.id&&h('span',{className:'pb-measured'},'Essayé · '+measured.min+' %'),
      h('span',{className:'pb-dots'},here.map(d=>{const s=sig(d.id);return h('span',{key:d.id,className:'pb-dot'+(s==null?'':' pb-'+lvl(s)),title:d.name+(s==null?'':' : '+s+' %')},tag(d.name));})));
    })),
    h('div',{className:'pb-actions'},
     h('button',{type:'button',className:'j-button primary pb-measure',disabled:busy||!spot||maxed,onClick:measure},h(Waves),busy?'Mesure en cours…':shown?'Mesurer encore ici':'Mesurer avec la box ici'),
-    v.spots.length>0&&h('button',{type:'button',className:'j-text-button pb-reset',disabled:busy,onClick:()=>send({action:'reset'}).then(()=>N('On recommence. Touchez la pièce où est la box.'))},'Recommencer')),
+    v.spots.length>0&&h('button',{type:'button',className:'j-text-button pb-reset',disabled:busy,onClick:()=>send({action:'reset'}).then(d=>d&&N('On recommence. Touchez la pièce où est la box.'))},'Recommencer')),
    maxed&&h('p',{className:'pb-note'},'Vous avez essayé '+v.max+' endroits. Touchez une pièce déjà mesurée, ou « Recommencer ».'),
    notice&&h('p',{className:'pb-note',role:'status'},notice),
    error&&h('p',{role:'alert',className:'j-error'},error),
    ),h('div',{className:'pb-right'},
-   v.spots.length>0&&h('div',{className:'du-advice pb-advice'},h('div',{className:'du-advice-head'},h('span',{className:'j-chat-avatar du-advice-art','aria-hidden':true},h('i'),h('i'),h('b')),h('div',null,h('small',null,v.advice.title),h('p',null,v.advice.text)))),
+   h('div',{className:'du-advice pb-advice',role:'status'},h('div',{className:'du-advice-head'},h('span',{className:'j-chat-avatar du-advice-art','aria-hidden':true},h('i'),h('i'),h('b')),h('div',null,h('small',null,v.advice.title),h('p',null,v.advice.text)))),
    v.spots.length>1&&h('div',{className:'pb-compare'},h('h3',null,'Les endroits essayés'),h('ul',null,[...v.spots].sort((a,b)=>b.min-a.min||b.avg-a.avg).map(s=>{const weak=s.devices.reduce((w,d)=>d.signal<w.signal?d:w,s.devices[0]);
     return h('li',{key:s.spot,className:s.best?'best':''},h('button',{type:'button',className:'pb-compare-row',onClick:()=>SP(s.spot),'aria-pressed':spot===s.spot},
      h('span',{className:'pb-compare-name'},h('strong',null,room(s.spot)?.label),h('small',null,'Le moins bien servi : '+(weak?weak.name:'—'))),h(Bar,{value:s.min}),h('strong',{className:'pb-compare-val'},s.min+' %')));}))),
-   shown&&h('div',{className:'pb-result'},h('h3',null,'Avec la box : '+room(shown.spot)?.label.toLowerCase()),h('ul',null,shown.devices.map(d=>h('li',{key:d.id},
-    h('span',{className:'pb-result-name'},h('strong',null,d.name),h('small',null,room(d.room)?.label+(d.real?' · lu par le PC':' · mesuré par la box'))),h(Bar,{value:d.signal}),h('span',{className:'pb-val'},h('strong',null,d.signal+' %'),h('small',{className:'pb-'+d.level},LEVEL[d.level])))))),
+   shown&&h('div',{className:'pb-result'},h('h3',null,'Box '+(room(shown.spot)?.dans||'')),h('ul',null,shown.devices.map(d=>h('li',{key:d.id},
+    h('span',{className:'pb-result-name'},h('strong',null,d.name),h('small',null,room(d.room)?.label+(d.real?' · lu par le PC':''))),h(Bar,{value:d.signal}),h('span',{className:'pb-val'},h('strong',null,d.signal+' %'),h('small',{className:'pb-'+d.level},LEVEL[d.level])))))),
    )),
    h('details',{className:'pb-rooms'},h('summary',null,'Changer la pièce d’un appareil'),h('ul',null,v.devices.map(d=>h('li',{key:d.id},h('label',null,h('span',null,d.name),
     h('select',{value:d.room,disabled:busy,onChange:e=>send({action:'room',id:d.id,room:e.target.value})},v.rooms.map(r=>h('option',{key:r.id,value:r.id},r.label)))))))),
