@@ -264,3 +264,105 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
  .ac-fibre-test-ico,.journey .ac .ac-svc,.ac-promo,.ac-go,.journey[data-espace=client] .j-nav-button svg,.mm-overlay .mm-pay{transition:none}
  .mm-overlay .mm-success :is(.mm-check,h2,p,.mm-recap,.mm-pay,.mm-cancel,.mm-receipt),.mm-overlay .mm-success .mm-check::before,.mm-overlay .mm-success .mm-check::after{animation:none}
 }
+
+/* ============ Relief 2 : icônes Fibre Guardian + boutons vivants ============ */
+/* Icônes dessinées (icones.js) : fond doux de la couleur du bouton, trait, détail orange Moov. */
+.fgi{display:block;flex:none;overflow:visible}
+.fgi .fgi-f{fill-opacity:var(--ico-fill,.24)}
+.fgi .fgi-a{stroke:var(--ico-accent,var(--moov-accent))}
+.fgi .fgi-af{fill:var(--ico-accent,var(--moov-accent))}
+.fgi .fgi-w{fill:var(--ico-hole,var(--ds-white))}
+/* Sur les tuiles orange, le détail passe en bleu Moov pour rester visible. */
+.ac-svc--orange,.ac-promo-ico,.ch-wa-icon{--ico-accent:var(--moov-primary)}
+.ac-round{--ico-accent:var(--moov-accent-600)}
+
+/* ---- Tuiles Services : matière en relief, lumière en haut, on les enfonce au toucher ---- */
+.journey .ac .ac-svc{position:relative;isolation:isolate;
+ background:linear-gradient(180deg,var(--ds-surface) 0%,color-mix(in srgb,var(--ds-surface) 82%,var(--ds-canvas)) 100%);
+ box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 85%,transparent),inset 0 -2px 0 color-mix(in srgb,var(--moov-primary-900) 5%,transparent),var(--ds-shadow-1)}
+.journey .ac .ac-svc:active{box-shadow:inset 0 3px 8px color-mix(in srgb,var(--moov-primary-900) 12%,transparent),0 1px 2px color-mix(in srgb,var(--moov-primary-900) 6%,transparent)}
+.ac-svc-ico{position:relative;transition:transform var(--ds-t2) var(--ds-spring);
+ background:radial-gradient(120% 90% at 28% 12%,color-mix(in srgb,var(--ds-white) 75%,transparent) 0,transparent 55%),linear-gradient(150deg,var(--bg) 0%,var(--soft) 100%);
+ box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 90%,transparent),inset 0 -3px 6px color-mix(in srgb,var(--fg) 12%,transparent),0 8px 14px -9px color-mix(in srgb,var(--fg) 60%,transparent)}
+.journey .ac .ac-svc:hover .ac-svc-ico{transform:translateY(-2px) rotate(-3deg)}
+.journey .ac .ac-svc:active .ac-svc-ico{transform:translateY(1px) scale(.92)}
+.ac-svc-ico .fgi{transition:transform var(--ds-t2) var(--ds-spring)}
+.journey .ac .ac-svc:hover .ac-svc-ico .fgi{transform:scale(1.08)}
+/* Les tuiles arrivent l'une après l'autre. */
+.journey .ac .ac-svc-grid>.ac-svc{animation:ds-rise .5s var(--ds-ease) both}
+.journey .ac .ac-svc-grid>.ac-svc:nth-child(2){animation-delay:.04s}
+.journey .ac .ac-svc-grid>.ac-svc:nth-child(3){animation-delay:.08s}
+.journey .ac .ac-svc-grid>.ac-svc:nth-child(4){animation-delay:.12s}
+.journey .ac .ac-svc-grid>.ac-svc:nth-child(5){animation-delay:.16s}
+.journey .ac .ac-svc-grid>.ac-svc:nth-child(6){animation-delay:.2s}
+.journey .ac .ac-svc-grid>.ac-svc:nth-child(7){animation-delay:.24s}
+.journey .ac .ac-svc-grid>.ac-svc:nth-child(n+8){animation-delay:.28s}
+
+/* ---- « Tester ma connexion » : l'aiguille balaie le cadran à l'arrivée, recule quand on appuie ---- */
+.ac-fibre-test-ico{--ico-fill:.14;background:radial-gradient(110% 80% at 30% 10%,var(--ds-white) 0,transparent 60%),linear-gradient(160deg,var(--moov-surface),var(--moov-primary-50))}
+.ac-fibre-test .fgi-a,.ac-fibre-test .fgi-af{transform-box:view-box;transform-origin:12px 16.5px;animation:ds-needle 1.5s .35s var(--ds-spring) both;transition:transform var(--ds-t2) var(--ds-spring)}
+.ac-fibre-test:active .fgi-a{animation:none;transform:rotate(-70deg)}
+@keyframes ds-needle{0%{transform:rotate(-95deg)}55%{transform:rotate(18deg)}100%{transform:rotate(0)}}
+
+/* ---- Bannière forfait : la flèche monte en boucle douce ---- */
+.ac-promo-ico .fgi-a{animation:ds-climb 2.6s 1s var(--ds-ease) infinite}
+@keyframes ds-climb{0%,60%,100%{transform:none}30%{transform:translate(1.5px,-1.5px)}}
+
+/* ---- Boutons principaux : verre bombé (reflet en haut, ombre dessous) et reflet qui traverse ---- */
+.journey[data-espace=client] .j-main :is(.j-button.primary,.rf-submit,.ch-cta),.mm-overlay .mm-pay,.ac-go:not(.ghost):not(.soft){position:relative;isolation:isolate}
+.journey[data-espace=client] .j-main :is(.j-button.primary,.rf-submit,.ch-cta),.mm-overlay .mm-pay{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 38%,transparent),inset 0 -2px 0 color-mix(in srgb,var(--moov-primary-900) 22%,transparent),var(--ds-glow-brand)}
+.ac-go:not(.ghost):not(.soft){box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 38%,transparent),inset 0 -2px 0 color-mix(in srgb,var(--moov-neutral-900) 18%,transparent),0 12px 22px -12px color-mix(in srgb,var(--tone) 75%,transparent)}
+.journey[data-espace=client] .j-main :is(.j-button.primary,.rf-submit,.ch-cta)::before,.mm-overlay .mm-pay::before,.ac-go:not(.ghost):not(.soft)::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+ background:linear-gradient(180deg,color-mix(in srgb,var(--ds-white) 22%,transparent) 0,transparent 52%),linear-gradient(105deg,transparent 38%,color-mix(in srgb,var(--ds-white) 34%,transparent) 50%,transparent 62%) no-repeat;
+ background-size:100% 100%,260% 100%;background-position:0 0,130% 0;animation:ds-shine 1.1s .7s var(--ds-ease) both}
+.journey[data-espace=client] .j-main :is(.j-button.primary,.rf-submit,.ch-cta):hover::before,.mm-overlay .mm-pay:hover::before,.ac-go:not(.ghost):not(.soft):hover::before{animation:ds-shine .9s var(--ds-ease) both}
+.journey[data-espace=client] .j-main :is(.j-button.primary,.rf-submit,.ch-cta):active,.mm-overlay .mm-pay:active,.ac-go:not(.ghost):not(.soft):active{transform:translateY(1px) scale(.97);box-shadow:inset 0 2px 6px color-mix(in srgb,var(--moov-primary-900) 30%,transparent),0 4px 10px -6px color-mix(in srgb,var(--moov-primary-900) 50%,transparent)}
+@keyframes ds-shine{from{background-position:0 0,130% 0}to{background-position:0 0,-30% 0}}
+
+/* Boutons secondaires et lignes de Mon compte : petit relief et pastille d'icône bombée. */
+.journey[data-espace=client] .j-main .j-button:not(.primary){box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 70%,transparent),0 1px 2px color-mix(in srgb,var(--moov-primary-900) 8%,transparent),0 6px 14px -10px color-mix(in srgb,var(--moov-primary-900) 30%,transparent);transition:transform var(--ds-t2) var(--ds-spring)}
+.journey[data-espace=client] .j-main .j-button:not(.primary):active{transform:scale(.97)}
+.journey[data-espace=client] .ch-row-icon{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 80%,transparent),inset 0 -2px 4px color-mix(in srgb,var(--moov-primary-500) 12%,transparent),0 6px 10px -8px color-mix(in srgb,var(--moov-primary-500) 55%,transparent)}
+.journey[data-espace=client] .ch-row-icon{--ico-fill:.3}
+.journey[data-espace=client] .ch-row{transition:transform var(--ds-t2) var(--ds-spring),background-color var(--ds-t1)}
+.journey[data-espace=client] .ch-row:active{transform:scale(.985)}
+.journey[data-espace=client] .ch-row:active .ch-row-icon{transform:scale(.9)}
+.journey[data-espace=client] .ch-row-icon{transition:transform var(--ds-t2) var(--ds-spring)}
+
+/* ---- Onde de lumière au toucher, partie du doigt (posée par icones.js) ---- */
+@property --ds-rip{syntax:'<percentage>';inherits:false;initial-value:0%}
+.journey .ac .ac-svc::after,.journey[data-espace=client] .ch-row::after,.ac-promo::after{content:'';display:block;position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;opacity:0;
+ background:radial-gradient(circle at var(--rx,50%) var(--ry,50%),color-mix(in srgb,var(--ds-ripple,var(--moov-primary)) 22%,transparent) 0,transparent var(--ds-rip))}
+.ac-promo::after{--ds-ripple:var(--ds-white);top:0;right:0;width:auto;height:auto;z-index:2;background:radial-gradient(circle at var(--rx,50%) var(--ry,50%),color-mix(in srgb,var(--ds-white) 40%,transparent) 0,transparent var(--ds-rip))}
+.journey[data-espace=client] .ch-row{position:relative}
+.is-tap::after{animation:ds-ripple .6s var(--ds-ease)}
+@keyframes ds-ripple{0%{--ds-rip:0%;opacity:1}100%{--ds-rip:150%;opacity:0}}
+
+/* ---- Barre du bas : l'icône choisie rebondit, Guardian respire doucement ---- */
+@media(max-width:760px){
+ .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button{--ico-accent:currentColor;--ico-fill:.12}
+ .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button.active{--ico-accent:var(--moov-accent);--ico-fill:.22}
+ .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button.active:not(:nth-of-type(3)) svg{animation:ds-tab .5s var(--ds-spring)}
+ .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button:nth-of-type(3){--ico-accent:var(--moov-accent-200);--ico-fill:.28}
+ .journey[data-espace=client] .j-navigation:not([data-open=true]) .j-nav-button:nth-of-type(3) svg{background:radial-gradient(80% 60% at 35% 15%,color-mix(in srgb,var(--ds-white) 30%,transparent) 0,transparent 60%),var(--ds-grad-brand);animation:ds-breathe 3.6s 1.2s ease-in-out infinite}
+}
+@keyframes ds-tab{0%{transform:scale(.8)}55%{transform:scale(1.14) translateY(-2px)}100%{transform:none}}
+@keyframes ds-breathe{0%,100%{box-shadow:0 0 0 5px var(--ds-surface),0 0 0 5px color-mix(in srgb,var(--moov-primary-300) 45%,transparent),var(--ds-glow-brand)}50%{box-shadow:0 0 0 5px var(--ds-surface),0 0 0 11px color-mix(in srgb,var(--moov-primary-300) 0%,transparent),var(--ds-glow-brand)}}
+
+/* Mode sombre : les reflets blancs se font discrets. */
+:root[data-mode=dark] .journey[data-espace=client] .ac .ac-svc{background:var(--ds-surface);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 8%,transparent),var(--ds-shadow-1)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc-ico{background:linear-gradient(150deg,var(--bg) 0%,var(--soft) 100%);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 12%,transparent),0 8px 14px -9px color-mix(in srgb,var(--moov-primary-900) 60%,transparent)}
+:root[data-mode=dark] .journey[data-espace=client] :is(.ch-row-icon,.j-main .j-button:not(.primary)){box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 10%,transparent)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-fibre-test-ico{background:var(--moov-surface)}
+/* Mode sombre : traits d'icône éclaircis pour rester lisibles sur les pastilles foncées. */
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc{--fg:var(--moov-primary-300)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc--green{--fg:var(--moov-success-300)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc--red{--fg:var(--moov-danger-300)}
+:root[data-mode=dark] .journey[data-espace=client] .ac-svc--orange{--fg:var(--moov-accent-500)}
+
+@media(prefers-reduced-motion:reduce){
+ .journey .ac .ac-svc-grid>.ac-svc,.ac-fibre-test .fgi-a,.ac-fibre-test .fgi-af,.ac-promo-ico .fgi-a,.is-tap::after,
+ .journey[data-espace=client] .j-main :is(.j-button.primary,.rf-submit,.ch-cta)::before,.mm-overlay .mm-pay::before,.ac-go:not(.ghost):not(.soft)::before,
+ .journey[data-espace=client] .j-navigation .j-nav-button svg{animation:none!important}
+ .ac-svc-ico,.ac-svc-ico .fgi,.journey[data-espace=client] .ch-row,.journey[data-espace=client] .ch-row-icon{transition:none}
+}

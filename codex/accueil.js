@@ -23,6 +23,8 @@
   list:'M4 7h10M4 12h16M4 17h7M18 5v4M16 7h4'
  };
  function Icon({d,size=24,stroke=2}){return h('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:stroke,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,focusable:false},h('path',{d}));}
+ // Icônes dessinées pour Fibre Guardian (icones.js) ; repli sur le trait simple si elles manquent.
+ function Ico({name,d,size=24,stroke}){return window.FGIcones&&FGIcones.has(name)?h(FGIcones.Icon,{name,size}):h(Icon,{d:d||S[name]||P[name],size,stroke});}
  const first=n=>String(n||'').trim().split(/\s+/)[0]||'';
 
  // Ce que dit le voyant. Une seule réponse, la plus importante d'abord.
@@ -80,17 +82,17 @@
   // En mode « Modifier », toucher une tuile l'épingle ou la retire (étoile) au lieu d'ouvrir le service.
   const tile=(icon,label,onClick,{tone='blue',badge,aria,disabled}={})=>{const pinned=live.includes(label),full=!pinned&&live.length>=4;
    return h('button',{type:'button',key:label,'data-id':label,className:'ac-svc ac-svc--'+tone+(edit?' is-edit':'')+(edit&&pinned?' is-fav':'')+(edit&&full?' is-full':''),onClick:edit?()=>{if(!full)toggle(label);}:onClick,disabled:edit?undefined:disabled,'aria-disabled':edit&&full?true:undefined,'aria-pressed':edit?pinned:undefined,'aria-label':edit?label:aria||label},
-    h('span',{className:'ac-svc-ico','aria-hidden':true},h(Icon,{d:icon,size:24}),badge&&!edit?h('b',{className:'ac-svc-badge'},badge):null,edit&&h('i',{className:'ac-svc-star','aria-hidden':true},h(Icon,{d:S.star,size:13,stroke:2.2}))),h('span',{className:'ac-svc-txt'},label));};
+    h('span',{className:'ac-svc-ico','aria-hidden':true},h(Ico,{name:icon,size:28}),badge&&!edit?h('b',{className:'ac-svc-badge'},badge):null,edit&&h('i',{className:'ac-svc-star','aria-hidden':true},h(Icon,{d:S.star,size:13,stroke:2.2}))),h('span',{className:'ac-svc-txt'},label));};
   const main=[
-   tile(S.gauge,'Tester ma connexion',on.test,{disabled:busy||!on.test||s.tone==='wait'}),
-   tile(S.chat,'Guardian',on.voice,{tone:'orange',aria:'Parler à Guardian'}),
-   tile(S.devices,'Appareils connectés',on.devices,{tone:'green',badge:extra||null,aria:'Appareils connectés'+(extra?' : '+extra+' inconnu'+(extra>1?'s':''):'')}),
-   tile(S.map,'Voir le réseau',go('ville'),{tone:'sky'}),
-   tile(S.up,'Changer de forfait',go('forfait'),{tone:'orange'}),
-   tile(S.alert,'Signaler une panne',on.report,{tone:'red'}),
-   order?tile(S.folder,'Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}):tile(S.user,'Mon compte',go('compte'),{tone:'blue'}),
-   tile(S.sms,'Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'})];
-  const extraTiles=[tile(S.gift,'Mes avantages',go('fidelite'),{tone:'orange'}),tile(S.shield,'Mes données',go('donnees'),{tone:'green'}),order&&tile(S.user,'Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
+   tile('gauge','Tester ma connexion',on.test,{disabled:busy||!on.test||s.tone==='wait'}),
+   tile('chat','Guardian',on.voice,{tone:'orange',aria:'Parler à Guardian'}),
+   tile('devices','Appareils connectés',on.devices,{tone:'green',badge:extra||null,aria:'Appareils connectés'+(extra?' : '+extra+' inconnu'+(extra>1?'s':''):'')}),
+   tile('map','Voir le réseau',go('ville'),{tone:'sky'}),
+   tile('up','Changer de forfait',go('forfait'),{tone:'orange'}),
+   tile('alert','Signaler une panne',on.report,{tone:'red'}),
+   order?tile('folder','Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}):tile('user','Mon compte',go('compte'),{tone:'blue'}),
+   tile('sms','Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'})];
+  const extraTiles=[tile('gift','Mes avantages',go('fidelite'),{tone:'orange'}),tile('shield','Mes données',go('donnees'),{tone:'green'}),order&&tile('user','Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
   // Les favoris passent devant ; la grille garde 8 tuiles, le reste va dans « Voir tout ».
   // « Signaler une panne » et « Sans internet » restent toujours dans les 8 tuiles visibles : ce sont celles d'une coupure.
   const pool=main.concat(extraTiles),pins=live.map(id=>pool.find(t=>t.key===id)).filter(Boolean),ordered=pins.concat(pool.filter(t=>!live.includes(t.key)));
@@ -104,7 +106,7 @@
    h('header',{className:'ac-hello'},
     h('div',{className:'ac-hi'},h('small',null,'Bienvenue,'),h('strong',null,first(user.name)||user.name)),
     h('div',{className:'ac-top-actions'},demo,
-     h('button',{type:'button',className:'ac-round',onClick:on.bell,'aria-label':'Mes messages'+(bell?' : '+bell+' à lire':'')},h(Icon,{d:P.bell,size:22}),bell>0&&h('i',{className:'ac-round-dot','aria-hidden':true})),
+     h('button',{type:'button',className:'ac-round',onClick:on.bell,'aria-label':'Mes messages'+(bell?' : '+bell+' à lire':'')},h(Ico,{name:'bell',d:P.bell,size:22}),bell>0&&h('i',{className:'ac-round-dot','aria-hidden':true})),
      h('button',{type:'button',className:'ac-face',onClick:go('compte'),'aria-label':'Mon compte'},window.FGAvatar?h(FGAvatar.Face,{name:user.name,size:44,role:'client'}):first(user.name).slice(0,1)))),
    h('section',{className:'ac-fibre ac-'+s.tone,'aria-label':'Ma fibre'},
     h('div',{className:'ac-fibre-main'},
@@ -113,7 +115,7 @@
      h('p',{className:'ac-fibre-state',role:'status','aria-live':'polite'},s.title),
      on.go&&h('button',{type:'button',className:'ac-fibre-link',onClick:go('compte'),'aria-label':'Mon compte'+(price?' : '+price.toLocaleString('fr-FR')+' F par mois':'')},price?price.toLocaleString('fr-FR')+' F par mois':'Mon compte',h(Icon,{d:S.chevron,size:16}))),
     h('button',{type:'button',className:'ac-fibre-test',onClick:on.test,disabled:busy||!on.test||s.tone==='wait'},
-     h('span',{className:'ac-fibre-test-ico','aria-hidden':true},h(Icon,{d:S.gauge,size:34,stroke:1.8})),
+     h('span',{className:'ac-fibre-test-ico','aria-hidden':true},h(Ico,{name:'gauge',size:44,stroke:1.8})),
      h('span',null,'Tester ma connexion'))),
    a.tone!=='ok'&&h('section',{className:'ac-alert ac-'+a.tone},
     h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:a.icon,size:26,stroke:2.3})),
@@ -132,7 +134,7 @@
     h('div',{className:'ac-svc-grid',id:'ac-svc-grid'},grid,all&&more)),
    promo&&h('button',{type:'button',className:'ac-promo',onClick:go('forfait')},
     h('span',{className:'ac-promo-txt'},h('small',null,'Jeux, films, télétravail'),h('strong',null,'Plus de débit ? Passez au forfait supérieur'),h('span',null,'Vous payez juste la différence. Voir les forfaits')),
-    h('span',{className:'ac-promo-ico','aria-hidden':true},h(Icon,{d:S.up,size:30,stroke:2.2}))),
+    h('span',{className:'ac-promo-ico','aria-hidden':true},h(Ico,{name:'up',size:30,stroke:2.2}))),
    h('section',{className:'ac-recent','aria-labelledby':'ac-recent-title'},
     h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-more',onClick:on.bell},'Tout voir',h(Icon,{d:S.chevron,size:16}))),
     recent.length?h('ul',null,recent.filter((n,i,all)=>all.findIndex(x=>x.title===n.title&&x.body===n.body)===i).slice(0,3).map(n=>{const k=kind(n);return h('li',{key:n.key||n.id||n.at},h('button',{type:'button',onClick:on.bell},
