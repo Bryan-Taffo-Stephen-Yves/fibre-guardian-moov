@@ -56,7 +56,8 @@ function seed(){return {version:0,mode:'simulation',created:Date.now(),scenario:
  homes:[{id:'home-1',name:'Mon foyer',segment:'YOP-07'},{id:'home-2',name:'Foyer Awa',segment:'YOP-07'},{id:'home-3',name:'Foyer Koné',segment:'YOP-07'},{id:'home-4',name:'Foyer Hady',segment:'YOP-07'},{id:'home-5',name:'Foyer témoin',segment:'YOP-08'}],
  incidents:[],notifications:[],audit:[],messages:[],proposal:null,technicians:TECHS};}
 function get(s,uid){const row=s.get('SELECT body FROM journey_state WHERE user_id=?',uid);return row?JSON.parse(row.body):null;}
-function put(s,uid,state){s.run('INSERT INTO journey_state VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET body=excluded.body',uid,JSON.stringify(state));}
+// Juste avant l'enregistrement : les nouveaux « Mes messages » partent aussi sur le téléphone, application fermée (push.cjs).
+function put(s,uid,state){try{require('./push.cjs').fromJourney(s,uid,state);}catch{}s.run('INSERT INTO journey_state VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET body=excluded.body',uid,JSON.stringify(state));}
 function audit(st,action,detail){st.audit.unshift({id:id(),at:Date.now(),action,detail});st.audit=st.audit.slice(0,100);}
 function notify(st,incident,title){for(const home of st.homes.filter(h=>h.segment===incident.segment)){const key=incident.id+':'+incident.status+':'+home.id;if(!st.notifications.some(n=>n.key===key))st.notifications.unshift({key,home:home.id,at:Date.now(),title,body:'Incident '+incident.reference+' · '+incident.zone,read:false});}st.notifications=st.notifications.slice(0,100);}
 function active(st){return st.incidents.find(i=>i.segment===st.segment&&i.status!=='resolved'&&i.status!=='false_alarm');}
