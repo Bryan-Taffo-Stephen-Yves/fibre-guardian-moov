@@ -144,6 +144,8 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
    at(5*HOUR-k*25*MIN);const {user}=await store.register({email:r.email,name:r.name,password:crypto.randomBytes(18).toString('base64url')});
    J.put(store,user.id,J.seed());noc.join(store,user.id,{segment:'YOP-07',consent:true});noc.feedback(store,user.id,{id:night.id,rating:r.rating,comment:r.comment});
   }
+  // Suivi de satisfaction : 7 semaines d'avis passés par quartier, pour que la courbe du Superviseur ait un sens (avis.cjs).
+  require('./avis.cjs').history(store,start);
 
   // --- Dossiers clients partagés avec le support
   at(2*HOUR+40*MIN);await relogin();
