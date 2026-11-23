@@ -227,6 +227,7 @@ function createGuardianServer(options={}){
      insist(d.confirm===true,'Confirmez la remise à zéro.');const r=await jury.reset(store,user.id,{log:m=>console.log(m),credentialsFile:demoCredentials()}),s=store.session(r.user);cookie(res,s.secret,8*3600);
      return json(res,{...jury.status(store,r.user.id,origin),whatsapp:waState(),user:{...r.user,csrf:s.csrf,role:workspace.sessionRole(store,r.user.id)}});}
     if(route==='/api/guardian/chat'&&method==='POST')return json(res,require('./guardian-copilot.cjs').reply(store,user,await body(req,4096)));
+    if(route==='/api/noc/rdv'&&method==='POST')return json(res,noc.rdv(store,user.id,await body(req,4096)));
     if(route==='/api/noc/feedback'&&method==='POST'){const r=noc.feedback(store,user.id,await body(req,4096));AV.sync(store);return json(res,r);}
     if(route==='/api/noc/overview'&&method==='GET')return json(res,{...noc.overview(store,user.id),whatsapp:WA.status(store,whatsapp.cfg)});
     if(route==='/api/noc/labo'&&method==='GET')return json(res,require('./labo.cjs').snapshot(store,user.id,{segment:url.searchParams.get('segment'),otdr:url.searchParams.get('otdr')==='1',nm:url.searchParams.get('nm')}));
