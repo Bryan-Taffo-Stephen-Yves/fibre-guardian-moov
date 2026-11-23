@@ -16,7 +16,7 @@
  // Fiche du technicien : grand portrait, ce qu'il fait, et comment le faire venir (Moov envoie le plus proche).
  function Sheet({t,onClose,onReport,onGuardian}){
   const close=R(null);
-  E(()=>{const prev=document.activeElement;close.current?.focus();const k=e=>{if(e.key==='Escape')onClose();};document.addEventListener('keydown',k);return()=>{document.removeEventListener('keydown',k);try{prev&&prev.focus();}catch{}};},[]);
+  E(()=>{const prev=document.activeElement;close.current?.focus();const k=e=>{if(e.key==='Escape')return onClose();if(e.key!=='Tab')return;const box=document.querySelector('.tq-sheet');if(!box)return;const f=[...box.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])')].filter(x=>!x.disabled);if(!f.length)return;const a=f[0],z=f[f.length-1];if(!box.contains(document.activeElement)){e.preventDefault();a.focus();}else if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus();}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus();}};document.addEventListener('keydown',k);return()=>{document.removeEventListener('keydown',k);try{prev&&prev.focus();}catch{}};},[]);
   const go=fn=>()=>{onClose();fn&&fn();};
   const layer=h('div',{className:'tq-backdrop',onClick:e=>{if(e.target===e.currentTarget)onClose();}},
    h('section',{className:'tq-sheet',role:'dialog','aria-modal':true,'aria-labelledby':'tq-sheet-name'},
@@ -52,7 +52,7 @@
   const here=t=>zone&&String(zone).toLowerCase().includes(String(t.zone).toLowerCase())?1:0;
   const list=team.slice().sort((a,b)=>here(b)-here(a)||b.rating-a.rating).slice(0,5),cur=open&&team.find(t=>t.id===open);
   return h('section',{className:'tq','aria-labelledby':'tq-title'},
-   h('div',{className:'tq-head'},h('h2',{id:'tq-title'},'Vos techniciens près de chez vous'),h('p',null,'Les équipes Moov de votre commune')),
+   h('div',{className:'tq-head'},h('h2',{id:'tq-title'},'Vos techniciens près de chez vous'),h('p',null,'Les équipes Moov d’Abidjan, en commençant par votre commune')),
    h('div',{className:'tq-row'},list.map(t=>h('button',{type:'button',key:t.id,className:'tq-card',onClick:()=>setOpen(t.id),'aria-label':t.name+', équipe '+t.team+', note '+note(t.rating)+' sur 5, '+(t.busy?'en mission':'disponible')},
     h('span',{className:'tq-face'},Face({name:t.name,size:64}),h('i',{className:'tq-dot '+(t.busy?'busy':'free'),'aria-hidden':true})),
     h('b',null,t.name),

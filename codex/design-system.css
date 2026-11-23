@@ -435,8 +435,6 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
  .tq-row{grid-auto-columns:minmax(200px,1fr);margin:0;padding:4px 2px 16px}
  .tq-backdrop{align-items:center;justify-items:center;padding:24px}
  .tq-sheet{width:min(460px,100%);border-radius:28px}
- .tq-actions{grid-template-columns:1fr 1fr}
- .tq-actions .tq-btn.primary{order:2}
 }
 :root[data-mode=dark] .journey[data-espace=client] .tq-card{background:var(--ds-surface);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 8%,transparent),var(--ds-shadow-1)}
 :root[data-mode=dark] .tq-stats strong{color:var(--moov-ink)}
@@ -480,4 +478,9 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
  .journey[data-espace=client] .j-main .fl-pay::before{animation:none}
  .journey[data-espace=client] .j-main :is(.fp-btn,.pv-use,.pv-plan,.fl-btn,.ch-chip,.vl-row,.ch-logout,.gv-toggle,.ch-pay-more,.fl-pay),.journey[data-espace=client] :is(.sv-key,.sv-call){transition:none}
 }
-:root[data-mode=dark] .journey[data-espace=client] .j-main .fl-pay{color:var(--moov-on-primary)}
+:root[data-mode=dark] .journey[data-espace=client] .j-main .fl-pay{color:var(--ds-white)}
+/* Mode sombre : les illustrations (techniciens, clients) gardent leurs vraies couleurs, pas les gris inversés. */
+:root[data-mode=dark] .journey :is(.fg-avatar,.fg-sticker){--moov-white:var(--ds-white);--moov-neutral-900:var(--moov-black);--moov-neutral-400:color-mix(in srgb,var(--ds-white) 60%,var(--moov-black));
+ --moov-primary:var(--moov-primary-500);--moov-primary-700:color-mix(in srgb,var(--moov-primary-500) 78%,var(--moov-black));--moov-primary-800:color-mix(in srgb,var(--moov-primary-500) 62%,var(--moov-black));--moov-primary-900:var(--ds-deep);
+ --moov-primary-200:color-mix(in srgb,var(--moov-primary-300) 55%,var(--ds-white))}
+.tq-sheet{overscroll-behavior:contain}
