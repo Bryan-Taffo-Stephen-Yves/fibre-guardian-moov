@@ -1,0 +1,14 @@
+/* « Alertes sur ce téléphone » (push-view.js) : Mon compte du client, Mes missions du technicien. */
+.fp-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:8px 12px;min-height:60px}
+.fp-text{min-width:0}
+.fp-text b{display:block;font-size:15.5px;font-weight:600;color:var(--moov-ink)}
+.fp-text small{display:block;margin-top:2px;font-size:13.5px;line-height:1.4;color:var(--moov-neutral-500)}
+.fp-icon{display:inline-grid;place-items:center;color:var(--moov-primary)}
+.fp-on .fp-icon{color:var(--moov-success-500)}
+.fp-denied .fp-icon,.fp-absent .fp-icon{color:var(--moov-neutral-400)}
+.fp-install .fp-row,.fp-denied .fp-row,.fp-absent .fp-row{grid-template-columns:auto 1fr}
+.fp-row>button{white-space:nowrap}
+.fp-error{margin:0 12px 10px;font-size:13.5px;color:var(--moov-danger-500)}
+.tv-card.fp-card .fp-row{padding:0}
+.tv-card.fp-card .fp-icon{width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--moov-primary) 10%,transparent)}
+@media (max-width:360px){.fp-row{grid-template-columns:auto 1fr}.fp-row>button{grid-column:1/-1;justify-self:start}}

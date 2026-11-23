@@ -209,6 +209,8 @@
    // « Mes données » : voir, télécharger ou effacer ce que l'application garde (loi n°2013-450).
    window.FGDonnees&&h(FGDonnees.Entry,{onOpen:()=>go('donnees')}),
    h(Apparence),
+   // Alertes même application fermée (push-view.js).
+   api&&window.FGPush&&h(FGPush.Card,{api}),
    h('section',{className:'ch-group'},h('h2',null,'Aide'),
     row('info','À propos de la démo','Comment fonctionne cette démonstration',onAbout),
     // Contre les arnaques au code secret : la règle à retenir, sans écran de plus.
