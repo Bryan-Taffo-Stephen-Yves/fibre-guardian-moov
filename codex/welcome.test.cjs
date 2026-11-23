@@ -67,3 +67,19 @@ test('Un client sans compte Moov reçoit 403 sur la liste des installations',asy
   assert.equal(r.order.step,'dossier');
  }finally{srv.close();}
 });
+
+test('Client déjà inscrit avec son numéro : le forfait commandé remplace celui par défaut, et chaque étape arrive dans ses messages',async()=>{
+ const {s,awa,nadia}=await fixture();
+ journey.put(s,awa,journey.seed());assert.equal(journey.get(s,awa).plan.mbps,100,'espace créé à l’inscription, forfait par défaut');
+ let r=W.act(s,awa,{action:'order',plan:'demo-50',commune:'Yopougon',quartier:'Niangon sud'},now);
+ W.act(s,awa,{action:'photos',idPhoto:PNG,homePhoto:PNG},now);
+ W.operate(s,nadia,{id:r.order.id,action:'validate'},now+1000);
+ const titles=()=>journey.get(s,awa).notifications.map(n=>n.title);
+ assert.ok(titles().includes('Dossier validé'));
+ assert.equal(journey.get(s,awa).notifications.find(n=>n.title==='Dossier validé').page,'bienvenue','le message ouvre le dossier');
+ r=W.state(s,awa,now+2000);W.act(s,awa,{action:'slot',at:r.order.slots[0]},now+2000);
+ W.operate(s,nadia,{id:r.order.id,action:'depart'},now+3000);W.operate(s,nadia,{id:r.order.id,action:'done'},now+4000);
+ assert.ok(titles().includes('Votre technicien arrive'));assert.ok(titles().includes('Votre fibre est installée'));
+ let st=W.activate(s,awa);assert.equal(st.plan.mbps,50);assert.equal(st.capacity,50);
+ const n=st.notifications.length;st=W.activate(s,awa);assert.equal(st.notifications.length,n,'ouvrir deux fois ne répète pas le message de bienvenue');
+});
