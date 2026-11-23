@@ -34,6 +34,8 @@ function createGuardianServer(options={}){
  const PU=require('./push.cjs'),pushLoop=PU.start(store,{env:options.env||process.env,fetchImpl:options.pushFetch,hosts:options.pushHosts,onError:e=>options.onError?.(e)});
  // Prises vers le vrai réseau Moov : chacune reste fermée tant que sa clé n'est pas réglée (BRANCHEMENTS.md).
  const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
+ // Mesures de la box de chaque client, lues sur l'ACS de Moov si GUARDIAN_BOX_URL et GUARDIAN_BOX_CLE sont réglées (mesures-box.cjs).
+ const MB=require('./mesures-box.cjs');
  // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
  const WB=require('./whatsapp-bot.cjs'),bot=WB.config(options.env||process.env);WB.migrate(store);
  // Le client relie lui-même son WhatsApp à son compte (« Mon compte ») : un code envoyé depuis son téléphone, mêmes places que le jury.
@@ -100,6 +102,8 @@ function createGuardianServer(options={}){
      if(d.type==='chat'&&typeof d.text==='string'){const local=langues.detect(d.text);if(local.lang!=='fr'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});d.meaning=ai&&ai.lang!=='fr'?ai:local;}
       // Français familier que les règles ne reconnaissent pas (« la box fait n'importe quoi », « YouTube refuse de s'ouvrir ») : Claude en donne le sens, qui guide la réponse.
       else if(journey.intent(d.text)==='inconnu'){const ai=await guardianAi.understand(d.text,{store,uid:user.id,log});if(ai&&journey.intent(ai.french)!=='inconnu')d.meaning=ai.lang==='fr'?{lang:'fr',french:ai.french}:ai;}}
+     // Vraie box branchée (mesures-box.cjs) : on la relit avant de répondre, sinon le simulateur répond.
+     await MB.rafraichir(store,branchements.box,user.id);
      const state=journey.act(store,user.id,d);
      // Fibre+ : un passage à 300 Mb/s ou plus active tout de suite le contenu inclus (le client est prévenu).
      if(d.type==='upgrade-pay')FP.sync(store,user.id);
@@ -286,7 +290,7 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/join'&&method==='POST')return json(res,noc.join(store,user.id,await body(req,4096)));
     // Le réseau d'où vient cet appareil (Wi-Fi de la box Moov ou données mobiles), pour le prévenir sur l'accueil. Rien n'est gardé.
     if(route==='/api/journey/network'&&method==='GET'){store.rate('net:'+user.id,120,600000);const n=await VT.network(ip(req));return json(res,{place:n.place||null,operator:n.operator||null});}
-    if(route==='/api/journey/state'&&method==='GET'){PU.seen(user.id);const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
+    if(route==='/api/journey/state'&&method==='GET'){PU.seen(user.id);await MB.rafraichir(store,branchements.box,user.id);const state=journey.get(store,user.id);return json(res,{state:state?journey.snapshotFor(store,user.id,state):null});}
     if(route==='/api/journey/usage'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration pour observer les appareils.',409);const current=journey.snapshotFor(store,user.id,state);return json(res,require('./journey-usage.cjs').read(store,user.id,url.searchParams.get('window')||'24h',current));}
     // Conseiller conso (forfait-bilan.cjs) : l'appareil qui prend le plus de données et le forfait qui va à la maison.
     if(route==='/api/journey/conso'&&method==='GET'){const state=journey.get(store,user.id);insist(state,'Démarrez votre démonstration.',409);return json(res,require('./forfait-bilan.cjs').conso(store,user.id,journey.snapshotFor(store,user.id,state),journey.PLANS,{pc:VT.pcDevices(store,user.id)}));}
@@ -304,7 +308,7 @@ function createGuardianServer(options={}){
      const image=typeof d.image==='string'&&d.image.length<=850000?d.image:null,log=message=>options.onError?options.onError(new Error(message)):console.warn(message);
      const leds=image?await guardianAi.readLeds(image,{store,uid:user.id,log}):null,reading=leds?{source:'claude',...leds}:boxReading.localReading(d.local);
      insist(reading,'Je n’ai pas pu lire cette photo. Reprenez-la de face, voyants visibles, à environ 30 cm de la box.',422);
-     return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
+     await MB.rafraichir(store,branchements.box,user.id);return json(res,{state:journey.boxPhoto(store,user.id,d,reading)});}
     // Surveillance du Wi-Fi, depuis l'écran Appareils : chacun ne voit et ne règle que la sienne.
     // « Mes données » : voir, télécharger, choisir, effacer. Seulement son propre compte, jamais celui d'un autre.
     // Journal « qui a regardé quoi » : superviseur et direction seulement (vérifié dans donnees.cjs).
