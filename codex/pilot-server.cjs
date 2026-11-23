@@ -30,6 +30,8 @@ function createGuardianServer(options={}){
  const WA=require('./whatsapp.cjs'),whatsapp=WA.start(store,{env:options.env||process.env,onError:e=>options.onError?.(e)});
  // Réglages des alertes, lus aussi par whatsapp-compte.cjs (places WhatsApp partagées, numéros de l'hébergeur).
  store.whatsappAlerts=whatsapp.cfg;
+ // Alertes sur le téléphone, application fermée (Web Push) : clé VAPID_PRIVATE_KEY chez l'hébergeur, jamais dans git.
+ const PU=require('./push.cjs');PU.start(store,{env:options.env||process.env,fetchImpl:options.pushFetch,hosts:options.pushHosts,onError:e=>options.onError?.(e)});
  // Prises vers le vrai réseau Moov : chacune reste fermée tant que sa clé n'est pas réglée (BRANCHEMENTS.md).
  const B=require('./branchements.cjs'),branchements=B.config(options.env||process.env);B.migrate(store);
  // Guardian sur WhatsApp (Green API) : fermé tant que GREENAPI_ID_INSTANCE, GREENAPI_API_TOKEN et GREENAPI_WEBHOOK_TOKEN ne sont pas réglés.
@@ -309,6 +311,11 @@ function createGuardianServer(options={}){
     if(route==='/api/donnees'&&method==='POST')return json(res,DP.choose(store,user.id,await body(req,512)));
     if(route==='/api/donnees/export'&&method==='GET'){store.rate('dp-export:'+user.id,10,600000);const file=JSON.stringify(DP.exportData(store,user.id),null,2);res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="mes-donnees-fibre-guardian.json"'});res.end(file);return;}
     if(route==='/api/donnees'&&method==='DELETE'){store.rate('dp-erase:'+user.id,5,600000);const r=DP.erase(store,user.id,await body(req,512));cookie(res,'',0);return json(res,r);}
+    // Alertes sur ce téléphone (push.cjs) : chacun n'abonne et ne désabonne que ses propres téléphones.
+    if(route==='/api/push'&&method==='GET')return json(res,PU.view(store,user.id));
+    if(route==='/api/push'&&method==='POST'){store.rate('push:'+user.id,30,600000);return json(res,PU.subscribe(store,user.id,await body(req,4096)));}
+    if(route==='/api/push'&&method==='DELETE')return json(res,PU.unsubscribe(store,user.id,await body(req,4096)));
+    if(route==='/api/push/essai'&&method==='POST'){store.rate('push-essai:'+user.id,6,600000);return json(res,{sent:await PU.toUser(store,user.id,{title:'Alertes activées',body:'Guardian vous préviendra ici, même quand l’application est fermée.',tag:'fg-essai',url:'./'})});}
     if(route==='/api/veille'&&method==='GET')return json(res,{...VW.view(store,user.id),pc:VT.pcLive(store,user.id),pcDevices:VT.pcDevices(store,user.id)});
     if(route==='/api/veille'&&method==='POST'){const d=await body(req,512);return json(res,{...(typeof d.mine==='string'?VW.mine(store,user.id,d.mine):VW.toggle(store,user.id,d.on)),pc:VT.pcLive(store,user.id),pcDevices:VT.pcDevices(store,user.id)});}
     if(route==='/api/test/link'&&method==='POST'){store.rate('vt-link:'+user.id,10,600000);return json(res,VT.link(store,user.id,{origin}));}

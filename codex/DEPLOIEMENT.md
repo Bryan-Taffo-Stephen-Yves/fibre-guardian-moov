@@ -47,6 +47,7 @@ Dans l'onglet **Variables** de l'application, ajoutez une ligne par réglage (bo
 | `GUARDIAN_DEMO_CLIENT_PASSWORD` | le mot de passe d'Awa Koné, si vous ne voulez pas celui du README | non |
 | `GUARDIAN_DEMO_TECH_PASSWORD` | le mot de passe d'Ibrahim Traoré, si vous ne voulez pas celui du README | non |
 | `ANTHROPIC_API_KEY` | votre clé API Anthropic (elle commence par `sk-ant-`) : Guardian rédige alors ses réponses avec Claude | non, mais conseillé |
+| `VAPID_PRIVATE_KEY` | n'importe quel long texte secret (sur Render : bouton **Generate**) ou une vraie clé VAPID : les alertes arrivent sur le téléphone même application fermée | non, mais conseillé (sans elle, chaque téléphone se réabonne tout seul à la réouverture de l'application après un redémarrage) |
 
 Les autres réglages sont déjà dans l'image : `GUARDIAN_PROXY=1` (Railway s'occupe du HTTPS), le port, et le dossier `/data`.
 
@@ -269,3 +270,12 @@ L'image `codex/Dockerfile` fonctionne chez tout hébergeur qui accepte Docker et
 | `GUARDIAN_TLS_KEY`, `GUARDIAN_TLS_CERT` | HTTPS géré par l'application elle-même (sans proxy) | aucun |
 
 Essai local avec les réglages de l'image, sans Docker (macOS ou Linux) : `PORT=3000 GUARDIAN_DATA_DIR=/tmp/guardian node codex/serveur-local.cjs`, puis ouvrez http://127.0.0.1:3000/.
+
+## Alertes sur le téléphone, application fermée
+
+1. Sur Render, onglet **Environment**, **Add Environment Variable** : nom `VAPID_PRIVATE_KEY`, puis le bouton **Generate** pour la valeur. Enregistrez (Render redéploie).
+2. Sur Android (Chrome) ou sur ordinateur : ouvrez l'application, **Mon compte** › **Alertes sur ce téléphone** › **Activer**, puis **Autoriser**.
+3. Sur iPhone (iOS 16.4 ou plus récent) : Safari ne le permet qu'à l'application posée sur l'écran d'accueil. Dans Safari, touchez **Partager**, puis **Sur l'écran d'accueil**. Ouvrez Fibre Guardian depuis cette icône, connectez-vous, puis **Mon compte** › **Activer**.
+4. Le téléphone reçoit tout de suite « Alertes activées ». Ensuite : pannes du quartier, technicien en route, « Mes messages » (client) ; missions (technicien) ; plans à valider (équipe Moov). Un téléphone appartient au dernier compte connecté dessus.
+
+Le texte est chiffré pour le seul téléphone (Apple, Google ou Mozilla ne le lisent pas) et le serveur n'écrit qu'à leurs services de notification. Un redémarrage de Render oublie les téléphones inscrits : chacun se réinscrit tout seul à la prochaine ouverture de l'application.

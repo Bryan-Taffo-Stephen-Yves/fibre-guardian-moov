@@ -37,6 +37,8 @@
   files.splice(files.indexOf('superviseur-view.js'), 0, 'avis-view.js');
   // « Mes données » (donnees-view.js) : page reliée à « Mon compte ».
   files.splice(files.indexOf('app.js'), 0, 'donnees-view.js');
+  // « Alertes sur ce téléphone » (push-view.js) : Mon compte du client et Mes missions du technicien.
+  files.splice(files.indexOf('app.js'), 0, 'push-view.js');
   next();
   // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

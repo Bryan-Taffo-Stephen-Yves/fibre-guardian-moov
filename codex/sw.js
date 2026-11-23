@@ -2,8 +2,8 @@
    Les pages et fichiers passent d'abord par le réseau (jamais de version périmée en ligne),
    le cache ne sert qu'en secours. Les données (/api/) ne sont jamais mises en cache. */
 'use strict';
-const CACHE = 'fibre-guardian-v40';
-const SHELL = ['./', './index.html', './offline.html', './bootstrap.js', './apparence.js', './icones.js', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png', '../vendor/fonts.css', './moov-theme.css', './moov-brand.css', './fonts.css', './refonte.css', './guardian-chat.css', './live-trip.css', './landing.css','./client-home.css','./tech-view.css','./avatars.css', './plan-view.css', './survie.css', './essentiel.css', './accueil.css', './ecrans-client.css', './design-system.css'];
+const CACHE = 'fibre-guardian-v41';
+const SHELL = ['./', './index.html', './offline.html', './bootstrap.js', './apparence.js', './icones.js', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png', '../vendor/fonts.css', './moov-theme.css', './moov-brand.css', './fonts.css', './refonte.css', './guardian-chat.css', './live-trip.css', './landing.css','./client-home.css','./tech-view.css','./avatars.css', './plan-view.css', './survie.css', './essentiel.css', './accueil.css', './ecrans-client.css', './push.css', './design-system.css'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -39,13 +39,25 @@ self.addEventListener('fetch', event => {
   }).catch(() => caches.match(request, { ignoreSearch: true }).then(hit => hit || Response.error())));
 });
 
-// Toucher une notification de Guardian (alerte Wi-Fi) : l'application s'ouvre sur l'écran Appareils.
+// Alerte reçue application fermée (push.cjs) : le téléphone l'affiche toujours (Safari retire l'autorisation sinon).
+self.addEventListener('push', event => {
+  let m = {};
+  try { m = event.data ? event.data.json() : {}; } catch (_) { m = {body: event.data ? event.data.text() : ''}; }
+  const title = String(m.title || 'Fibre Guardian').slice(0, 120);
+  const opts = {body: String(m.body || '').slice(0, 400), icon: './pwa/icon-192.png', badge: './pwa/icon-192.png', data: {url: m.url || './'}};
+  if (m.tag) { opts.tag = String(m.tag).slice(0, 120); opts.renotify = true; }
+  event.waitUntil(self.registration.showNotification(title, opts));
+});
+
+// Toucher une notification de Guardian : l'application s'ouvre sur le bon écran (alerte Wi-Fi : écran Appareils).
+// Seules les adresses de l'application sont ouvertes.
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const page = (event.notification.data && event.notification.data.page) || 'devices';
-  const target = new URL('./?section=' + encodeURIComponent(page), self.location.href).href;
+  const base = new URL('./', self.location.href).href, data = event.notification.data || {};
+  let target = new URL('./?section=' + encodeURIComponent(data.page || 'devices'), self.location.href).href;
+  if (data.url) { try { const u = new URL(data.url, self.location.href); if (u.href.startsWith(base)) target = u.href; } catch (_) {} }
   event.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then(list => {
-    const open = list.find(c => c.url.startsWith(new URL('./', self.location.href).href));
+    const open = list.find(c => c.url.startsWith(base));
     if (open) return open.focus().then(c => (c || open).navigate ? (c || open).navigate(target) : null).catch(() => null);
     return self.clients.openWindow(target);
   }));
