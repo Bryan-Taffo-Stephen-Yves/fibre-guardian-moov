@@ -1,0 +1,124 @@
+'use strict';
+// Page « Simulations » : chaque scène se joue sur le compte du client lui-même, ses suites arrivent à leur heure,
+// l'alerte urgente bloque l'appareil sans réponse, et la grosse consommation mène à un vrai devis payable (prorata).
+const {test} = require('node:test'), assert = require('node:assert/strict');
+const J = require('./journey-store.cjs'), SIM = require('./simulations.cjs');
+const {Store} = require('./pilot-store.cjs'), {createGuardianServer} = require('./pilot-server.cjs'), {seedDemo, DEMO} = require('./seed-demo.cjs');
+
+const fresh = () => { const st = J.seed(); st.version = 1; return st; };
+const titles = st => st.notifications.map(n => n.title);
+
+test('plusieurs personnes : un message par arrivée, puis un point de Guardian', () => {
+  const st = fresh(), t0 = Date.UTC(2026, 10, 23, 20, 0);
+  SIM.start(st, 'foule', t0);
+  assert.equal(st.devices.filter(d => d.sim).length, 1, 'le premier arrive tout de suite');
+  assert.equal(st.notifications.length, 1);
+  assert.equal(SIM.tick(st, t0 + 30000), true);
+  assert.equal(st.devices.filter(d => d.sim && !d.recognized).length, 4);
+  assert.equal(titles(st).filter(t => t === 'Nouvel appareil sur votre Wi-Fi').length, 4);
+  assert.ok(titles(st).includes('4 nouveaux appareils en une minute'));
+  assert.ok(st.messages.at(-1).text.includes('C’est à moi'));
+  assert.ok(st.notifications.every(n => n.home === 'home-1' && n.kind === 'wifi' && n.page === 'devices'), 'bandeau Wi-Fi et notification du téléphone');
+  assert.equal(SIM.tick(st, t0 + 31000), false, 'rien de plus à faire');
+});
+
+test('alerte urgente : sans réponse en une minute, Guardian bloque ; « C’est à moi » l’en empêche', () => {
+  const t0 = Date.UTC(2026, 10, 23, 2, 0);
+  let st = fresh(); SIM.start(st, 'urgent', t0);
+  assert.equal(SIM.status(st, t0 + 20000).urgent.left, 40);
+  SIM.tick(st, t0 + SIM.URGENT_MS - 1);
+  assert.equal(st.devices.find(d => d.id === 'sim-urgent').blocked, undefined);
+  SIM.tick(st, t0 + SIM.URGENT_MS);
+  const d = st.devices.find(x => x.id === 'sim-urgent');
+  assert.equal(d.blocked, true); assert.equal(d.autoBlocked, true);
+  assert.equal(st.notifications[0].title, 'Guardian a bloqué un appareil inconnu');
+  assert.deepEqual(SIM.status(st, t0 + SIM.URGENT_MS).blocked.map(x => x.id), ['sim-urgent']);
+  assert.equal(SIM.status(st, t0 + SIM.URGENT_MS).urgent, null);
+
+  st = fresh(); SIM.start(st, 'urgent', t0);
+  st.devices.find(x => x.id === 'sim-urgent').recognized = true; // le client a touché « C'est à moi »
+  SIM.tick(st, t0 + SIM.URGENT_MS + 5000);
+  assert.ok(!st.devices.find(x => x.id === 'sim-urgent').blocked);
+  assert.ok(!titles(st).includes('Guardian a bloqué un appareil inconnu'));
+});
+
+test('grosse consommation : alerte, puis devis au prorata que le paiement Moov Money accepte', () => {
+  const t0 = Date.UTC(2026, 10, 21, 10, 0), st = fresh();
+  SIM.start(st, 'conso', t0);
+  assert.equal(st.scenario, 'download');
+  assert.equal(st.notifications[0].title, 'Un appareil consomme beaucoup');
+  assert.equal(st.upgrade.source, 'simulation');
+  assert.equal(st.upgrade.to.mbps, 200);
+  assert.equal(st.upgrade.amount, J.prorata(25000 - 20000, t0).amount, 'même calcul que « Changer de forfait »');
+  SIM.tick(st, t0 + 6000);
+  assert.ok(titles(st).includes('Guardian vous propose un forfait plus rapide'));
+  assert.match(st.messages.at(-1).text, /200 Mb\/s/);
+});
+
+test('quartier saturé : débit réduit pendant trois minutes, puis message de retour', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'sature', now);
+  assert.equal(J.snapshot(st).metrics.capacity, 30);
+  assert.match(st.notifications[0].body, /inutile de la redémarrer/);
+  SIM.tick(st, now + SIM.BUSY_MS);
+  assert.equal(st.notifications[0].title, 'Le réseau du quartier est redevenu fluide');
+});
+
+test('panne : le technicien avance seul jusqu’à la ligne vérifiée', () => {
+  const t0 = Date.now(), st = fresh();
+  SIM.start(st, 'panne', t0);
+  assert.equal(J.snapshot(st).metrics.state, 'panne');
+  assert.equal(SIM.status(st, t0).panne.status, 'confirmed');
+  SIM.tick(st, t0 + 12000);
+  assert.equal(SIM.status(st, t0).panne.status, 'en_route');
+  assert.equal(SIM.status(st, t0).panne.technician, 'Awa');
+  SIM.tick(st, t0 + 60000);
+  const i = st.incidents.find(x => x.sim);
+  assert.equal(i.status, 'resolved'); assert.ok(i.verification.online);
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+  assert.ok(titles(st).includes('Internet est revenu : ligne vérifiée'));
+});
+
+test('coupure voisine : « baisse de débit possible », sans couper le client', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'voisin', now);
+  assert.equal(st.notifications[0].title, 'Attention : baisse de débit possible');
+  assert.match(st.notifications[0].body, /Yopougon Sideci/);
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+});
+
+test('relancer ou « Tout remettre comme avant » efface la scène précédente', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'panne', now); SIM.start(st, 'foule', now);
+  assert.equal(st.incidents.filter(i => i.sim).length, 0);
+  SIM.clear(st);
+  assert.equal(st.devices.filter(d => d.sim).length, 0);
+  assert.deepEqual(st.simQueue, []);
+  assert.throws(() => SIM.start(st, 'inconnue', now), /Simulation inconnue/);
+});
+
+test('API : le client joue la scène sur son seul compte, l’application relit les suites', async () => {
+  const store = new Store(':memory:'), server = createGuardianServer({store, env: {}, onError: () => {}});
+  await seedDemo(store);
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  try {
+    const base = 'http://127.0.0.1:' + server.address().port;
+    const r = await fetch(base + '/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email: DEMO.client.email, password: DEMO.client.fallback})});
+    const who = {cookie: r.headers.getSetCookie().map(v => v.split(';')[0]).join('; '), csrf: (await r.json()).user.csrf};
+    const call = async (p, body) => { const x = await fetch(base + '/api' + p, {method: body ? 'POST' : 'GET', headers: {Cookie: who.cookie, ...(body ? {'Content-Type': 'application/json', 'X-CSRF-Token': who.csrf} : {})}, body: body ? JSON.stringify(body) : undefined}); return {status: x.status, data: await x.json()}; };
+    await call('/journey/start', {});
+    const run = await call('/journey/simulation', {scene: 'urgent'});
+    assert.equal(run.status, 200);
+    assert.equal(run.data.state.simulation.scene, 'urgent');
+    assert.ok(run.data.state.simulation.urgent.left > 50);
+    const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id, st = J.get(store, uid);
+    st.simQueue[0].at = Date.now() - 1; J.put(store, uid, st); // la minute est passée
+    const read = await call('/journey/state');
+    assert.equal(read.data.state.version, run.data.state.version, 'la version ne change pas : aucune action du client refusée');
+    assert.deepEqual(read.data.state.simulation.blocked.map(d => d.id), ['sim-urgent']);
+    assert.equal((await call('/journey/simulation', {scene: 'stop'})).data.state.simulation.scene, null);
+    assert.equal((await call('/journey/simulation', {scene: 'nimporte'})).status, 400);
+    const anon = await fetch(base + '/api/journey/simulation', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{"scene":"panne"}'});
+    assert.ok([401, 403].includes(anon.status), 'connexion obligatoire');
+  } finally { server.close(); }
+});
