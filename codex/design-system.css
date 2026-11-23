@@ -484,3 +484,50 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
  --moov-primary:var(--moov-primary-500);--moov-primary-700:color-mix(in srgb,var(--moov-primary-500) 78%,var(--moov-black));--moov-primary-800:color-mix(in srgb,var(--moov-primary-500) 62%,var(--moov-black));--moov-primary-900:var(--ds-deep);
  --moov-primary-200:color-mix(in srgb,var(--moov-primary-300) 55%,var(--ds-white))}
 .tq-sheet{overscroll-behavior:contain}
+
+/* ============ Couleurs : moins de blanc, des teintes Moov qui se mélangent (mode clair) ============ */
+/* Fond de page : halos bleu, orange et vert très doux au lieu d'un fond uni. */
+:root:not([data-mode=dark]) body:has(.journey[data-espace=client]),:root:not([data-mode=dark]) .journey[data-espace=client]{
+ background:radial-gradient(70vmax 46vmax at 105% -6%,color-mix(in srgb,var(--moov-accent-100) 75%,transparent),transparent 62%),
+  radial-gradient(60vmax 50vmax at -12% 34%,color-mix(in srgb,var(--moov-primary-100) 85%,transparent),transparent 64%),
+  radial-gradient(60vmax 40vmax at 110% 78%,color-mix(in srgb,var(--moov-success-100) 70%,transparent),transparent 62%),
+  var(--ds-canvas);background-attachment:fixed}
+
+/* Titres de section : une petite barre en dégradé Moov devant. */
+:root:not([data-mode=dark]) .journey[data-espace=client] :is(.ac-services-head h2,.tq-head h2,.ac-recent-head h2){display:flex;align-items:center;gap:9px}
+:root:not([data-mode=dark]) .journey[data-espace=client] :is(.ac-services-head h2,.tq-head h2,.ac-recent-head h2)::before{content:'';flex:none;width:5px;height:20px;border-radius:3px;background:linear-gradient(180deg,var(--moov-accent-500),var(--moov-primary))}
+
+/* Tuiles Services : toute la tuile prend la couleur de son service, la pastille d'icône devient blanche. */
+:root:not([data-mode=dark]) .journey .ac .ac-svc{background:linear-gradient(160deg,color-mix(in srgb,var(--soft) 92%,var(--ds-surface)) 0%,color-mix(in srgb,var(--bg) 70%,var(--ds-surface)) 100%);
+ box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 85%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--fg) 10%,transparent),0 10px 22px -16px color-mix(in srgb,var(--fg) 60%,transparent)}
+:root:not([data-mode=dark]) .journey .ac .ac-svc:active{box-shadow:inset 0 3px 8px color-mix(in srgb,var(--fg) 18%,transparent)}
+:root:not([data-mode=dark]) .journey .ac .ac-svc-ico{background:radial-gradient(120% 90% at 28% 12%,var(--ds-white) 0,transparent 60%),var(--ds-surface);
+ box-shadow:inset 0 -2px 4px color-mix(in srgb,var(--fg) 10%,transparent),0 8px 14px -8px color-mix(in srgb,var(--fg) 55%,transparent)}
+:root:not([data-mode=dark]) .journey .ac .ac-svc .ac-svc-txt{color:color-mix(in srgb,var(--fg) 45%,var(--moov-ink))}
+
+/* Cartes des techniciens : une couleur par personne (bleu, orange, vert), le portrait posé sur la bande colorée. */
+.tq-card{--tq:var(--moov-primary-100);--tq-ink:var(--moov-primary-700)}
+.tq-card:nth-child(3n+2){--tq:var(--moov-accent-100);--tq-ink:var(--moov-accent-800)}
+.tq-card:nth-child(3n){--tq:var(--moov-success-100);--tq-ink:var(--moov-success-700)}
+:root:not([data-mode=dark]) .journey .tq-card{background:linear-gradient(180deg,var(--tq) 0,color-mix(in srgb,var(--tq) 55%,var(--ds-surface)) 62px,var(--ds-surface) 63px,var(--ds-surface) 100%);
+ box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 70%,transparent),0 12px 24px -16px color-mix(in srgb,var(--tq-ink) 55%,transparent)}
+:root:not([data-mode=dark]) .journey .tq-card .tq-face{box-shadow:0 0 0 3px var(--ds-surface),0 10px 18px -10px color-mix(in srgb,var(--tq-ink) 70%,transparent)}
+:root:not([data-mode=dark]) .journey .tq-card .tq-zone{background:color-mix(in srgb,var(--tq) 70%,var(--ds-surface));color:var(--tq-ink)}
+:root:not([data-mode=dark]) .journey .tq-card .tq-see{color:var(--tq-ink)}
+
+/* Cartes du contenu (Messages, Mon compte, Appareils…) : un léger voile bleu en haut au lieu du blanc plat. */
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main :is(.j-card,.ch-group,.du-card,.du-history,.fl-card,.pv-card,.dp-card,.ac-recent,.ch-parr,.pv-bilan,.pv-find,.rf-card,.du-metric:not(.featured)){
+ background:linear-gradient(180deg,color-mix(in srgb,var(--moov-primary-50) 80%,var(--ds-surface)) 0,var(--ds-surface) 140px)}
+/* Messages : une bande de couleur à gauche, orange pour les nouveaux, et l'étiquette « NOUVEAU » en orange. */
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main .j-inbox-item{box-shadow:inset 5px 0 0 var(--moov-primary-300),var(--ds-shadow-1)}
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main .j-inbox-item.unread{background:linear-gradient(120deg,color-mix(in srgb,var(--moov-accent-50) 90%,var(--ds-surface)) 0,var(--ds-surface) 70%);box-shadow:inset 5px 0 0 var(--moov-accent-500),var(--ds-shadow-1)}
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main .j-inbox-item.unread .j-tag{background:var(--moov-accent-100);color:var(--moov-accent-800)}
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main .j-inbox-item.unread .j-inbox-icon{background:var(--moov-accent-100);color:var(--moov-accent-700);--ico-accent:var(--moov-primary)}
+/* Boutons secondaires blancs : teintés de bleu. Onglets : l'onglet choisi devient bleu Moov. */
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main :is(.j-heading>.j-button,.ch-logout,.gv-toggle){background:linear-gradient(180deg,var(--moov-primary-50),color-mix(in srgb,var(--moov-primary-100) 70%,var(--ds-surface)));color:var(--moov-primary-800)}
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main :is(.du-tabs,.j-offers-tabs){background:color-mix(in srgb,var(--moov-primary-100) 70%,var(--ds-surface))}
+:root:not([data-mode=dark]) .journey[data-espace=client] .j-main :is(.du-tabs>button.active,.du-tabs>button[aria-pressed=true],.j-offers-tabs>[aria-selected=true]){background:var(--ds-grad-brand);color:var(--ds-white);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 30%,transparent),0 8px 16px -8px color-mix(in srgb,var(--moov-primary-700) 70%,transparent)}
+/* Mon compte : chaque pastille d'icône de ligne prend une couleur différente. */
+:root:not([data-mode=dark]) .journey[data-espace=client] .ch-group .ch-row:nth-of-type(3n+1) .ch-row-icon{background:var(--moov-primary-100);color:var(--moov-primary-700)}
+:root:not([data-mode=dark]) .journey[data-espace=client] .ch-group .ch-row:nth-of-type(3n+2) .ch-row-icon{background:var(--moov-accent-100);color:var(--moov-accent-700);--ico-accent:var(--moov-primary)}
+:root:not([data-mode=dark]) .journey[data-espace=client] .ch-group .ch-row:nth-of-type(3n) .ch-row-icon{background:var(--moov-success-100);color:var(--moov-success-700)}
