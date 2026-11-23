@@ -50,6 +50,7 @@ function createGuardianServer(options={}){
  // Surveillance du Wi-Fi : nouvel appareil vu par le PC branché, grosse consommation jouée dans la Régie → WhatsApp du propriétaire (veille-wifi.cjs).
  const SIM=require('./simulations.cjs'),VW=require('./veille-wifi.cjs');VW.migrate(store);VT.setOnScan(VW.hook(store,()=>whatsapp.cfg,{onError:e=>options.onError?.(e)}));VT.setOnBeat(VW.beatHook(store,()=>whatsapp.cfg,{onError:e=>options.onError?.(e)}));
  // Coupure : un PC surveillé qui se tait depuis une minute (toutes les 15 secondes, rien à faire sans PC surveillé).
+ const simTimer=setInterval(()=>{try{SIM.sweep(store);}catch(e){options.onError?.(e);}},3000);simTimer.unref(); // suites des simulations, même application fermée
  const vwTimer=setInterval(()=>{if(VW.BEATS.size)VW.check(store,()=>whatsapp.cfg).catch(e=>options.onError?.(e));},15000);vwTimer.unref();
  // Fibre Welcome (thème 1) : commande, dossier, rendez-vous et installation d'un nouvel abonné (welcome.cjs).
  const WEL=require('./welcome.cjs');WEL.migrate(store);
@@ -299,7 +300,7 @@ function createGuardianServer(options={}){
     if(route==='/api/parrainage'&&method==='POST'){store.rate('parrain-use:'+user.id,10);return json(res,PR.use(store,user.id,await body(req,512)));}
     if(route==='/api/journey/start'&&method==='POST'){if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return json(res,{state:journey.snapshotFor(store,user.id,journey.get(store,user.id))});}
     // Page « Simulations » : le client rejoue une situation sur son propre compte de démonstration (simulations.cjs).
-    if(route==='/api/journey/simulation'&&method==='POST'){store.rate('simulation:'+user.id,20,600000);return json(res,{state:SIM.run(store,user.id,await body(req,1024))});}
+    if(route==='/api/journey/simulation'&&method==='POST'){store.rate('simulation:'+user.id,60,600000);return json(res,{state:SIM.run(store,user.id,await body(req,1024))});}
     if(route==='/api/journey/action'&&method==='POST')return json(res,{state:await journeyAction(user,await body(req,600000))});
     // « La photo qui parle » : lecture des voyants par Claude, sinon lecture faite sur le téléphone. La photo n'est pas conservée.
     if(route==='/api/journey/photo'&&method==='POST'){const d=await body(req,900000);store.rate('photo:'+user.id,12,600000);insist(Number.isInteger(d.version),'Version du parcours requise.');

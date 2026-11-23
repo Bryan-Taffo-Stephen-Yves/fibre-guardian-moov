@@ -54,18 +54,22 @@ function status(st, now = Date.now()) {
 }
 
 // Enlève tout ce qu'une simulation a ajouté (appareils, panne, saturation, offre) ; garde les messages déjà reçus.
-function clear(st) {
+function clear(st, {keepScenario = false} = {}) {
   st.devices = st.devices.filter(d => !d.sim);
   st.incidents = st.incidents.filter(i => !i.sim);
   st.simQueue = []; st.simBusy = null; st.simScene = null; st.simAt = null;
   if (st.upgrade?.source === 'simulation') st.upgrade = null;
+  if (keepScenario) return; // le client vient de choisir lui-même un état de la box
   if (['download', 'devices'].includes(st.scenario)) { st.scenario = 'normal'; const ps5 = st.devices.find(d => d.id === 'ps5'); if (ps5) ps5.demand = 6; }
   st.devices = st.devices.filter(d => !d.guest);
 }
 
-function start(st, scene, now = Date.now()) {
+// fault : une vraie panne en cours chez le client (incident du parcours ou panne de zone de l'équipe Moov).
+function start(st, scene, now = Date.now(), {fault = null} = {}) {
   insist(Object.hasOwn(SCENES, scene), 'Simulation inconnue.');
   clear(st);
+  fault = fault || J.active(st);
+  insist(!(scene === 'panne' && fault), 'Une panne est déjà en cours chez vous : suivez-la dans « Suivi technicien ».', 409);
   st.simScene = scene; st.simAt = now;
   const plan = st.plan || J.PLANS[1];
 
@@ -88,9 +92,10 @@ function start(st, scene, now = Date.now()) {
     st.scenario = 'download';
     const ps5 = st.devices.find(d => d.id === 'ps5'); if (ps5) ps5.demand = 110;
     const name = ps5?.name || 'Console de jeux';
-    note(st, {kind: 'wifi', page: 'devices', title: 'Un appareil consomme beaucoup', body: '« ' + name + ' » a utilisé 18 Go depuis ce matin, 6 fois plus que d’habitude. Les autres appareils ralentissent.'}, now);
+    note(st, {kind: 'wifi', page: 'devices', title: 'Un appareil consomme beaucoup', body: '« ' + name + ' » télécharge un jeu de 40 Go : déjà 18 Go depuis ce matin, 6 fois plus que d’habitude. Les autres appareils ralentissent.'}, now);
     const to = J.PLANS.find(p => p.price > plan.price && p.mbps >= 200) || null;
-    if (to && !(st.declinedUntil > now)) {
+    // Mêmes conditions que « Changer de forfait » : pas d'offre pendant une panne (un forfait plus rapide ne la réglerait pas).
+    if (to && !fault) {
       st.upgrade = J.upgradeQuote(plan, to, now, {source: 'simulation'});
       later(st, now + 5000, {type: 'note', n: {page: 'forfait', title: 'Guardian vous propose un forfait plus rapide', body: 'Passez de ' + plan.mbps + ' à ' + to.mbps + ' Mb/s : ' + st.upgrade.amount.toLocaleString('fr-FR') + ' FCFA pour la fin du mois, payés avec Moov Money.'},
         say: '« ' + name + ' » télécharge beaucoup : votre ligne de ' + plan.mbps + ' Mb/s est pleine et les autres appareils ralentissent. Vous pouvez limiter son débit dans Appareils, ou passer à ' + to.mbps + ' Mb/s. Ce mois-ci, vous payez seulement la différence pour les jours restants : ' + st.upgrade.amount.toLocaleString('fr-FR') + ' FCFA.'});
@@ -135,7 +140,7 @@ function tick(st, now = Date.now()) {
       } else if (d) d.urgentUntil = null;
     } else if (step.type === 'step') {
       const i = st.incidents.find(x => x.id === step.id && x.sim);
-      if (!i || i.status === 'resolved') continue;
+      if (!i || J.STEPS.indexOf(step.to) <= J.STEPS.indexOf(i.status)) continue; // jamais de retour en arrière
       i.status = step.to;
       if (step.to === 'assigned') i.technician = st.technicians?.[0] || {id: 'awa', name: 'Awa', team: 'Équipe fibre Ouest'};
       if (step.to === 'en_route') i.departed = step.at;
@@ -163,11 +168,16 @@ function run(s, uid, d, now = Date.now()) {
     insist(st, 'Démarrez votre démonstration.', 409);
     const type = String(d?.scene || '');
     if (type === 'stop') clear(st);
-    else start(st, type, now);
+    else { let fault = null; try { fault = J.sharedFault(s, uid); } catch {} start(st, type, now, {fault}); }
     st.version++;
     J.put(s, uid, st);
     return J.snapshotFor(s, uid, st);
   });
 }
 
-module.exports = {SCENES, URGENT_MS, BUSY_MS, start, tick, refresh, run, status, clear, neighbour};
+// Toutes les 3 secondes (pilot-server.cjs) : les suites arrivent même application fermée (notification du téléphone).
+function sweep(s, now = Date.now()) {
+  for (const r of s.all('SELECT user_id FROM journey_state WHERE body LIKE ?', '%"simQueue":[{%')) refresh(s, r.user_id, now);
+}
+
+module.exports = {sweep, SCENES, URGENT_MS, BUSY_MS, start, tick, refresh, run, status, clear, neighbour};

@@ -122,3 +122,38 @@ test('API : le client joue la scène sur son seul compte, l’application relit 
     assert.ok([401, 403].includes(anon.status), 'connexion obligatoire');
   } finally { server.close(); }
 });
+
+test('relecture jury : pas de devis ni de 2e panne pendant une panne, pas de retour en arrière', () => {
+  const now = Date.now(), st = fresh();
+  J.openIncident(st, now, {zone: st.zone, description: 'Vraie panne', lat: 5.3, lon: -4, kind: 'fibre'});
+  assert.throws(() => SIM.start(st, 'panne', now), /déjà en cours/);
+  SIM.start(st, 'conso', now);
+  assert.ok(!st.upgrade, 'un forfait plus rapide ne réglerait pas la panne');
+  const b = fresh(); SIM.start(b, 'conso', now, {fault: {id: 'zone'}});
+  assert.ok(!b.upgrade, 'panne de zone de l’équipe Moov : pas de devis non plus');
+  const c = fresh(); c.declinedUntil = now + 86400000; SIM.start(c, 'conso', now);
+  assert.ok(c.upgrade, 'un refus d’offre ne bloque pas la simulation');
+  const d = fresh(); SIM.start(d, 'panne', now);
+  const i = d.incidents.find(x => x.sim); i.status = 'on_site';
+  SIM.tick(d, now + 13000);
+  assert.equal(i.status, 'on_site', 'l’étape « en route » programmée ne réécrit pas « sur place »');
+});
+
+test('relecture jury : « C’est à moi » après le blocage automatique débloque ; un état de box choisi arrête la scène', () => {
+  const store = new Store(':memory:');
+  return seedDemo(store).then(() => {
+    const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id;
+    const t0 = Date.now() - SIM.URGENT_MS - 1000; let st = J.seed(); J.put(store, uid, st);
+    st = J.get(store, uid); SIM.start(st, 'urgent', t0); J.put(store, uid, st);
+    SIM.sweep(store); // même application fermée, le serveur applique la suite
+    st = J.get(store, uid);
+    assert.equal(st.devices.find(x => x.id === 'sim-urgent').blocked, true);
+    J.act(store, uid, {type: 'device', id: 'sim-urgent', action: 'recognize', version: st.version});
+    st = J.get(store, uid);
+    assert.equal(st.devices.find(x => x.id === 'sim-urgent').blocked, false);
+    SIM.start(st, 'foule', Date.now()); J.put(store, uid, st);
+    J.act(store, uid, {type: 'scenario', value: 'slow', version: st.version});
+    st = J.get(store, uid);
+    assert.deepEqual(st.simQueue, []); assert.equal(st.simScene, null); assert.equal(st.scenario, 'slow');
+  });
+});

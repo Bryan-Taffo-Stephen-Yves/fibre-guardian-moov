@@ -52,11 +52,11 @@
 
 /* Les six situations : une colonne au téléphone, deux sur grand écran. */
 .sim-grid{list-style:none;margin:0;padding:0;display:grid;gap:12px}
-.sim-card{--tint:var(--moov-primary-500);--soft:var(--moov-primary-50);width:100%;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:start;padding:16px;border:1px solid var(--moov-line);border-radius:var(--ds-r-lg,24px);background:var(--moov-surface);box-shadow:var(--ds-shadow-1,none);text-align:left;font:inherit;color:var(--moov-ink);cursor:pointer;transition:transform var(--ds-t1,.16s) var(--ds-ease,ease),box-shadow var(--ds-t2,.32s) var(--ds-ease,ease)}
+.sim-card{--tint:var(--moov-primary-700);--soft:var(--moov-primary-50);width:100%;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:start;padding:16px;border:1px solid var(--moov-line);border-radius:var(--ds-r-lg,24px);background:var(--moov-surface);box-shadow:var(--ds-shadow-1,none);text-align:left;font:inherit;color:var(--moov-ink);cursor:pointer;transition:transform var(--ds-t1,.16s) var(--ds-ease,ease),box-shadow var(--ds-t2,.32s) var(--ds-ease,ease)}
 .sim-card:hover{box-shadow:var(--ds-shadow-2,none)}
 .sim-card:active{transform:scale(.98)}
-.sim-card.tone-danger{--tint:var(--moov-danger-500);--soft:var(--moov-danger-50)}
-.sim-card.tone-accent{--tint:var(--moov-accent-600);--soft:var(--moov-accent-50)}
+.sim-card.tone-danger{--tint:var(--moov-danger-700);--soft:var(--moov-danger-50)}
+.sim-card.tone-accent{--tint:var(--moov-accent-800);--soft:var(--moov-accent-50)}
 .sim-card.tone-warning{--tint:var(--moov-warning-700);--soft:var(--moov-warning-100)}
 .sim-card.is-on{border-color:var(--tint);box-shadow:0 0 0 2px var(--tint),var(--ds-shadow-1,none)}
 .sim-ico{grid-row:span 2;display:grid;place-items:center;width:48px;height:48px;border-radius:var(--ds-r-sm,14px);background:var(--soft);color:var(--tint)}
@@ -70,10 +70,16 @@
 .sim-box h2{margin:0 0 4px;font-size:17px;color:var(--moov-ink)}
 .sim-box p{margin:0 0 10px;font-size:14px;color:var(--moov-text-muted)}
 .sim-chips{display:flex;flex-wrap:wrap;gap:8px}
-.sim-chip{min-height:40px;padding:0 14px;border:1px solid var(--moov-line);border-radius:var(--ds-r-pill,999px);background:var(--moov-surface);font:inherit;font-size:14px;color:var(--moov-ink);cursor:pointer}
+.sim-chip{min-height:44px;padding:0 14px;border:1px solid var(--moov-line);border-radius:var(--ds-r-pill,999px);background:var(--moov-surface);font:inherit;font-size:14px;color:var(--moov-ink);cursor:pointer}
 .sim-chip.is-on{background:var(--moov-primary-500);border-color:var(--moov-primary-500);color:var(--ds-white,var(--moov-white));font-weight:700}
 .sim-foot{margin:0;font-size:13px;color:var(--moov-text-muted);text-align:center}
 
 @media (min-width:760px){.sim-grid{grid-template-columns:1fr 1fr}.sim-head h1{font-size:36px}}
 @media (prefers-reduced-motion:reduce){.sim-pulse,.sim-steps li.is-now>span,.sim-urgent.is-late .sim-count{animation:none}.sim-card{transition:none}}
 .fg-demo-sim .fg-demo-choice{width:100%;justify-content:center}
+/* Mode sombre du client (apparence.js) : pastilles sombres, teintes claires, pour garder le texte lisible. */
+:root[data-mode=dark] .sim-card{--tint:var(--moov-primary-200);--soft:color-mix(in srgb,var(--moov-primary-300) 22%,transparent)}
+:root[data-mode=dark] .sim-card.tone-danger{--tint:var(--moov-danger-300);--soft:color-mix(in srgb,var(--moov-danger-300) 20%,transparent)}
+:root[data-mode=dark] .sim-card.tone-accent{--tint:var(--moov-accent-200);--soft:color-mix(in srgb,var(--moov-accent-500) 22%,transparent)}
+:root[data-mode=dark] .sim-card.tone-warning{--tint:var(--moov-warning-300);--soft:color-mix(in srgb,var(--moov-warning-300) 20%,transparent)}
+:root[data-mode=dark] .sim-card.is-on .sim-go{color:var(--ds-deep)}

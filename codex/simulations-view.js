@@ -12,7 +12,7 @@
  const SCENES=[
   ['foule','Plusieurs personnes sur votre Wi-Fi','Quatre appareils se connectent en une minute. Guardian vous écrit à chaque arrivée.','devices','primary'],
   ['urgent','Alerte urgente','Un appareil inconnu arrive. Sans réponse de votre part en une minute, Guardian le bloque.','alert','danger'],
-  ['conso','Un appareil consomme beaucoup','La console télécharge 40 Go. Guardian prévient et propose un forfait plus rapide, à payer avec Moov Money.','gauge','accent'],
+  ['conso','Un appareil consomme beaucoup','La console télécharge un jeu de 40 Go. Guardian prévient et propose un forfait plus rapide, à payer avec Moov Money.','gauge','accent'],
   ['sature','La fibre est occupée dans le quartier','Trop de foyers connectés en même temps : le débit baisse quelques minutes.','up','warning'],
   ['panne','Panne et technicien','Un câble est coupé. Suivez le technicien jusqu’à la réparation, étape par étape.','shield','danger'],
   ['voisin','Coupure dans un quartier voisin','Guardian vous prévient que le débit peut baisser chez vous.','map','primary'],

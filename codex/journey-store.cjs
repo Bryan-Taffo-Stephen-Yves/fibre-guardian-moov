@@ -153,6 +153,7 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
  if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
   return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
    facts:[...facts,{label:'Lumière reçue par la box',value:dbm(f.current)+' dBm (coupure vers '+dbm(f.threshold)+' dBm)'},{label:'Baisse mesurée',value:dbm(Math.abs(f.slope))+' dB par jour sur 7 jours'}]};}}
+ if(st.simBusy?.until>Date.now())return {message:hello+'Votre débit est bas parce que beaucoup de foyers du quartier utilisent la fibre en même temps. Votre box et vos appareils n’y sont pour rien : ne redémarrez pas la box. L’équipe Moov répartit la charge, le débit revient dans quelques minutes.',facts};
  if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:hello+'Votre débit est tombé à '+snap.metrics.capacity+' Mb/s alors que votre offre prévoit '+plan.mbps+' Mb/s. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot',proof:proofFor('box',snap,st,largest)};
  if(connected.length>st.usual+1)return {message:'Le nombre d’appareils est inhabituel. Un appareil nouveau n’est pas forcément un intrus : vérifiez ceux auxquels vous avez donné le mot de passe avant de les bloquer.',facts,action:'devices'};
  const line=snap.metrics.state==='redémarrage'?null:snap.metrics.capacity;
@@ -215,7 +216,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   if(changed&&d.value==='fading'){const f=optical(st,now);st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Guardian a vu venir une panne',body:'La lumière qui arrive à votre box baisse chaque jour. Un passage du technicien est proposé avant la coupure.',read:false});st.notifications=st.notifications.slice(0,100);audit(st,'forecast.detected',dbm(f.current)+' dBm, '+f.slope+' dB par jour');}
   if(d.value!=='devices')st.devices=st.devices.filter(x=>!x.guest);
   st.devices.find(x=>x.id==='ps5').demand=d.value==='download'?110:6;
-  if(changed){st.proposal=null;st.upgrade=null;} // Un partage proposé sur un autre scénario ne doit plus être validable.
+  if(changed){st.proposal=null;st.upgrade=null;require('./simulations.cjs').clear(st,{keepScenario:true});} // Un partage proposé sur un autre scénario ne doit plus être validable.
   if(d.value==='devices'){
    for(const guest of [{id:'guest-1',name:'Samsung Galaxy invité',demand:8,guest:true,recognized:false},{id:'guest-2',name:'Smart TV LED 32 pouces',demand:15,guest:true,recognized:false}])if(!st.devices.some(x=>x.id===guest.id))st.devices.push(guest);
    const connected=snapshot(st).metrics.connected;
@@ -297,7 +298,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
  }else if(d.type==='restore'){for(const dev of st.devices){dev.limit=null;dev.until=null;}st.proposal=null;audit(st,'qos.restore','Limites temporaires annulées');
  }else if(d.type==='device'){
   const dev=st.devices.find(v=>v.id===d.id);insist(dev,'Appareil inconnu.',404);insist(['recognize','block','unblock','limit','unlimit','remove'].includes(d.action),'Action inconnue.');
-  if(d.action==='recognize')dev.recognized=true;
+  if(d.action==='recognize'){dev.recognized=true;if(dev.autoBlocked){dev.blocked=false;dev.autoBlocked=false;}} // bloqué par Guardian faute de réponse (simulations.cjs) : « C'est à moi » le rend
   else{insist(!dev.protected||['limit','unlimit'].includes(d.action),'Cet appareil est protégé : vous pouvez réduire son débit, pas le couper ni le retirer.',403);insist(d.confirm===true,'Confirmation obligatoire.');
    // Limite choisie par le client : reste en place jusqu'à ce qu'il l'enlève (plancher de 2 Mb/s conservé).
    if(d.action==='limit'){insist(DEVICE_LIMITS.includes(d.mbps),'Débit proposé : '+DEVICE_LIMITS.join(', ')+' Mb/s.');insist(!dev.blocked,'Débloquez d’abord cet appareil.',409);dev.limit=d.mbps;dev.until=now+MANUAL_LIMIT_MS;dev.manual=true;}
