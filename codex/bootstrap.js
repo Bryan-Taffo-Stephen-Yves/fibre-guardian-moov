@@ -39,6 +39,8 @@
   files.splice(files.indexOf('superviseur-view.js'), 0, 'reclamation-view.js');
   // Échange de box (echange-box-view.js) : demande dans « Ma réparation », bloc du Superviseur.
   files.splice(files.indexOf('superviseur-view.js'), 0, 'echange-box-view.js');
+  // Créneau de dépannage (rendezvous-view.js) : sur le dossier du client, bloc du Superviseur.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'rendezvous-view.js');
   // « Mes données » (donnees-view.js) : page reliée à « Mon compte ».
   files.splice(files.indexOf('app.js'), 0, 'donnees-view.js');
   // « Alertes sur ce téléphone » (push-view.js) : Mon compte du client et Mes missions du technicien.

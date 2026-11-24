@@ -129,7 +129,7 @@ function erase(s, uid, d) {
 
 // Ce que l'équipe Moov peut consulter sur les clients : une ligne par écran ouvert. Les blocs du Superviseur se
 // rafraîchissent toutes les 8 secondes : une même personne sur un même écran compte une seule fois par quart d'heure.
-const VUES = {retention: 'Clients qui risquent de partir', welcome: 'Nouveaux abonnés et leurs photos', acces: 'Offres solidaires et cartes d’étudiant', avis: 'Avis et commentaires des clients', reclamations: 'Réclamations des clients', echanges: 'Échanges de box', fairdeal: 'Gestes après une coupure', copies: 'Copies du Wi-Fi d’un client'};
+const VUES = {retention: 'Clients qui risquent de partir', welcome: 'Nouveaux abonnés et leurs photos', acces: 'Offres solidaires et cartes d’étudiant', avis: 'Avis et commentaires des clients', reclamations: 'Réclamations des clients', echanges: 'Échanges de box', rendezvous: 'Rendez-vous chez les clients', fairdeal: 'Gestes après une coupure', copies: 'Copies du Wi-Fi d’un client'};
 const WINDOW = 15 * 60000;
 function seen(s, actor, key, now = Date.now()) {
   const what = VUES[key]; if (!what || !actor) return;
