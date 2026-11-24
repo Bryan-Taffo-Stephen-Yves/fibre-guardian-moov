@@ -103,18 +103,42 @@
 .ae-news li small{font-size:12.5px;color:var(--moov-neutral-500)}
 .ae-news .ac-more{justify-self:start}
 
-/* ---- Grand écran : l'en-tête devient une grande carte à gauche, les Services à droite ---- */
+/* Sur téléphone, les colonnes du grand écran n'existent pas : tout se suit dans la feuille */
+.ae-side,.ae-main{display:contents}
+/* Ordre sur téléphone : ce qui se passe, puis les Services, puis les messages, puis les techniciens */
+.ae-side>*{order:1}.ae-main>*{order:2}.ae-side>.ac-recent{order:3}.ae-main>.tq{order:4}
+.ae-stats{display:none}
+
+/* ---- Grand écran : un tableau de bord. Un bandeau bleu sur toute la largeur (bonjour, débit, repères, actions),
+   puis deux colonnes pleines : les Services à gauche, ce qui se passe et les messages à droite. Aucun vide. ---- */
 @media(min-width:761px){
- .ac--epure{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
- .ae-hero{grid-column:1;grid-row:1/span 4;margin:0;padding:24px 24px 28px;border-radius:var(--ds-r-xl);box-shadow:var(--ds-glow-brand);align-content:start}
+ .ac--epure{grid-template-columns:minmax(0,1fr);gap:22px}
+ .ac--epure :is(.ac-services,.ac-alert,.ac-cards,.ac-promo){grid-column:auto;grid-row:auto}
+ .ae-hero{margin:0;padding:24px 28px;border-radius:var(--ds-r-xl);box-shadow:var(--ds-glow-brand);
+  grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"top acts" "speed acts";align-items:center;gap:14px 28px}
  .ae-hero.ae-down{box-shadow:0 20px 36px -16px color-mix(in srgb,var(--moov-danger-500) 65%,transparent)}
- .ae-sheet{display:contents}
- .ac--epure .ac-services{grid-column:2;grid-row:1}
- .ac--epure .ac-alert,.ac--epure .ac-cards,.ac--epure .ae-row{grid-column:2}
- .ac--epure .ac-recent{grid-column:1/-1}
- .ae-num strong{font-size:80px}
- .ae-acts{margin-top:10px}
+ .ae-top{grid-area:top}
+ .ae-speed{grid-area:speed;justify-items:start;text-align:left}
+ .ae-acts{grid-area:acts;grid-template-columns:repeat(2,96px);gap:16px 18px;margin:0}
  .ae-top-actions{display:none}
+ .ae-num strong{font-size:64px}
+ .ae-sheet{margin:0;padding:0;border-radius:0;background:none;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-areas:"main side";align-items:start;gap:22px 24px}
+ .ae-main{grid-area:main;display:grid;gap:18px;align-content:start}
+ .ae-side{grid-area:side;display:grid;gap:14px;align-content:start}
+ .ac--epure .ac-services{padding:18px;border-radius:var(--ds-r-xl);background:var(--ds-surface);box-shadow:var(--ds-shadow-1)}
+ .ac--epure .ac-cards{grid-template-columns:1fr}
+}
+@media(min-width:1100px){
+ .ae-hero{grid-template-columns:minmax(0,1fr) auto minmax(0,auto);grid-template-areas:"top speed acts" "stats stats acts";padding:26px 32px;gap:18px 40px}
+ .ae-speed{justify-items:center;text-align:center}
+ .ae-acts{grid-template-columns:repeat(4,84px);gap:14px}
+ .ae-num strong{font-size:76px}
+ .ae-stats{grid-area:stats;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0}
+ .ae-stats>div{padding:12px 16px;border-radius:var(--ds-r-md);background:color-mix(in srgb,var(--ds-white) 14%,transparent)}
+ .ae-stats dt{font-size:13px;font-weight:600;color:color-mix(in srgb,var(--ds-white) 80%,transparent)}
+ .ae-stats dd{margin:2px 0 0;font:700 24px/1.1 var(--ds-font-display);font-variant-numeric:tabular-nums}
+ .ae-stats dd small{font-size:14px;font-weight:600;color:color-mix(in srgb,var(--ds-white) 75%,transparent)}
+ .ae-hi strong{font-size:28px}
 }
 /* Téléphone : la date seule sous le bonjour, pour qu'elle tienne sur une ligne */
 @media(max-width:430px){.ae-part{display:none}}
