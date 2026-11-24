@@ -532,47 +532,66 @@ body:has(.noc),.noc{background:var(--ds-canvas)}
 :root:not([data-mode=dark]) .journey[data-espace=client] .ch-group .ch-row:nth-of-type(3n+2) .ch-row-icon{background:var(--moov-accent-100);color:var(--moov-accent-700);--ico-accent:var(--moov-primary)}
 :root:not([data-mode=dark]) .journey[data-espace=client] .ch-group .ch-row:nth-of-type(3n) .ch-row-icon{background:var(--moov-success-100);color:var(--moov-success-700)}
 
-/* ── Relief 3 : Mes appareils (2026-11-24, « trop plat ») ──────────────────────────────────────────
-   Chaque appareil devient une carte en relief : tuile d'icône en dégradé (bleu s'il est en ligne, vert s'il est protégé,
-   orange s'il est limité, rouge s'il est bloqué), point vert qui respire quand il échange des données, débit en grand,
-   barre en dégradé lumineuse, état en pastille, bouton « Gérer » doux. Couleurs : --moov-* et --ds-* seulement. */
-.journey[data-espace=client] .j-main .du-device-section{gap:14px}
-.journey[data-espace=client] .j-main .du-device{margin:0 0 12px;padding:16px;border:0;border-radius:var(--ds-r-lg);background:var(--ds-surface);box-shadow:var(--ds-shadow-1),0 0 0 1px var(--moov-neutral-100);transition:transform var(--ds-t1) var(--ds-ease),box-shadow var(--ds-t2) var(--ds-ease)}
-.journey[data-espace=client] .j-main .du-device:last-of-type{margin-bottom:4px}
-.journey[data-espace=client] .j-main .du-device.selected{background:var(--ds-surface);box-shadow:var(--ds-shadow-2),0 0 0 2px var(--moov-primary-200)}
-.journey[data-espace=client] .j-main .du-device .du-device-icon{position:relative;width:52px;height:52px;border-radius:16px;background:linear-gradient(150deg,var(--moov-neutral-50),var(--moov-neutral-150));color:var(--moov-neutral-600)}
-.journey[data-espace=client] .j-main .du-device.is-on .du-device-icon{background:var(--ds-grad-brand);color:var(--moov-on-primary);box-shadow:var(--ds-glow-brand),inset 0 1px 0 color-mix(in srgb,var(--ds-white) 35%,transparent)}
-.journey[data-espace=client] .j-main .du-device.is-protected .du-device-icon{background:linear-gradient(150deg,var(--moov-success-100),var(--moov-success-300));color:var(--moov-success-700);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 70%,transparent)}
-.journey[data-espace=client] .j-main .du-device.is-limited .du-device-icon{background:var(--ds-grad-accent);color:var(--moov-on-accent);box-shadow:var(--ds-glow-accent)}
-.journey[data-espace=client] .j-main .du-device.is-blocked .du-device-icon{background:var(--ds-grad-danger);color:var(--moov-on-primary);box-shadow:none}
-.journey[data-espace=client] .j-main .du-device .du-device-icon svg{width:24px;height:24px}
-.du-live-dot{position:absolute;right:-3px;top:-3px;width:14px;height:14px;border-radius:50%;background:var(--moov-success-500);border:2.5px solid var(--ds-surface,var(--moov-surface));box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-success-500) 55%,transparent);animation:du-live 2.2s var(--ds-ease,ease) infinite}
-@keyframes du-live{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-success-500) 55%,transparent)}70%,100%{box-shadow:0 0 0 9px color-mix(in srgb,var(--moov-success-500) 0%,transparent)}}
-.journey[data-espace=client] .j-main .du-device-name strong{font-size:16px;font-weight:700;letter-spacing:-.01em;color:var(--moov-ink)}
-.journey[data-espace=client] .j-main .du-device-name small{display:inline-flex;align-items:center;margin-top:6px;padding:3px 10px;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary-700);font-size:12px;font-weight:600;line-height:1.4}
-.journey[data-espace=client] .j-main .du-device.is-protected .du-device-name small{background:var(--moov-success-50);color:var(--moov-success-700)}
-.journey[data-espace=client] .j-main .du-device-name small.du-state-limited{background:var(--moov-accent-50);color:var(--moov-accent-700)}
-.journey[data-espace=client] .j-main .du-device-name small.du-state-blocked{background:var(--moov-danger-50);color:var(--moov-danger-700)}
-.journey[data-espace=client] .j-main .du-device .du-rate strong{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--moov-ink);font-variant-numeric:tabular-nums}
-.journey[data-espace=client] .j-main .du-device.is-on .du-rate strong{color:var(--moov-primary)}
-.journey[data-espace=client] .j-main .du-device .du-rate-track{display:block;height:8px;margin-top:8px;border-radius:999px;background:var(--moov-neutral-100);overflow:hidden}
-.journey[data-espace=client] .j-main .du-device .du-rate-track i{display:block;height:100%;min-width:8px;border-radius:inherit;background:var(--ds-grad-brand);box-shadow:0 0 10px color-mix(in srgb,var(--moov-primary) 45%,transparent);transition:width var(--ds-t3) var(--ds-ease)}
-.journey[data-espace=client] .j-main .du-device.is-limited .du-rate-track i{background:var(--ds-grad-accent)}
-.journey[data-espace=client] .j-main .du-device-actions .j-button{border:0;background:var(--moov-primary-50);color:var(--moov-primary-700);font-weight:700;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-white) 70%,transparent),0 1px 2px color-mix(in srgb,var(--moov-primary-900) 10%,transparent)}
-.journey[data-espace=client] .j-main .du-device-actions .du-protected{color:var(--moov-success-700);font-weight:600}
-.journey[data-espace=client] .j-main .du-device:active{transform:scale(.99)}
+/* ── Relief 3 : Mes appareils (2026-11-24, « trop plat, ennuyeux », « un appareil par ligne ») ─────────────
+   Une seule liste, un appareil par ligne (comme une liste iPhone) : tuile d'icône à la couleur de l'appareil,
+   point vert qui respire quand il échange, débit en gras à droite avec une mini-barre, état en une ligne.
+   Au-dessus, la barre « En ce moment » montre en couleurs qui prend la connexion : mêmes couleurs que les tuiles.
+   Couleurs : --moov-* et --ds-* seulement (dv-c0…dv-c5). */
+.dv-c0{--dv:var(--moov-primary);--dv-soft:var(--moov-primary-50)}
+.dv-c1{--dv:var(--moov-accent-500);--dv-soft:var(--moov-accent-50)}
+.dv-c2{--dv:var(--moov-success-500);--dv-soft:var(--moov-success-50)}
+.dv-c3{--dv:var(--moov-sky-300);--dv-soft:var(--moov-primary-25)}
+.dv-c4{--dv:var(--moov-primary-300);--dv-soft:var(--moov-primary-50)}
+.dv-c5{--dv:var(--moov-accent-700);--dv-soft:var(--moov-accent-25)}
+.journey[data-espace=client] .j-main .du-card.du-device-section{padding:18px 0 6px;overflow:hidden}
+.journey[data-espace=client] .j-main .du-device-section>.du-section-heading,.journey[data-espace=client] .j-main .du-device-section>.du-list-footer{padding-left:18px;padding-right:18px}
+/* Barre « En ce moment » */
+.dv-share{display:grid;gap:10px;margin:2px 18px 6px;padding:14px;border-radius:18px;background:linear-gradient(150deg,var(--moov-primary-50),var(--ds-surface,var(--moov-surface)) 80%);box-shadow:inset 0 0 0 1px var(--moov-primary-100)}
+.dv-share-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:var(--moov-neutral-600)}
+.dv-share-top b{font-size:15px;color:var(--moov-ink);font-variant-numeric:tabular-nums}
+.dv-share-bar{display:flex;gap:3px;height:14px;border-radius:999px;overflow:hidden;background:var(--moov-neutral-100)}
+.dv-share-bar i{display:block;min-width:6px;background:var(--dv);transition:flex-grow var(--ds-t3,.6s) var(--ds-ease,ease)}
+.dv-share-bar i:first-child{border-radius:999px 0 0 999px}
+.dv-share-bar i.dv-free{min-width:0;background:none}
+.dv-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0;padding:0;list-style:none;font-size:12.5px;font-weight:600;color:var(--moov-neutral-700)}
+.dv-legend li{display:inline-flex;align-items:center;gap:6px}
+.dv-legend i{width:9px;height:9px;border-radius:50%;background:var(--dv)}
+/* Une ligne par appareil */
+.journey[data-espace=client] .j-main .du-device{grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;margin:0;padding:12px 18px;border:0;border-top:1px solid var(--moov-neutral-100);border-radius:0;background:none;box-shadow:none;transition:background var(--ds-t1,.16s) var(--ds-ease,ease)}
+.journey[data-espace=client] .j-main .du-device.selected{background:var(--dv-soft)}
+.journey[data-espace=client] .j-main .du-device-name{grid-column:auto;gap:12px;min-height:48px}
+.journey[data-espace=client] .j-main .du-device .du-device-icon{position:relative;width:46px;height:46px;border-radius:15px;background:linear-gradient(150deg,color-mix(in srgb,var(--dv) 62%,var(--ds-white,var(--moov-white))),var(--dv));color:var(--moov-on-primary);box-shadow:0 8px 16px -10px var(--dv),inset 0 1px 0 color-mix(in srgb,var(--ds-white,var(--moov-white)) 40%,transparent)}
+.journey[data-espace=client] .j-main .du-device:not(.is-on) .du-device-icon{background:linear-gradient(150deg,var(--moov-neutral-50),var(--moov-neutral-150));color:var(--moov-neutral-600);box-shadow:none}
+.journey[data-espace=client] .j-main .du-device.is-blocked .du-device-icon{background:var(--ds-grad-danger);color:var(--moov-on-primary)}
+.journey[data-espace=client] .j-main .du-device .du-device-icon svg{width:22px;height:22px}
+.du-live-dot{position:absolute;right:-3px;top:-3px;width:13px;height:13px;border-radius:50%;background:var(--moov-success-500);border:2.5px solid var(--ds-surface,var(--moov-surface));animation:du-live 2.2s var(--ds-ease,ease) infinite}
+@keyframes du-live{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--moov-success-500) 55%,transparent)}70%,100%{box-shadow:0 0 0 8px color-mix(in srgb,var(--moov-success-500) 0%,transparent)}}
+.journey[data-espace=client] .j-main .du-device-name strong{font-size:15.5px;font-weight:700;letter-spacing:-.01em;color:var(--moov-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+.journey[data-espace=client] .j-main .du-device-name small{margin-top:2px;font-size:12.5px;font-weight:500;color:var(--moov-neutral-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.journey[data-espace=client] .j-main .du-device.is-protected .du-device-name small{color:var(--moov-success-700);font-weight:600}
+.journey[data-espace=client] .j-main .du-device-name small.du-state-limited{color:var(--moov-accent-700);font-weight:600}
+.journey[data-espace=client] .j-main .du-device-name small.du-state-blocked{color:var(--moov-danger-700);font-weight:600}
+.journey[data-espace=client] .j-main .du-device .du-rate{grid-column:auto;display:grid;grid-template-columns:auto auto;justify-content:end;align-items:baseline;column-gap:3px;row-gap:6px;padding:0}
+.journey[data-espace=client] .j-main .du-device .du-rate strong{font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--moov-ink);font-variant-numeric:tabular-nums;line-height:1}
+.journey[data-espace=client] .j-main .du-device .du-rate small{font-size:11px}
+.journey[data-espace=client] .j-main .du-device .du-rate-track{display:block;width:44px;justify-self:end;height:5px;margin:0;border-radius:999px;background:var(--moov-neutral-100);overflow:hidden;grid-column:1/-1}
+.journey[data-espace=client] .j-main .du-device .du-rate-track i{display:block;height:100%;min-width:5px;border-radius:inherit;background:var(--dv);transition:width var(--ds-t3,.6s) var(--ds-ease,ease)}
+.journey[data-espace=client] .j-main .du-device:not(.is-on) .du-rate-track i{background:var(--moov-neutral-300)}
+.journey[data-espace=client] .j-main .du-device-actions,.journey[data-espace=client] .j-main .du-device.selected .du-device-actions{grid-column:auto;grid-row:auto;padding:0}
+.journey[data-espace=client] .j-main .du-device-actions .du-protected{display:none}
+.journey[data-espace=client] .j-main .du-device-actions .j-button{min-height:36px!important;padding:0 12px!important;border:0;border-radius:999px;background:var(--moov-primary-50);color:var(--moov-primary-700);font-size:12.5px!important;font-weight:700}
+.journey[data-espace=client] .j-main .du-device-detail{grid-column:1/-1}
+.journey[data-espace=client] .j-main .du-device-section>.du-list-head{padding-left:18px;padding-right:18px;margin:0}
+.journey[data-espace=client] .j-main .du-device-section .du-list-footer{margin-top:4px;border-top:1px solid var(--moov-neutral-100);padding-top:14px}
 /* Le grand chiffre « Appareils connectés » prend aussi du relief (pastel + reflet). */
 .journey[data-espace=client] .j-main .du-metric:not(.featured){background:linear-gradient(150deg,var(--moov-accent-25),var(--ds-surface) 70%);box-shadow:var(--ds-shadow-1),0 0 0 1px var(--moov-accent-100)}
+@media (min-width:601px){.journey[data-espace=client] .j-main .du-device{grid-template-columns:minmax(190px,1.6fr) minmax(80px,.8fr) minmax(100px,1fr) minmax(90px,.65fr)}.journey[data-espace=client] .j-main .du-device .du-rate{justify-content:start}}
+:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device .du-device-icon,:root[data-mode=dark] .dv-share{--moov-white:var(--ds-white)}
+:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device.is-on .du-device-icon{color:var(--ds-white)}
 :root[data-mode=dark] .journey[data-espace=client] .j-main .du-metric:not(.featured){background:var(--ds-surface);box-shadow:var(--ds-shadow-1)}
-:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device{box-shadow:var(--ds-shadow-1)}
-:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device .du-device-icon{--moov-white:var(--ds-white)}
-:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device-name small,:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device-actions .j-button{background:color-mix(in srgb,var(--ds-white) 12%,transparent);color:var(--ds-white);box-shadow:none}
-:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device.is-protected .du-device-name small{background:color-mix(in srgb,var(--moov-success-500) 28%,transparent);color:var(--ds-white)}
-@media (prefers-reduced-motion:reduce){.du-live-dot{animation:none}.journey[data-espace=client] .j-main .du-device{transition:none}}
-/* La liste n'est plus une carte qui contient des cartes : les appareils posent directement sur le fond. */
-.journey[data-espace=client] .j-main .du-card.du-device-section{padding:0;background:none;box-shadow:none;border:0}
-:root:not([data-mode=dark]) .journey[data-espace=client] .j-main .du-card.du-device-section{background:none;box-shadow:none}
-.journey[data-espace=client] .j-main .du-device-section .du-list-footer{padding:14px 16px;border-radius:var(--ds-r-lg);background:var(--ds-surface-2)}
-/* La pastille dit déjà « Protégé » : on ne le répète pas à côté du bouton. */
-.journey[data-espace=client] .j-main .du-device.is-protected .du-device-actions .du-protected{display:none}
-:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device:is(.is-on,.is-blocked,.is-limited):not(.is-protected) .du-device-icon{color:var(--ds-white)}
+:root[data-mode=dark] .dv-share{background:var(--ds-surface-2);box-shadow:none}
+:root[data-mode=dark] .dv-legend{color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
+:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device-actions .j-button{background:color-mix(in srgb,var(--ds-white) 12%,transparent);color:var(--ds-white)}
+:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device-name small{color:color-mix(in srgb,var(--ds-white) 66%,transparent)}
+:root[data-mode=dark] .journey[data-espace=client] .j-main .du-device.is-protected .du-device-name small{color:var(--moov-success-300)}
+@media (prefers-reduced-motion:reduce){.du-live-dot{animation:none}.dv-share-bar i,.journey[data-espace=client] .j-main .du-device .du-rate-track i{transition:none}}
