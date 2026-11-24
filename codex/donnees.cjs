@@ -109,6 +109,8 @@ function erase(s, uid, d) {
   const phone = has(s, 'wa_accounts') ? s.get('SELECT phone FROM wa_accounts WHERE user_id=?', uid)?.phone : null;
   const tables = s.all("SELECT name FROM sqlite_master WHERE type='table'").map(t => t.name);
   s.transaction(() => {
+    // Un ancien conseiller : son prénom part aussi des demandes du service client qu'il a traitées.
+    if (tables.includes('sc_demandes')) s.run('UPDATE sc_demandes SET agent_name=NULL WHERE agent_id=?', uid);
     // Colonnes qui pointent vers le compte sans effacement automatique : la ligne part, ou perd seulement le nom.
     for (const t of tables) {
       if (t === 'users') continue;

@@ -32,7 +32,6 @@ function migrate(s){s.db.exec(`
  CREATE INDEX IF NOT EXISTS sc_user ON sc_demandes(user_id,status);
  CREATE INDEX IF NOT EXISTS sc_ref ON sc_demandes(kind,ref);
  CREATE INDEX IF NOT EXISTS sc_status ON sc_demandes(status,due);
- CREATE TRIGGER IF NOT EXISTS sc_agent_erase BEFORE DELETE ON users BEGIN UPDATE sc_demandes SET agent_name=NULL WHERE agent_id=OLD.id; END;
  `);}
 
 const J=()=>require('./journey-store.cjs');

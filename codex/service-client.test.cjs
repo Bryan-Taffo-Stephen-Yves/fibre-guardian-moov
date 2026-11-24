@@ -124,3 +124,14 @@ test('Relecture jury : un seul chemin pour répondre, un conseiller par demande,
  SC.act(s,ids.fatou,{id:lvl2,action:'take'},t+5*HOUR);SC.act(s,ids.fatou,{id:lvl2,action:'result',outcome:'regle'},t+6*HOUR);
  assert.equal(item(s,ids.awa,t+6*HOUR).status,'reglee');
 });
+
+test('Effacement du compte d’un ancien conseiller : son nom part aussi des demandes',async()=>{
+ const {s,ids}=await setup(),t=Date.UTC(2026,10,24,8),DP=require('./donnees.cjs');DP.migrate(s);
+ const r=EB.ask(s,ids.awa,{mode:'agence',agence:'yop',tried:true},t),id=item(s,ids.awa,t).id;
+ SC.act(s,ids.moussa,{id,action:'take'},t);
+ operator.grant(s,'moussa@example.test','revoke');
+ DP.erase(s,ids.moussa,{confirm:true});
+ const row=s.get('SELECT agent_id,agent_name FROM sc_demandes WHERE id=?',id);
+ assert.equal(row.agent_id,null);assert.equal(row.agent_name,null);
+ assert.ok(r.current);
+});
