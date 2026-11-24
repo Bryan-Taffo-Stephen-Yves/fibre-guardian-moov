@@ -33,7 +33,9 @@ const SCENES = {
   voisin: 'Coupure dans un quartier voisin',
   box: 'Box éteinte chez le client',
   facture: 'Facture pas encore payée',
+  vol: 'Câble volé sur le poteau',
 };
+const OUTAGES = ['panne', 'vol']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
 
 function note(st, n, now) {
   st.notifications.unshift({key: key(), home: 'home-1', at: now, read: false, sim: true, ...n});
@@ -75,7 +77,7 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
   insist(Object.hasOwn(SCENES, scene), 'Simulation inconnue.');
   clear(st);
   fault = fault || J.active(st);
-  insist(!(['panne', 'box'].includes(scene) && fault), 'Une panne est déjà en cours chez vous : suivez-la dans « Suivi technicien ».', 409);
+  insist(!([...OUTAGES, 'box'].includes(scene) && fault), 'Une panne est déjà en cours chez vous : suivez-la dans « Suivi technicien ».', 409);
   st.simScene = scene; st.simAt = now;
   const plan = st.plan || J.PLANS[1];
 
@@ -116,11 +118,11 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     later(st, now + BUSY_MS, {type: 'note', n: {page: 'home', title: 'Le réseau du quartier est redevenu fluide', body: 'Votre débit habituel est revenu.'}});
   } else if (scene === 'panne') {
     // Une panne dans le quartier : Guardian la confirme, un technicien est envoyé, répare, et la ligne est vérifiée.
-    const i = J.openIncident(st, now, {zone: st.zone, description: 'Câble fibre coupé par un chantier, près de chez vous.', lat: 5.335, lon: -4.087, kind: 'fibre', channel: 'app'});
-    i.sim = true; i.status = 'confirmed'; i.events.push({at: now, label: J.LABELS[1]});
-    J.notify(st, i, 'Panne dans votre quartier : Guardian l’a confirmée');
-    const steps = [['assigned', 6000], ['en_route', 12000], ['on_site', 24000], ['repairing', 32000], ['verifying', 44000], ['resolved', 52000]];
-    for (const [to, wait] of steps) later(st, now + wait, {type: 'step', id: i.id, to});
+    outage(st, now, {description: 'Câble fibre coupé par un chantier, près de chez vous.', title: 'Panne dans votre quartier : Guardian l’a confirmée'});
+  } else if (scene === 'vol') {
+    // Vol de câble : une voisine a envoyé la photo du poteau ; Yao sécurise le poteau puis remplace le câble.
+    outage(st, now, {description: 'Câble fibre volé sur le poteau de la rue, près de chez vous.', kind: 'pole', tech: 'yao', title: 'Câble volé dans votre rue : Moov intervient',
+      say: 'Une voisine a envoyé la photo du poteau de votre rue : le câble fibre a été volé. Ce n’est pas votre box. Yao, de l’équipe fibre, va d’abord sécuriser le poteau, puis remplacer le câble. Je vous préviens à chaque étape.'});
   } else if (scene === 'box') {
     // La box ne répond plus mais le quartier va bien : ce n'est pas une panne Moov. Guardian le dit et guide le client.
     st.simBoxOff = {until: now + BOX_MS};
@@ -147,6 +149,22 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
   return st;
 }
 
+// Une coupure jouée de bout en bout : panne confirmée, technicien choisi, en route, sur place, réparation, vérification.
+const STEPS_MS = [['assigned', 6000], ['en_route', 12000], ['on_site', 24000], ['repairing', 32000], ['verifying', 44000], ['resolved', 52000]];
+function outage(st, now, {description, title, say: text = null, kind = 'fibre', tech = 'koffi', steps = STEPS_MS}) {
+  const i = J.openIncident(st, now, {zone: st.zone, description, lat: 5.335, lon: -4.087, kind, channel: 'app'});
+  i.sim = true; i.status = 'confirmed'; i.events.push({at: now, label: J.LABELS[1]});
+  J.notify(st, i, title);
+  if (text) say(st, text);
+  for (const [to, wait, extra] of steps) later(st, now + wait, {type: 'step', id: i.id, to, tech, ...extra});
+  return i;
+}
+// Les fiches des techniciens (noc-store.cjs), avec le prénom seulement.
+function techOf(id) {
+  const t = require('./noc-store.cjs').TECHS.find(x => x.id === id);
+  return t ? {id: t.id, name: t.name.split(' ')[0], team: 'Équipe ' + t.team.toLowerCase()} : {id: 'koffi', name: 'Koffi', team: 'Équipe fibre ouest'};
+}
+
 // Les suites arrivées à leur heure. Renvoie true si l'état a changé.
 function tick(st, now = Date.now()) {
   if (!st || !Array.isArray(st.simQueue) || !st.simQueue.length) return false;
@@ -165,15 +183,15 @@ function tick(st, now = Date.now()) {
       const i = st.incidents.find(x => x.id === step.id && x.sim);
       if (!i || J.STEPS.indexOf(step.to) <= J.STEPS.indexOf(i.status)) continue; // jamais de retour en arrière
       i.status = step.to;
-      // Koffi, l'équipe fibre de Yopougon (fiches de noc-store.cjs) : jamais le même prénom que la cliente de démonstration.
-      if (step.to === 'assigned') { const t = require('./noc-store.cjs').TECHS.find(x => x.id === 'koffi'); i.technician = t ? {id: t.id, name: t.name.split(' ')[0], team: 'Équipe ' + t.team.toLowerCase()} : {id: 'koffi', name: 'Koffi', team: 'Équipe fibre Ouest'}; }
+      // Koffi par défaut (équipe fibre de Yopougon) : jamais le même prénom que la cliente de démonstration.
+      if (step.to === 'assigned') i.technician = techOf(step.tech || 'koffi');
       if (step.to === 'en_route') i.departed = step.at;
       if (step.to === 'on_site') i.arrived = step.at;
       if (step.to === 'resolved') { i.resolved = step.at; i.verification = {source: 'simulateur', at: step.at, online: true, mbps: (st.plan || J.PLANS[1]).mbps}; }
       i.events.push({at: step.at, label: J.LABELS[J.STEPS.indexOf(step.to)]});
       const who = i.technician?.name || 'Le technicien';
       J.notify(st, i, ({assigned: who + ' s’occupe de réparer votre ligne', en_route: who + ' est en route vers la panne', on_site: who + ' est sur place', repairing: 'Réparation en cours', verifying: 'Réparation finie : Guardian vérifie votre ligne', resolved: 'Internet est revenu : ligne vérifiée'})[step.to] || J.LABELS[J.STEPS.indexOf(step.to)]);
-      if (step.to === 'resolved') say(st, 'Bonne nouvelle : ' + who + ' a réparé le câble et j’ai vérifié votre ligne. Internet est revenu chez vous.');
+      if (step.to === 'resolved') say(st, 'Bonne nouvelle : ' + who + ' a ' + (i.kind === 'pole' ? 'remplacé le câble volé' : 'réparé le câble') + ' et j’ai vérifié votre ligne. Internet est revenu chez vous.');
     }
   }
   return changed;

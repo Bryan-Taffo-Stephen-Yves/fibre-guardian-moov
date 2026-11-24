@@ -19,6 +19,7 @@
   ['voisin','Coupure dans un quartier voisin','Guardian prévient le client que son débit peut baisser.','map','primary'],
   ['box','Box éteinte chez le client','Le quartier va bien, mais sa box ne répond plus. Guardian lui dit de vérifier la prise et le courant.','home','warning'],
   ['facture','Facture pas encore payée','Guardian rappelle la facture du mois, puis propose de la payer en 2 ou 3 fois, sans frais.','wallet','accent'],
+  ['vol','Câble volé sur le poteau','Une voisine envoie la photo du poteau. Yao sécurise le poteau, remplace le câble, et le client suit chaque étape.','alert','danger'],
  ];
  const TITLE=Object.fromEntries(SCENES.map(s=>[s[0],s[1]]));
  const PANNE=[['confirmed','Panne confirmée'],['assigned','Technicien choisi'],['en_route','En route'],['on_site','Sur place'],['repairing','Réparation'],['verifying','Vérification'],['resolved','Internet revenu']];
@@ -28,7 +29,7 @@
   E(()=>{read.current=Date.now();},[st]);
   E(()=>{if(!st.urgent&&!st.busy&&!st.box)return;const t=setInterval(()=>N(Date.now()),1000);return()=>clearInterval(t);},[!!st.urgent,!!st.busy,!!st.box]);
   const drift=Math.max(0,Math.floor((now-read.current)/1000)),left=st.urgent?Math.max(0,st.urgent.left-drift):0,busyLeft=st.busy?Math.max(0,st.busy.left-drift):0;
-  const at=st.panne?PANNE.findIndex(p=>p[0]===st.panne.status):st.scene==='panne'?PANNE.length-1:-1;
+  const at=st.panne?PANNE.findIndex(p=>p[0]===st.panne.status):['panne','vol','retard'].includes(st.scene)?PANNE.length-1:-1;
   return h('section',{className:'sim-live','aria-live':'polite'},
    h('div',{className:'sim-live-head'},h('span',{className:'sim-pulse','aria-hidden':true}),h('div',null,h('small',null,'EN COURS CHEZ '+String(st.client||'le client').toUpperCase()),h('h2',null,TITLE[st.scene]||'Simulation'))),
    st.urgent&&h('div',{className:'sim-urgent'+(left<=10?' is-late':'')},

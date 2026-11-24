@@ -201,3 +201,16 @@ test('facture : rappel de la vraie facture du mois, puis paiement en plusieurs f
   F.pay(store, uid, {confirm: true, month: bill.month}, now);
   assert.throws(() => SIM.run(store, uid, {scene: 'facture'}, now), /déjà payée/);
 });
+
+test('câble volé : poteau, Yao, mêmes étapes que la panne ; refusé pendant une vraie panne', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'vol', now);
+  const i = st.incidents.find(x => x.sim);
+  assert.equal(i.kind, 'pole'); assert.equal(i.electrical, true);
+  assert.match(st.messages.at(-1).text, /photo du poteau/);
+  SIM.tick(st, now + 60000);
+  assert.equal(i.technician.name, 'Yao'); assert.equal(i.status, 'resolved');
+  assert.match(st.messages.at(-1).text, /remplacé le câble volé/);
+  const busy = fresh(); J.openIncident(busy, now, {zone: busy.zone, description: 'Vraie panne', lat: 5.3, lon: -4, kind: 'fibre'});
+  assert.throws(() => SIM.start(busy, 'vol', now), /déjà en cours/);
+});
