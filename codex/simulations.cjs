@@ -33,6 +33,7 @@ const SCENES = {
   voisin: 'Coupure dans un quartier voisin',
   box: 'Box éteinte chez le client',
   facture: 'Facture pas encore payée',
+  suspendue: 'Ligne suspendue pour facture impayée',
   vol: 'Câble volé sur le poteau',
   chambre: 'Wi-Fi faible dans une chambre',
   retard: 'Technicien en retard',
@@ -138,7 +139,7 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     // La vraie facture du mois (fidelite.cjs) : Guardian rappelle gentiment, puis propose de payer en 2 ou 3 fois (acces.cjs).
     insist(s && uid, 'Client introuvable.', 404);
     const b = require('./fidelite.cjs').state(s, uid, now).bill;
-    insist(!b.paid, 'La facture de ' + b.label + ' de ce client est déjà payée : rien à lui rappeler.', 409);
+    insist(!b.paid || b.split, 'La facture de ' + b.label + ' de ce client est déjà payée : rien à lui rappeler.', 409);
     let split = null; try { split = require('./acces.cjs').state(s, uid, now).split; } catch {}
     const fmt = n => n.toLocaleString('fr-FR') + ' FCFA', day = t => new Date(t).getUTCDate() + ' ' + b.label.split(' ')[0];
     if (split) {
@@ -154,6 +155,11 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
       later(st, now + 20000, {type: 'note', n: {page: 'acces', title: 'Besoin d’un peu de temps ?', body: 'Vous pouvez payer ' + b.label + ' en 2 ou 3 fois, sans frais. Choisissez dans « Offres solidaires ».'},
         say: 'Si le mois est difficile, vous pouvez payer en 2 ou 3 fois, sans frais : ouvrez « Offres solidaires » dans votre compte. Votre fibre reste allumée.'});
     }
+  } else if (scene === 'suspendue') {
+    // La facture du mois n'est pas payée : la ligne est suspendue (ligne.cjs). Le client paie, internet revient tout de suite.
+    insist(s && uid, 'Client introuvable.', 404);
+    const l = require('./ligne.cjs').demoSuspend(s, uid, now, st);
+    say(st, 'Votre internet est suspendu car la facture de ' + l.label + ' (' + l.amount.toLocaleString('fr-FR') + ' FCFA) n’est pas payée. Payez-la avec Moov Money, ou en 2 ou 3 fois : internet revient tout de suite.');
   } else if (scene === 'retard') {
     // Le technicien part, prend du retard (route bloquée), puis ne peut plus venir : Guardian prévient et un autre prend le relais.
     outage(st, now, {description: 'Câble fibre coupé par un chantier, près de chez vous.', title: 'Panne dans votre quartier : Guardian l’a confirmée', steps: [

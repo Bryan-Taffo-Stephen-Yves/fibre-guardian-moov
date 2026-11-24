@@ -51,7 +51,8 @@ function bill(s,uid,now){
 
 // Points gagnés, facture par facture (du plus ancien au plus récent), sans compter le mois en cours non payé.
 function ledger(s,uid,now){
- const rows=s.all('SELECT * FROM fidelite_factures WHERE user_id=? ORDER BY month',uid).filter(r=>r.paid_at||r.due<now);
+ // Un mois payé en plusieurs fois compte comme payé (avec Moov Money) le jour de la dernière part.
+ const rows=s.all('SELECT * FROM fidelite_factures WHERE user_id=? ORDER BY month',uid).map(r=>{if(r.paid_at)return r;const p=splitOf(s,uid,r.month);return p&&p.done?{...r,paid_at:p.last,channel:'moov_money'}:r;}).filter(r=>r.paid_at||r.due<now);
  let earned=0,run=0,streak=0;const lines=[];
  for(const r of rows){
   const onTime=!!r.paid_at&&r.paid_at<=r.due;let p=0;
@@ -72,14 +73,25 @@ function tierOf(l){
  return t;
 }
 
+// Le mois que le client a choisi de payer en plusieurs fois (Offres solidaires, acces.cjs), s'il existe.
+function splitOf(s,uid,month){
+ if(!s.get("SELECT 1 FROM sqlite_master WHERE name='acces_echeances'"))return null;
+ const e=s.get('SELECT parts FROM acces_echeances WHERE user_id=? AND month=?',uid,month);if(!e)return null;
+ let p=[];try{p=JSON.parse(e.parts);}catch{}
+ const paid=p.filter(x=>x&&x.paid);
+ return {count:p.length,paid:paid.length,done:p.length>0&&paid.length===p.length,last:paid.length?Math.max(...paid.map(x=>x.paid)):null};
+}
+
 function state(s,uid,now=Date.now()){
- const b=bill(s,uid,now),l=ledger(s,uid,now),tier=tierOf(l),next=TIERS[TIERS.indexOf(tier)+1]||null,plan=planOf(s,uid);
+ const b=bill(s,uid,now),parts=splitOf(s,uid,b.month),l=ledger(s,uid,now),tier=tierOf(l),next=TIERS[TIERS.indexOf(tier)+1]||null,plan=planOf(s,uid);
  const boost=s.get("SELECT * FROM fidelite_echanges WHERE user_id=? AND reward IN ('argent','boost') AND until>? ORDER BY until DESC LIMIT 1",uid,now);
  const faster=J().PLANS.find(p=>p.mbps>plan.mbps)||plan;
  return {points:l.points,earned:l.earned,tier:{id:tier.id,name:tier.name},next:next?{id:next.id,name:next.name,missing:Math.max(0,next.min-l.earned),min:next.min}:null,
   progress:next?Math.max(0,Math.min(100,Math.round((l.earned-tier.min)/(next.min-tier.min)*100))):100,
   streak:l.streak,streakGoal:STREAK,filleuls:l.filleuls,rules:POINTS,
-  bill:{month:b.month,label:monthName(b.month),amount:b.amount,due:b.due,paid:!!b.paid_at,paidAt:b.paid_at,channel:b.channel,late:!b.paid_at&&now>b.due},
+  // Un mois payé en plusieurs fois (acces.cjs) : la facture est réglée quand la dernière part l'est, et ne se paie pas une 2e fois.
+  bill:parts?{month:b.month,label:monthName(b.month),amount:b.amount,due:b.due,paid:parts.done,paidAt:parts.last,channel:'plusieurs_fois',late:false,split:{paid:parts.paid,count:parts.count}}
+   :{month:b.month,label:monthName(b.month),amount:b.amount,due:b.due,paid:!!b.paid_at,paidAt:b.paid_at,channel:b.channel,late:!b.paid_at&&now>b.due},
   boost:boost?{mbps:faster.mbps,until:boost.until,why:boost.reward==='argent'?'Cadeau du niveau Argent':'Échangé contre vos points'}:null,
   plan:{mbps:plan.mbps,price:plan.price},
   rewards:REWARDS.map(r=>({...r,canAfford:l.points>=r.points})),
@@ -97,6 +109,7 @@ function pay(s,uid,d,now=Date.now()){
  return s.transaction(()=>{
   insist(d&&d.confirm===true,'Confirmez le paiement.');
   const before=state(s,uid,now);insist(!before.bill.paid,'Votre facture de '+before.bill.label+' est déjà payée.',409);
+  insist(!before.bill.split,'Votre facture de '+before.bill.label+' se paie déjà en plusieurs fois : réglez la part suivante dans « Payer en plusieurs fois ».',409);
   insist(d.month===before.bill.month,'Cette facture n’est plus à payer. Rechargez la page.',409);
   s.run("UPDATE fidelite_factures SET paid_at=?,channel='moov_money' WHERE user_id=? AND month=?",now,uid,before.bill.month);
   const after=state(s,uid,now),won=after.earned-before.earned;
