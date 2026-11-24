@@ -71,6 +71,8 @@ function createGuardianServer(options={}){
  const EB=require('./echange-box.cjs');EB.migrate(store);
  // Créneau de dépannage : le client choisit quand le technicien passe ; retard signalé (rendezvous.cjs).
  const RV=require('./rendezvous.cjs');RV.migrate(store);
+ // Déménagement : la fibre suit le client à sa nouvelle adresse, avec l'appel d'un conseiller (demenagement.cjs).
+ const DM=require('./demenagement.cjs');DM.migrate(store);
  // Service client : chaque demande du client suit un parcours complet (file « À rappeler », appel, « C'est réglé ? », note).
  const SC=require('./service-client.cjs');SC.migrate(store);
  // Panne qui revient : 3 coupures en 30 jours dans un quartier = dossier prioritaire et appel d'un conseiller (panne-recurrente.cjs).
@@ -262,9 +264,11 @@ function createGuardianServer(options={}){
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
     if(route==='/api/echange-box'&&method==='GET')return json(res,EB.state(store,user.id));
     if(route==='/api/echange-box'&&method==='POST'){store.rate('echange:'+user.id,10,600000);const d=await body(req,1024);return json(res,d.action==='cancel'?EB.cancel(store,user.id):EB.ask(store,user.id,d));}
-    if(route==='/api/service-client'&&method==='GET'){PNR.sweep(store);return json(res,SC.mine(store,user.id));}
+    if(route==='/api/demenagement'&&method==='GET')return json(res,DM.state(store,user.id));
+    if(route==='/api/demenagement'&&method==='POST'){store.rate('demenagement:'+user.id,10,600000);const d=await body(req,1024);return json(res,d.action==='cancel'?DM.cancel(store,user.id):DM.ask(store,user.id,d));}
+    if(route==='/api/service-client'&&method==='GET'){PNR.sweep(store);DM.tick(store);return json(res,SC.mine(store,user.id));}
     if(route==='/api/service-client'&&method==='POST'){store.rate('service:'+user.id,20,600000);return json(res,SC.answer(store,user.id,await body(req,1024)));}
-    if(route==='/api/noc/service-client'&&method==='GET'){operator.requireOperator(store,user.id);PNR.sweep(store);const r=SC.queue(store,user.id);DP.seen(store,user.id,'service');return json(res,r);}
+    if(route==='/api/noc/service-client'&&method==='GET'){operator.requireOperator(store,user.id);PNR.sweep(store);DM.tick(store);const r=SC.queue(store,user.id);DP.seen(store,user.id,'service');return json(res,r);}
     if(route==='/api/noc/service-client'&&method==='POST')return json(res,SC.act(store,user.id,await body(req,1024)));
     if(route==='/api/rendezvous'&&method==='POST'){store.rate('rendezvous:'+user.id,10,600000);return json(res,RV.choose(store,user.id,await body(req,512)));}
     if(route==='/api/noc/rendezvous'&&method==='GET'){const r=RV.list(store,user.id);DP.seen(store,user.id,'rendezvous');return json(res,r);}
@@ -422,6 +426,6 @@ function createGuardianServer(options={}){
    const data=zipped?file.gz:file.raw;headers['Content-Length']=data.length;res.writeHead(200,headers);res.end(method==='HEAD'?undefined:data);
   }catch(e){if(res.headersSent){res.end();return;}json(res,{error:e instanceof Problem?e.message:'Erreur interne. Aucune action confirmée.'},e instanceof Problem?e.status:500);if(!(e instanceof Problem)&&options.onError)options.onError(e);}
  };
- const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.on('close',()=>pushLoop.stop());server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const forgetJury=()=>{try{jury.forgetWhatsapp(store);}catch(e){options.onError?.(e);}};forgetJury();const cleanup=setInterval(()=>{store.cleanup();forgetJury();},3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(vwTimer);clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
+ const server=options.tls?https.createServer(options.tls,listener):http.createServer(listener);server.on('close',()=>pushLoop.stop());server.requestTimeout=15000;server.headersTimeout=10000;server.maxHeadersCount=60;server.guardianStore=store;const nocTimer=setInterval(()=>{try{store.transaction(()=>{if(options.liveTelemetry&&!store.demoSeeding)noc.refreshTelemetry(store);noc.scan(store);if(!store.demoSeeding)noc.arrivals(store);});}catch(e){options.onError?.(e);}},5000);nocTimer.unref();const expiry=setInterval(()=>{try{approvals.tick(store);}catch(e){if(options.onError)options.onError(e);}},30000);expiry.unref();const forgetJury=()=>{try{jury.forgetWhatsapp(store);}catch(e){options.onError?.(e);}};forgetJury();const cleanup=setInterval(()=>{store.cleanup();forgetJury();},3600000);cleanup.unref();server.on('close',()=>{whatsapp.stop();clearInterval(simTimer);clearInterval(vwTimer);clearInterval(cleanup);clearInterval(nocTimer);clearInterval(expiry);if(!options.store)store.close();});return server;
 }
 module.exports={createGuardianServer};

@@ -52,7 +52,7 @@
   // Côté Moov : une demande de la file.
   function Item({r, outcomes, busy, act}) {
     const [open, O] = S(false), [note, N] = S('');
-    const list = outcomes.filter(o => o.key !== 'echange' || r.kind === 'echange');
+    const list = outcomes.filter(o => !o.only || o.only === r.kind);
     return h('li', {className: 'av-call sc-call' + (r.late ? ' is-late' : '')},
       h('div', {className: 'av-call-head'},
         h('div', null, h('b', null, r.name), h('small', null, r.what + ' · ' + r.title)),

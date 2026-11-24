@@ -75,7 +75,7 @@ function inventory(s, uid) {
   return {items, ia: iaAllowed(s, uid), effacable: !protege(s, uid), refus: protege(s, uid), durees: DUREES};
 }
 
-const LABELS = {users: 'compte', journey_state: 'box_et_parcours', journey_usage_minutes: 'releves_de_debit', wa_accounts: 'whatsapp', wifi_watch: 'surveillance_wifi', wifi_copies: 'copies_wifi', citizen_reports: 'signalements', noc_feedback: 'avis', voice_requests: 'questions_a_la_voix', fidelite_factures: 'factures', parrainage_codes: 'parrainage', fibre_welcome: 'abonnement', acces_etudiants: 'tarif_etudiant', donnees_choix: 'vos_choix'};
+const LABELS = {demenagements: 'demenagements', users: 'compte', journey_state: 'box_et_parcours', journey_usage_minutes: 'releves_de_debit', wa_accounts: 'whatsapp', wifi_watch: 'surveillance_wifi', wifi_copies: 'copies_wifi', citizen_reports: 'signalements', noc_feedback: 'avis', voice_requests: 'questions_a_la_voix', fidelite_factures: 'factures', parrainage_codes: 'parrainage', fibre_welcome: 'abonnement', acces_etudiants: 'tarif_etudiant', donnees_choix: 'vos_choix'};
 
 function clean(row) {
   const out = {};

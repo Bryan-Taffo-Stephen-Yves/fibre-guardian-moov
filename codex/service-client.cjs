@@ -21,7 +21,8 @@ const KINDS={reclamation:'Réclamation',echange:'Échange de box',retard:'Techni
 const OUTCOMES={
  regle:{label:'Réglé au téléphone',client:'Votre problème est réglé.'},
  technicien:{label:'Technicien envoyé',client:'Un technicien passe chez vous. Vous le suivez dans « Ma réparation ».',wait:true},
- echange:{label:'Échange confirmé',client:'Votre échange de box est confirmé. Vous suivez chaque étape ici.',wait:true},
+ echange:{label:'Échange confirmé',client:'Votre échange de box est confirmé. Vous suivez chaque étape ici.',wait:true,only:'echange'},
+ demenagement:{label:'Déménagement confirmé',client:'Votre déménagement est confirmé : le technicien installe votre fibre à la nouvelle adresse le jour prévu.',wait:true,only:'demenagement'},
  absent:{label:'Pas de réponse',client:null}
 };
 const STEPS=['Demande reçue','Conseiller','Appel','Réglé','Votre avis'];
@@ -81,6 +82,7 @@ function tick(s,now){
   let done=now-d.called_at>DAY;
   if(d.incident_id&&has(s,'noc_events'))done=done||!!s.get("SELECT 1 FROM noc_events WHERE incident_id=? AND kind IN ('resolved','closed') AND at>?",d.incident_id,d.called_at);
   if(d.kind==='echange'&&has(s,'box_echanges'))done=s.get('SELECT status FROM box_echanges WHERE id=?',d.ref)?.status==='echangee';
+  if(d.kind==='demenagement'&&has(s,'demenagements')&&require('./demenagement.cjs').waiting(s,d.ref))done=false;   // réglé par demenagement.cjs le jour de l'installation
   if(done)settle(s,d.kind,d.ref,{},now);
  }
  s.run("UPDATE sc_demandes SET status='confirmee',answer='sans_reponse',answered_at=?,updated=? WHERE status='reglee' AND resolved_at<?",now,now,now-CONFIRM);
@@ -149,7 +151,7 @@ function queue(s,uid,now=Date.now()){
   stats:{taken:taken.length?Math.round(taken.reduce((n,d)=>n+(d.taken_at-d.created),0)/taken.length/MIN):null,
    solved:week.filter(d=>d.answer==='oui').length,notSolved:week.filter(d=>d.answer==='non').length,
    rating:rated.length?Math.round(rated.reduce((n,d)=>n+d.rating,0)/rated.length*10)/10:null},
-  outcomes:Object.entries(OUTCOMES).map(([key,o])=>({key,label:o.label}))};
+  outcomes:Object.entries(OUTCOMES).map(([key,o])=>({key,label:o.label,only:o.only||null}))};
 }
 
 // Le conseiller agit : « Je m'en occupe », puis le résultat de l'appel.
@@ -169,7 +171,7 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
  insist(d.action==='result','Action inconnue.');
  insist(r.agent_id,'Prenez d’abord la demande (« Je m’en occupe »).',409);
  insist(typeof d.outcome==='string'&&Object.hasOwn(OUTCOMES,d.outcome),'Choisissez le résultat de l’appel.');
- insist(d.outcome!=='echange'||r.kind==='echange','Ce résultat ne concerne que les échanges de box.');
+ insist(!OUTCOMES[d.outcome].only||OUTCOMES[d.outcome].only===r.kind,'Ce résultat ne concerne pas cette demande.');
  const note=String(d.note||'').trim().slice(0,500)||null;
  if(d.outcome==='absent'){
   const tries=r.tries+1,due=now+RETRY;
@@ -177,6 +179,7 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
   notify(s,r.user_id,'Nous avons essayé de vous appeler',tries>=MAX_TRIES?'Toujours pas de réponse. Rappelez le 111 quand vous voulez, ou répondez ici : votre demande reste ouverte.':first(me)+' vous rappelle avant '+when(due,now)+'. Gardez votre téléphone près de vous.',now);
   return queue(s,uid,now);
  }
+ if(r.kind==='demenagement'){const DM=require('./demenagement.cjs');DM.check(s,r.ref,d.outcome);DM.called(s,r.ref,d.outcome,now);}
  if(r.kind==='reclamation'&&s.get("SELECT status FROM reclamations WHERE id=?",r.ref)?.status==='open'){
   // La réponse passe par les réclamations (historique, recours) ; settle() demande ensuite son avis au client.
   require('./reclamation.cjs').answer(s,uid,{id:r.ref,outcome:d.outcome==='technicien'?'intervention':'regle',message:note||OUTCOMES[d.outcome].client},now);
@@ -193,4 +196,4 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
  return queue(s,uid,now);
 });}
 
-module.exports={migrate,open,cancelRef,settle,mine,answer,queue,act,KINDS,OUTCOMES,DUE};
+module.exports={migrate,open,cancelRef,settle,mine,answer,queue,act,when,KINDS,OUTCOMES,DUE};
