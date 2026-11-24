@@ -57,10 +57,13 @@ test('Créneau passé sans technicien : en retard chez le client (prévenu une f
  assert.equal(RV.list(s,ids.fatou,after).items.length,0);
 });
 
-test('Panne de quartier : pas de rendez-vous, la réparation se fait dans la rue',async()=>{
+test('Panne de quartier ou dossier support local : pas de rendez-vous',async()=>{
  const {s,ids}=await setup(),t=Date.UTC(2026,10,24,9);
  dossier(s,ids.awa,'inc-3','approved',t,'telemetry');
  assert.equal(view(s,ids.awa,'inc-3',t),null);
+ s.run("INSERT INTO noc_incidents(id,reporter,source,mode,status,title,description,created,updated) VALUES('inc-5',?,'customer_report','local','reported','Photo','Test',?,?)",ids.awa,t,t);
+ assert.equal(view(s,ids.awa,'inc-5',t),null,'un dossier local ne reçoit jamais de technicien');
+ assert.throws(()=>RV.choose(s,ids.awa,{incident:'inc-5',day:Date.UTC(2026,10,25),slot:'matin'},t));
  assert.throws(()=>RV.choose(s,ids.awa,{incident:'inc-3',day:Date.UTC(2026,10,25),slot:'matin'},t),/dans la rue/);
 });
 
@@ -71,4 +74,15 @@ test('Centre d’opérations : le rendez-vous du client s’affiche sur son doss
  const d=RV.forTeam(s,{incidents:[{id:'inc-4',status:'approved'},{id:'autre',status:'approved'}]},Date.UTC(2026,10,24,13));
  assert.equal(d.incidents[0].rendezvous.late,true);assert.match(d.incidents[0].rendezvous.label,/mardi 24 novembre/);
  assert.equal(d.incidents[1].rendezvous,null);
+});
+
+test('Créneau manqué par Moov : un nouveau choix reste possible même après 4 changements',async()=>{
+ const {s,ids}=await setup(),t=Date.UTC(2026,10,23,6);
+ dossier(s,ids.awa,'inc-6','approved',t);
+ for(let k=0;k<5;k++)RV.choose(s,ids.awa,{incident:'inc-6',day:Date.UTC(2026,10,23),slot:k%2?'apres':'matin'},t+k);
+ assert.throws(()=>RV.choose(s,ids.awa,{incident:'inc-6',day:Date.UTC(2026,10,24),slot:'matin'},t+10),/plusieurs fois/);
+ const late=Date.UTC(2026,10,23,12,30),v=view(s,ids.awa,'inc-6',late);
+ assert.equal(v.current.late,true);assert.equal(v.canChange,true);
+ RV.choose(s,ids.awa,{incident:'inc-6',day:Date.UTC(2026,10,24),slot:'matin'},late);
+ assert.equal(view(s,ids.awa,'inc-6',late).current.late,false);
 });

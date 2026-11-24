@@ -34,9 +34,10 @@ function slotsOf(day,now){return Object.entries(SLOTS).filter(([,v])=>day+v.from
 function choices(now){return days(now).map(d=>({day:d,label:dayName(d),today:d===midnight(now),slots:slotsOf(d,now)})).filter(d=>d.slots.length);}
 const label=r=>dayName(r.day)+', '+SLOTS[r.slot].label;
 
-function incident(s,iid){return s.get('SELECT id,reporter,source,status,technician FROM noc_incidents WHERE id=?',iid);}
-// Un signalement du client lui-même (application ou *144#) ; pas une panne détectée par la supervision du réseau.
-const eligible=i=>!!i&&!!i.reporter&&i.source!=='telemetry';
+function incident(s,iid){return s.get('SELECT id,reporter,source,mode,status,technician FROM noc_incidents WHERE id=?',iid);}
+// Un signalement du client lui-même (application ou *144#), suivi par les équipes terrain (mode « demo » du moteur d'incidents) ;
+// ni une panne détectée par la supervision, ni un dossier support local (qui ne reçoit jamais de technicien).
+const eligible=i=>!!i&&!!i.reporter&&i.source!=='telemetry'&&i.mode==='demo';
 function notify(s,uid,title,body,now){
  const st=J().get(s,uid);if(!st)return;st.notifications=st.notifications||[];
  st.notifications.unshift({key:'rdv:'+now+':'+title.length,home:'home-1',at:now,title,body,read:false,page:'tracking'});
@@ -58,7 +59,7 @@ function decorate(s,uid,data,now=Date.now()){
   }
   v.rendezvous={
    current:r?{day:r.day,slot:r.slot,label:label(r),late:isLate}:null,
-   canChange:OPEN.includes(i.status)&&(!r||r.changes<MAX_CHANGES),
+   canChange:OPEN.includes(i.status)&&(!r||isLate||r.changes<MAX_CHANGES),
    choices:OPEN.includes(i.status)?choices(now):[]
   };
  }
@@ -73,8 +74,9 @@ function choose(s,uid,d,now=Date.now()){return s.transaction(()=>{
  const day=Number(d.day);
  insist(choices(now).some(c=>c.day===day&&c.slots.some(x=>x.id===d.slot)),'Choisissez un des créneaux proposés.');
  const r=s.get('SELECT * FROM rendezvous WHERE incident_id=?',i.id);
- if(r){insist(r.changes<MAX_CHANGES,'Vous avez déjà changé plusieurs fois : appelez le 111 pour fixer l’heure avec un conseiller.',409);
-  s.run('UPDATE rendezvous SET day=?,slot=?,changes=changes+1,updated=? WHERE incident_id=?',day,d.slot,now,i.id);}
+ if(r){const missed=now>endOf(r);   // créneau manqué par Moov : le nouveau choix ne compte pas comme un changement du client
+  insist(missed||r.changes<MAX_CHANGES,'Vous avez déjà changé plusieurs fois : appelez le 111 pour fixer l’heure avec un conseiller.',409);
+  s.run('UPDATE rendezvous SET day=?,slot=?,changes=changes+?,updated=? WHERE incident_id=?',day,d.slot,missed?0:1,now,i.id);}
  else s.run('INSERT INTO rendezvous(incident_id,user_id,day,slot,created,updated) VALUES(?,?,?,?,?,?)',i.id,uid,day,d.slot,now,now);
  const v={day,slot:d.slot};
  notify(s,uid,r?'Rendez-vous changé':'Rendez-vous noté','Le technicien passe chez vous '+label(v)+'. Vous le suivrez ici dès son départ.',now);
