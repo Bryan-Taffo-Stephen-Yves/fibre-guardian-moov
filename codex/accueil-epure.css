@@ -1,0 +1,128 @@
+/* Accueil épuré (novembre 2026) : un grand en-tête bleu Moov, une feuille claire qui remonte dessus.
+   En-tête : avatar + bonjour + cloche ; le débit reçu en très gros ; l'offre dans une pastille ; quatre gros boutons ronds.
+   Pastilles rouges (.ae-count) : le nombre de messages non lus d'un service, comme sur l'icône d'une app de téléphone.
+   Chargé après design-system.css. Couleurs = variables --moov-* (et jetons --ds-* qui en sont faits) uniquement. */
+
+.ac--epure{gap:18px}
+/* L'en-tête bleu remplace la barre du haut sur l'accueil du téléphone */
+@media(max-width:760px){
+ .journey:has(.ae-hero) .j-header{display:none}
+ .journey[data-espace=client]:has(.ae-hero) .j-main{padding-top:0}
+}
+
+/* ---- En-tête bleu ---- */
+.ae-hero{--tone:var(--moov-success-300);position:relative;isolation:isolate;overflow:hidden;display:grid;gap:18px;
+ margin:0 -16px;padding:calc(14px + env(safe-area-inset-top)) 18px 52px;color:var(--ds-white);
+ background:var(--ds-sheen),var(--ds-grad-brand);animation:ac-in .45s var(--ac-ease) both}
+/* Deux grands cercles clairs, comme sur une carte bancaire */
+.ae-hero::before,.ae-hero::after{content:'';position:absolute;z-index:-1;border-radius:50%;pointer-events:none}
+.ae-hero::before{top:-90px;right:-110px;width:300px;height:300px;border:46px solid color-mix(in srgb,var(--ds-white) 9%,transparent)}
+.ae-hero::after{bottom:-120px;left:-90px;width:240px;height:240px;background:color-mix(in srgb,var(--ds-white) 7%,transparent)}
+.ae-hero.ae-slow{--tone:var(--moov-accent-200)}
+.ae-hero.ae-wait{--tone:var(--moov-primary-100)}
+.ae-hero.ae-down{--tone:var(--ds-white);background:var(--ds-sheen),var(--ds-grad-danger)}
+
+.ae-top{display:flex;align-items:center;gap:12px}
+.ae-face{flex:none;display:grid;place-items:center;width:56px;height:56px;padding:0;border:0;border-radius:50%;overflow:hidden;cursor:pointer;
+ background:var(--ds-white);color:var(--moov-primary-700);font:700 20px var(--ds-font);box-shadow:0 0 0 3px color-mix(in srgb,var(--ds-white) 55%,transparent)}
+.ae-hi{min-width:0;flex:1;display:grid;gap:2px}
+.ae-hi strong{font:700 23px/1.15 var(--ds-font-display);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ae-hi small{font-size:13.5px;line-height:1.3;font-weight:500;color:color-mix(in srgb,var(--ds-white) 82%,transparent)}
+.ae-top-actions{flex:none;display:flex;align-items:center;gap:8px}
+.ae-top-actions .fg-demo-badge{border:0;background:color-mix(in srgb,var(--ds-white) 20%,transparent);color:var(--ds-white);box-shadow:none}
+.ae-bell{position:relative;display:grid;place-items:center;width:48px;height:48px;padding:0;border:0;border-radius:50%;cursor:pointer;
+ background:color-mix(in srgb,var(--ds-white) 22%,transparent);color:var(--ds-white);transition:transform var(--ds-t1) var(--ds-spring)}
+.ae-bell:active{transform:scale(.92)}
+.ae-bell svg{--ico-fill:.0}
+.ae-bell .ae-count{top:-3px;right:-4px}
+
+.ae-speed{display:grid;justify-items:center;gap:6px;text-align:center}
+.ae-speed p{margin:0}
+.ae-label{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:color-mix(in srgb,var(--ds-white) 86%,transparent)}
+.ae-dot{width:9px;height:9px;border-radius:50%;background:var(--tone);box-shadow:0 0 0 4px color-mix(in srgb,var(--tone) 30%,transparent)}
+.ae-num{display:flex;align-items:baseline;gap:8px}
+.ae-num strong{font:800 72px/1 var(--ds-font-display);letter-spacing:-.05em;font-variant-numeric:tabular-nums;text-shadow:0 4px 18px color-mix(in srgb,var(--moov-primary-900) 25%,transparent)}
+.ae-num small{font:700 24px var(--ds-font-display);color:color-mix(in srgb,var(--ds-white) 78%,transparent)}
+.ae-state{font-size:15.5px;font-weight:600}
+.ae-pill{display:inline-flex;align-items:center;gap:6px;min-height:40px;margin-top:4px;padding:0 14px 0 16px;border:0;border-radius:var(--ds-r-pill);cursor:pointer;
+ background:color-mix(in srgb,var(--ds-white) 20%,transparent);color:var(--ds-white);font:600 14px var(--ds-font);max-width:100%}
+
+/* Quatre gros boutons ronds */
+.ae-acts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:4px}
+.ae-act{display:grid;justify-items:center;gap:8px;padding:0;border:0;background:none;color:var(--ds-white);font:600 14px/1.2 var(--ds-font);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ae-act-ico{position:relative;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;
+ background:radial-gradient(110% 80% at 30% 10%,var(--ds-white) 0,transparent 60%),linear-gradient(160deg,var(--ds-white),var(--moov-primary-50));color:var(--moov-primary-600);
+ box-shadow:0 12px 22px -12px color-mix(in srgb,var(--moov-primary-900) 70%,transparent);transition:transform var(--ds-t1) var(--ds-spring)}
+.ae-act:active .ae-act-ico{transform:scale(.9)}
+.ae-act:disabled{opacity:.6;cursor:default}
+.ae-act:focus-visible{outline:none}
+.ae-act:focus-visible .ae-act-ico,.ae-bell:focus-visible,.ae-pill:focus-visible,.ae-face:focus-visible{outline:3px solid var(--ds-white);outline-offset:3px}
+
+/* Pastille rouge du nombre de messages non lus (aussi sur les tuiles des Services) */
+.journey .ac .ae-count,.ae-count{position:absolute;top:-4px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:var(--ds-r-pill);
+ background:var(--moov-danger-500);color:var(--ds-white);font:700 12.5px/22px var(--ds-font);text-align:center;font-variant-numeric:tabular-nums;
+ box-shadow:0 0 0 2px var(--ds-white),0 4px 10px -4px color-mix(in srgb,var(--moov-danger-700) 70%,transparent);animation:ae-pop .5s var(--ds-spring) both}
+@keyframes ae-pop{from{transform:scale(.3);opacity:0}}
+
+/* ---- La feuille claire qui remonte sur l'en-tête ---- */
+.ae-sheet{position:relative;display:grid;gap:18px;margin:-30px -16px 0;padding:22px 16px 0;border-radius:var(--ds-r-xl) var(--ds-r-xl) 0 0;background:var(--ds-canvas)}
+.ac--epure .ac-cards{display:grid;gap:12px}
+.ac--epure .ac-cards:not(:has(>*:not(:empty))){display:none}
+
+/* Une carte-ligne sombre : changer de forfait */
+.ae-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;width:100%;padding:16px;border:0;border-radius:var(--ds-r-lg);cursor:pointer;text-align:left;
+ font:inherit;background:var(--ds-surface);color:var(--moov-ink);box-shadow:var(--ds-shadow-1)}
+.ae-row--dark{background:var(--ds-sheen),linear-gradient(135deg,var(--moov-primary-800),var(--ds-deep));color:var(--ds-white)}
+.ae-row-ico{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:var(--ds-grad-accent);color:var(--ds-white)}
+.ae-row-ico svg{--ico-fill:.25}
+.ae-row-ico{position:relative}
+.ae-row--dossier{border:1px solid color-mix(in srgb,var(--moov-primary-500) 16%,transparent)}
+.ae-row--dossier .ae-row-ico{background:var(--moov-primary-50);color:var(--moov-primary-600)}
+.ae-row--dossier>svg{color:var(--moov-primary-600)}
+.ae-row-txt{display:grid;gap:3px;min-width:0}
+.ae-row-txt strong{font-size:16.5px;font-weight:700}
+.ae-row-txt small{font-size:14px;color:color-mix(in srgb,currentColor 75%,transparent)}
+.ae-row:active{transform:scale(.98)}
+
+/* Proposer les alertes du téléphone (push-view.js) */
+.fp-prompt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 14px;padding:16px;border-radius:var(--ds-r-lg);background:var(--ds-surface);box-shadow:var(--ds-shadow-1);border:1px solid color-mix(in srgb,var(--moov-primary-500) 14%,transparent)}
+.fp-prompt-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--moov-primary-50);color:var(--moov-primary-600)}
+.fp-prompt-txt h2{margin:2px 0 4px;font-size:16.5px;color:var(--moov-ink)}
+.fp-prompt-txt p{margin:0;font-size:14px;line-height:1.45;color:var(--moov-neutral-600)}
+.fp-prompt-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.fp-prompt-actions .ac-go{min-height:44px}
+
+/* Guardian : ce qu'il a écrit pendant l'absence */
+.ae-news{display:grid;gap:10px;margin:0 0 14px;padding:16px;border-radius:var(--ds-r-lg);background:var(--moov-primary-50);border:1px solid color-mix(in srgb,var(--moov-primary-500) 18%,transparent)}
+.ae-news h2{margin:0;font-size:16.5px;color:var(--moov-primary-800)}
+.ae-news ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.ae-news li{display:grid;gap:2px;padding:10px 12px;border-radius:var(--ds-r-sm);background:var(--ds-surface)}
+.ae-news li b{font-size:15px;color:var(--moov-ink)}
+.ae-news li span{font-size:14px;line-height:1.4;color:var(--moov-neutral-600)}
+.ae-news li small{font-size:12.5px;color:var(--moov-neutral-500)}
+.ae-news .ac-more{justify-self:start}
+
+/* ---- Grand écran : l'en-tête devient une grande carte à gauche, les Services à droite ---- */
+@media(min-width:761px){
+ .ac--epure{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
+ .ae-hero{grid-column:1;grid-row:1/span 2;margin:0;padding:24px 24px 28px;border-radius:var(--ds-r-xl);box-shadow:var(--ds-glow-brand);align-content:start}
+ .ae-hero.ae-down{box-shadow:0 20px 36px -16px color-mix(in srgb,var(--moov-danger-500) 65%,transparent)}
+ .ae-sheet{display:contents}
+ .ac--epure .ac-services{grid-column:2;grid-row:1}
+ .ac--epure .ac-alert,.ac--epure .ac-cards,.ac--epure .ae-row{grid-column:2}
+ .ac--epure .ac-recent{grid-column:1/-1}
+ .ae-num strong{font-size:80px}
+ .ae-acts{margin-top:10px}
+ .ae-top-actions{display:none}
+}
+/* Petit téléphone */
+@media(max-width:370px){.ae-act-ico{width:56px;height:56px}.ae-num strong{font-size:60px}.ae-hi strong{font-size:20px}.ae-act{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.ae-hero,.ae-count{animation:none}.ae-act-ico,.ae-bell{transition:none}}
+
+/* ---- Mode sombre du client : l'en-tête reste bleu Moov, la feuille prend le fond sombre ---- */
+:root[data-mode=dark] .journey[data-espace=client] .ae-act-ico{background:var(--ds-white);color:var(--moov-primary-500)}
+:root[data-mode=dark] .journey[data-espace=client] .ae-row--dark{background:var(--ds-sheen),linear-gradient(135deg,var(--moov-primary-700),var(--ds-deep))}
+:root[data-mode=dark] .journey[data-espace=client] .ae-news{background:var(--moov-surface)}
+:root[data-mode=dark] .journey[data-espace=client] .ae-row--dossier .ae-row-ico{background:color-mix(in srgb,var(--moov-primary-500) 22%,transparent);color:var(--moov-primary)}
+:root[data-mode=dark] .journey[data-espace=client] .ae-news h2{color:var(--moov-primary)}
+:root[data-mode=dark] .journey[data-espace=client] .fp-prompt-ico{background:color-mix(in srgb,var(--moov-primary-500) 22%,transparent);color:var(--moov-primary)}
