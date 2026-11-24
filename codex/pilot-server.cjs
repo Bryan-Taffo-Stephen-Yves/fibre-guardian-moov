@@ -71,6 +71,8 @@ function createGuardianServer(options={}){
  const EB=require('./echange-box.cjs');EB.migrate(store);
  // Créneau de dépannage : le client choisit quand le technicien passe ; retard signalé (rendezvous.cjs).
  const RV=require('./rendezvous.cjs');RV.migrate(store);
+ // Service client : chaque demande du client suit un parcours complet (file « À rappeler », appel, « C'est réglé ? », note).
+ const SC=require('./service-client.cjs');SC.migrate(store);
  // Réclamations : délai de réponse promis, « Ce n'est pas réglé », recours ARTCI (reclamation.cjs).
  const RC=require('./reclamation.cjs');RC.migrate(store);
  // État de la ligne : suspendue pour facture impayée, rétablie dès le paiement (ligne.cjs).
@@ -258,6 +260,10 @@ function createGuardianServer(options={}){
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
     if(route==='/api/echange-box'&&method==='GET')return json(res,EB.state(store,user.id));
     if(route==='/api/echange-box'&&method==='POST'){store.rate('echange:'+user.id,10,600000);const d=await body(req,1024);return json(res,d.action==='cancel'?EB.cancel(store,user.id):EB.ask(store,user.id,d));}
+    if(route==='/api/service-client'&&method==='GET')return json(res,SC.mine(store,user.id));
+    if(route==='/api/service-client'&&method==='POST'){store.rate('service:'+user.id,20,600000);return json(res,SC.answer(store,user.id,await body(req,1024)));}
+    if(route==='/api/noc/service-client'&&method==='GET'){const r=SC.queue(store,user.id);DP.seen(store,user.id,'service');return json(res,r);}
+    if(route==='/api/noc/service-client'&&method==='POST')return json(res,SC.act(store,user.id,await body(req,1024)));
     if(route==='/api/rendezvous'&&method==='POST'){store.rate('rendezvous:'+user.id,10,600000);return json(res,RV.choose(store,user.id,await body(req,512)));}
     if(route==='/api/noc/rendezvous'&&method==='GET'){const r=RV.list(store,user.id);DP.seen(store,user.id,'rendezvous');return json(res,r);}
     if(route==='/api/noc/echanges'&&method==='GET'){const r=EB.list(store,user.id);DP.seen(store,user.id,'echanges');return json(res,r);}
