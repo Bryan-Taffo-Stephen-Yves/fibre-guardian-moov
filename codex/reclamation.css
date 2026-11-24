@@ -1,0 +1,27 @@
+/* Réclamations (reclamation-view.js) : carte du dossier client et bloc du Superviseur.
+   Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.rc-card{display:grid;gap:10px;margin-top:12px;padding:14px;border-radius:16px;background:var(--moov-primary-25);border:1px solid var(--moov-primary-100)}
+.rc-card.is-late{background:var(--moov-danger-50);border-color:var(--moov-danger-300)}
+.rc-promise{margin:0;font-size:14.5px;line-height:1.4;color:var(--moov-primary-800)}
+.rc-card.is-late .rc-promise{color:var(--moov-danger-700)}
+.rc-state{display:grid;gap:4px}
+.rc-state b{font-size:15px;color:var(--moov-ink)}
+.rc-state p{margin:0;font-size:14px;line-height:1.45;color:var(--moov-neutral-700)}
+.rc-state.is-done b{color:var(--moov-success-700)}
+.rc-ok{margin:0;font-size:14px;font-weight:600;color:var(--moov-success-700)}
+.rc-error{margin:0;font-size:14px;font-weight:600;color:var(--moov-danger-700)}
+.rc-claim{justify-self:start;min-height:44px;padding:0 18px;border:1.5px solid var(--moov-primary);border-radius:14px;background:var(--moov-surface);color:var(--moov-primary);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.rc-claim.is-main{background:var(--moov-primary);color:var(--moov-on-primary)}
+.rc-claim:disabled{opacity:.6;cursor:default}
+.rc-form{display:grid;gap:10px}
+.rc-form label{display:grid;gap:6px;font-size:14px;font-weight:600;color:var(--moov-ink)}
+.rc-form textarea{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--moov-neutral-200);border-radius:12px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;font-size:15px;font-weight:400;resize:vertical}
+.rc-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.rc-link{border:0;background:none;color:var(--moov-primary-700);font:inherit;font-size:14px;font-weight:600;text-decoration:underline;cursor:pointer;min-height:44px}
+.rc-recours{border-top:1px solid var(--moov-primary-100);padding-top:8px}
+.rc-recours summary{cursor:pointer;font-size:14px;font-weight:700;color:var(--moov-primary-700);min-height:32px;display:flex;align-items:center}
+.rc-recours p{margin:6px 0 0;font-size:14px;line-height:1.45;color:var(--moov-neutral-700)}
+.rc-recours a{color:var(--moov-primary-700);font-weight:700}
+.rc-level{flex:none;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:var(--moov-primary-50);color:var(--moov-primary-700)}
+.rc-level.is-2,.rc-level.is-3{background:var(--moov-accent-50);color:var(--moov-accent-text)}
+.rc-hint{margin:0;font-size:14px;line-height:1.45;color:var(--moov-neutral-700)}
