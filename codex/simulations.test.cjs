@@ -169,3 +169,18 @@ test('relecture jury : « C’est à moi » après le blocage automatique déblo
     assert.deepEqual(st.simQueue, []); assert.equal(st.simScene, null); assert.equal(st.scenario, 'slow');
   });
 });
+
+test('box éteinte : pas une panne Moov, pas de redémarrage à distance, retour au bout de 90 s', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'box', now);
+  const m = J.snapshot(st).metrics;
+  assert.equal(m.capacity, 0); assert.equal(m.latency, null); assert.equal(m.state, 'éteinte');
+  assert.match(st.notifications[0].body, /ce n’est pas une panne Moov/);
+  assert.ok(SIM.status(st, now).box.left > 80);
+  SIM.tick(st, now + 90000);
+  assert.equal(st.simBoxOff, null);
+  assert.equal(st.notifications[0].title, 'Votre box est revenue');
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+  const busy = fresh(); J.openIncident(busy, now, {zone: busy.zone, description: 'Vraie panne', lat: 5.3, lon: -4, kind: 'fibre'});
+  assert.throws(() => SIM.start(busy, 'box', now), /déjà en cours/);
+});

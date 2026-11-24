@@ -17,6 +17,7 @@
   ['sature','La fibre est occupée dans le quartier','Trop de foyers connectés en même temps : le débit du client baisse quelques minutes.','up','warning'],
   ['panne','Panne et technicien','Un câble est coupé. Le client suit le technicien jusqu’à la réparation, étape par étape.','shield','danger'],
   ['voisin','Coupure dans un quartier voisin','Guardian prévient le client que son débit peut baisser.','map','primary'],
+  ['box','Box éteinte chez le client','Le quartier va bien, mais sa box ne répond plus. Guardian lui dit de vérifier la prise et le courant.','home','warning'],
  ];
  const TITLE=Object.fromEntries(SCENES.map(s=>[s[0],s[1]]));
  const PANNE=[['confirmed','Panne confirmée'],['assigned','Technicien choisi'],['en_route','En route'],['on_site','Sur place'],['repairing','Réparation'],['verifying','Vérification'],['resolved','Internet revenu']];
@@ -24,7 +25,7 @@
  function Live({st,stop,busy}){
   const [now,N]=S(Date.now()),read=R(Date.now());
   E(()=>{read.current=Date.now();},[st]);
-  E(()=>{if(!st.urgent&&!st.busy)return;const t=setInterval(()=>N(Date.now()),1000);return()=>clearInterval(t);},[!!st.urgent,!!st.busy]);
+  E(()=>{if(!st.urgent&&!st.busy&&!st.box)return;const t=setInterval(()=>N(Date.now()),1000);return()=>clearInterval(t);},[!!st.urgent,!!st.busy,!!st.box]);
   const drift=Math.max(0,Math.floor((now-read.current)/1000)),left=st.urgent?Math.max(0,st.urgent.left-drift):0,busyLeft=st.busy?Math.max(0,st.busy.left-drift):0;
   const at=st.panne?PANNE.findIndex(p=>p[0]===st.panne.status):st.scene==='panne'?PANNE.length-1:-1;
   return h('section',{className:'sim-live','aria-live':'polite'},
@@ -34,6 +35,7 @@
     h('div',null,h('p',null,h('b',null,st.urgent.name)),h('p',null,'Le client peut répondre « C’est à moi » ou « Bloquer » dans Appareils. Sinon, Guardian le bloque à la fin du compte à rebours.'))),
    st.blocked.map(d=>h('div',{key:d.id,className:'sim-note is-done'},h(Icon,{name:'shield',size:20}),h('p',null,h('b',null,'Guardian a bloqué « '+d.name+' ». '),'Le client n’a pas répondu à temps.'))),
    st.guests>0&&h('div',{className:'sim-note'},h(Icon,{name:'devices',size:20}),h('p',null,h('b',null,st.guests+' appareil'+(st.guests>1?'s':'')+' arrivé'+(st.guests>1?'s':'')+'. '),st.pending>0?'D’autres arrivent…':'Guardian a écrit pour chacun.')),
+   st.box&&h('div',{className:'sim-note is-warn'},h(Icon,{name:'home',size:20}),h('p',null,h('b',null,'Box du client éteinte. '),'Le courant revient dans '+mmss(Math.max(0,st.box.left-drift))+'.')),
    st.busy&&h('div',{className:'sim-note is-warn'},h(Icon,{name:'up',size:20}),h('p',null,h('b',null,'Débit du client réduit. '),'Retour à la normale dans '+mmss(busyLeft)+'.')),
    at>=0&&h('ol',{className:'sim-steps','aria-label':'Étapes de la réparation'},PANNE.map(([k,label],n)=>h('li',{key:k,className:n<at||(n===at&&k==='resolved')?'is-done':n===at?'is-now':''},h('span',{'aria-hidden':true}),h('b',null,label),n===1&&st.panne?.technician&&n<=at&&h('small',null,st.panne.technician)))),
    st.upgrade&&h('div',{className:'sim-offer'},h('div',null,h('small',null,'OFFRE ENVOYÉE PAR GUARDIAN'),h('p',null,h('b',null,st.upgrade.from.mbps+' → '+st.upgrade.to.mbps+' Mb/s')),h('p',null,fcfa(st.upgrade.amount)+' pour la fin du mois. Le client paie avec Moov Money depuis la conversation avec Guardian.'))),

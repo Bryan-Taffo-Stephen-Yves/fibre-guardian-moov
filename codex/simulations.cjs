@@ -21,6 +21,7 @@ const NEIGHBOURS = {'YOP-07': 'Yopougon Sideci', 'YOP-08': 'Yopougon Niangon', '
 const neighbour = st => NEIGHBOURS[st.segment] && !String(st.zone || '').includes(NEIGHBOURS[st.segment].split(' ').pop()) ? NEIGHBOURS[st.segment] : 'un quartier voisin';
 const quarter = st => String(st.zone || 'votre quartier').split('·').pop().trim();
 
+const BOX_MS = 90000; // la box éteinte revient au bout d'une minute et demie (le courant est revenu)
 const GUESTS = [['Téléphone de Fatou', 6], ['Tablette Samsung', 9], ['iPhone inconnu', 7], ['PC portable HP', 14]];
 
 const SCENES = {
@@ -30,6 +31,7 @@ const SCENES = {
   sature: 'La fibre est occupée dans votre quartier',
   panne: 'Panne, puis réparation par le technicien',
   voisin: 'Coupure dans un quartier voisin',
+  box: 'Box éteinte chez le client',
 };
 
 function note(st, n, now) {
@@ -47,6 +49,7 @@ function status(st, now = Date.now()) {
     scene: st.simScene || null, at: st.simAt || null, pending: (st.simQueue || []).length,
     urgent: urgent ? {id: urgent.id, name: urgent.name, left: Math.max(0, Math.ceil((urgent.urgentUntil - now) / 1000))} : null,
     blocked: (st.devices || []).filter(d => d.autoBlocked && d.blocked).map(d => ({id: d.id, name: d.name})),
+    box: st.simBoxOff?.until > now ? {left: Math.ceil((st.simBoxOff.until - now) / 1000)} : null,
     busy: st.simBusy?.until > now ? {until: st.simBusy.until, left: Math.ceil((st.simBusy.until - now) / 1000)} : null,
     panne: panne ? {reference: panne.reference, status: panne.status, label: J.LABELS[J.STEPS.indexOf(panne.status)], technician: panne.technician?.name || null} : null,
     guests: (st.devices || []).filter(d => d.sim && !d.urgentUntil).length,
@@ -59,7 +62,7 @@ function status(st, now = Date.now()) {
 function clear(st, {keepScenario = false} = {}) {
   st.devices = st.devices.filter(d => !d.sim);
   st.incidents = st.incidents.filter(i => !i.sim);
-  st.simQueue = []; st.simBusy = null; st.simScene = null; st.simAt = null;
+  st.simQueue = []; st.simBusy = null; st.simBoxOff = null; st.simScene = null; st.simAt = null;
   if (st.upgrade?.source === 'simulation') st.upgrade = null;
   if (keepScenario) return; // le client vient de choisir lui-même un état de la box
   if (['download', 'devices'].includes(st.scenario)) { st.scenario = 'normal'; const ps5 = st.devices.find(d => d.id === 'ps5'); if (ps5) ps5.demand = 6; }
@@ -71,7 +74,7 @@ function start(st, scene, now = Date.now(), {fault = null} = {}) {
   insist(Object.hasOwn(SCENES, scene), 'Simulation inconnue.');
   clear(st);
   fault = fault || J.active(st);
-  insist(!(scene === 'panne' && fault), 'Une panne est déjà en cours chez vous : suivez-la dans « Suivi technicien ».', 409);
+  insist(!(['panne', 'box'].includes(scene) && fault), 'Une panne est déjà en cours chez vous : suivez-la dans « Suivi technicien ».', 409);
   st.simScene = scene; st.simAt = now;
   const plan = st.plan || J.PLANS[1];
 
@@ -117,6 +120,12 @@ function start(st, scene, now = Date.now(), {fault = null} = {}) {
     J.notify(st, i, 'Panne dans votre quartier : Guardian l’a confirmée');
     const steps = [['assigned', 6000], ['en_route', 12000], ['on_site', 24000], ['repairing', 32000], ['verifying', 44000], ['resolved', 52000]];
     for (const [to, wait] of steps) later(st, now + wait, {type: 'step', id: i.id, to});
+  } else if (scene === 'box') {
+    // La box ne répond plus mais le quartier va bien : ce n'est pas une panne Moov. Guardian le dit et guide le client.
+    st.simBoxOff = {until: now + BOX_MS};
+    note(st, {page: 'home', title: 'Votre box ne répond plus', body: 'Le réseau de votre quartier va bien : ce n’est pas une panne Moov. Vérifiez que la box est branchée et allumée. Une coupure de courant chez vous ?'}, now);
+    say(st, 'Votre box ne me répond plus depuis ' + hm(now) + ', alors que les autres box de ' + quarter(st) + ' vont bien. Ce n’est donc pas une panne Moov. Vérifiez la prise, le bouton de la box et le courant chez vous. Je vous préviens dès qu’elle revient.');
+    later(st, now + BOX_MS, {type: 'note', n: {page: 'home', title: 'Votre box est revenue', body: 'Le courant est revenu : votre box répond de nouveau et internet marche.'}, boxOn: true});
   } else if (scene === 'voisin') {
     const place = neighbour(st);
     note(st, {page: 'home', title: 'Attention : baisse de débit possible', body: 'Une coupure est en cours à ' + place + ', à côté de chez vous. Pendant la réparation, le débit peut baisser dans votre zone. Votre internet reste allumé.'}, now);
@@ -132,7 +141,7 @@ function tick(st, now = Date.now()) {
   let changed = false;
   while (st.simQueue.length && st.simQueue[0].at <= now) {
     const step = st.simQueue.shift(); changed = true;
-    if (step.type === 'note') { if (step.device && !st.devices.some(x => x.id === step.device.id)) st.devices.push(step.device); note(st, step.n, step.at); if (step.say) say(st, step.say); }
+    if (step.type === 'note') { if (step.boxOn) st.simBoxOff = null; if (step.device && !st.devices.some(x => x.id === step.device.id)) st.devices.push(step.device); note(st, step.n, step.at); if (step.say) say(st, step.say); }
     else if (step.type === 'autoblock') {
       const d = st.devices.find(x => x.id === step.id);
       if (d && !d.recognized && !d.blocked) {
