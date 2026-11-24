@@ -56,7 +56,8 @@
       open ? h('div', {className: 'av-outcomes', role: 'group', 'aria-label': 'Ce qui a été fait'},
         outcomes.map(o => h('button', {key: o.key, type: 'button', className: 'av-btn' + (o.key === 'regle' ? ' is-main' : ''), disabled: busy, onClick: () => onDone(c.id, o.key)}, o.label)),
         h('button', {type: 'button', className: 'av-link', onClick: () => O(false)}, 'Annuler'))
-        : h('button', {type: 'button', className: 'av-btn is-main', onClick: () => O(true)}, 'Répondre au client'));
+        : c.canAnswer ? h('button', {type: 'button', className: 'av-btn is-main', onClick: () => O(true)}, 'Répondre au client')
+        : h('p', {className: 'av-due'}, 'Un responsable doit répondre à ce client.'));
   }
 
   function Block({api}) {

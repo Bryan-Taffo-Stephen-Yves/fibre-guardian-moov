@@ -252,7 +252,7 @@ function createGuardianServer(options={}){
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
     if(route==='/api/noc/client'&&method==='GET')return json(res,RC.decorate(store,user.id,noc.client(store,user.id)));
     if(route==='/api/reclamation'&&method==='POST'){store.rate('reclamation:'+user.id,10,600000);return json(res,RC.claim(store,user.id,await body(req,2048)));}
-    if(route==='/api/noc/reclamations'&&method==='GET')return json(res,RC.list(store,user.id));
+    if(route==='/api/noc/reclamations'&&method==='GET'){const r=RC.list(store,user.id);DP.seen(store,user.id,'reclamations');return json(res,r);}
     if(route==='/api/noc/reclamations'&&method==='POST')return json(res,RC.answer(store,user.id,await body(req,2048)));
     // Carte des pannes côté client : état de chaque quartier, chiffres seulement (voir ville.cjs).
     if(route==='/api/ville'&&method==='GET')return json(res,require('./ville.cjs').snapshot(store,user.id));

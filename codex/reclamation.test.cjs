@@ -54,9 +54,12 @@ test('« Ce n’est pas réglé » : conseiller puis responsable, recours ARTCI 
  assert.equal(r2.level,2);assert.equal(r2.due,t+11*HOUR);
  i=item(s,ids.awa,'d-2',t+9*HOUR);assert.equal(i.reclamation.recours,true);assert.equal(i.reclamation.ref,'D2');
  l=RC.list(s,ids.kader,t+9*HOUR);assert.equal(l.counts.high,1);
+ assert.equal(l.open[0].canAnswer,false,'un conseiller ne répond pas au niveau 2');assert.equal(RC.list(s,ids.fatou,t+9*HOUR).open[0].canAnswer,true);
+ assert.throws(()=>RC.answer(s,ids.fatou,{id:l.open[0].id,outcome:'constructor'},t+9*HOUR),/Choisissez/);
  assert.throws(()=>RC.answer(s,ids.kader,{id:l.open[0].id,outcome:'regle'},t+9*HOUR),/responsable/);
  RC.answer(s,ids.fatou,{id:l.open[0].id,outcome:'regle',message:'Le câble a été changé ce matin.'},t+10*HOUR);
  assert.match(journey.get(s,ids.awa).notifications[0].body,/Le câble a été changé ce matin\./);
+ assert.throws(()=>RC.claim(s,ids.awa,{id:'d-2'},t+11*HOUR),/déjà chez un responsable/,'deux niveaux au plus, ensuite les recours');
 });
 
 test('Pas de réclamation sur le dossier d’un autre, ni sur une réparation vieille de plus de 7 jours',async()=>{
@@ -66,4 +69,17 @@ test('Pas de réclamation sur le dossier d’un autre, ni sur une réparation vi
  assert.equal(item(s,ids.awa,'d-3',t+8*DAY).reclamation.canClaim,false);
  assert.throws(()=>RC.claim(s,ids.awa,{id:'d-3'},t+8*DAY),/plus de 7 jours/);
  assert.throws(()=>RC.list(s,ids.awa),/réservé/);
+});
+
+test('Un message du support après la fin ne relance pas les 7 jours ; un dossier de zone ne promet rien aux voisins',async()=>{
+ const {s,ids}=await setup(),t=Date.UTC(2026,10,1,9);
+ dossier(s,ids.awa,'d-4','resolved',t);
+ s.run('INSERT INTO noc_events VALUES(?,?,?,?,?,?,?)','d-4-e3','d-4',ids.kader,'support.response','Réponse du support : connexion rétablie, tout va bien.','{}',t+9*DAY);
+ assert.equal(item(s,ids.awa,'d-4',t+10*DAY).reclamation.canClaim,false);
+ // Panne de quartier en préparation : Yao, voisin membre de la zone, ne voit pas de promesse « en retard ».
+ s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,status,title,description,created,updated) VALUES(?,?,?,?,?,?,?,?,?)",'z-1','YOP-07','telemetry','demo','proposed','Panne de quartier','Test',t,t);
+ s.run('INSERT INTO noc_events VALUES(?,?,?,?,?,?,?)','z-1-e1','z-1',null,'detected','Guardian a repéré une coupure.','{}',t);
+ noc.join(s,ids.yao,{segment:'YOP-07',consent:true});
+ const z=item(s,ids.yao,'z-1',t+6*HOUR);
+ assert.ok(z,'le voisin voit la panne');assert.equal(z.promise,null);assert.equal(z.reclamation.canClaim,false);
 });
