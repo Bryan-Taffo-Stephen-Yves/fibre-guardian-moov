@@ -31,7 +31,7 @@ test('3e coupure en 30 jours : dossier prioritaire pour chaque client du quartie
  const q=SC.queue(s,ids.kader,t+60000);
  assert.equal(q.items.length,2);assert.equal(q.items[0].kind,'panne');assert.equal(q.items[0].due,t+60000+2*HOUR);
  assert.match(q.items[0].title,/^3e coupure en 30 jours/);
- const note=journey.get(s,ids.awa).notifications[0];assert.match(note.title,/3e coupure ce mois/);assert.match(note.body,/dans les 2 heures/);
+ const note=journey.get(s,ids.awa).notifications[0];assert.match(note.title,/3e coupure en 30 jours/);assert.match(note.body,/dans les 2 heures/);
  assert.equal(SC.mine(s,ids.bob,t).items.length,0);
  // Pas de deuxième dossier pour la même période, même à la 4e coupure.
  coupure(s,seg,t+DAY);assert.equal(PR.sweep(s,t+DAY+HOUR),0);
@@ -49,4 +49,21 @@ test('Le conseiller appelle et envoie un technicien vérifier toute la ligne ; l
  assert.equal(SC.mine(s,ids.awa,t+HOUR).items[0].status,'appele');
  s.run("INSERT INTO noc_events VALUES('pr-e','"+last+"',NULL,'resolved','Internet est revenu.','{}',?)",t+5*HOUR);
  const c=SC.mine(s,ids.awa,t+6*HOUR).items[0];assert.equal(c.status,'reglee');assert.equal(c.what,'Panne qui revient');
+});
+
+test('Des signalements de clients (« ma box ») ne font pas une panne de quartier',async()=>{
+ const {s,ids,seg}=await setup(),t=Date.UTC(2026,10,24,9);
+ for(const d of [3,2,1])s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,reporter,status,title,description,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)",'r-'+d,seg,'customer_report','demo',ids.awa,'resolved','Ma box','Test',t-d*DAY,t-d*DAY+HOUR);
+ assert.equal(PR.outages(s,seg,t).length,0);
+ assert.equal(PR.sweep(s,t),0);
+ assert.equal(SC.mine(s,ids.yao,t).items.length,0);
+});
+
+test('Une panne d’OLT compte pour tous les quartiers de la commune',async()=>{
+ const {s}=await setup(),t=Date.UTC(2026,10,24,9);
+ // Cocody · Palmeraie et Cocody · Cité des Arts : même commune.
+ s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,status,title,description,plan,created,updated) VALUES('olt-1','PAL-02','telemetry','demo','resolved','OLT','Test',?,?,?)",JSON.stringify({cause:'OLT_FAILURE'}),t-DAY,t-DAY+HOUR);
+ s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,status,title,description,created,updated) VALUES('fib-1','PAL-02','telemetry','demo','resolved','Câble','Test',?,?)",t-2*DAY,t-2*DAY+HOUR);
+ assert.equal(PR.outages(s,'COC-03',t).length,1,'la panne d’OLT compte, pas le câble du quartier voisin');
+ assert.equal(PR.outages(s,'YOP-07',t).length,0);
 });

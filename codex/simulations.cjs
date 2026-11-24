@@ -37,7 +37,7 @@ const SCENES = {
   vol: 'Câble volé sur le poteau',
   chambre: 'Wi-Fi faible dans une chambre',
   retard: 'Technicien en retard',
-  recurrente: 'Panne qui revient (3e coupure du mois)',
+  recurrente: 'Panne qui revient (3e coupure en 30 jours)',
   arnaque: 'Message d’arnaque',
 };
 const OUTAGES = ['panne', 'vol', 'retard']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
@@ -173,13 +173,17 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     const seg = s.get('SELECT segment_id FROM noc_members WHERE user_id=?', uid)?.segment_id;
     insist(seg, 'Ce client n’a pas encore choisi son quartier.', 409);
     const PR = require('./panne-recurrente.cjs');
-    for (const [ago, status] of [[18 * 86400000, 'resolved'], [7 * 86400000, 'resolved'], [0, 'reported']]) {
+    // Trois coupures réparées (la dernière il y a 2 h). Elles ne comptent que pour ce client : ses voisins ne sont pas touchés.
+    for (const ago of [18 * 86400000, 7 * 86400000, 5 * 3600000]) {
       const id = 'sim-recurrente-' + key();
-      s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,status,title,description,created,updated) VALUES(?,?,?,?,?,?,?,?,?)", id, seg, 'telemetry', 'demo', status, 'Coupure fibre · ' + quarter(st), 'Scène de la Régie : coupure du quartier.', now - ago, now - ago + (status === 'resolved' ? 3 * 3600000 : 0));
+      s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,status,title,description,created,updated) VALUES(?,?,?,?,?,?,?,?,?)", id, seg, 'telemetry', 'demo', 'resolved', 'Coupure fibre · ' + quarter(st), 'Scène de la Régie : coupure du quartier.', now - ago, now - ago + 3 * 3600000);
     }
-    PR.sweep(s, now, {force: true});
-    const n = PR.outages(s, seg, now).length;
-    say(st, 'Pardon : c’est la ' + n + 'e coupure ce mois-ci à ' + quarter(st) + '. Votre dossier est prioritaire. Un conseiller Moov vous appelle dans les 2 heures pour en parler et, si besoin, envoyer un technicien vérifier toute votre ligne.');
+    const made = PR.sweep(s, now, {force: true, only: uid});
+    st.notifications = J.get(s, uid).notifications;   // la notification posée par sweep, que l'enregistrement de la scène écraserait
+    const n = PR.outages(s, seg, now, {sim: true}).length;
+    say(st, made
+      ? 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est prioritaire. Un conseiller Moov vous appelle dans les 2 heures pour en parler et, si besoin, envoyer un technicien vérifier toute votre ligne.'
+      : 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est déjà prioritaire : suivez l’appel du conseiller dans « Ma réparation ».');
   } else if (scene === 'arnaque') {
     // Un faux SMS « Moov » demande le code secret Moov Money : Guardian met en garde, sans jamais lire les SMS du client.
     note(st, {page: 'compte', urgent: true, title: 'Attention : arnaque en cours dans votre quartier', body: 'Un faux message « Moov » demande votre code Moov Money pour « réparer votre fibre ». Moov ne vous demandera jamais votre code. Ne répondez pas.'}, now);
