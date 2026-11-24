@@ -113,3 +113,14 @@ test('Étalement à cheval sur deux mois : la part en retard reste payable le mo
  AC.act(s,uid,{action:'split-pay',part:2},late+1000);
  assert.equal(LG.state(s,uid,late+1000).status,'active');
 });
+
+test('Compte de présentation : jamais coupé de lui-même d’un mois sur l’autre, la Régie seule le suspend',async()=>{
+ const s=new Store(':memory:');operator.migrate(s);journey.migrate(s);noc.migrate(s);FL.migrate(s);AC.migrate(s);LG.migrate(s);
+ const uid=(await s.register({email:'awa.kone@demo.fibre-guardian.ci',name:'Awa Koné',password:'ligne-password-123'})).user.id;
+ journey.put(s,uid,journey.seed());
+ const now=Date.UTC(2026,11,10,9);FL.state(s,uid,now);
+ s.run('INSERT INTO fidelite_factures(user_id,month,amount,due) VALUES(?,?,?,?)',uid,'2026-11',25000,LG.dueOf('2026-11'));
+ assert.equal(LG.state(s,uid,now).status,'active');
+ SIM.run(s,uid,{scene:'suspendue'},now);
+ assert.equal(LG.state(s,uid,now).status,'suspendue');
+});

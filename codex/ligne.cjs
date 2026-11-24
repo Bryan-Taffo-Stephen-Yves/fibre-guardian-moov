@@ -68,6 +68,9 @@ function lift(s,uid,row,how,now){
  note(st,'Internet rétabli','Merci, votre paiement de '+monthName(row.month).split(' ')[0]+' est bien reçu. Votre box se reconnecte dans la minute.',now);
  J().put(s,uid,st);
 }
+// Les comptes de présentation (@demo.fibre-guardian.ci) ne sont jamais coupés d'eux-mêmes : le serveur de démonstration
+// peut rester allumé d'un mois sur l'autre sans que personne paie leur facture. La Régie montre la suspension (scène « Ligne suspendue »).
+const demoAccount=(s,uid)=>String(s.get('SELECT email FROM users WHERE id=?',uid)?.email||'').endsWith('@demo.fibre-guardian.ci');
 const row=(s,uid)=>s.get('SELECT * FROM ligne_suspensions WHERE user_id=?',uid);
 
 // L'état de la ligne, relu à chaque ouverture (et juste après chaque paiement).
@@ -76,7 +79,7 @@ function state(s,uid,now=Date.now()){
  if(r&&!r.lifted_at){
   const paid=r.origin==='demo'?paidSince(s,uid,r.month,r.since):!missing(s,uid,r.month,now);
   if(paid){lift(s,uid,r,'paiement',now);r=row(s,uid);}
- }else{
+ }else if(!demoAccount(s,uid)){
   // Le mois passé, puis le mois en cours (une part en retard) : le premier qui manque suspend la ligne.
   for(const month of [shift(monthOf(now),-1),monthOf(now)]){
    const m=missing(s,uid,month,now);
