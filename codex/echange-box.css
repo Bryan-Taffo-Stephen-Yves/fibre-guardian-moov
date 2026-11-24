@@ -1,0 +1,30 @@
+/* Échange de box (echange-box-view.js) : demande et suivi dans « Ma réparation », bloc du Superviseur.
+   Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.eb-card{display:grid;gap:12px;margin:14px 0;padding:16px;border-radius:18px;background:var(--moov-surface);border:1px solid var(--moov-primary-100)}
+.eb-card.is-done{background:var(--moov-success-50);border-color:var(--moov-success-300)}
+.eb-card h2{margin:0;font-size:18px;line-height:1.25;color:var(--moov-ink);text-transform:none;letter-spacing:0}
+.eb-card p{margin:0;font-size:14.5px;line-height:1.45;color:var(--moov-neutral-700)}
+.eb-card label{display:grid;gap:6px;font-size:14px;font-weight:600;color:var(--moov-ink)}
+.eb-card select,.eb-card textarea{width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px;border:1px solid var(--moov-neutral-200);border-radius:12px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;font-size:15px;font-weight:400}
+.eb-card textarea{resize:vertical}
+.eb-card label.eb-check{display:flex;gap:10px;align-items:flex-start;font-weight:500;line-height:1.4;padding:10px 12px;border-radius:12px;background:var(--moov-primary-25)}
+.eb-check input{flex:none;width:22px;height:22px;margin:0;accent-color:var(--moov-primary)}
+.eb-modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.eb-mode{display:grid;gap:3px;text-align:left;min-height:64px;padding:10px 12px;border:1.5px solid var(--moov-neutral-200);border-radius:14px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;cursor:pointer}
+.eb-mode b{font-size:14.5px}
+.eb-mode small{font-size:12.5px;color:var(--moov-neutral-600)}
+.eb-mode.is-on{border-color:var(--moov-primary);background:var(--moov-primary-50)}
+.eb-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.eb-main,.eb-open{min-height:46px;padding:0 20px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.eb-open{display:block;margin:14px 0;background:var(--moov-surface);color:var(--moov-primary);border:1.5px solid var(--moov-primary)}
+.eb-main:disabled,.eb-mode:disabled{opacity:.6;cursor:default}
+.eb-link{border:0;background:none;color:var(--moov-primary-700);font:inherit;font-size:14px;font-weight:600;text-decoration:underline;cursor:pointer;min-height:44px;justify-self:start;padding:0}
+.eb-error{color:var(--moov-danger-700)!important;font-weight:600}
+.eb-code{font-family:ui-monospace,monospace;letter-spacing:.06em;color:var(--moov-primary-800)}
+.eb-steps{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.eb-steps li{display:flex;gap:10px;align-items:center;font-size:14.5px;color:var(--moov-neutral-600)}
+.eb-steps li span{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--moov-neutral-100);font-size:13px;font-weight:700}
+.eb-steps li.is-done{color:var(--moov-ink);font-weight:600}
+.eb-steps li.is-done span{background:var(--moov-primary);color:var(--moov-on-primary)}
+.eb-card.is-done .eb-steps li.is-done span{background:var(--moov-success-700)}
+@media (min-width:900px){.eb-card{max-width:640px}}
