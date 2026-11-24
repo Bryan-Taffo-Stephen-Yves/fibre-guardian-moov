@@ -1,0 +1,22 @@
+/* Créneau de dépannage (rendezvous-view.js) : carte du dossier client et bloc du Superviseur.
+   Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.rv-card{display:grid;gap:10px;margin-top:12px;padding:14px;border-radius:16px;background:var(--moov-primary-25);border:1px solid var(--moov-primary-100)}
+.rv-card.is-late{background:var(--moov-danger-50);border-color:var(--moov-danger-300)}
+.rv-now{display:grid;gap:4px}
+.rv-now b{font-size:15.5px;color:var(--moov-primary-800)}
+.rv-card.is-late .rv-now b{color:var(--moov-danger-700)}
+.rv-now p,.rv-hint{margin:0;font-size:14.5px;line-height:1.45;color:var(--moov-neutral-700)}
+.rv-pick{display:grid;gap:10px}
+.rv-pick>b{font-size:15.5px;color:var(--moov-ink)}
+.rv-days{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rv-slots{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rv-day,.rv-slot{display:grid;gap:2px;justify-items:start;text-align:left;min-height:56px;padding:8px 10px;border:1.5px solid var(--moov-neutral-200);border-radius:14px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;font-size:14.5px;font-weight:700;cursor:pointer}
+.rv-day small,.rv-slot small{font-size:12.5px;font-weight:500;color:var(--moov-neutral-600)}
+.rv-day.is-on,.rv-slot.is-on{border-color:var(--moov-primary);background:var(--moov-primary-50)}
+.rv-day:disabled,.rv-slot:disabled,.rv-main:disabled{opacity:.6;cursor:default}
+.rv-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.rv-main{justify-self:start;min-height:46px;padding:0 20px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.rv-link{justify-self:start;min-height:44px;padding:0;border:0;background:none;color:var(--moov-primary-700);font:inherit;font-size:14px;font-weight:600;text-decoration:underline;cursor:pointer}
+.rv-error{margin:0;font-size:14px;font-weight:600;color:var(--moov-danger-700)}
+@media (min-width:900px){.rv-card{max-width:640px}}
+.rv-team-late{color:var(--moov-danger-700)!important;font-weight:700}
