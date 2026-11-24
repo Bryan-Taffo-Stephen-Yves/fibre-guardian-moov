@@ -106,3 +106,13 @@
 .fw-block .fw-field select{min-height:40px;font-size:13.5px}
 .fw-ask{display:grid;gap:8px}
 .fw-due.is-late{color:var(--moov-danger-700);font-weight:600}
+
+/* « La fibre arrive-t-elle chez moi ? » (eligibilite.cjs) : commune pas encore couverte, attente, arrivée. */
+.fw-away{margin:0;padding:12px 14px;border-radius:14px;background:var(--moov-accent-50);color:var(--moov-accent-text);font-size:14.5px;line-height:1.45;font-weight:600}
+.fw-card .fw-check{display:flex;grid-template-columns:none;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.4;color:var(--moov-ink);cursor:pointer}
+.fw-card .fw-check input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--moov-primary)}
+.fw-news{margin:0;padding:12px 14px;border-radius:14px;background:var(--moov-success-50);color:var(--moov-success-700);font-size:14.5px;line-height:1.45}
+.fw-wait-zone{border:1px solid var(--moov-primary-100)}
+.fw-wait-zone p{margin:0;font-size:15px;color:var(--moov-ink)}
+.el-opened{margin:0 0 8px;padding:10px 12px;border-radius:12px;background:var(--moov-success-50);color:var(--moov-success-700);font-size:14px;font-weight:600}
+.el-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}

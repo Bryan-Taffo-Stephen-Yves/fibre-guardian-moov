@@ -33,9 +33,12 @@ const SCENES = {
   voisin: 'Coupure dans un quartier voisin',
   box: 'Box éteinte chez le client',
   facture: 'Facture pas encore payée',
+  suspendue: 'Ligne suspendue pour facture impayée',
   vol: 'Câble volé sur le poteau',
   chambre: 'Wi-Fi faible dans une chambre',
   retard: 'Technicien en retard',
+  recurrente: 'Panne qui revient (3e coupure en 30 jours)',
+  demenagement: 'Jour du déménagement (installation à la nouvelle adresse)',
   arnaque: 'Message d’arnaque',
 };
 const OUTAGES = ['panne', 'vol', 'retard']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
@@ -138,7 +141,7 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     // La vraie facture du mois (fidelite.cjs) : Guardian rappelle gentiment, puis propose de payer en 2 ou 3 fois (acces.cjs).
     insist(s && uid, 'Client introuvable.', 404);
     const b = require('./fidelite.cjs').state(s, uid, now).bill;
-    insist(!b.paid, 'La facture de ' + b.label + ' de ce client est déjà payée : rien à lui rappeler.', 409);
+    insist(!b.paid || b.split, 'La facture de ' + b.label + ' de ce client est déjà payée : rien à lui rappeler.', 409);
     let split = null; try { split = require('./acces.cjs').state(s, uid, now).split; } catch {}
     const fmt = n => n.toLocaleString('fr-FR') + ' FCFA', day = t => new Date(t).getUTCDate() + ' ' + b.label.split(' ')[0];
     if (split) {
@@ -154,11 +157,44 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
       later(st, now + 20000, {type: 'note', n: {page: 'acces', title: 'Besoin d’un peu de temps ?', body: 'Vous pouvez payer ' + b.label + ' en 2 ou 3 fois, sans frais. Choisissez dans « Offres solidaires ».'},
         say: 'Si le mois est difficile, vous pouvez payer en 2 ou 3 fois, sans frais : ouvrez « Offres solidaires » dans votre compte. Votre fibre reste allumée.'});
     }
+  } else if (scene === 'suspendue') {
+    // La facture du mois n'est pas payée : la ligne est suspendue (ligne.cjs). Le client paie, internet revient tout de suite.
+    insist(s && uid, 'Client introuvable.', 404);
+    const l = require('./ligne.cjs').demoSuspend(s, uid, now, st);
+    say(st, 'Votre internet est suspendu car la facture de ' + l.label + ' (' + l.amount.toLocaleString('fr-FR') + ' FCFA) n’est pas payée. Payez-la avec Moov Money, ou en 2 ou 3 fois : internet revient tout de suite.');
   } else if (scene === 'retard') {
     // Le technicien part, prend du retard (route bloquée), puis ne peut plus venir : Guardian prévient et un autre prend le relais.
     outage(st, now, {description: 'Câble fibre coupé par un chantier, près de chez vous.', title: 'Panne dans votre quartier : Guardian l’a confirmée', steps: [
       ['assigned', 6000], ['en_route', 12000], ['', 20000, {type: 'delay'}], ['', 32000, {type: 'swap', tech: 'yao'}],
       ['on_site', 44000], ['repairing', 50000], ['verifying', 56000], ['resolved', 62000]]});
+  } else if (scene === 'recurrente') {
+    // Deux coupures déjà réparées ce mois-ci dans le quartier du client, puis une 3e : son dossier devient prioritaire
+    // et un conseiller doit l'appeler sous 2 h (panne-recurrente.cjs, file « À rappeler »).
+    insist(s && uid, 'Client introuvable.', 404);
+    const seg = s.get('SELECT segment_id FROM noc_members WHERE user_id=?', uid)?.segment_id;
+    insist(seg, 'Ce client n’a pas encore choisi son quartier.', 409);
+    const PR = require('./panne-recurrente.cjs');
+    // Trois coupures réparées (la dernière il y a 2 h). Elles ne comptent que pour ce client : ses voisins ne sont pas touchés.
+    for (const ago of [18 * 86400000, 7 * 86400000, 5 * 3600000]) {
+      const id = 'sim-recurrente-' + key();
+      s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,status,title,description,created,updated) VALUES(?,?,?,?,?,?,?,?,?)", id, seg, 'telemetry', 'demo', 'resolved', 'Coupure fibre · ' + quarter(st), 'Scène de la Régie : coupure du quartier.', now - ago, now - ago + 3 * 3600000);
+    }
+    const made = PR.sweep(s, now, {force: true, only: uid});
+    st.notifications = J.get(s, uid).notifications;   // la notification posée par sweep, que l'enregistrement de la scène écraserait
+    const n = PR.outages(s, seg, now, {sim: true}).length;
+    say(st, made
+      ? 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est prioritaire. Un conseiller Moov vous appelle dans les 2 heures pour en parler et, si besoin, envoyer un technicien vérifier toute votre ligne.'
+      : 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est déjà prioritaire' + (s.get("SELECT 1 FROM sc_demandes WHERE kind='panne' AND user_id=? AND status IN ('recue','prise','appele','recours')", uid) ? ' : suivez l’appel du conseiller dans « Ma réparation ».' : '. Si ça coupe encore, dites-le-moi : j’alerte tout de suite l’équipe Moov.'));
+  } else if (scene === 'demenagement') {
+    // Le jour du déménagement arrive tout de suite : le technicien a installé la fibre à la nouvelle adresse (demenagement.cjs).
+    // Il faut que le client ait demandé son déménagement et qu'un conseiller l'ait confirmé : la scène ne saute que l'attente.
+    insist(s && uid, 'Client introuvable.', 404);
+    const DM = require('./demenagement.cjs'); DM.migrate(s);
+    const r = s.get("SELECT * FROM demenagements WHERE user_id=? AND status='planifie' ORDER BY created DESC LIMIT 1", uid);
+    insist(r, 'Ce client n’a pas de déménagement confirmé : il le demande dans Mon compte, puis un conseiller le confirme dans « À rappeler ».', 409);
+    DM.finish(s, r, now);
+    st.notifications = J.get(s, uid).notifications;   // la notification « Est-ce réglé ? », que l'enregistrement de la scène écraserait
+    say(st, 'Bienvenue chez vous ! Votre fibre est installée à votre nouvelle adresse (' + r.quartier + ', ' + r.commune + '). Je surveille maintenant votre nouveau quartier. Dites-moi dans « Ma réparation » si tout va bien.');
   } else if (scene === 'arnaque') {
     // Un faux SMS « Moov » demande le code secret Moov Money : Guardian met en garde, sans jamais lire les SMS du client.
     note(st, {page: 'compte', urgent: true, title: 'Attention : arnaque en cours dans votre quartier', body: 'Un faux message « Moov » demande votre code Moov Money pour « réparer votre fibre ». Moov ne vous demandera jamais votre code. Ne répondez pas.'}, now);

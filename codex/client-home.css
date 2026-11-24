@@ -194,3 +194,18 @@
 .ch-scam .ch-row-icon{background:var(--moov-accent-50);color:var(--moov-accent-text)}
 .ch-scam b{display:block;font-size:15.5px;font-weight:600;color:var(--moov-ink)}
 .ch-scam small{display:block;margin-top:2px;font-size:13px;line-height:1.45;color:var(--moov-text-muted)}
+/* « Ma ligne » (ligne.cjs) : seulement si la ligne est suspendue, ou rétablie depuis moins de 24 h. */
+.ch-group.ch-ligne{display:grid;gap:10px;padding:16px;border-radius:18px}
+.ch-group.ch-ligne h2{margin:0;font-size:17px;text-transform:none!important;letter-spacing:0!important}
+.ch-group.ch-ligne p{margin:0;font-size:14.5px;line-height:1.45;color:var(--moov-neutral-700)}
+.ch-group.ch-ligne.is-off{background:var(--moov-danger-50)!important;border:1px solid var(--moov-danger-300)!important}
+.ch-group.ch-ligne.is-off h2{color:var(--moov-danger-700)}
+.ch-group.ch-ligne.is-ok{background:var(--moov-success-50)!important;border:1px solid var(--moov-success-300)!important}
+.ch-group.ch-ligne.is-ok h2{color:var(--moov-success-700)}
+.ch-ligne-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ch-ligne-pay,.ch-ligne-split,.ch-ligne-check{min-height:46px;padding:0 12px;border-radius:14px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.ch-ligne-pay{border:0;background:var(--moov-primary);color:var(--moov-on-primary)}
+.ch-ligne-split{border:1.5px solid var(--moov-primary);background:var(--moov-surface);color:var(--moov-primary)}
+.ch-ligne-check{border:0;background:none;color:var(--moov-primary-700);text-decoration:underline;justify-self:start;padding:0}
+.ch-ligne-check:disabled{opacity:.6}
+.ch-ligne-msg{font-weight:600;color:var(--moov-ink)!important}

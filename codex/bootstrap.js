@@ -37,12 +37,30 @@
   files.splice(files.indexOf('superviseur-view.js'), 0, 'avis-view.js');
   // Réclamations (reclamation-view.js) : délai promis et « Ce n'est pas réglé » sur le dossier, bloc du Superviseur.
   files.splice(files.indexOf('superviseur-view.js'), 0, 'reclamation-view.js');
+  // Échange de box (echange-box-view.js) : demande dans « Ma réparation », bloc du Superviseur.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'echange-box-view.js');
+  // Créneau de dépannage (rendezvous-view.js) : sur le dossier du client, bloc du Superviseur.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'rendezvous-view.js');
+  // Service client (service-client-view.js) : « Mes demandes » côté client, file « À rappeler » des conseillers.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'service-client-view.js');
+  // Déménagement (demenagement-view.js) : « Je déménage » dans Mon compte.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'demenagement-view.js');
+  // « Ils attendent la fibre » (eligibilite-view.js) : bloc du Superviseur, onglet Clients.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'eligibilite-view.js');
+  // Boîte à idées (idees-view.js) : Mon compte et Superviseur.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'idees-view.js');
   // « Mes données » (donnees-view.js) : page reliée à « Mon compte ».
   files.splice(files.indexOf('app.js'), 0, 'donnees-view.js');
   // « Alertes sur ce téléphone » (push-view.js) : Mon compte du client et Mes missions du technicien.
   files.splice(files.indexOf('app.js'), 0, 'push-view.js');
   // Page « Simulations » (simulations-view.js) : ouverte depuis le badge « Démo ».
   files.splice(files.indexOf('app.js'), 0, 'simulations-view.js');
+  // Tous les fichiers sont demandés au serveur en même temps (préchargement), puis exécutés un par un dans l'ordre.
+  // Avant, chaque fichier attendait le précédent : 85 allers-retours à la suite, soit 10 à 15 secondes sur un téléphone.
+  files.forEach(function (path) {
+    const link = document.createElement('link'); link.rel = 'preload'; link.as = 'script'; link.href = path;
+    document.head.appendChild(link);
+  });
   next();
   // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

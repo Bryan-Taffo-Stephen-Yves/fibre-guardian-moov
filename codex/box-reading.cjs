@@ -30,7 +30,7 @@ function interpret(reading,snap){
   for(const l of reading.leds)facts.push({label:'Voyant '+(NAMES[l.name]||NAMES.autre),value:STATES[l.state]+(l.state!=='eteint'&&!['aucune','inconnue'].includes(l.color)?', '+l.color:'')});
   context();
   const led=name=>reading.leds.find(l=>l.name===name),on=l=>l&&['allume','clignote'].includes(l.state),off=l=>l&&l.state==='eteint';
-  if(off(led('power'))||reading.leds.length&&reading.leds.every(l=>l.state==='eteint'))return say('Votre box semble éteinte : aucun voyant n’est allumé. Vérifiez qu’elle est bien branchée sur la prise et que son bouton marche est enfoncé. Rien ne peut fonctionner sans courant.',{verdict:'anomalie'});
+  if(off(led('power'))||reading.leds.length&&reading.leds.every(l=>l.state==='eteint'))return say('Votre box semble éteinte : aucun voyant n’est allumé. Vérifiez qu’elle est bien branchée sur la prise et que son bouton marche est enfoncé. Rien ne peut fonctionner sans courant. Si elle reste éteinte sur une prise qui marche, elle est sans doute en panne : je peux organiser son échange.',{verdict:'anomalie',action:'echange'});
   const fiberLost=on(led('los'))||off(led('pon'))||led('pon')?.state==='clignote';
   return conclude({fiberLost,wifiOff:off(led('wifi')),internetOff:off(led('internet'))&&on(led('pon')),shared,measuredDown,snap,say});
  }

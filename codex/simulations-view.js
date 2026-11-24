@@ -19,8 +19,11 @@
   ['voisin','Coupure dans un quartier voisin','Guardian prévient le client que son débit peut baisser.','map','primary'],
   ['box','Box éteinte chez le client','Le quartier va bien, mais sa box ne répond plus. Guardian lui dit de vérifier la prise et le courant.','home','warning'],
   ['facture','Facture pas encore payée','Guardian rappelle la facture du mois, puis propose de la payer en 2 ou 3 fois, sans frais.','wallet','accent'],
+  ['suspendue','Ligne suspendue (facture impayée)','Internet du client est suspendu. Il paie avec Moov Money, ou en plusieurs fois : internet revient tout de suite.','wallet','danger'],
   ['vol','Câble volé sur le poteau','Une voisine envoie la photo du poteau. Yao sécurise le poteau, remplace le câble, et le client suit chaque étape.','shield','danger'],
   ['chambre','Wi-Fi faible dans une chambre','La fibre va bien, mais la tablette de la chambre capte mal. Guardian explique où mettre la box.','guardian','warning'],
+  ['recurrente','Panne qui revient','La 3e coupure en 30 jours dans son quartier : son dossier devient prioritaire et un conseiller doit l’appeler sous 2 h.','alert','danger'],
+  ['demenagement','Jour du déménagement','Après la confirmation du conseiller : le technicien installe la fibre à la nouvelle adresse, le client change de quartier et donne son avis.','home','primary'],
   ['retard','Technicien en retard','Le technicien Koffi est bloqué sur la route. Guardian prévient le client, puis Yao prend le relais.','user','warning'],
   ['arnaque','Message d’arnaque','Un faux SMS « Moov » demande le code Moov Money. Guardian prévient le client de ne jamais le donner.','sms','danger'],
  ];

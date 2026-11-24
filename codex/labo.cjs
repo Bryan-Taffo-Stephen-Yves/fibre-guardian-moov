@@ -50,13 +50,22 @@ function plant(segmentId){
  });
  return {feeder,branches,onts};
 }
+// Le plan d'un quartier ne change jamais (tirage fixe) : calculé une seule fois.
+const PLANTS=new Map();
+function plantOf(segmentId){let p=PLANTS.get(segmentId);if(!p){if(PLANTS.size>2000)PLANTS.clear();p=plant(segmentId);PLANTS.set(segmentId,p);}return p;}
 // Perte optique de l'OLT jusqu'à la box, à une longueur d'onde donnée.
 function loss(ont,nm){const bendFactor=ont.flaw==='bend'?(nm===1550?1.9:nm===1490?1.3:1):1;return ont.km*KM[nm]+SPLIT.cabinet+SPLIT.pole+4*CONNECTOR+Math.ceil(ont.km/2)*SPLICE+(ont.extra-ont.flawDb)+ont.flawDb*bendFactor;}
 
 // Ordre de chute : une coupure prend d'abord les branches les plus lointaines, poteau par poteau.
+// Le résultat ne dépend que du quartier et du nombre de box allumées : calculé une fois puis gardé en mémoire
+// (avant, il était recalculé pour chaque box à chaque rafraîchissement et prenait l'essentiel du temps du serveur).
+const DOWN_SETS=new Map();
 function downSet(segmentId,count){
+ const key=segmentId+'|'+count;let set=DOWN_SETS.get(key);if(set)return set;
  const order=[...Array(ONTS).keys()].sort((a,b)=>Math.floor(b/BRANCH)-Math.floor(a/BRANCH)||rnd(segmentId+':o'+a)-rnd(segmentId+':o'+b));
- return new Set(order.slice(0,Math.max(0,ONTS-count)));
+ set=new Set(order.slice(0,Math.max(0,ONTS-count)));
+ if(DOWN_SETS.size>5000)DOWN_SETS.clear();
+ DOWN_SETS.set(key,set);return set;
 }
 
 // État d'un quartier à l'instant t. Avant le dernier changement du simulateur, le quartier était normal.
@@ -183,7 +192,7 @@ function console_(s,segments,ports,now){
 
 function snapshot(s,uid,q={},now=Date.now()){
  O.requireOperator(s,uid);
- const segments=s.all('SELECT * FROM noc_segments ORDER BY rowid'),plans=Object.fromEntries(segments.map(g=>[g.id,plant(g.id)])),change=changes(s,segments);
+ const segments=s.all('SELECT * FROM noc_segments ORDER BY rowid'),plans=Object.fromEntries(segments.map(g=>[g.id,plantOf(g.id)])),change=changes(s,segments);
  const communes=[...new Set(segments.map(g=>g.zone.split(' · ')[0]))];
  const selected=segments.find(g=>g.id===q.segment)?.id||segments.find(g=>g.alarm!=='NONE')?.id||segments[0].id;
  const ports=segments.map(g=>{

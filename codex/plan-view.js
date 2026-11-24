@@ -31,10 +31,12 @@
     h('output',{'aria-live':'polite'},value),
     h('button',{type:'button','aria-label':'Une '+unit+' de plus',onClick:()=>onChange(Math.min(max,value+1)),disabled:value>=max},'+')));
  }
+ // La zone fibre du serveur : elle grandit quand un responsable ouvre une commune (eligibilite.cjs).
+ function useZone(SO){const [z,Z]=React.useState(SO?SO.ZONE:[]);React.useEffect(()=>{let live=true;fetch('/api/zone-fibre').then(r=>r.ok?r.json():null).then(d=>{if(live&&d&&Array.isArray(d.zone))Z(d.zone);}).catch(()=>{});return()=>{live=false;};},[]);return z;}
  function Finder({plans,current,form,onForm,onPick,pickLabel,withCommune,invite}){
-  const SO=window.FGSmartOffer;if(!SO)return null;
+  const SO=window.FGSmartOffer,zone=useZone(SO);if(!SO)return null;
   const set=k=>v=>onForm({...form,[k]:v}),uses=form.uses;
-  const r=SO.recommend({...form,plans:plans&&plans.length?plans:SO.PLANS}),toggle=id=>set('uses')(uses.includes(id)?uses.filter(u=>u!==id):uses.concat(id));
+  const r=SO.recommend({...form,zone,plans:plans&&plans.length?plans:SO.PLANS}),toggle=id=>set('uses')(uses.includes(id)?uses.filter(u=>u!==id):uses.concat(id));
   const mine=r&&current&&r.plan.id===current.id;
   return h('section',{className:'pv-find','aria-labelledby':'pv-find-title'},
    h('div',{className:'pv-find-head'},h('h2',{id:'pv-find-title'},'Quel forfait pour moi ?'),h('p',null,'Dites-nous ce que vous faites sur internet. Guardian calcule le débit qu’il vous faut.')),
@@ -48,7 +50,7 @@
      h('div',{className:'pv-budget',role:'group','aria-label':'Budget par mois'},h('span',null,'Budget par mois'),
       h('div',null,[0,...SO.BUDGETS].map(b=>h('button',{key:b,type:'button','aria-pressed':form.budget===b,className:form.budget===b?'on':'',onClick:()=>set('budget')(b)},b?'≤ '+F(b):'Pas de limite')))),
      withCommune&&h('label',{className:'pv-commune'},h('span',null,'Votre commune'),
-      h('select',{value:form.commune,onChange:e=>set('commune')(e.target.value)},h('option',{value:''},'Choisir…'),SO.ZONE.map(c=>h('option',{key:c,value:c},c)),h('option',{value:'Autre'},'Autre ville'))))),
+      h('select',{value:form.commune,onChange:e=>set('commune')(e.target.value)},h('option',{value:''},'Choisir…'),zone.map(c=>h('option',{key:c,value:c},c)),h('option',{value:'Autre'},'Autre ville'))))),
    r?h('div',{className:'pv-result',role:'status'},
     h('div',{className:'pv-result-top'},h('span',{className:'pv-speed'},h('b',null,r.plan.mbps),h('small',null,'Mb/s')),
      h('div',null,h('small',null,'Guardian vous conseille'),h('strong',null,'Fibre '+r.plan.mbps+' · '+F(r.plan.price)+' par mois'),
@@ -58,7 +60,7 @@
     h('ul',{className:'pv-perks'},
      h('li',null,h(Icon,{d:I.wifi,size:18}),r.extenders?'Wi-Fi : '+r.rooms+' pièces, c’est trop pour la box seule. Ajoutez '+r.extenders+' répéteur'+(r.extenders>1?'s':'')+' Wi-Fi, un toutes les 2 pièces.':'Wi-Fi : la box couvre vos '+r.rooms+' pièce'+(r.rooms>1?'s':'')+', placez-la au centre de la maison.'),
      uses.includes('jeux')&&h('li',null,h(Icon,{d:I.game,size:18}),'Un jeu de '+SO.GAME_GB+' Go (la taille d’un Call of Duty) se télécharge en '+SO.duration(r.gameMinutes)+' environ.'),
-     withCommune&&r.commune&&h('li',{className:r.inZone?'':'warn'},h(Icon,{d:I.pin,size:18}),r.inZone?(invite?h('span',null,r.commune+' fait partie de la zone fibre. ',h('b',null,'Votre offre : Fibre '+r.plan.mbps+' à '+F(r.plan.price)+' par mois, et 1 mois offert après 3 mois (code de '+invite.parrain+').'),' Un conseiller confirme votre adresse exacte.'):r.commune+' fait partie de la zone fibre : un conseiller confirme votre adresse exacte.'):'Votre ville n’est pas encore dans notre zone fibre. Un conseiller Moov vous dit ce qui est possible à votre adresse.')),
+     withCommune&&r.commune&&h('li',{className:r.inZone?'':'warn'},h(Icon,{d:I.pin,size:18}),r.inZone?(invite?h('span',null,r.commune+' fait partie de la zone fibre. ',h('b',null,'Votre offre : Fibre '+r.plan.mbps+' à '+F(r.plan.price)+' par mois, et 1 mois offert après 3 mois (code de '+invite.parrain+').'),' Un conseiller confirme votre adresse exacte.'):r.commune+' fait partie de la zone fibre : un conseiller confirme votre adresse exacte.'):'Votre ville n’est pas encore dans notre zone fibre. Créez votre compte et demandez « Prévenez-moi » : vous saurez dès qu’elle arrive, et un conseiller peut vous appeler.')),
     r.sources.length>0&&h('details',{className:'pv-sources'},h('summary',null,'D’où viennent ces chiffres ?'),h('ul',null,r.sources.map(s=>h('li',{key:s.id},s.text)))),
     !mine&&onPick&&h('button',{type:'button',className:'pv-cta',onClick:()=>onPick(r.plan)},pickLabel?pickLabel(r.plan):'Voir l’offre '+r.plan.mbps+' Mb/s')):
    h('p',{className:'pv-hint'},'Cochez au moins un usage pour voir le forfait conseillé.'));

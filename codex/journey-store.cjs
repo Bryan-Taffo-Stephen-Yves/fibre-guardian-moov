@@ -145,6 +145,10 @@ function sceneReply(st,ask,text,hello,facts){
 function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context||active(st),connected=snap.devices.filter(d=>!d.blocked),largest=connected.slice().sort((a,b)=>b.mbps-a.mbps)[0];
  const facts=[{label:'Incident du quartier',value:fault?(fault.zone||fault.segment||fault.reference||st.segment):'Aucun incident ouvert'},{label:'Appareils connectés',value:connected.length+' / '+st.usual+' habituels'},{label:'Plus gros usage',value:largest?largest.name+' · '+largest.mbps+' Mb/s':'Aucun appareil actif'}];
  const ask=intent(text),hello=ask==='salut'?'Bonjour ! ':'';
+ // Ligne suspendue pour facture impayée (ligne.cjs) : c'est la vraie raison, avant toute panne ou réglage.
+ if(st.suspended&&ask!=='merci'){st.proposal=null;st.upgrade=null;const F=Number(st.suspended.amount).toLocaleString('fr-FR')+' F';
+  if(st.suspended.kind==='part')return {message:hello+'Votre internet est suspendu car une part de votre facture de '+st.suspended.label+' ('+F+') est en retard. Payez-la dans « Offres solidaires » : internet revient tout de suite.',facts,action:'payer-part'};
+  return {message:hello+'Votre internet est suspendu car la facture de '+st.suspended.label+' ('+F+') n’est pas payée. Payez-la avec Moov Money dans « Mon compte » : internet revient tout de suite. Si vous avez déjà payé, dites-le aussi dans « Mon compte ».',facts,action:'payer'};}
  if(fault){st.proposal=null;st.upgrade=null;
   if(ask==='merci')return {message:'Avec plaisir. Je vous préviens dès que votre internet revient.',facts,action:'tracking'};
   return {message:hello+faultMessage(fault,st)+(['upgrade','usage'].includes(ask)?' Un forfait plus rapide ou un partage du débit ne réglerait pas cette coupure.':''),facts,action:'tracking'};}
