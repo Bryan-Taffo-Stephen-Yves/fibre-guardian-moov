@@ -34,6 +34,7 @@ const SCENES = {
   box: 'Box éteinte chez le client',
   facture: 'Facture pas encore payée',
   vol: 'Câble volé sur le poteau',
+  chambre: 'Wi-Fi faible dans une chambre',
 };
 const OUTAGES = ['panne', 'vol']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
 
@@ -140,6 +141,11 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     say(st, 'Petit rappel : votre facture de ' + b.label + ' (' + amount + ') n’est pas encore payée. Vous pouvez la régler en deux gestes dans « Ma fidélité », avec Moov Money.');
     if (!split) later(st, now + 20000, {type: 'note', n: {page: 'acces', title: 'Besoin d’un peu de temps ?', body: 'Vous pouvez payer ' + b.label + ' en 2 ou 3 fois, sans frais. Choisissez dans « Offres solidaires ».'},
       say: 'Si le mois est difficile, vous pouvez payer en 2 ou 3 fois, sans frais : ouvrez « Offres solidaires » dans votre compte. Votre fibre reste allumée.'});
+  } else if (scene === 'chambre') {
+    // La fibre va bien, mais le Wi-Fi n'arrive pas jusqu'à la chambre des enfants : Guardian explique où mettre la box.
+    st.devices.push({id: 'sim-chambre', name: 'Tablette de Kevin (chambre des enfants)', demand: 3, sim: true, recognized: true});
+    note(st, {kind: 'wifi', page: 'devices', title: 'Wi-Fi faible dans la chambre des enfants', body: 'La tablette de Kevin capte seulement 1 barre sur 4 : les vidéos coupent. Votre fibre va bien, c’est le Wi-Fi qui n’arrive pas jusque-là.'}, now);
+    say(st, 'Votre fibre reçoit bien ses ' + (st.plan || J.PLANS[1]).mbps + ' Mb/s, mais le Wi-Fi arrive mal dans la chambre des enfants : la tablette de Kevin capte 1 barre sur 4. Trois gestes simples : posez la box en hauteur, au centre de la maison (le couloir, par exemple), loin des murs épais et du frigo. Si ça ne suffit pas, un répéteur Wi-Fi dans le couloir règle le problème.');
   } else if (scene === 'voisin') {
     const place = neighbour(st);
     note(st, {page: 'home', title: 'Attention : baisse de débit possible', body: 'Une coupure est en cours à ' + place + ', à côté de chez vous. Pendant la réparation, le débit peut baisser dans votre zone. Votre internet reste allumé.'}, now);

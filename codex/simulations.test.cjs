@@ -214,3 +214,13 @@ test('câble volé : poteau, Yao, mêmes étapes que la panne ; refusé pendant 
   const busy = fresh(); J.openIncident(busy, now, {zone: busy.zone, description: 'Vraie panne', lat: 5.3, lon: -4, kind: 'fibre'});
   assert.throws(() => SIM.start(busy, 'vol', now), /déjà en cours/);
 });
+
+test('Wi-Fi faible dans une chambre : la fibre va bien, conseil de placement', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'chambre', now);
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+  assert.equal(st.notifications[0].page, 'devices');
+  assert.match(st.messages.at(-1).text, /répéteur/);
+  SIM.clear(st);
+  assert.ok(!st.devices.some(d => d.id === 'sim-chambre'));
+});
