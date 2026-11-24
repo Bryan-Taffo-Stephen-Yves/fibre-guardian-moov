@@ -40,7 +40,7 @@
  function ReportForm({onSend,busy,real=false,home=null}){
   // Le repère part du quartier du client (Rose à Grand-Bassam ne doit pas voir Niangon).
   const homeAt=home&&window.FGAbidjan?.SEGMENTS?.[home.segment]?.at;
-  const [photo,P]=S(''),[error,X]=S(''),[coords,C]=S({lat:real?'':homeAt?homeAt[1]:5.35,lon:real?'':homeAt?homeAt[0]:-4.06}),[located,L]=S(false),[loading,I]=S(false),[fileName,FN]=S(''),[detailsOpen,DO]=S(false),[locating,Locating]=S(false);
+  const [photo,P]=S(''),[error,X]=S(''),[coords,C]=S({lat:real?'':homeAt?homeAt[1]:5.35,lon:real?'':homeAt?homeAt[0]:-4.06}),[located,L]=S(false),[loading,I]=S(false),[fileName,FN]=S(''),[detailsOpen,DO]=S(false),[mapOpen,MO]=S(false),[locating,Locating]=S(false);
   const fileInput=R(null),coordinateInputs=R({});
   const hasCoords=coords.lat!==''&&coords.lon!==''&&Number.isFinite(Number(coords.lat))&&Number.isFinite(Number(coords.lon));
   const disabled=busy||loading;
@@ -56,7 +56,7 @@
   return h('form',{className:'j-report-form rf-form','aria-busy':busy||loading||locating,onSubmit:e=>{
     e.preventDefault();X('');if(disabled||locating)return;const f=Object.fromEntries(new FormData(e.currentTarget));
     if(!photo){X('Ajoutez une photo du problème avant l’envoi.');fileInput.current?.focus();return;}
-    if(!hasCoords||Math.abs(Number(coords.lat))>90||Math.abs(Number(coords.lon))>180||(real&&!located)){X('Confirmez la position GPS ou saisissez les coordonnées valides du lieu : latitude entre −90 et 90, longitude entre −180 et 180.');DO(true);const key=coords.lat===''||!Number.isFinite(Number(coords.lat))||Math.abs(Number(coords.lat))>90?'lat':'lon';requestAnimationFrame(()=>coordinateInputs.current[key]?.focus());return;}
+    if(!hasCoords||Math.abs(Number(coords.lat))>90||Math.abs(Number(coords.lon))>180||(real&&!located)){X('Confirmez la position GPS ou saisissez les coordonnées valides du lieu : latitude entre −90 et 90, longitude entre −180 et 180.');DO(true);MO(true);const key=coords.lat===''||!Number.isFinite(Number(coords.lat))||Math.abs(Number(coords.lat))>90?'lat':'lon';requestAnimationFrame(()=>coordinateInputs.current[key]?.focus());return;}
     if(f.share!=='on'){X('Votre autorisation de partage est nécessaire pour envoyer ce signalement.');return;}
     const {share,...fields}=f;onSend({...fields,consent:true,photo,lat:Number(coords.lat),lon:Number(coords.lon)});
    }},
@@ -68,12 +68,14 @@
      h('p',{className:'rf-hint'},'Une photo nette suffit. Évitez les visages, plaques et autres informations personnelles.')),
     h('section',{className:'rf-card rf-place'},h(SectionHead,{number:'02',title:'Où se trouve le problème ?',subtitle:'Indiquez le quartier, puis vérifiez le point de signalement.'}),
      h('label',null,'Quartier / zone',h('input',{name:'zone',required:true,maxLength:100,defaultValue:real?'':home?.zone||'Yopougon · Niangon',placeholder:'Ex. : Cocody · Cité des Arts',disabled:busy})),
+     h('div',{className:'rf-location-state'},h('span',{className:'rf-pin-icon'},h(ReportIcon,{name:'pin'})),h('div',null,h('strong',null,located?'Position renseignée':real?'Position à confirmer':'Point placé dans votre quartier'),h('small',null,hasCoords?Number(coords.lat).toFixed(5)+' / '+Number(coords.lon).toFixed(5):'Utilisez le GPS sur place ou les coordonnées du lieu.'))),
+     // La carte, le GPS et les coordonnées se déplient sur demande (repli.css) : le point est déjà placé dans le quartier.
+     h('details',{className:'fg-pli fg-pli--nu rf-map-pli',open:mapOpen||real,onToggle:e=>MO(e.currentTarget.open)},h('summary',null,h('span',{className:'fg-pli-t'},h('b',null,real?'Préciser la position':'Vérifier ou déplacer le point'),h('small',null,'Carte, GPS ou coordonnées'))),h('div',{className:'fg-pli-corps'},
      !real&&h(Map,{selectedPoint:coords,onPick:(lat,lon)=>{if(!busy){C({lat,lon});L(true);}}}),
-     h('div',{className:'rf-location-state'},h('span',{className:'rf-pin-icon'},h(ReportIcon,{name:'pin'})),h('div',null,h('strong',null,located?'Position renseignée':real?'Position à confirmer':'Point sur la carte'),h('small',null,hasCoords?Number(coords.lat).toFixed(5)+' / '+Number(coords.lon).toFixed(5):'Utilisez le GPS sur place ou les coordonnées du lieu.'))),
      B(h(React.Fragment,null,h(ReportIcon,{name:'pin'}),locating?'Recherche de votre position…':'Utiliser ma position GPS'),locate,{disabled:busy||locating,className:'j-button rf-gps'}),
      h('p',{className:'rf-hint'},'À utiliser seulement si vous êtes sur place. Votre navigateur vous demandera l’autorisation.'),
      h('details',{className:'rf-coordinates',open:detailsOpen,onToggle:e=>DO(e.currentTarget.open)},h('summary',null,'Ajuster la position manuellement'),h('p',null,'Renseignez les coordonnées du dommage, pas celles de votre domicile.'),h('div',{className:'rf-coordinate-grid'},['lat','lon'].map(k=>h('label',{key:k},k==='lat'?'Latitude':'Longitude',h('input',{ref:el=>{coordinateInputs.current[k]=el;},type:'number',step:'any',placeholder:k==='lat'?'Ex. 5,35000':'Ex. −4,06000',value:coords[k],disabled:busy,onChange:e=>{C({...coords,[k]:e.target.value===''?'':Number(e.target.value)});L(true);}}))))),
-     !real&&h('p',{className:'rf-demo-note'},'Le repère est placé dans votre quartier'+(home?.zone?' ('+home.zone+')':'')+'. Déplacez-le si besoin.')),
+     !real&&h('p',{className:'rf-demo-note'},'Le repère est placé dans votre quartier'+(home?.zone?' ('+home.zone+')':'')+'. Déplacez-le si besoin.')))),
     h('section',{className:'rf-card rf-description'},h(SectionHead,{number:'03',title:'Quelques détails utiles',subtitle:'Décrivez ce que vous observez, simplement.'}),
      h('label',null,'Type de problème',h('select',{name:'kind',disabled:busy},h('option',{value:'cable'},'Câble tombé ou coupé'),h('option',{value:'pole'},'Poteau endommagé'),h('option',{value:'box'},'Coffret ouvert'),h('option',{value:'other'},'Autre'))),
      h('label',null,'Que s’est-il passé ?',h('textarea',{name:'description',required:true,maxLength:500,rows:3,disabled:busy,placeholder:'Ex. : un poteau a été heurté devant la pharmacie. Le câble est au sol.'})),h('small',{className:'rf-hint'},'500 caractères maximum. Ajoutez un repère visible si possible.'))),

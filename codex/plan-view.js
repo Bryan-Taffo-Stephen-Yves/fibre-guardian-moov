@@ -88,6 +88,7 @@
   const plans=state.plans||[],current=state.plan||plans[1]||{},next=state.nextPlan,tip=advice(state,plans);
   const [pick,P]=S(null),[verdict,VD]=S(null),[form,FM]=S(FORM),smart=window.FGSmartOffer?FGSmartOffer.recommend({...form,plans}):null,tipId=smart?smart.plan.id:['monter','baisser','ok'].includes(verdict)?null:tip?.plan.id,review=R(null),sel=pick&&pick.id!==current.id?plans.find(p=>p.id===pick.id):null,up=sel&&sel.price>current.price,cost=up?(state.upgradeCosts||{})[sel.id]||null:null;
   E(()=>{if(sel&&matchMedia('(max-width:760px)').matches)review.current?.scrollIntoView({behavior:'smooth',block:'nearest'});},[pick]);
+  const loud=['monter','baisser'].includes(verdict),bilan=h(Bilan,{key:'bilan',api,lab,plans,onPick:p=>P(p.id===current.id?null:p),onVerdict:VD});
   const tipText=tip&&(tip.plan.id===current.id?'Votre forfait actuel vous suffit.':tip.plan.mbps>current.mbps?'Passer à '+tip.plan.mbps+' Mb/s vous donnerait de la marge.':tip.plan.mbps+' Mb/s suffiraient pour vos usages du moment.');
   return h('div',{className:'pv'},
    h('header',{className:'pv-head'},
@@ -96,12 +97,11 @@
    next&&h('section',{className:'pv-next',role:'status'},h('span',{className:'pv-next-ico'},h(Icon,{d:I.calendar,size:20})),
     h('div',null,h('strong',null,'À partir du '+day(next.at)+' : '+next.plan.mbps+' Mb/s'),h('small',null,'Pour '+F(next.plan.price)+' par mois. D’ici là, vous gardez '+current.mbps+' Mb/s.')),
     h('button',{type:'button',className:'pv-link',onClick:onKeep,disabled:busy},'Garder '+current.mbps+' Mb/s')),
-   window.FGFibrePlus&&h(FGFibrePlus.Section,{api,mbps:current.mbps}),
-   h(Bilan,{api,lab,plans,onPick:p=>P(p.id===current.id?null:p),onVerdict:VD}),
+   // Le bilan reste en haut seulement quand il conseille de changer ; sinon il se range dans « M'aider à choisir ».
+   loud&&bilan,
    // Le bilan sur 7 jours prime sur le conseil de l'instant, pour ne jamais dire deux choses différentes.
    tip&&!['monter','baisser','ok'].includes(verdict)&&h('section',{className:'pv-tip'},h('span',{className:'j-chat-avatar pv-tip-art','aria-hidden':true},h('i'),h('i'),h('b')),
     h('div',null,h('small',null,'Le conseil de Guardian'),h('p',null,'Chez vous, '+tip.connected+' appareil'+(tip.connected>1?'s':'')+' utilise'+(tip.connected>1?'nt':'')+' '+String(tip.used).replace('.',',')+' Mb/s en ce moment. '+tipText))),
-   h(Finder,{plans,current,form,onForm:FM,onPick:p=>P(p)}),
    h('div',{className:'pv-list',role:'radiogroup','aria-label':'Choisir un forfait'},plans.map(p=>{
     const mine=p.id===current.id,chosen=pick?.id===p.id,diff=p.price-current.price,later=next?.plan.id===p.id;
     return h('button',{key:p.id,type:'button',role:'radio','aria-checked':chosen,className:'pv-plan'+(mine?' mine':'')+(chosen?' chosen':''),onClick:()=>P(mine?null:p)},
@@ -120,7 +120,17 @@
     up?h('button',{type:'button',className:'pv-cta mm',onClick:()=>onUpgrade(sel),disabled:busy},h('span',{className:'pv-mm','aria-hidden':true},'M'),(cost?'Payer '+F(cost.amount):'Payer')+' avec Moov Money'):
      h('button',{type:'button',className:'pv-cta',onClick:()=>onDowngrade(sel).then(()=>P(null)),disabled:busy},'Confirmer le passage à '+sel.mbps+' Mb/s'),
     h('button',{type:'button',className:'pv-cancel',onClick:()=>P(null)},'Annuler')):
-   h('p',{className:'pv-hint'},h(Icon,{d:I.gift,size:18}),'Choisissez une offre pour voir ce que vous payez. Rien ne change sans votre accord.'));
+   h('p',{className:'pv-hint'},h(Icon,{d:I.gift,size:18}),'Choisissez une offre pour voir ce que vous payez. Rien ne change sans votre accord.'),
+   // Le secondaire se déplie sur demande : l'aide au choix et les contenus Fibre+.
+   h('div',{className:'pv-more'},
+    h(Pli,{icon:I.users,title:'M’aider à choisir',hint:'Vos usages, votre foyer, votre budget'},!loud&&bilan,h(Finder,{plans,current,form,onForm:FM,onPick:p=>P(p)})),
+    window.FGFibrePlus&&h(Pli,{icon:I.gift,title:'Fibre+ : films, cours et jeux',hint:current.mbps>=300?'Inclus dans votre forfait':'Inclus dès 300 Mb/s',open:current.mbps>=300},h(FGFibrePlus.Section,{api,mbps:current.mbps}))));
+ }
+ // Section repliée (repli.css) : une ligne qu'on touche pour voir la suite.
+ function Pli({icon,title,hint,open,children}){
+  return h('details',{className:'fg-pli',open:!!open},
+   h('summary',null,h('span',{className:'fg-pli-ico','aria-hidden':true},h(Icon,{d:icon,size:20})),h('span',{className:'fg-pli-t'},h('b',null,title),hint&&h('small',null,hint))),
+   h('div',{className:'fg-pli-corps'},children));
  }
  window.FGPlans={View,Finder,FORM};
 })();
