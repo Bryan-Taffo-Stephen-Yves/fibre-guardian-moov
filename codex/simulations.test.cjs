@@ -224,3 +224,19 @@ test('Wi-Fi faible dans une chambre : la fibre va bien, conseil de placement', (
   SIM.clear(st);
   assert.ok(!st.devices.some(d => d.id === 'sim-chambre'));
 });
+
+test('technicien en retard : Guardian prévient, Yao prend le relais, la panne est réparée', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'retard', now);
+  const i = st.incidents.find(x => x.sim);
+  SIM.tick(st, now + 21000);
+  assert.equal(i.technician.name, 'Koffi');
+  assert.equal(st.notifications[0].title, 'Koffi a du retard');
+  SIM.tick(st, now + 33000);
+  assert.equal(i.technician.name, 'Yao');
+  assert.equal(st.notifications[0].title, 'Yao prend le relais');
+  SIM.tick(st, now + 70000);
+  assert.equal(i.status, 'resolved');
+  assert.ok(i.events.some(e => e.label === 'Changement de technicien'));
+  assert.match(st.messages.at(-1).text, /Yao a réparé/);
+});

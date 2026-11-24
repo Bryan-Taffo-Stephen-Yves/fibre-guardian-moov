@@ -21,6 +21,7 @@
   ['facture','Facture pas encore payée','Guardian rappelle la facture du mois, puis propose de la payer en 2 ou 3 fois, sans frais.','wallet','accent'],
   ['vol','Câble volé sur le poteau','Une voisine envoie la photo du poteau. Yao sécurise le poteau, remplace le câble, et le client suit chaque étape.','alert','danger'],
   ['chambre','Wi-Fi faible dans une chambre','La fibre va bien, mais la tablette de la chambre capte mal. Guardian explique où mettre la box.','devices','warning'],
+  ['retard','Technicien en retard','Koffi est bloqué sur la route. Guardian prévient le client, puis Yao prend le relais.','alert','warning'],
  ];
  const TITLE=Object.fromEntries(SCENES.map(s=>[s[0],s[1]]));
  const PANNE=[['confirmed','Panne confirmée'],['assigned','Technicien choisi'],['en_route','En route'],['on_site','Sur place'],['repairing','Réparation'],['verifying','Vérification'],['resolved','Internet revenu']];
