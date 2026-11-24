@@ -18,6 +18,7 @@
   ['panne','Panne et technicien','Un câble est coupé. Le client suit le technicien jusqu’à la réparation, étape par étape.','shield','danger'],
   ['voisin','Coupure dans un quartier voisin','Guardian prévient le client que son débit peut baisser.','map','primary'],
   ['box','Box éteinte chez le client','Le quartier va bien, mais sa box ne répond plus. Guardian lui dit de vérifier la prise et le courant.','home','warning'],
+  ['facture','Facture pas encore payée','Guardian rappelle la facture du mois, puis propose de la payer en 2 ou 3 fois, sans frais.','wallet','accent'],
  ];
  const TITLE=Object.fromEntries(SCENES.map(s=>[s[0],s[1]]));
  const PANNE=[['confirmed','Panne confirmée'],['assigned','Technicien choisi'],['en_route','En route'],['on_site','Sur place'],['repairing','Réparation'],['verifying','Vérification'],['resolved','Internet revenu']];

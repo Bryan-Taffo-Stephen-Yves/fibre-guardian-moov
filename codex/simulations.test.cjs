@@ -184,3 +184,20 @@ test('box éteinte : pas une panne Moov, pas de redémarrage à distance, retour
   const busy = fresh(); J.openIncident(busy, now, {zone: busy.zone, description: 'Vraie panne', lat: 5.3, lon: -4, kind: 'fibre'});
   assert.throws(() => SIM.start(busy, 'box', now), /déjà en cours/);
 });
+
+test('facture : rappel de la vraie facture du mois, puis paiement en plusieurs fois ; rien si elle est payée', async () => {
+  const store = new Store(':memory:'); await seedDemo(store);
+  const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id, now = Date.now();
+  if (!J.get(store, uid)) J.put(store, uid, J.seed());
+  const F = require('./fidelite.cjs'), bill = F.state(store, uid, now).bill;
+  if (bill.paid) store.run('UPDATE fidelite_factures SET paid_at=NULL WHERE user_id=? AND month=?', uid, bill.month);
+  const snap = SIM.run(store, uid, {scene: 'facture'}, now);
+  assert.match(snap.notifications[0].title, /Votre facture de .+ est à payer/);
+  assert.equal(snap.notifications[0].page, 'fidelite');
+  SIM.refresh(store, uid, now + 20000);
+  const st = J.get(store, uid);
+  assert.equal(st.notifications[0].title, 'Besoin d’un peu de temps ?');
+  assert.equal(st.notifications[0].page, 'acces');
+  F.pay(store, uid, {confirm: true, month: bill.month}, now);
+  assert.throws(() => SIM.run(store, uid, {scene: 'facture'}, now), /déjà payée/);
+});

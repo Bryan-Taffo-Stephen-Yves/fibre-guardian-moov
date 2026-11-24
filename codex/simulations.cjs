@@ -32,6 +32,7 @@ const SCENES = {
   panne: 'Panne, puis réparation par le technicien',
   voisin: 'Coupure dans un quartier voisin',
   box: 'Box éteinte chez le client',
+  facture: 'Facture pas encore payée',
 };
 
 function note(st, n, now) {
@@ -70,7 +71,7 @@ function clear(st, {keepScenario = false} = {}) {
 }
 
 // fault : une vraie panne en cours chez le client (incident du parcours ou panne de zone de l'équipe Moov).
-function start(st, scene, now = Date.now(), {fault = null} = {}) {
+function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null} = {}) {
   insist(Object.hasOwn(SCENES, scene), 'Simulation inconnue.');
   clear(st);
   fault = fault || J.active(st);
@@ -126,6 +127,17 @@ function start(st, scene, now = Date.now(), {fault = null} = {}) {
     note(st, {page: 'home', title: 'Votre box ne répond plus', body: 'Le réseau de votre quartier va bien : ce n’est pas une panne Moov. Vérifiez que la box est branchée et allumée. Une coupure de courant chez vous ?'}, now);
     say(st, 'Votre box ne me répond plus depuis ' + hm(now) + ', alors que les autres box de ' + quarter(st) + ' vont bien. Ce n’est donc pas une panne Moov. Vérifiez la prise, le bouton de la box et le courant chez vous. Je vous préviens dès qu’elle revient.');
     later(st, now + BOX_MS, {type: 'note', n: {page: 'home', title: 'Votre box est revenue', body: 'Le courant est revenu : votre box répond de nouveau et internet marche.'}, boxOn: true});
+  } else if (scene === 'facture') {
+    // La vraie facture du mois (fidelite.cjs) : Guardian rappelle gentiment, puis propose de payer en 2 ou 3 fois (acces.cjs).
+    insist(s && uid, 'Client introuvable.', 404);
+    const b = require('./fidelite.cjs').state(s, uid, now).bill;
+    insist(!b.paid, 'La facture de ' + b.label + ' de ce client est déjà payée : rien à lui rappeler.', 409);
+    let split = null; try { split = require('./acces.cjs').state(s, uid, now).split; } catch {}
+    const amount = b.amount.toLocaleString('fr-FR') + ' FCFA', day = new Date(b.due).getUTCDate() + ' ' + b.label.split(' ')[0];
+    note(st, {page: 'fidelite', title: 'Votre facture de ' + b.label + ' est à payer', body: amount + ', à payer avec Moov Money avant le ' + day + '. Payée à temps, elle vous rapporte des points de fidélité.'}, now);
+    say(st, 'Petit rappel : votre facture de ' + b.label + ' (' + amount + ') n’est pas encore payée. Vous pouvez la régler en deux gestes dans « Ma fidélité », avec Moov Money.');
+    if (!split) later(st, now + 20000, {type: 'note', n: {page: 'acces', title: 'Besoin d’un peu de temps ?', body: 'Vous pouvez payer ' + b.label + ' en 2 ou 3 fois, sans frais. Choisissez dans « Offres solidaires ».'},
+      say: 'Si le mois est difficile, vous pouvez payer en 2 ou 3 fois, sans frais : ouvrez « Offres solidaires » dans votre compte. Votre fibre reste allumée.'});
   } else if (scene === 'voisin') {
     const place = neighbour(st);
     note(st, {page: 'home', title: 'Attention : baisse de débit possible', body: 'Une coupure est en cours à ' + place + ', à côté de chez vous. Pendant la réparation, le débit peut baisser dans votre zone. Votre internet reste allumé.'}, now);
@@ -180,7 +192,7 @@ function run(s, uid, d, now = Date.now()) {
     insist(st, 'Démarrez votre démonstration.', 409);
     const type = String(d?.scene || '');
     if (type === 'stop') clear(st);
-    else { let fault = null; try { fault = J.sharedFault(s, uid); } catch {} start(st, type, now, {fault}); }
+    else { let fault = null; try { fault = J.sharedFault(s, uid); } catch {} start(st, type, now, {fault, s, uid}); }
     st.version++;
     J.put(s, uid, st);
     return J.snapshotFor(s, uid, st);
