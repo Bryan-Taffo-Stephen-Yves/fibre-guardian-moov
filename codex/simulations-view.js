@@ -22,6 +22,7 @@
   ['suspendue','Ligne suspendue (facture impayée)','Internet du client est suspendu. Il paie avec Moov Money, ou en plusieurs fois : internet revient tout de suite.','wallet','danger'],
   ['vol','Câble volé sur le poteau','Une voisine envoie la photo du poteau. Yao sécurise le poteau, remplace le câble, et le client suit chaque étape.','shield','danger'],
   ['chambre','Wi-Fi faible dans une chambre','La fibre va bien, mais la tablette de la chambre capte mal. Guardian explique où mettre la box.','guardian','warning'],
+  ['recurrente','Panne qui revient','La 3e coupure en 30 jours dans son quartier : son dossier devient prioritaire et un conseiller doit l’appeler sous 2 h.','alert','danger'],
   ['retard','Technicien en retard','Le technicien Koffi est bloqué sur la route. Guardian prévient le client, puis Yao prend le relais.','user','warning'],
   ['arnaque','Message d’arnaque','Un faux SMS « Moov » demande le code Moov Money. Guardian prévient le client de ne jamais le donner.','sms','danger'],
  ];

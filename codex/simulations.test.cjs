@@ -249,7 +249,7 @@ test('arnaque : Guardian met en garde, rien ne coupe internet', () => {
   assert.match(st.notifications[0].body, /ne vous demandera jamais votre code/);
   assert.match(st.messages.at(-1).text, /arnaque/);
   assert.equal(J.snapshot(st).metrics.state, 'stable');
-  assert.equal(Object.keys(SIM.SCENES).length, 13, 'six scènes de départ + six nouvelles + la ligne suspendue');
+  assert.equal(Object.keys(SIM.SCENES).length, 14, 'six scènes de départ + six nouvelles + la ligne suspendue + la panne qui revient');
 });
 
 test('relecture jury 2 : le retard ne part que si le technicien est encore en route, avec son vrai nom', () => {
@@ -312,4 +312,26 @@ test('relecture jury 2 : la Régie voit le retard, le changement de technicien e
   assert.equal(SIM.status(b, now).boxBack, false);
   SIM.tick(b, now + 91000);
   assert.equal(SIM.status(b, now + 91000).boxBack, true);
+});
+
+test('Régie : « Panne qui revient » rend le dossier du client prioritaire, avec un appel de conseiller sous 2 h', async () => {
+  const {Store} = require('./pilot-store.cjs'), operator = require('./operator-store.cjs'), noc = require('./noc-store.cjs'), SC = require('./service-client.cjs');
+  const s = new Store(':memory:'); operator.migrate(s); J.migrate(s); noc.migrate(s); SC.migrate(s);
+  const uid = (await s.register({email: 'awa@example.test', name: 'Awa Koné', password: 'recurrente-password-123'})).user.id;
+  const yao = (await s.register({email: 'yao@example.test', name: 'Yao Konan', password: 'recurrente-password-123'})).user.id;
+  J.put(s, uid, J.seed()); J.put(s, yao, J.seed());
+  const seg = s.get('SELECT id FROM noc_segments LIMIT 1').id;
+  for (const u of [uid, yao]) s.run('INSERT OR REPLACE INTO noc_members(user_id,segment_id) VALUES(?,?)', u, seg);
+  const now = Date.UTC(2026, 10, 24, 9);
+  SIM.run(s, uid, {scene: 'recurrente'}, now);
+  const d = SC.mine(s, uid, now).items[0];
+  assert.equal(d.kind, 'panne'); assert.match(d.title, /3e coupure/);
+  assert.match(J.get(s, uid).messages.at(-1).text, /3e coupure en 30 jours/);
+  assert.match(J.get(s, uid).notifications[0].title, /3e coupure en 30 jours/, 'la notification reste après l’enregistrement de la scène');
+  // Le voisin n'est pas touché par la scène, même plus tard.
+  assert.equal(require('./panne-recurrente.cjs').sweep(s, now + 60000), 0);
+  assert.equal(SC.mine(s, yao, now).items.length, 0);
+  // Deuxième lancement : pas de nouvelle demande, et Guardian ne promet pas un nouvel appel.
+  SIM.run(s, uid, {scene: 'recurrente'}, now + 1000);
+  assert.match(J.get(s, uid).messages.at(-1).text, /déjà prioritaire/);
 });
