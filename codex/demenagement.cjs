@@ -55,17 +55,31 @@ function tick(s,now=Date.now()){
 // Le technicien a installé la fibre à la nouvelle adresse (le jour prévu, ou tout de suite dans la scène de la Régie).
 function finish(s,r,now=Date.now()){
  const seg=segmentFor(s,r.commune,r.quartier);
+ // Le client a donné lui-même sa nouvelle adresse : il suit son nouveau quartier. Sans quartier suivi dans la commune,
+ // il ne reçoit plus les alertes de l'ancien.
  if(seg)s.run('INSERT INTO noc_members(user_id,segment_id) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET segment_id=excluded.segment_id',r.user_id,seg);
+ else s.run('DELETE FROM noc_members WHERE user_id=?',r.user_id);
  s.run("UPDATE demenagements SET status='fait',new_segment=?,done_at=?,updated=? WHERE id=?",seg,now,now,r.id);
  SC().settle(s,'demenagement',r.id,{message:'Votre fibre est installée à votre nouvelle adresse ('+r.quartier+', '+r.commune+'). Bienvenue chez vous !'},now);
 }
 
-// Le conseiller a appelé (service-client.cjs) : la date est confirmée, ou la demande est close au téléphone.
+// Avant que le conseiller note son appel (service-client.cjs) : hors zone fibre, pas de technicien ni d'installation.
+function check(s,id,outcome){
+ ensure(s);const r=s.get('SELECT * FROM demenagements WHERE id=?',String(id));
+ insist(!r||r.covered||!['demenagement','technicien'].includes(outcome),'La fibre n’arrive pas à cette adresse : proposez une solution au client, puis notez « Réglé au téléphone ».',409);
+}
+// Le conseiller a appelé : la date est confirmée, ou la demande est close au téléphone.
+// Confirmée après le jour choisi : l'installation passe au premier jour possible (jamais « installée » sans technicien).
 function called(s,id,outcome,now=Date.now()){
  ensure(s);const r=s.get('SELECT * FROM demenagements WHERE id=?',String(id));if(!r||!OPEN.includes(r.status))return;
- if(r.covered&&['demenagement','technicien'].includes(outcome))s.run("UPDATE demenagements SET status='planifie',updated=? WHERE id=?",now,r.id);
+ if(r.covered&&['demenagement','technicien'].includes(outcome)){
+  const day=r.day&&endOf(r)>now?r.day:choices(now)[0].day;
+  s.run("UPDATE demenagements SET status='planifie',day=?,updated=? WHERE id=?",day,now,r.id);
+ }
  else if(outcome!=='absent')s.run("UPDATE demenagements SET status='conseille',updated=? WHERE id=?",now,r.id);
 }
+// La demande du service client attend l'installation seulement tant que le déménagement est prévu.
+const waiting=(s,id)=>{ensure(s);return s.get('SELECT status FROM demenagements WHERE id=?',String(id))?.status==='planifie';};
 
 function view(s,r,now){
  if(!r)return null;
@@ -124,4 +138,4 @@ function cancel(s,uid,now=Date.now()){return s.transaction(()=>{
  return state(s,uid,now);
 });}
 
-module.exports={migrate,state,ask,cancel,called,tick,finish,choices,segmentFor,OTHER};
+module.exports={migrate,state,ask,cancel,check,called,waiting,tick,finish,choices,segmentFor,OTHER};

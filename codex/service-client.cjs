@@ -82,7 +82,7 @@ function tick(s,now){
   let done=now-d.called_at>DAY;
   if(d.incident_id&&has(s,'noc_events'))done=done||!!s.get("SELECT 1 FROM noc_events WHERE incident_id=? AND kind IN ('resolved','closed') AND at>?",d.incident_id,d.called_at);
   if(d.kind==='echange'&&has(s,'box_echanges'))done=s.get('SELECT status FROM box_echanges WHERE id=?',d.ref)?.status==='echangee';
-  if(d.kind==='demenagement'&&has(s,'demenagements'))done=false;   // réglé par demenagement.cjs le jour de l'installation
+  if(d.kind==='demenagement'&&has(s,'demenagements')&&require('./demenagement.cjs').waiting(s,d.ref))done=false;   // réglé par demenagement.cjs le jour de l'installation
   if(done)settle(s,d.kind,d.ref,{},now);
  }
  s.run("UPDATE sc_demandes SET status='confirmee',answer='sans_reponse',answered_at=?,updated=? WHERE status='reglee' AND resolved_at<?",now,now,now-CONFIRM);
@@ -179,7 +179,7 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
   notify(s,r.user_id,'Nous avons essayé de vous appeler',tries>=MAX_TRIES?'Toujours pas de réponse. Rappelez le 111 quand vous voulez, ou répondez ici : votre demande reste ouverte.':first(me)+' vous rappelle avant '+when(due,now)+'. Gardez votre téléphone près de vous.',now);
   return queue(s,uid,now);
  }
- if(r.kind==='demenagement')require('./demenagement.cjs').called(s,r.ref,d.outcome,now);
+ if(r.kind==='demenagement'){const DM=require('./demenagement.cjs');DM.check(s,r.ref,d.outcome);DM.called(s,r.ref,d.outcome,now);}
  if(r.kind==='reclamation'&&s.get("SELECT status FROM reclamations WHERE id=?",r.ref)?.status==='open'){
   // La réponse passe par les réclamations (historique, recours) ; settle() demande ensuite son avis au client.
   require('./reclamation.cjs').answer(s,uid,{id:r.ref,outcome:d.outcome==='technicien'?'intervention':'regle',message:note||OUTCOMES[d.outcome].client},now);
