@@ -61,7 +61,7 @@ function ask(s,uid,d,now=Date.now()){return s.transaction(()=>{
  if(cur){
   s.run('UPDATE elig_demandes SET commune=?,quartier=?,call=MAX(call,?),updated=? WHERE id=?',commune,quartier,call?1:0,now,id);
   // Le client change de commune : la demande d'appel déjà ouverte suit sa nouvelle adresse.
-  if(s.get("SELECT 1 FROM sqlite_master WHERE name='sc_demandes'"))s.run("UPDATE sc_demandes SET title=?,updated=? WHERE kind='eligibilite' AND ref=? AND status IN ('recue','prise','appele')",'Fibre demandée à '+quartier+', '+commune,now,id);
+  if(s.get("SELECT 1 FROM sqlite_master WHERE name='sc_demandes'"))s.run("UPDATE sc_demandes SET title=?,detail=?,updated=? WHERE kind='eligibilite' AND ref=? AND status IN ('recue','prise','appele')",'Fibre demandée à '+quartier+', '+commune,'Le client a changé de commune : '+quartier+', '+commune+'. Proposez une solution en attendant et dites au client qu’il sera prévenu.',now,id);
  }
  else{id=crypto.randomUUID();s.run('INSERT INTO elig_demandes(id,user_id,commune,quartier,call,status,created,updated) VALUES(?,?,?,?,?,?,?,?)',id,uid,commune,quartier,call?1:0,'attente',now,now);}
  const n=waiting(s,commune)-1;
