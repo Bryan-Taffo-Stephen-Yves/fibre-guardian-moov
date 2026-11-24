@@ -19,27 +19,34 @@ test('Une idée de bout en bout : proposée, soutenue, étudiée, prévue, faite
  const {s,ids}=await setup();
  let r=ID.propose(s,ids.awa,{text:'Pouvoir choisir l’heure exacte du passage du technicien'},t);
  assert.ok(r.sent);assert.equal(r.mine[0].votes,1);assert.equal(r.mine[0].label,'Reçue');
- // Yao écrit presque la même chose : Guardian lui montre l'idée d'Awa ; il vote pour elle.
- r=ID.propose(s,ids.yao,{text:'Choisir l’heure du passage du technicien chez moi'},t+HOUR);
- assert.ok(r.similar,'idée proche trouvée');assert.equal(r.similar.text,'Pouvoir choisir l’heure exacte du passage du technicien');
- ID.vote(s,ids.yao,{id:r.similar.id},t+HOUR);ID.vote(s,ids.yao,{id:r.similar.id},t+HOUR);   // deux clics : une seule voix
- ID.propose(s,ids.bob,{text:'Recevoir la facture sur WhatsApp chaque mois'},t+HOUR);
- const id=r.similar.id;
- assert.deepEqual(ID.state(s,ids.bob,t+2*HOUR).open.map(i=>i.votes),[2,1],'la plus soutenue d’abord');
+ // Pas encore lue par Moov : seule Awa la voit ; personne d'autre ne peut voter pour elle.
+ const id=r.sent;
+ assert.equal(ID.state(s,ids.bob,t).open.length,0);assert.throws(()=>ID.vote(s,ids.bob,{id},t),/introuvable/);
+ assert.equal(ID.list(s,ids.kader,t).items[0].hidden,true);
  // Un conseiller voit les idées mais ne décide pas ; un client ne voit pas la liste de l'équipe.
  assert.equal(ID.list(s,ids.kader,t).canAct,false);assert.equal(ID.list(s,ids.kader,t).items[0].next.length,0);
  assert.throws(()=>ID.decide(s,ids.kader,{id,status:'etude'},t),/responsable/);
  assert.throws(()=>ID.list(s,ids.awa,t),/./);
- // Le responsable fait avancer l'idée ; on ne saute pas d'étape.
+ // Le responsable la lit et la publie (« À l'étude ») ; on ne saute pas d'étape.
  assert.throws(()=>ID.decide(s,ids.fatou,{id,status:'faite'},t),/Étape impossible/);
- let l=ID.decide(s,ids.fatou,{id,status:'etude'},t+3*HOUR);assert.equal(l.told,2);
- assert.match(journey.get(s,ids.yao).notifications[0].title,/à l’étude/);
+ assert.equal(ID.list(s,ids.fatou,t).items[0].next[0].label,'Publier et étudier');
+ let l=ID.decide(s,ids.fatou,{id,status:'etude'},t+HOUR/2);assert.equal(l.told,1);
+ assert.match(journey.get(s,ids.awa).notifications[0].title,/à l’étude/);
+ // Yao écrit presque la même chose : Guardian lui montre l'idée d'Awa ; il vote pour elle.
+ r=ID.propose(s,ids.yao,{text:'Choisir l’heure du passage du technicien chez moi'},t+HOUR);
+ assert.ok(r.similar,'idée proche trouvée');assert.equal(r.similar.text,'Pouvoir choisir l’heure exacte du passage du technicien');
+ ID.vote(s,ids.yao,{id:r.similar.id},t+HOUR);ID.vote(s,ids.yao,{id:r.similar.id},t+HOUR);   // deux clics : une seule voix
+ const bob=ID.propose(s,ids.bob,{text:'Recevoir la facture sur WhatsApp chaque mois'},t+HOUR).sent;
+ ID.decide(s,ids.fatou,{id:bob,status:'etude'},t+HOUR);
+ assert.deepEqual(ID.state(s,ids.bob,t+2*HOUR).open.map(i=>i.votes),[2,1],'la plus soutenue d’abord');
  ID.decide(s,ids.fatou,{id,status:'prevue',answer:'Les créneaux d’une heure arrivent en décembre.'},t+4*HOUR);
- l=ID.decide(s,ids.fatou,{id,status:'faite'},t+5*HOUR);
+ l=ID.decide(s,ids.fatou,{id,status:'faite'},t+5*HOUR);assert.equal(l.told,2);
  for(const u of [ids.awa,ids.yao]){const n=journey.get(s,u).notifications[0];assert.match(n.title,/C’est fait/);assert.match(n.body,/Merci/);}
- assert.equal(journey.get(s,ids.bob).notifications.filter(n=>/idée/.test(n.title)).length,0,'Bob n’a pas voté pour celle-ci');
+ assert.equal(journey.get(s,ids.bob).notifications.filter(n=>/C’est fait/.test(n.title)).length,0,'Bob n’a pas voté pour celle-ci');
  const st=ID.state(s,ids.bob,t+5*HOUR);assert.equal(st.done[0].id,id);assert.equal(st.done[0].answer,'Les créneaux d’une heure arrivent en décembre.');
  assert.throws(()=>ID.vote(s,ids.bob,{id},t+5*HOUR),/n’attend plus/);
+ // Bob propose plus tard la même idée : on lui dit que c'est déjà fait.
+ assert.equal(ID.propose(s,ids.bob,{text:'Choisir l’heure exacte du technicien'},t+6*HOUR).similar.status,'faite');
 });
 
 test('« Pas pour l’instant » demande une raison ; saisie et abus contrôlés',async()=>{
@@ -51,8 +58,11 @@ test('« Pas pour l’instant » demande une raison ; saisie et abus contrôlés
  assert.throws(()=>ID.decide(s,ids.fatou,{id,status:'non'},t),/pourquoi/);
  ID.decide(s,ids.fatou,{id,status:'non',answer:'Le prix de la batterie doublerait celui de la box.'},t);
  assert.match(journey.get(s,ids.awa).notifications[0].body,/doublerait/);
+ // Moov y revient : la raison du refus n'est plus affichée.
+ ID.decide(s,ids.fatou,{id,status:'etude'},t+HOUR);assert.equal(ID.state(s,ids.awa,t+HOUR).mine[0].answer,null);
  for(const k of ['Des tarifs pour les familles nombreuses','Un mode nuit pour couper le Wi-Fi','Une alerte avant la fin du forfait','Des points fidélité pour chaque parrainage'])ID.propose(s,ids.awa,{text:k,force:true},t);
  assert.throws(()=>ID.propose(s,ids.awa,{text:'Une sixième idée dans la même journée',force:true},t),/demain/);
  assert.equal(ID.close('Une alerte avant la fin du forfait','Recevoir une alerte avant la fin de mon forfait')>=0.5,true);
  assert.equal(ID.close('Une alerte avant la fin du forfait','Des tarifs pour les familles')<0.5,true);
+ assert.equal(ID.close('Plus de débit','Plus de débit le soir pour les gamers')<0.5,true,'un seul mot en commun ne suffit pas');
 });

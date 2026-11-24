@@ -12,6 +12,7 @@
       i.answer && h('p', {className: 'id-answer'}, h('b', null, 'Moov : '), i.answer),
       h('div', {className: 'id-foot'},
         h('span', {className: 'id-status is-' + i.status}, i.label),
+        i.mine && i.status === 'recue' && h('small', null, 'Moov la lit avant de la publier'),
         h('small', null, plural(i.votes, 'voix', 'voix')),
         ['recue', 'etude', 'prevue'].includes(i.status) && !i.mine && h('button', {type: 'button', className: 'id-vote' + (i.voted ? ' is-on' : ''), 'aria-pressed': i.voted, disabled: busy, onClick: () => onVote(i)}, i.voted ? '✓ Moi aussi' : 'Moi aussi')));
   }
@@ -22,7 +23,7 @@
     E(() => { api('/idees').then(D).catch(() => {}); }, []);
     if (!d) return null;
     async function post(body, after) { B(true); X(''); try { const r = await api('/idees', 'POST', body); D(r); after && after(r); } catch (e) { X(e.message); } finally { B(false); } }
-    const sent = r => { if (r.similar) { M(r.similar); return; } M(null); T(''); O(false); K('Merci ! Votre idée est enregistrée. Vous serez prévenu à chaque étape.'); };
+    const sent = r => { if (r.similar) { M(r.similar); return; } M(null); T(''); O(false); K('Merci ! Moov lit votre idée, puis la publie pour que d’autres clients la soutiennent. Vous serez prévenu à chaque étape.'); };
     const vote = i => post({action: 'vote', id: i.id, off: i.voted}, () => K(''));
     return h('section', {className: 'ch-group id-card', 'aria-labelledby': 'id-title'},
       h('h2', {id: 'id-title'}, 'Vos idées pour Moov'),
@@ -31,9 +32,9 @@
       d.done.length > 0 && h('div', {className: 'id-done'}, h('b', null, 'Déjà fait grâce à vous'), h('ul', null, d.done.map(i => h('li', {key: i.id}, '✓ ' + i.text)))),
       d.open.length > 0 && h('ul', {className: 'id-list', 'aria-label': 'Idées des clients'}, d.open.map(i => h(Idea, {key: i.id, i, busy, onVote: vote}))),
       similar && h('div', {className: 'id-similar', role: 'status'},
-        h('b', null, 'Une idée proche existe déjà'), h('p', null, '« ' + similar.text + ' » · ' + plural(similar.votes, 'voix', 'voix')),
+        h('b', null, similar.status === 'faite' ? 'C’est déjà fait !' : 'Une idée proche existe déjà'), h('p', null, '« ' + similar.text + ' » · ' + (similar.status === 'faite' ? 'Moov l’a déjà mise en place.' : plural(similar.votes, 'voix', 'voix'))),
         h('div', {className: 'id-actions'},
-          !similar.voted && !similar.mine && h('button', {type: 'button', className: 'id-main', disabled: busy, onClick: () => post({action: 'vote', id: similar.id}, () => { M(null); T(''); O(false); K('Merci ! Votre voix compte pour cette idée.'); })}, 'Voter pour elle'),
+          similar.status !== 'faite' && !similar.voted && !similar.mine && h('button', {type: 'button', className: 'id-main', disabled: busy, onClick: () => post({action: 'vote', id: similar.id}, () => { M(null); T(''); O(false); K('Merci ! Votre voix compte pour cette idée.'); })}, 'Voter pour elle'),
           h('button', {type: 'button', className: 'id-link', disabled: busy, onClick: () => post({action: 'propose', text, force: true}, sent)}, 'Envoyer quand même la mienne'))),
       open ? h('form', {className: 'id-form', onSubmit: e => { e.preventDefault(); post({action: 'propose', text}, sent); }},
           h('label', null, 'Votre idée', h('textarea', {rows: 3, maxLength: 280, value: text, disabled: busy, onChange: e => { T(e.target.value); M(null); }, placeholder: 'Exemple : pouvoir choisir l’heure exacte du passage du technicien'})),
@@ -58,7 +59,7 @@
       error && h('p', {className: 'fw-error', role: 'alert'}, error),
       d.items.length ? h('ul', {className: 'av-calls'}, d.items.slice(0, 10).map(i => h('li', {key: i.id, className: 'av-call'},
         h('div', {className: 'av-call-head'},
-          h('div', null, h('b', null, i.text), h('small', null, i.author + ' · ' + plural(i.votes, 'voix', 'voix'))),
+          h('div', null, h('b', null, i.text), h('small', null, i.author + ' · ' + (i.hidden ? 'pas encore publiée' : plural(i.votes, 'voix', 'voix')))),
           h('span', {className: 'id-status is-' + i.status}, i.label)),
         i.answer && h('p', {className: 'av-due'}, 'Réponse : ' + i.answer),
         i.next.length > 0 && (pick && pick.id === i.id
