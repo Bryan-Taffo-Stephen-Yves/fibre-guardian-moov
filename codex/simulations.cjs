@@ -37,6 +37,7 @@ const SCENES = {
   vol: 'Câble volé sur le poteau',
   chambre: 'Wi-Fi faible dans une chambre',
   retard: 'Technicien en retard',
+  recurrente: 'Panne qui revient (3e coupure du mois)',
   arnaque: 'Message d’arnaque',
 };
 const OUTAGES = ['panne', 'vol', 'retard']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
@@ -165,6 +166,20 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     outage(st, now, {description: 'Câble fibre coupé par un chantier, près de chez vous.', title: 'Panne dans votre quartier : Guardian l’a confirmée', steps: [
       ['assigned', 6000], ['en_route', 12000], ['', 20000, {type: 'delay'}], ['', 32000, {type: 'swap', tech: 'yao'}],
       ['on_site', 44000], ['repairing', 50000], ['verifying', 56000], ['resolved', 62000]]});
+  } else if (scene === 'recurrente') {
+    // Deux coupures déjà réparées ce mois-ci dans le quartier du client, puis une 3e : son dossier devient prioritaire
+    // et un conseiller doit l'appeler sous 2 h (panne-recurrente.cjs, file « À rappeler »).
+    insist(s && uid, 'Client introuvable.', 404);
+    const seg = s.get('SELECT segment_id FROM noc_members WHERE user_id=?', uid)?.segment_id;
+    insist(seg, 'Ce client n’a pas encore choisi son quartier.', 409);
+    const PR = require('./panne-recurrente.cjs');
+    for (const [ago, status] of [[18 * 86400000, 'resolved'], [7 * 86400000, 'resolved'], [0, 'reported']]) {
+      const id = 'sim-recurrente-' + key();
+      s.run("INSERT INTO noc_incidents(id,segment_id,source,mode,status,title,description,created,updated) VALUES(?,?,?,?,?,?,?,?,?)", id, seg, 'telemetry', 'demo', status, 'Coupure fibre · ' + quarter(st), 'Scène de la Régie : coupure du quartier.', now - ago, now - ago + (status === 'resolved' ? 3 * 3600000 : 0));
+    }
+    PR.sweep(s, now, {force: true});
+    const n = PR.outages(s, seg, now).length;
+    say(st, 'Pardon : c’est la ' + n + 'e coupure ce mois-ci à ' + quarter(st) + '. Votre dossier est prioritaire. Un conseiller Moov vous appelle dans les 2 heures pour en parler et, si besoin, envoyer un technicien vérifier toute votre ligne.');
   } else if (scene === 'arnaque') {
     // Un faux SMS « Moov » demande le code secret Moov Money : Guardian met en garde, sans jamais lire les SMS du client.
     note(st, {page: 'compte', urgent: true, title: 'Attention : arnaque en cours dans votre quartier', body: 'Un faux message « Moov » demande votre code Moov Money pour « réparer votre fibre ». Moov ne vous demandera jamais votre code. Ne répondez pas.'}, now);
