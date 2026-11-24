@@ -240,3 +240,12 @@ test('technicien en retard : Guardian prévient, Yao prend le relais, la panne e
   assert.ok(i.events.some(e => e.label === 'Changement de technicien'));
   assert.match(st.messages.at(-1).text, /Yao a réparé/);
 });
+
+test('arnaque : Guardian met en garde, rien ne coupe internet', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'arnaque', now);
+  assert.match(st.notifications[0].body, /ne vous demandera jamais votre code/);
+  assert.match(st.messages.at(-1).text, /arnaque/);
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+  assert.equal(Object.keys(SIM.SCENES).length, 12, 'six scènes de départ + six nouvelles');
+});

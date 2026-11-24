@@ -36,6 +36,7 @@ const SCENES = {
   vol: 'Câble volé sur le poteau',
   chambre: 'Wi-Fi faible dans une chambre',
   retard: 'Technicien en retard',
+  arnaque: 'Message d’arnaque',
 };
 const OUTAGES = ['panne', 'vol', 'retard']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
 
@@ -151,6 +152,10 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
         say: 'Koffi est bloqué sur la route par un accident. Il arrivera plutôt vers ' + late + '. Je surveille : si un autre technicien peut venir plus vite, je vous le dis tout de suite.'}],
       ['', 32000, {type: 'swap', tech: 'yao'}],
       ['on_site', 44000], ['repairing', 50000], ['verifying', 56000], ['resolved', 62000]]});
+  } else if (scene === 'arnaque') {
+    // Un faux SMS « Moov » demande le code secret Moov Money : Guardian met en garde, sans jamais lire les SMS du client.
+    note(st, {page: 'compte', urgent: true, title: 'Attention : arnaque en cours dans votre quartier', body: 'Un faux message « Moov » demande votre code Moov Money pour « réparer votre fibre ». Moov ne vous demandera jamais votre code. Ne répondez pas.'}, now);
+    say(st, 'Attention : des clients de ' + quarter(st) + ' reçoivent un faux SMS « Moov » qui demande leur code secret Moov Money pour « réparer la fibre ». C’est une arnaque. Moov ne demande jamais votre code, ni par SMS, ni par appel, ni sur WhatsApp. Ne répondez pas et supprimez le message. Pour une vraie panne, passez par moi ou par le 111.');
   } else if (scene === 'chambre') {
     // La fibre va bien, mais le Wi-Fi n'arrive pas jusqu'à la chambre des enfants : Guardian explique où mettre la box.
     st.devices.push({id: 'sim-chambre', name: 'Tablette de Kevin (chambre des enfants)', demand: 3, sim: true, recognized: true});

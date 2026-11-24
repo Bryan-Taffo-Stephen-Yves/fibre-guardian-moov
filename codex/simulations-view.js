@@ -22,6 +22,7 @@
   ['vol','Câble volé sur le poteau','Une voisine envoie la photo du poteau. Yao sécurise le poteau, remplace le câble, et le client suit chaque étape.','alert','danger'],
   ['chambre','Wi-Fi faible dans une chambre','La fibre va bien, mais la tablette de la chambre capte mal. Guardian explique où mettre la box.','devices','warning'],
   ['retard','Technicien en retard','Koffi est bloqué sur la route. Guardian prévient le client, puis Yao prend le relais.','alert','warning'],
+  ['arnaque','Message d’arnaque','Un faux SMS « Moov » demande le code Moov Money. Guardian prévient le client de ne jamais le donner.','shield','danger'],
  ];
  const TITLE=Object.fromEntries(SCENES.map(s=>[s[0],s[1]]));
  const PANNE=[['confirmed','Panne confirmée'],['assigned','Technicien choisi'],['en_route','En route'],['on_site','Sur place'],['repairing','Réparation'],['verifying','Vérification'],['resolved','Internet revenu']];
