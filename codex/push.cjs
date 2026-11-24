@@ -79,18 +79,6 @@ async function toUser(s, uid, message, only = {}) {
 // Réserve la clé avant l'envoi : un message ne part jamais deux fois, même si deux passages se croisent.
 const once = (s, key) => !!s.run('INSERT OR IGNORE INTO push_sent VALUES(?,?)', key, Date.now()).changes;
 
-// Chiffre sur l'icône de l'application du client (Badging API, sw.js) : ses messages non lus,
-// ceux de son application (foyer home-1) et ceux de la panne de son quartier (noc-store.cjs). Jamais bloquant.
-function badgeOf(s, uid, st) {
-  let n = 0;
-  try {
-    const saved = st || require('./journey-store.cjs').get(s, uid);
-    for (const x of saved?.notifications || []) if (x && !x.read && (!x.home || x.home === 'home-1')) n++;
-  } catch {}
-  try { const c = N.notifications(s, uid).unreadCards; if (Number.isInteger(c) && c > 0) n += c; } catch {}
-  return n;
-}
-
 // Messages « Mes messages » de l'application du client (journey-store.cjs les écrit ; appelé juste avant l'enregistrement).
 // pushMark : la date du dernier message déjà passé par ici, gardée dans l'état du client.
 function fromJourney(s, uid, st, now = Date.now()) {
@@ -105,12 +93,10 @@ function fromJourney(s, uid, st, now = Date.now()) {
   setImmediate(() => {
     try {
       const saved = require('./journey-store.cjs').get(s, uid);
-      let badge = null;
       for (const n of saved?.notifications || []) {
         if (!keys.includes(n.key) || n.read) continue;
         if (!once(s, 'j|' + uid + '|' + n.key)) continue;
-        if (badge === null) badge = badgeOf(s, uid, saved);
-        toUser(s, uid, {title: n.title || TITLE.client, body: n.body || '', tag: n.key, url: './?section=' + (n.page || 'notifications'), badge}).catch(e => state?.onError?.(e));
+        toUser(s, uid, {title: n.title || TITLE.client, body: n.body || '', tag: n.key, url: './?section=' + (n.page || 'notifications')}).catch(e => state?.onError?.(e));
       }
     } catch (e) { state?.onError?.(e); }
   });
@@ -148,9 +134,7 @@ async function tick(s, now = Date.now()) {
         // La clé ne dépend pas du texte (il peut changer quand le plan est complété) : un message, une fois.
         if (!once(s, ['n', i.id, m.to, m.channel, m.at, uid].join('|'))) continue;
         const url = m.to === 'client' && /en route|sur place/.test(m.body) ? './?section=tracking' : URL_OF[m.to];
-        const message = {title: TITLE[m.to], body: m.body, tag: 'fg-' + i.id + '-' + m.to, url};
-        if (m.to === 'client') message.badge = badgeOf(s, uid);
-        jobs.push(toUser(s, uid, message));
+        jobs.push(toUser(s, uid, {title: TITLE[m.to], body: m.body, tag: 'fg-' + i.id + '-' + m.to, url}));
       }
     }
   }
@@ -167,5 +151,5 @@ function start(s, {env = process.env, fetchImpl, hosts, onError} = {}) {
   return {stop() { clearInterval(timer); }, get publicKey() { return state?.keys.publicKey; }};
 }
 
-module.exports = {seen, isActive, badgeOf, config, migrate, view, subscribe, unsubscribe, toUser, fromJourney, tick, start, audience, RECENT,
+module.exports = {seen, isActive, config, migrate, view, subscribe, unsubscribe, toUser, fromJourney, tick, start, audience, RECENT,
   _state: () => state, _set: v => { state = v; }};

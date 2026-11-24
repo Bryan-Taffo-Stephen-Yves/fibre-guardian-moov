@@ -1,7 +1,7 @@
 /* Accueil client, simple comme pour un enfant.
-   1. Un grand en-tête bleu : bonjour, le débit reçu en gros, une phrase, quatre gros boutons ronds.
-   2. Une grille « Services » : les autres fonctions en tuiles, avec une pastille rouge là où un message attend.
-   3. Les cartes du moment, seulement si elles concernent le client maintenant. */
+   1. Un grand voyant : vert, ça marche ; orange, c'est lent ; rouge, panne. Une phrase, un bouton.
+   2. Une grille « Services » : toutes les fonctions en tuiles, la suite derrière « Voir tout ».
+   3. Deux cartes au plus, seulement si elles concernent le client maintenant. */
 (function(){
  'use strict';
  const h=React.createElement;
@@ -67,119 +67,86 @@
   eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
   star:'m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z'
  };
- // Pastille rouge comme sur l'icône d'une app de téléphone : le nombre de messages non lus du service ; « 9+ » au-delà.
- const dot=n=>n>0?h('b',{className:'ac-svc-badge ae-count','aria-hidden':true},n>9?'9+':n):null;
- const unread=n=>n>0?' : '+n+' message'+(n>1?'s':'')+' non lu'+(n>1?'s':''):'';
- // Bonjour selon l'heure, et la date du jour : « Bon après-midi · mar. 24 nov. ».
- function hello(now=new Date()){const H=now.getHours();return {hi:H>=18||H<4?'Bonsoir':'Bonjour',part:H<4||H>=18?'Bonne soirée':H<12?'Bonne matinée':'Bon après-midi',date:now.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})};}
- // Accueil épuré : un grand en-tête bleu Moov (bonjour, le débit reçu, quatre gros boutons ronds),
- // puis une feuille claire avec seulement ce qui compte : l'alerte s'il y en a une, les Services, les derniers messages.
- // badges = messages non lus par service (dossier de la fibre, appareils, Guardian) : la pastille rouge dit où aller.
- function Home({state,user,fault,busy,on,call,cards,recent=[],bell=0,badges={},demo}){
+ function Home({state,user,fault,busy,on,call,cards,recent=[],bell=0,demo}){
   const s=status({state,fault}),m=state.metrics||{},extra=Math.max(0,(m.connected||0)-(state.usual||0)),plan=state.plan?.mbps||100,price=state.plan?.price;
   const [all,setAll]=React.useState(false),[order,setOrder]=React.useState(false),[edit,setEdit]=React.useState(false);
   // Raccourcis préférés : le client met jusqu'à 4 services en tête de la grille (gardés sur ce téléphone).
   const KEY='fg-favoris:'+user.id;
   const [fav,setFav]=React.useState(()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v.slice(0,4):[];}catch{return [];}});
-  // Services de la grille (le dossier de la fibre n'existe que pour un nouvel abonné) : un favori qui n'est plus proposé ne garde pas sa place.
-  const offered=['Voir le réseau','Changer de forfait','Sans internet','Suivi technicien','Mes avantages','Mes données','Mon compte'].concat(order?['Dossier de ma fibre']:[]);
+  // Services proposés à ce client (le dossier de la fibre n'existe que pour un nouvel abonné) : un favori qui n'est plus proposé ne garde pas sa place.
+  const offered=['Tester ma connexion','Guardian','Appareils connectés','Voir le réseau','Changer de forfait','Signaler une panne','Sans internet','Mes avantages','Mes données','Mon compte'].concat(order?['Dossier de ma fibre']:[]);
   const live=fav.filter(id=>offered.includes(id));
   const toggle=id=>{const next=live.includes(id)?live.filter(x=>x!==id):live.length<4?live.concat(id):live;try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}setFav(next);};
-  // « Dossier de ma fibre » seulement s'il existe un dossier d'installation (nouvel abonné), ou un message du dossier à lire.
-  // Rechargé à chaque nouveau message du dossier : l'étape affichée suit l'avancée.
-  React.useEffect(()=>{let alive=true;fetch('/api/welcome',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(r=>{if(alive)setOrder(r&&r.order&&r.order.status!=='annule'?r.order:false);}).catch(()=>{});return()=>{alive=false;};},[user.id,badges.dossier]);
+  // « Dossier de ma fibre » seulement s'il existe un dossier d'installation (nouvel abonné) ; sinon « Mon compte » prend sa place.
+  React.useEffect(()=>{let alive=true;fetch('/api/welcome',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(r=>{if(alive)setOrder(!!(r&&r.order&&r.order.status!=='annule'));}).catch(()=>{});return()=>{alive=false;};},[user.id]);
   const run=k=>({bell:on.bell,track:on.track,guardian:on.guardian,reboot:on.reboot,devices:on.devices})[k];
-  const shown=(cards||[]).filter(Boolean),cut=s.tone==='down',got=cut?0:Math.round(m.capacity||0);
+  const shown=(cards||[]).filter(Boolean).slice(0,2),cut=s.tone==='down',got=cut?0:Math.round(m.capacity||0);
   const go=k=>on.go?()=>on.go(k):undefined;
-  const nDossier=badges.dossier||0,nGuardian=badges.guardian||0,nDevices=badges.appareils||0,hasDossier=!!order||nDossier>0;
-  // Installation en cours : une carte-ligne en haut de la feuille dit où en est le dossier.
-  const stepAt=order&&order.status!=='installe'&&Array.isArray(order.steps)?order.steps.findIndex(x=>x.id===order.step):-1;
   // En mode « Modifier », toucher une tuile l'épingle ou la retire (étoile) au lieu d'ouvrir le service.
   const tile=(icon,label,onClick,{tone='blue',badge,aria,disabled}={})=>{const pinned=live.includes(label),full=!pinned&&live.length>=4;
-   return h('button',{type:'button',key:label,'data-id':label,className:'ac-svc ac-svc--'+tone+(edit?' is-edit':'')+(edit&&pinned?' is-fav':'')+(edit&&full?' is-full':''),onClick:edit?()=>{if(!full)toggle(label);}:onClick,disabled:edit?undefined:disabled,'aria-disabled':edit&&full?true:undefined,'aria-pressed':edit?pinned:undefined,'aria-label':edit?label:(aria||label)+unread(badge)},
-    h('span',{className:'ac-svc-ico','aria-hidden':true},h(Ico,{name:icon,size:28}),!edit&&dot(badge),edit&&h('i',{className:'ac-svc-star','aria-hidden':true},h(Icon,{d:S.star,size:13,stroke:2.2}))),h('span',{className:'ac-svc-txt'},label));};
-  // Le dossier de la fibre passe en tête : c'est là qu'arrivent les nouvelles de l'installation.
-  const pool=[hasDossier&&stepAt<0&&tile('folder','Dossier de ma fibre',go('bienvenue'),{tone:'blue',badge:nDossier,aria:'Suivre le dossier de ma fibre'}),
+   return h('button',{type:'button',key:label,'data-id':label,className:'ac-svc ac-svc--'+tone+(edit?' is-edit':'')+(edit&&pinned?' is-fav':'')+(edit&&full?' is-full':''),onClick:edit?()=>{if(!full)toggle(label);}:onClick,disabled:edit?undefined:disabled,'aria-disabled':edit&&full?true:undefined,'aria-pressed':edit?pinned:undefined,'aria-label':edit?label:aria||label},
+    h('span',{className:'ac-svc-ico','aria-hidden':true},h(Ico,{name:icon,size:28}),badge&&!edit?h('b',{className:'ac-svc-badge'},badge):null,edit&&h('i',{className:'ac-svc-star','aria-hidden':true},h(Icon,{d:S.star,size:13,stroke:2.2}))),h('span',{className:'ac-svc-txt'},label));};
+  const main=[
+   tile('gauge','Tester ma connexion',on.test,{disabled:busy||!on.test||s.tone==='wait'}),
+   tile('chat','Guardian',on.voice,{tone:'orange',aria:'Parler à Guardian'}),
+   tile('devices','Appareils connectés',on.devices,{tone:'green',badge:extra||null,aria:'Appareils connectés'+(extra?' : '+extra+' inconnu'+(extra>1?'s':''):'')}),
    tile('map','Voir le réseau',go('ville'),{tone:'sky'}),
    tile('up','Changer de forfait',go('forfait'),{tone:'orange'}),
-   tile('sms','Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'}),
-   tile('truck','Suivi technicien',on.track,{tone:'green',aria:'Suivre mon technicien'}),
-   tile('gift','Mes avantages',go('fidelite'),{tone:'orange'}),
-   tile('shield','Mes données',go('donnees'),{tone:'green'}),
-   tile('user','Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
-  // Les favoris passent devant ; la grille garde 8 cases, le reste va dans « Voir tout ».
-  // Une tuile avec une pastille rouge reste toujours visible, comme « Sans internet » (celle d'une coupure).
-  const pins=live.map(id=>pool.find(t=>t.key===id)).filter(Boolean),ordered=pins.concat(pool.filter(t=>!live.includes(t.key)));
-  const KEEP=['Sans internet'].concat(nDossier?['Dossier de ma fibre']:[]),withCall=!cut&&call&&!edit&&ordered.length<=7,top=ordered.slice(0,withCall?7:8),rest=ordered.slice(withCall?7:8);
+   tile('alert','Signaler une panne',on.report,{tone:'red'}),
+   order?tile('folder','Dossier de ma fibre',go('bienvenue'),{tone:'blue',aria:'Suivre le dossier de ma fibre'}):tile('user','Mon compte',go('compte'),{tone:'blue'}),
+   tile('sms','Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'})];
+  const extraTiles=[tile('gift','Mes avantages',go('fidelite'),{tone:'orange'}),tile('shield','Mes données',go('donnees'),{tone:'green'}),order&&tile('user','Mon compte',go('compte'),{tone:'blue'})].filter(Boolean);
+  // Les favoris passent devant ; la grille garde 8 tuiles, le reste va dans « Voir tout ».
+  // « Signaler une panne » et « Sans internet » restent toujours dans les 8 tuiles visibles : ce sont celles d'une coupure.
+  const pool=main.concat(extraTiles),pins=live.map(id=>pool.find(t=>t.key===id)).filter(Boolean),ordered=pins.concat(pool.filter(t=>!live.includes(t.key)));
+  const KEEP=['Signaler une panne','Sans internet'],top=ordered.slice(0,8),rest=ordered.slice(8);
   for(const k of KEEP){const i=rest.findIndex(t=>t.key===k);if(i<0)continue;let j=top.length-1;while(j>=0&&(KEEP.includes(top[j].key)||live.includes(top[j].key)))j--;if(j<0)continue;rest.splice(i,1,top[j]);top.splice(j,1);top.push(pool.find(t=>t.key===k));}
-  // « Appeler » remplit la 8e case quand il reste de la place, sinon il attend dans « Voir tout ».
-  const grid=edit?ordered:top.concat(withCall?[call]:[]),more=edit?[]:(!cut&&call&&!withCall?[call]:[]).concat(rest);
+  const grid=edit?ordered:top,more=edit?[]:[!cut&&call].concat(rest).filter(Boolean);
   const promo=s.tone==='ok'&&!fault&&!state.sharedIncident&&plan<500&&on.go;
   // Tout marche mais des appareils inconnus sont sur le Wi-Fi : le bandeau le dit en toutes lettres.
   const a=s.tone==='ok'&&extra?{tone:'slow',icon:P.devices,title:extra+' appareil'+(extra>1?'s':'')+' inconnu'+(extra>1?'s':'')+' sur votre Wi-Fi',text:'Vérifiez que vous les connaissez. Vous pouvez les bloquer en un geste.',action:'devices',actionLabel:'Voir mes appareils'}:s;
-  const hi=hello(),testOff=busy||!on.test||s.tone==='wait';
-  // Les quatre gros boutons ronds de l'en-tête : ce qu'on fait le plus souvent.
-  const round=(icon,label,onClick,{badge,aria,disabled}={})=>h('button',{type:'button',key:label,className:'ae-act',onClick,disabled,'aria-label':(aria||label)+unread(badge)},
-   h('span',{className:'ae-act-ico','aria-hidden':true},h(Ico,{name:icon,size:30}),dot(badge)),h('span',{className:'ae-act-txt'},label));
-  return h('div',{className:'ac ac--svc ac--epure'},
-   h('section',{className:'ae-hero ae-'+s.tone,'aria-label':'Ma fibre'},
-    h('header',{className:'ae-top'},
-     h('button',{type:'button',className:'ae-face',onClick:go('compte'),'aria-label':'Mon compte'},window.FGAvatar?h(FGAvatar.Face,{name:user.name,size:52,role:'client'}):first(user.name).slice(0,1)),
-     h('div',{className:'ae-hi'},h('strong',null,hi.hi+' '+(first(user.name)||user.name)),h('small',null,h('span',{className:'ae-part'},hi.part+' · '),hi.date)),
-     h('div',{className:'ae-top-actions'},demo,
-      h('button',{type:'button',className:'ae-bell',onClick:on.bell,'aria-label':'Mes messages'+unread(bell)},h(Ico,{name:'bell',d:P.bell,size:24}),dot(bell)))),
-    h('div',{className:'ae-speed'},
-     h('p',{className:'ae-label'},h('span',{className:'ae-dot','aria-hidden':true}),'Débit reçu'),
-     h('p',{className:'ae-num'},h('strong',null,got),h('small',null,'Mb/s')),
-     h('p',{className:'ae-state',role:'status','aria-live':'polite'},s.title),
-     on.go&&h('button',{type:'button',className:'ae-pill',onClick:go('compte'),'aria-label':'Mon compte : offre '+plan+' Mb/s'+(price?', '+price.toLocaleString('fr-FR')+' F par mois':'')},
-      'Offre '+plan+' Mb/s'+(state.homeZone?.zone?' · '+String(state.homeZone.zone).split(' · ')[0]:''),h(Icon,{d:S.chevron,size:15,stroke:2.4}))),
-    h('nav',{className:'ae-acts','aria-label':'Actions rapides'},
-     round('gauge','Tester',on.test,{aria:'Tester ma connexion',disabled:testOff}),
-     round('chat','Guardian',on.voice,{aria:'Parler à Guardian',badge:nGuardian}),
-     round('devices','Appareils',on.devices,{aria:'Appareils connectés',badge:nDevices}),
-     round('alert','Signaler',on.report,{aria:'Signaler une panne'}))),
-   h('div',{className:'ae-sheet'},
-    a.tone!=='ok'&&h('section',{className:'ac-alert ac-'+a.tone},
-     h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:a.icon,size:26,stroke:2.3})),
-     h('div',null,h('h2',null,a.title),h('p',null,a.text)),
-     (a.action||a.second||cut&&call)&&h('div',{className:'ac-alert-actions'},
-      a.action&&h('button',{type:'button',className:'ac-go',onClick:run(a.action),disabled:busy&&a.action!=='devices'},a.actionLabel),
-      a.second&&h('button',{type:'button',className:'ac-go ghost',onClick:run(a.second),disabled:busy},a.secondLabel),
-      cut&&call)),
-    stepAt>=0&&on.go&&h('button',{type:'button',className:'ae-row ae-row--dossier',onClick:go('bienvenue'),'aria-label':'Mon installation fibre : étape '+(stepAt+1)+' sur '+order.steps.length+', '+order.steps[stepAt].label+unread(nDossier)},
-     h('span',{className:'ae-row-ico','aria-hidden':true},h(Ico,{name:'folder',size:26}),dot(nDossier)),
-     h('span',{className:'ae-row-txt'},h('strong',null,'Mon installation fibre'),h('small',null,'Étape '+(stepAt+1)+' sur '+order.steps.length+' · '+order.steps[stepAt].label+(order.status==='a_corriger'?' : une photo à refaire':order.status==='rdv'?' : choisissez votre jour':''))),
-     h(Icon,{d:S.chevron,size:20,stroke:2.2})),
-    shown.length>0&&h('div',{className:'ac-cards'},shown),
-    h('section',{className:'ac-services','aria-labelledby':'ac-svc-title'},
-     h('div',{className:'ac-services-head'},h('h2',{id:'ac-svc-title'},'Services'),
-      h('div',{className:'ac-services-tools'},
-       on.go&&h('button',{type:'button',className:'ac-more'+(edit?' is-done':''),'aria-pressed':edit,onClick:()=>{setEdit(v=>!v);setAll(false);}},edit?'Terminé':'Modifier'),
-       !edit&&more.length>0&&h('button',{type:'button',className:'ac-more','aria-expanded':all,'aria-controls':'ac-svc-grid',onClick:()=>setAll(v=>!v)},all?'Moins':'Voir tout',h(Icon,{d:S.chevron,size:16})))),
-     edit&&h('p',{className:'ac-svc-hint',role:'status'},'Touchez jusqu’à 4 services pour les mettre en premier. '+live.length+' sur 4 choisis'+(live.length>=4?' : touchez une étoile pour en changer.':'.')),
-     h('div',{className:'ac-svc-grid',id:'ac-svc-grid'},grid,all&&more)),
-    promo&&h('button',{type:'button',className:'ae-row ae-row--dark',onClick:go('forfait')},
-     h('span',{className:'ae-row-ico','aria-hidden':true},h(Ico,{name:'up',size:26})),
-     h('span',{className:'ae-row-txt'},h('strong',null,'Plus de débit ? Changez de forfait'),h('small',null,'Vous payez juste la différence, au jour près')),
-     h(Icon,{d:S.chevron,size:20,stroke:2.2})),
-    h('section',{className:'ac-recent','aria-labelledby':'ac-recent-title'},
-     h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-more',onClick:on.bell},'Tout voir',h(Icon,{d:S.chevron,size:16}))),
-     recent.length?h('ul',null,recent.filter((n,i,all)=>all.findIndex(x=>x.title===n.title&&x.body===n.body)===i).slice(0,3).map(n=>{const k=kind(n);return h('li',{key:n.key||n.id||n.at},h('button',{type:'button',onClick:n.page==='bienvenue'&&on.go?go('bienvenue'):on.bell},
-      h('span',{className:'ac-recent-ico '+k.tone,'aria-hidden':true},h(Icon,{d:k.icon,size:20})),
-      h('span',{className:'ac-recent-txt'},h('b',null,n.title),h('small',null,when(n.at))),
-      h('span',{className:'ac-recent-tag'+(n.read?'':' new')},n.read?'Lu':'Nouveau')));})):
-      h('p',{className:'ac-recent-empty'},'Pas de message pour l’instant. Guardian vous écrit ici dès qu’il se passe quelque chose.')),
-    // Des visages : l'équipe Moov de la commune du client (techniciens.js).
-    window.FGTechniciens&&h(FGTechniciens.Strip,{zone:state.homeZone?.zone,onReport:on.report,onGuardian:on.voice})));
- }
- // En arrivant sur Guardian : ce qu'il a écrit pendant l'absence du client (la pastille rouge menait ici).
- function News({items,onAll}){
-  if(!items||!items.length)return null;
-  return h('section',{className:'ae-news','aria-labelledby':'ae-news-title'},
-   h('h2',{id:'ae-news-title'},items.length>1?'Guardian vous a écrit '+items.length+' messages':'Guardian vous a écrit'),
-   h('ul',null,items.slice(0,3).map(n=>h('li',{key:n.key||n.id||n.at},h('b',null,n.title),n.body&&h('span',null,n.body),h('small',null,when(n.at))))),
-   onAll&&h('button',{type:'button',className:'ac-more',onClick:onAll},'Tous mes messages',h(Icon,{d:S.chevron,size:16})));
+  return h('div',{className:'ac ac--svc'},
+   h('header',{className:'ac-hello'},
+    h('div',{className:'ac-hi'},h('small',null,'Bienvenue,'),h('strong',null,first(user.name)||user.name)),
+    h('div',{className:'ac-top-actions'},demo,
+     h('button',{type:'button',className:'ac-round',onClick:on.bell,'aria-label':'Mes messages'+(bell?' : '+bell+' à lire':'')},h(Ico,{name:'bell',d:P.bell,size:22}),bell>0&&h('i',{className:'ac-round-dot','aria-hidden':true})),
+     h('button',{type:'button',className:'ac-face',onClick:go('compte'),'aria-label':'Mon compte'},window.FGAvatar?h(FGAvatar.Face,{name:user.name,size:44,role:'client'}):first(user.name).slice(0,1)))),
+   h('section',{className:'ac-fibre ac-'+s.tone,'aria-label':'Ma fibre'},
+    h('div',{className:'ac-fibre-main'},
+     h('p',{className:'ac-fibre-plan'},h('span',{className:'ac-fibre-dot','aria-hidden':true}),'Ma fibre · Offre '+plan+' Mb/s'+(state.homeZone?.zone?' · '+state.homeZone.zone:'')),
+     h('p',{className:'ac-fibre-num'},h('strong',null,got),h('small',null,' Mb/s reçus')),
+     h('p',{className:'ac-fibre-state',role:'status','aria-live':'polite'},s.title),
+     on.go&&h('button',{type:'button',className:'ac-fibre-link',onClick:go('compte'),'aria-label':'Mon compte'+(price?' : '+price.toLocaleString('fr-FR')+' F par mois':'')},price?price.toLocaleString('fr-FR')+' F par mois':'Mon compte',h(Icon,{d:S.chevron,size:16}))),
+    h('button',{type:'button',className:'ac-fibre-test',onClick:on.test,disabled:busy||!on.test||s.tone==='wait'},
+     h('span',{className:'ac-fibre-test-ico','aria-hidden':true},h(Ico,{name:'gauge',size:44,stroke:1.8})),
+     h('span',null,'Tester ma connexion'))),
+   a.tone!=='ok'&&h('section',{className:'ac-alert ac-'+a.tone},
+    h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:a.icon,size:26,stroke:2.3})),
+    h('div',null,h('h2',null,a.title),h('p',null,a.text)),
+    (a.action||a.second||cut&&call)&&h('div',{className:'ac-alert-actions'},
+     a.action&&h('button',{type:'button',className:'ac-go',onClick:run(a.action),disabled:busy&&a.action!=='devices'},a.actionLabel),
+     a.second&&h('button',{type:'button',className:'ac-go ghost',onClick:run(a.second),disabled:busy},a.secondLabel),
+     cut&&call)),
+   shown.length>0&&h('div',{className:'ac-cards'},shown),
+   h('section',{className:'ac-services','aria-labelledby':'ac-svc-title'},
+    h('div',{className:'ac-services-head'},h('h2',{id:'ac-svc-title'},'Services'),
+     h('div',{className:'ac-services-tools'},
+      on.go&&h('button',{type:'button',className:'ac-more'+(edit?' is-done':''),'aria-pressed':edit,onClick:()=>{setEdit(v=>!v);setAll(false);}},edit?'Terminé':'Modifier'),
+      !edit&&more.length>0&&h('button',{type:'button',className:'ac-more','aria-expanded':all,'aria-controls':'ac-svc-grid',onClick:()=>setAll(v=>!v)},all?'Moins':'Voir tout',h(Icon,{d:S.chevron,size:16})))),
+    edit&&h('p',{className:'ac-svc-hint',role:'status'},'Touchez jusqu’à 4 services pour les mettre en premier. '+live.length+' sur 4 choisis'+(live.length>=4?' : touchez une étoile pour en changer.':'.')),
+    h('div',{className:'ac-svc-grid',id:'ac-svc-grid'},grid,all&&more)),
+   // Des visages : l'équipe Moov de la commune du client (techniciens.js).
+   window.FGTechniciens&&h(FGTechniciens.Strip,{zone:state.homeZone?.zone,onReport:on.report,onGuardian:on.voice}),
+   promo&&h('button',{type:'button',className:'ac-promo',onClick:go('forfait')},
+    h('span',{className:'ac-promo-txt'},h('small',null,'Jeux, films, télétravail'),h('strong',null,'Plus de débit ? Passez au forfait supérieur'),h('span',null,'Vous payez juste la différence. Voir les forfaits')),
+    window.FGAvatar?h('span',{className:'ac-promo-human','aria-hidden':true},h(FGAvatar.Sticker,{name:'Koffi N’Guessan',role:'tech',pose:'thumbs',size:118,bare:true})):h('span',{className:'ac-promo-ico','aria-hidden':true},h(Ico,{name:'up',size:30,stroke:2.2}))),
+   h('section',{className:'ac-recent','aria-labelledby':'ac-recent-title'},
+    h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-more',onClick:on.bell},'Tout voir',h(Icon,{d:S.chevron,size:16}))),
+    recent.length?h('ul',null,recent.filter((n,i,all)=>all.findIndex(x=>x.title===n.title&&x.body===n.body)===i).slice(0,3).map(n=>{const k=kind(n);return h('li',{key:n.key||n.id||n.at},h('button',{type:'button',onClick:on.bell},
+     h('span',{className:'ac-recent-ico '+k.tone,'aria-hidden':true},h(Icon,{d:k.icon,size:20})),
+     h('span',{className:'ac-recent-txt'},h('b',null,n.title),h('small',null,when(n.at))),
+     h('span',{className:'ac-recent-tag'+(n.read?'':' new')},n.read?'Lu':'Nouveau')));})):
+     h('p',{className:'ac-recent-empty'},'Pas de message pour l’instant. Guardian vous écrit ici dès qu’il se passe quelque chose.')));
  }
  // Le téléphone n'est pas sur le Wi-Fi de la box : le serveur voit des données mobiles, ou le réseau d'un autre opérateur.
  // (Une page web ne peut pas lire le nom du Wi-Fi.) Sur données mobiles, Guardian peut quand même redémarrer la box à distance.
@@ -196,5 +163,5 @@
     kind==='mobile'&&onReboot&&h('button',{type:'button',className:'ac-where-go',onClick:onReboot,disabled:busy},h(Icon,{d:P.refresh,size:18}),'Redémarrer ma box'),
     h('button',{type:'button',className:'ac-where-ok',onClick:hide},'Compris')));
  }
- window.FGAccueil={Home,News,status,Where,hello};
+ window.FGAccueil={Home,status,Where};
 })();
