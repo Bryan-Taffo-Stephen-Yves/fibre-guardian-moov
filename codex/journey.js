@@ -104,8 +104,9 @@
   E(()=>{let live=true;api('/session').then(r=>{if(live){U(r.user);userRef.current=r.user;if(r.user){refresh().catch(e=>X(e.message));window.FGPush?.sync(api);}}}).catch(e=>X('Service momentanément indisponible : '+e.message)).finally(()=>{if(live)Q(true);});return()=>{live=false;recognition.current?.abort();};},[]);
   E(()=>{if(!user||!state||legacy)return;const t=setInterval(()=>{if(!lock.current)refresh().catch(e=>X('Actualisation interrompue : '+e.message));},3000);return()=>clearInterval(t);},[user?.id,!!state,legacy]);
   // « Nouvel abonnement » est pour qui n'a pas encore la fibre. Un client déjà abonné, sans commande, va plutôt à « Mes offres » (s'il a choisi un forfait sur l'accueil) ou à l'accueil.
+  // Un compte tout neuf (rien encore fait : version 0) qui arrive avec un forfait choisi sur la page publique est un nouvel abonné : il reste sur sa commande.
   E(()=>{if(view!=='bienvenue'||!state?.plan||!user||!window.FGWelcome)return;let alive=true;
-   api('/welcome').then(r=>{const o=r.order;if(!alive||o&&o.status!=='annule')return;let plan='';try{plan=sessionStorage.getItem(FGWelcome.PLAN_KEY)||'';sessionStorage.removeItem(FGWelcome.PLAN_KEY);}catch(e){}V(plan?'forfait':'home',true);}).catch(()=>{});
+   api('/welcome').then(r=>{const o=r.order;if(!alive||o&&o.status!=='annule')return;let plan='';try{plan=sessionStorage.getItem(FGWelcome.PLAN_KEY)||'';}catch(e){}if(plan&&!state.version)return;try{sessionStorage.removeItem(FGWelcome.PLAN_KEY);}catch(e){}V(plan?'forfait':'home',true);}).catch(()=>{});
    return()=>{alive=false;};},[view,!!state?.plan,user?.id]);
   // Fibre Welcome : un forfait choisi sur l'accueil, ou une installation en cours, mène au parcours du nouvel abonné.
   E(()=>{if(!user||!window.FGWelcome||OPERATOR.includes(user.role))return;let plan='';try{plan=sessionStorage.getItem(FGWelcome.PLAN_KEY)||'';}catch(e){}

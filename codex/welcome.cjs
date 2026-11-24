@@ -75,10 +75,18 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
 });}
 
 // Le nouvel abonné ouvre son espace : Guardian démarre avec le forfait commandé.
+// Un client inscrit avec son numéro a déjà un espace (forfait 100 Mb/s par défaut) : on y met le forfait commandé, une seule fois par installation.
 function activate(s,uid){const J=require('./journey-store.cjs'),row=current(s,uid);insist(row&&row.status==='installe','Votre fibre n’est pas encore installée.',409);
- let st=J.get(s,uid);if(!st){st=J.seed();const plan=plans().find(p=>p.id===row.plan);if(plan){st.plan={...plan};st.capacity=plan.mbps;}
-  st.notifications.unshift({key:crypto.randomUUID(),home:'home-1',at:Date.now(),title:'Bienvenue chez Moov',body:'Votre '+(plan?.name||'fibre')+' est installée. Guardian veille sur votre connexion jour et nuit.',read:false});J.put(s,uid,st);}
+ let st=J.get(s,uid)||J.seed();if(st.welcomeId===row.id)return st;
+ const plan=plans().find(p=>p.id===row.plan);if(plan){st.plan={...plan};st.capacity=plan.mbps;}st.welcomeId=row.id;st.notifications=st.notifications||[];
+ st.notifications.unshift({key:'welcome:'+row.id+':bienvenue',home:'home-1',at:Date.now(),title:'Bienvenue chez Moov',body:'Votre '+(plan?.name||'fibre')+' est installée. Guardian veille sur votre connexion jour et nuit.',read:false});
+ st.notifications=st.notifications.slice(0,100);J.put(s,uid,st);
  return st;}
+
+// Chaque étape décidée par Moov arrive aussi dans « Mes messages » du client (et sur son téléphone si les alertes sont activées, push.cjs).
+function tell(s,row,step,title,body,now){const J=require('./journey-store.cjs'),st=J.get(s,row.user_id);if(!st)return;st.notifications=st.notifications||[];
+ const key='welcome:'+row.id+':'+step;if(st.notifications.some(n=>n.key===key))return;
+ st.notifications.unshift({key,home:'home-1',at:now,title,body,page:'bienvenue',read:false});st.notifications=st.notifications.slice(0,100);J.put(s,row.user_id,st);}
 
 // Côté équipe Moov : les dossiers à vérifier et les installations à suivre.
 function list(s,uid,now=Date.now()){
@@ -96,17 +104,21 @@ function operate(s,uid,d,now=Date.now()){return s.transaction(()=>{
  if(d.action==='validate'){
   insist(row.status==='verification','Ce dossier n’attend pas de vérification.',409);
   s.run("UPDATE fibre_welcome SET status='rdv',checked_by=?,events=?,updated=? WHERE id=?",uid,log(row,'Dossier validé par '+shortName(name)+' : choisissez votre rendez-vous',now),now,row.id);
+  tell(s,row,'rdv','Dossier validé','Votre dossier fibre est accepté. Choisissez maintenant le jour de votre installation.',now);
  }else if(d.action==='ask'){
   insist(row.status==='verification','Ce dossier n’attend pas de vérification.',409);
   const note=text(d.note,'Ce qu’il faut refaire',200);
   s.run("UPDATE fibre_welcome SET status='a_corriger',note=?,id_photo=NULL,home_photo=NULL,checked_by=?,events=?,updated=? WHERE id=?",note,uid,log(row,'Le conseiller demande une nouvelle photo',now),now,row.id);
+  tell(s,row,'photo:'+now,'Une photo à refaire','Le conseiller vous demande : '+note,now);
  }else if(d.action==='depart'){
   insist(row.status==='planifie','Le rendez-vous n’est pas encore fixé.',409);
   s.run("UPDATE fibre_welcome SET status='en_route',events=?,updated=? WHERE id=?",log(row,JSON.parse(row.tech).name+' est en route vers chez vous',now),now,row.id);
+  tell(s,row,'route','Votre technicien arrive',JSON.parse(row.tech).name+' est en route pour installer votre fibre. Restez joignable.',now);
  }else if(d.action==='done'){
   insist(row.status==='en_route','Le technicien n’est pas encore parti.',409);
   // Les photos du dossier ne servent plus : elles sont effacées une fois la fibre posée.
   s.run("UPDATE fibre_welcome SET status='installe',id_photo=NULL,home_photo=NULL,events=?,updated=? WHERE id=?",log(row,'Fibre installée et testée : bienvenue chez Moov',now),now,row.id);
+  tell(s,row,'installe','Votre fibre est installée','Ouvrez « Dossier de ma fibre » pour commencer avec Guardian.',now);
  }else insist(false,'Action inconnue.');
  return list(s,uid,now);
 });}
