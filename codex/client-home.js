@@ -235,6 +235,8 @@
    api&&window.FGDemenagement&&h(FGDemenagement.Card,{api}),
    // Signaler et *144# sont déjà en gros boutons sur l'accueil : pas de doublon ici.
    // « Mes données » : voir, télécharger ou effacer ce que l'application garde (loi n°2013-450).
+   // « Vos idées pour Moov » : proposer, voter, suivre la réponse de Moov (idees-view.js).
+   api&&window.FGIdees&&h(FGIdees.Card,{api}),
    window.FGDonnees&&h(FGDonnees.Entry,{onOpen:()=>go('donnees')}),
    h(Apparence),
    // Alertes même application fermée (push-view.js).

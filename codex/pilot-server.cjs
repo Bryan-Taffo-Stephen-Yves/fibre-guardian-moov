@@ -75,6 +75,8 @@ function createGuardianServer(options={}){
  const RV=require('./rendezvous.cjs');RV.migrate(store);
  // Déménagement : la fibre suit le client à sa nouvelle adresse, avec l'appel d'un conseiller (demenagement.cjs).
  const DM=require('./demenagement.cjs');DM.migrate(store);
+ // Boîte à idées : proposer, voter « Moi aussi », réponse de Moov à chaque étape (idees.cjs).
+ const ID=require('./idees.cjs');ID.migrate(store);
  // Service client : chaque demande du client suit un parcours complet (file « À rappeler », appel, « C'est réglé ? », note).
  const SC=require('./service-client.cjs');SC.migrate(store);
  // Panne qui revient : 3 coupures en 30 jours dans un quartier = dossier prioritaire et appel d'un conseiller (panne-recurrente.cjs).
@@ -270,6 +272,11 @@ function createGuardianServer(options={}){
     if(route==='/api/demenagement'&&method==='GET')return json(res,DM.state(store,user.id));
     if(route==='/api/demenagement'&&method==='POST'){store.rate('demenagement:'+user.id,10,600000);const d=await body(req,1024);return json(res,d.action==='cancel'?DM.cancel(store,user.id):DM.ask(store,user.id,d));}
     if(route==='/api/service-client'&&method==='GET'){PNR.sweep(store);DM.tick(store);return json(res,SC.mine(store,user.id));}
+    if(route==='/api/idees'&&method==='GET')return json(res,ID.state(store,user.id));
+    if(route==='/api/idees'&&method==='POST'){store.rate('idees:'+user.id,30,600000);const d=await body(req,2048);return json(res,d.action==='vote'?ID.vote(store,user.id,d):ID.propose(store,user.id,d));}
+    if(route==='/api/noc/idees'&&method==='GET'){const r=ID.list(store,user.id);DP.seen(store,user.id,'idees');return json(res,r);}
+    if(route==='/api/noc/idees'&&method==='POST')return json(res,ID.decide(store,user.id,await body(req,2048)));
+    if(route==='/api/service-client'&&method==='GET'){PNR.sweep(store);return json(res,SC.mine(store,user.id));}
     if(route==='/api/service-client'&&method==='POST'){store.rate('service:'+user.id,20,600000);return json(res,SC.answer(store,user.id,await body(req,1024)));}
     if(route==='/api/noc/service-client'&&method==='GET'){operator.requireOperator(store,user.id);PNR.sweep(store);DM.tick(store);const r=SC.queue(store,user.id);DP.seen(store,user.id,'service');return json(res,r);}
     if(route==='/api/noc/service-client'&&method==='POST')return json(res,SC.act(store,user.id,await body(req,1024)));

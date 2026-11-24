@@ -75,7 +75,7 @@ function inventory(s, uid) {
   return {items, ia: iaAllowed(s, uid), effacable: !protege(s, uid), refus: protege(s, uid), durees: DUREES};
 }
 
-const LABELS = {elig_demandes: 'fibre_demandee', demenagements: 'demenagements', users: 'compte', journey_state: 'box_et_parcours', journey_usage_minutes: 'releves_de_debit', wa_accounts: 'whatsapp', wifi_watch: 'surveillance_wifi', wifi_copies: 'copies_wifi', citizen_reports: 'signalements', noc_feedback: 'avis', voice_requests: 'questions_a_la_voix', fidelite_factures: 'factures', parrainage_codes: 'parrainage', fibre_welcome: 'abonnement', acces_etudiants: 'tarif_etudiant', donnees_choix: 'vos_choix'};
+const LABELS = {elig_demandes: 'fibre_demandee', idees: 'idees', idee_votes: 'votes_idees', demenagements: 'demenagements', users: 'compte', journey_state: 'box_et_parcours', journey_usage_minutes: 'releves_de_debit', wa_accounts: 'whatsapp', wifi_watch: 'surveillance_wifi', wifi_copies: 'copies_wifi', citizen_reports: 'signalements', noc_feedback: 'avis', voice_requests: 'questions_a_la_voix', fidelite_factures: 'factures', parrainage_codes: 'parrainage', fibre_welcome: 'abonnement', acces_etudiants: 'tarif_etudiant', donnees_choix: 'vos_choix'};
 
 function clean(row) {
   const out = {};
@@ -131,7 +131,7 @@ function erase(s, uid, d) {
 
 // Ce que l'équipe Moov peut consulter sur les clients : une ligne par écran ouvert. Les blocs du Superviseur se
 // rafraîchissent toutes les 8 secondes : une même personne sur un même écran compte une seule fois par quart d'heure.
-const VUES = {retention: 'Clients qui risquent de partir', welcome: 'Nouveaux abonnés et leurs photos', acces: 'Offres solidaires et cartes d’étudiant', avis: 'Avis et commentaires des clients', reclamations: 'Réclamations des clients', echanges: 'Échanges de box', rendezvous: 'Rendez-vous chez les clients', service: 'File « À rappeler » du service client', eligibilite: 'Communes où les clients attendent la fibre', fairdeal: 'Gestes après une coupure', copies: 'Copies du Wi-Fi d’un client'};
+const VUES = {retention: 'Clients qui risquent de partir', welcome: 'Nouveaux abonnés et leurs photos', acces: 'Offres solidaires et cartes d’étudiant', avis: 'Avis et commentaires des clients', reclamations: 'Réclamations des clients', echanges: 'Échanges de box', rendezvous: 'Rendez-vous chez les clients', service: 'File « À rappeler » du service client', idees: 'Idées des clients', eligibilite: 'Communes où les clients attendent la fibre', fairdeal: 'Gestes après une coupure', copies: 'Copies du Wi-Fi d’un client'};
 const WINDOW = 15 * 60000;
 function seen(s, actor, key, now = Date.now()) {
   const what = VUES[key]; if (!what || !actor) return;
