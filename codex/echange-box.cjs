@@ -94,8 +94,8 @@ function advance(s,uid,d,now=Date.now()){
  const v=view(s.get('SELECT * FROM box_echanges WHERE id=?',r.id));
  if(next==='prete')notify(s,r.user_id,'Votre box neuve est prête','Passez la retirer à l’'+v.agence.replace(/^Agence/,'agence')+' avec votre code '+r.code+' et l’ancienne box.',now);
  if(next==='envoye')notify(s,r.user_id,'Le technicien arrive avec votre box neuve','Il passe '+v.when+'. Préparez l’ancienne box et son chargeur.',now);
- if(next==='echangee'){notify(s,r.user_id,'Box échangée','Votre nouvelle box est installée. Si quelque chose ne va pas, dites-le à Guardian.',now);
-  require('./service-client.cjs').settle(s,'echange',r.id,{outcome:'echange',message:'Votre nouvelle box est installée.',by:uid},now);}
+ if(next==='echangee'){notify(s,r.user_id,'Box échangée','Votre nouvelle box est installée. Tout marche ? Dites-le dans « Ma réparation ».',now);
+  require('./service-client.cjs').settle(s,'echange',r.id,{outcome:'echange',message:'Votre nouvelle box est installée.',by:uid,quiet:true},now);}
  return list(s,uid,now);
 }
 

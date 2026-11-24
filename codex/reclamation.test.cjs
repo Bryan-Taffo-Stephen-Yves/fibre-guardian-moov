@@ -49,8 +49,14 @@ test('« Ce n’est pas réglé » : conseiller puis responsable, recours ARTCI 
  assert.equal(journey.get(s,ids.awa).notifications[0].title,'Moov a répondu à votre réclamation');
  i=item(s,ids.awa,'d-2',t+8*HOUR);
  assert.equal(i.reclamation.open,null);assert.equal(i.reclamation.items[0].outcome,'Nouvelle intervention prévue');
- // 2e fois : un responsable doit répondre, et le client voit ses recours.
- const r2=RC.claim(s,ids.awa,{id:'d-2'},t+9*HOUR);
+ // Le technicien répare ; le client dit « Non, toujours pas » (parcours du service client, service-client.cjs) :
+ // c'est la 2e fois, un responsable doit répondre, et le client voit ses recours.
+ // (Avant le parcours complet, le client touchait de nouveau « Ce n'est pas réglé » ; ce bouton est remplacé par « Est-ce réglé ? ».)
+ assert.equal(item(s,ids.awa,'d-2',t+8*HOUR).reclamation.canClaim,false,'un seul chemin : la demande du service client suit le dossier');
+ s.run("INSERT INTO noc_events VALUES('d-2-e3','d-2',NULL,'resolved','Internet est revenu.','{}',?)",t+8*HOUR);
+ const SC=require('./service-client.cjs'),dem=SC.mine(s,ids.awa,t+9*HOUR).items[0];assert.equal(dem.status,'reglee');
+ SC.answer(s,ids.awa,{id:dem.id,answer:'non'},t+9*HOUR);
+ const r2=s.get('SELECT level,due FROM reclamations WHERE level=2');
  assert.equal(r2.level,2);assert.equal(r2.due,t+11*HOUR);
  i=item(s,ids.awa,'d-2',t+9*HOUR);assert.equal(i.reclamation.recours,true);assert.equal(i.reclamation.ref,'D2');
  l=RC.list(s,ids.kader,t+9*HOUR);assert.equal(l.counts.high,1);

@@ -58,7 +58,8 @@ function decorate(s,uid,data,now=Date.now()){
    ref:ref(i.id),
    items:list.map(r=>view(r,now)),
    open:open?view(open,now):null,
-   canClaim:!open&&list.length<MAX&&((terminal(i)&&now-endOf(i)<=WINDOW)||(!!p&&p.late)),
+   // Une demande au service client suit déjà ce dossier (appel, « C'est réglé ? ») : un seul chemin pour répondre.
+   canClaim:!open&&!followed(s,uid,i.id)&&list.length<MAX&&((terminal(i)&&now-endOf(i)<=WINDOW)||(!!p&&p.late)),
    recours:list.length>=2
   };
  }
@@ -71,6 +72,8 @@ function notify(s,uid,key,title,body,now){
  st.notifications.unshift({key,home:'home-1',at:now,title,body,read:false});
  st.notifications=st.notifications.slice(0,100);J.put(s,uid,st);
 }
+
+const followed=(s,uid,iid)=>!!s.get("SELECT 1 FROM sqlite_master WHERE name='sc_demandes'")&&!!s.get("SELECT 1 FROM sc_demandes WHERE kind='reclamation' AND user_id=? AND incident_id=? AND status IN ('recue','prise','appele','reglee','recours')",uid,iid);
 
 // Le client dit « Ce n'est pas réglé » (ou « Toujours pas de réponse ») sur un dossier qu'il voit dans son suivi.
 function claim(s,uid,d,now=Date.now()){
@@ -113,9 +116,13 @@ function answer(s,uid,d,now=Date.now()){
  insist(r,'Réclamation introuvable.',404);insist(r.status==='open','Cette réclamation a déjà une réponse.',409);
  insist(r.level<2||['admin','supervisor'].includes(role),'Un responsable doit répondre à cette réclamation.',403);
  insist(typeof d.outcome==='string'&&Object.hasOwn(OUTCOMES,d.outcome),'Choisissez ce qui a été fait.');
+ // Un conseiller a pris la demande dans la file « À rappeler » : lui seul (ou un responsable) répond.
+ const sc=s.get("SELECT 1 FROM sqlite_master WHERE name='sc_demandes'")?s.get("SELECT agent_id FROM sc_demandes WHERE kind='reclamation' AND ref=? AND status IN ('recue','prise','appele','recours')",r.id):null;
+ insist(!sc||!sc.agent_id||sc.agent_id===uid||['admin','supervisor'].includes(role),'Un autre conseiller s’occupe de ce client.',409);
  const message=String(d.message||'').trim().slice(0,500)||OUTCOMES[d.outcome][1];
  s.run("UPDATE reclamations SET status='done',outcome=?,response=?,done_by=?,done_at=? WHERE id=?",d.outcome,message,uid,now,r.id);
- notify(s,r.user_id,'reclamation-reponse:'+r.id,'Moov a répondu à votre réclamation','Dossier '+ref(r.incident_id)+' : '+message,now);
+ // Suivie par le service client : un seul message au client (« Est-ce réglé pour vous ? », ou l'annonce du technicien).
+ if(!sc||d.outcome==='intervention')notify(s,r.user_id,'reclamation-reponse:'+r.id,'Moov a répondu à votre réclamation','Dossier '+ref(r.incident_id)+' : '+message,now);
  // Réponse donnée hors de la file (bloc du Superviseur) : la demande du client suit ; « intervention » attend la réparation.
  const SC=require('./service-client.cjs');
  if(d.outcome==='intervention'){s.run("UPDATE sc_demandes SET status='appele',outcome='technicien',note=?,called_at=?,agent_id=COALESCE(agent_id,?),agent_name=COALESCE(agent_name,(SELECT name FROM users WHERE id=?)),taken_at=COALESCE(taken_at,?),updated=? WHERE kind='reclamation' AND ref=? AND status IN ('recue','prise','appele')",message,now,uid,uid,now,now,r.id);}

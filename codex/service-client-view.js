@@ -56,13 +56,13 @@
     return h('li', {className: 'av-call sc-call' + (r.late ? ' is-late' : '')},
       h('div', {className: 'av-call-head'},
         h('div', null, h('b', null, r.name), h('small', null, r.what + ' · ' + r.title)),
-        h('span', {className: 'rc-level' + (r.level > 1 ? ' is-2' : '')}, r.level > 1 ? 'Responsable' : r.status === 'recue' ? 'À prendre' : r.status === 'appele' ? 'En attente de la suite' : 'En cours')),
+        h('span', {className: 'rc-level' + (r.level > 1 ? ' is-2' : '')}, r.status === 'recours' ? 'Recours' : r.level > 1 ? 'Responsable' : r.status === 'recue' ? 'À prendre' : r.status === 'appele' ? 'En attente de la suite' : 'En cours')),
       r.detail && h('p', {className: 'av-quote'}, '« ' + r.detail + ' »'),
       h('p', {className: 'av-due'}, (r.late ? 'En retard : rappel promis avant ' : 'Rappel promis avant ') + r.dueText + (r.agent ? ' · ' + r.agent : '') + (r.tries ? ' · ' + r.tries + ' appel' + (r.tries > 1 ? 's' : '') + ' sans réponse' : '')),
       r.status !== 'recue' && h('p', {className: 'sc-phone'}, r.phone ? h('a', {href: 'tel:' + r.phone.replace(/\s/g, '')}, 'Appeler ' + r.phone) : 'Numéro absent de l’application : le client suit sa demande dans « Ma réparation ».'),
       r.outcome && h('p', {className: 'av-due'}, 'Dernier appel : ' + r.outcome),
       !r.canAct ? h('p', {className: 'av-due'}, r.level > 1 ? 'Un responsable doit traiter cette demande.' : 'Un autre conseiller s’en occupe.')
-        : r.status === 'recue' || (!r.mine && r.agent) ? h('button', {type: 'button', className: 'av-btn is-main', disabled: busy, onClick: () => act({id: r.id, action: 'take'})}, r.agent ? 'Reprendre la demande' : 'Je m’en occupe')
+        : ['recue', 'recours'].includes(r.status) || (!r.mine && r.agent) ? h('button', {type: 'button', className: 'av-btn is-main', disabled: busy, onClick: () => act({id: r.id, action: 'take'})}, r.agent ? 'Reprendre la demande' : 'Je m’en occupe')
         : r.status === 'appele' ? h('p', {className: 'av-due'}, 'Le client est prévenu. On lui demandera si c’est réglé dès que c’est fait.')
         : open ? h('div', {className: 'sc-result'},
             h('label', null, 'Ce que vous avez dit au client (facultatif)', h('textarea', {rows: 2, maxLength: 500, value: note, onChange: e => N(e.target.value), disabled: busy})),

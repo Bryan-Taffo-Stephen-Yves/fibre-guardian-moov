@@ -98,3 +98,29 @@ test('Échange annulé par le client : la demande sort de la file ; technicien p
  s.run("INSERT INTO noc_events VALUES('inc-3-r','inc-3',NULL,'resolved','Internet est revenu.','{}',?)",late+3*HOUR);
  assert.equal(item(s,ids.awa,late+3*HOUR+1000).status,'reglee');
 });
+
+test('Relecture jury : un seul chemin pour répondre, un conseiller par demande, le recours arrive chez un responsable',async()=>{
+ const {s,ids}=await setup(),t=Date.UTC(2026,10,24,8);
+ dossier(s,ids.awa,'inc-9','resolved',t-2*HOUR);
+ RC.claim(s,ids.awa,{id:'inc-9'},t);
+ const id=item(s,ids.awa,t).id;
+ SC.act(s,ids.kader,{id,action:'take'},t);
+ // L'ancien bloc du Superviseur ne laisse pas un autre conseiller répondre à la place de Kader.
+ const rid=s.get('SELECT id FROM reclamations').id;
+ assert.throws(()=>RC.answer(s,ids.moussa,{id:rid,outcome:'regle'},t),/autre conseiller/);
+ SC.act(s,ids.kader,{id,action:'result',outcome:'regle'},t+HOUR);
+ assert.equal(journey.get(s,ids.awa).notifications.filter(n=>n.at===t+HOUR).length,1,'un seul message au client');
+ // Pendant « Est-ce réglé ? », l'ancien bouton « Ce n'est pas réglé » disparaît.
+ const d=RC.decorate(s,ids.awa,noc.client(s,ids.awa),t+HOUR).incidents.find(i=>i.id==='inc-9');
+ assert.equal(d.reclamation.canClaim,false);
+ SC.answer(s,ids.awa,{id,answer:'non'},t+2*HOUR);
+ const lvl2=item(s,ids.awa,t+2*HOUR).id;
+ SC.act(s,ids.fatou,{id:lvl2,action:'take'},t+2*HOUR);SC.act(s,ids.fatou,{id:lvl2,action:'result',outcome:'regle'},t+3*HOUR);
+ SC.answer(s,ids.awa,{id:lvl2,answer:'non'},t+4*HOUR);
+ let q=SC.queue(s,ids.fatou,t+4*HOUR);
+ assert.equal(q.items.length,1);assert.equal(q.items[0].status,'recours');assert.equal(q.items[0].canAct,true);
+ assert.equal(SC.queue(s,ids.kader,t+4*HOUR).items[0].canAct,false,'un conseiller ne traite pas un recours');
+ assert.equal(item(s,ids.awa,t+5*DAY).status,'recours','le client voit toujours son dossier ouvert');
+ SC.act(s,ids.fatou,{id:lvl2,action:'take'},t+5*HOUR);SC.act(s,ids.fatou,{id:lvl2,action:'result',outcome:'regle'},t+6*HOUR);
+ assert.equal(item(s,ids.awa,t+6*HOUR).status,'reglee');
+});

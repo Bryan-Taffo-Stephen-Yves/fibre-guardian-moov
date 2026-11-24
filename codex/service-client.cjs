@@ -25,13 +25,14 @@ const OUTCOMES={
  absent:{label:'Pas de réponse',client:null}
 };
 const STEPS=['Demande reçue','Conseiller','Appel','Réglé','Votre avis'];
-const OPEN=['recue','prise','appele'];
+const OPEN=['recue','prise','appele','recours'];   // recours : le client a dit deux fois « non », un responsable reprend le dossier
 
 function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS sc_demandes(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,kind TEXT NOT NULL,ref TEXT NOT NULL,incident_id TEXT,title TEXT NOT NULL,detail TEXT NOT NULL DEFAULT '',level INTEGER NOT NULL DEFAULT 1,status TEXT NOT NULL DEFAULT 'recue',created INTEGER NOT NULL,due INTEGER NOT NULL,agent_id TEXT REFERENCES users(id) ON DELETE SET NULL,agent_name TEXT,taken_at INTEGER,called_at INTEGER,tries INTEGER NOT NULL DEFAULT 0,outcome TEXT,note TEXT,resolved_at INTEGER,answer TEXT,answered_at INTEGER,rating INTEGER,updated INTEGER NOT NULL);
  CREATE INDEX IF NOT EXISTS sc_user ON sc_demandes(user_id,status);
  CREATE INDEX IF NOT EXISTS sc_ref ON sc_demandes(kind,ref);
  CREATE INDEX IF NOT EXISTS sc_status ON sc_demandes(status,due);
+ CREATE TRIGGER IF NOT EXISTS sc_agent_erase BEFORE DELETE ON users BEGIN UPDATE sc_demandes SET agent_name=NULL WHERE agent_id=OLD.id; END;
  `);}
 
 const J=()=>require('./journey-store.cjs');
@@ -65,12 +66,12 @@ function open(s,{uid,kind,ref,incident=null,title,detail='',level=1,due=null,sil
 // Le sujet n'existe plus (le client a annulé sa demande d'échange, par exemple).
 function cancelRef(s,kind,ref,now=Date.now()){ensure(s);s.run("UPDATE sc_demandes SET status='annulee',updated=? WHERE kind=? AND ref=? AND status IN ('recue','prise','appele')",now,kind,String(ref));}
 // Le module d'origine dit que c'est réglé (réponse à la réclamation, box échangée) : on demande au client s'il est d'accord.
-function settle(s,kind,ref,{outcome='regle',message=null,by=null}={},now=Date.now()){ensure(s);
- const d=s.get("SELECT * FROM sc_demandes WHERE kind=? AND ref=? AND status IN ('recue','prise','appele') ORDER BY created DESC LIMIT 1",kind,String(ref));
+function settle(s,kind,ref,{outcome='regle',message=null,by=null,quiet=false}={},now=Date.now()){ensure(s);
+ const d=s.get("SELECT * FROM sc_demandes WHERE kind=? AND ref=? AND status IN ('recue','prise','appele','recours') ORDER BY created DESC LIMIT 1",kind,String(ref));
  if(!d)return null;
  const agent=by?s.get('SELECT name FROM users WHERE id=?',by):null;
  s.run("UPDATE sc_demandes SET status='reglee',outcome=COALESCE(outcome,?),note=COALESCE(?,note),resolved_at=?,agent_id=COALESCE(agent_id,?),agent_name=COALESCE(agent_name,?),taken_at=COALESCE(taken_at,?),updated=? WHERE id=?",outcome,message,now,by,agent?.name||null,now,now,d.id);
- notify(s,d.user_id,'Est-ce réglé pour vous ?',(message||OUTCOMES[outcome]?.client||'Moov a traité votre demande.')+' Dites-nous si c’est bon dans « Ma réparation ».',now);
+ if(!quiet)notify(s,d.user_id,'Est-ce réglé pour vous ?',(message||OUTCOMES[outcome]?.client||'Moov a traité votre demande.')+' Dites-nous si c’est bon dans « Ma réparation ».',now);
  return d.id;
 }
 
@@ -98,7 +99,7 @@ function clientView(d,now){
   appele:first(d.agent_name)+' vous a appelé. '+(OUTCOMES[d.outcome]?.client||''),
   reglee:(d.note||OUTCOMES[d.outcome]?.client||'Moov a traité votre demande.'),
   confirmee:d.answer==='oui'?'Merci : votre demande est close.':'Demande close.',
-  recours:'Votre dossier reste ouvert chez Moov. Vous pouvez aussi saisir l’ARTCI.'
+  recours:'Un responsable Moov reprend votre dossier et vous appelle avant '+when(d.due,now)+'. Vous pouvez aussi saisir l’ARTCI.'
  }[d.status]||'';
  return {id:d.id,kind:d.kind,what:KINDS[d.kind],title:d.title,level:d.level,status:d.status,late,text,steps:steps(d),
   agent:d.agent_name?first(d.agent_name):null,canAnswer:d.status==='reglee',canRate:d.status==='confirmee'&&d.answer==='oui'&&!d.rating,rating:d.rating,updated:d.updated};
@@ -107,7 +108,7 @@ function clientView(d,now){
 // Ce que voit le client : ses demandes en cours, et celles closes depuis moins de 3 jours.
 function mine(s,uid,now=Date.now()){
  tick(s,now);
- return {items:s.all("SELECT * FROM sc_demandes WHERE user_id=? AND status!='annulee' AND (status IN ('recue','prise','appele','reglee') OR updated>?) ORDER BY created DESC LIMIT 10",uid,now-3*DAY).map(d=>clientView(d,now))};
+ return {items:s.all("SELECT * FROM sc_demandes WHERE user_id=? AND status!='annulee' AND (status IN ('recue','prise','appele','reglee','recours') OR updated>?) ORDER BY created DESC LIMIT 10",uid,now-3*DAY).map(d=>clientView(d,now))};
 }
 
 // Le client répond : « Oui, c'est réglé » (puis une note), ou « Non, toujours pas » (la demande monte d'un niveau).
@@ -123,8 +124,8 @@ function answer(s,uid,d,now=Date.now()){return s.transaction(()=>{
  insist(['oui','non'].includes(d.answer),'Répondez oui ou non.');
  if(d.answer==='oui'){s.run("UPDATE sc_demandes SET status='confirmee',answer='oui',answered_at=?,updated=? WHERE id=?",now,now,r.id);return mine(s,uid,now);}
  if(r.level>=2){
-  s.run("UPDATE sc_demandes SET status='recours',answer='non',answered_at=?,updated=? WHERE id=?",now,now,r.id);
-  notify(s,uid,'Votre dossier reste ouvert','Un responsable Moov reprend votre dossier. Vous pouvez aussi saisir l’ARTCI, l’autorité des télécoms, sur artci.ci.',now);
+  s.run("UPDATE sc_demandes SET status='recours',answer='non',answered_at=?,due=?,agent_id=NULL,agent_name=NULL,called_at=NULL,updated=? WHERE id=?",now,now+DUE[2],now,r.id);
+  notify(s,uid,'Votre dossier reste ouvert','Un responsable Moov reprend votre dossier et vous appelle avant '+when(now+DUE[2],now)+'. Vous pouvez aussi saisir l’ARTCI, l’autorité des télécoms, sur artci.ci.',now);
   return mine(s,uid,now);
  }
  s.run("UPDATE sc_demandes SET status='confirmee',answer='non',answered_at=?,updated=? WHERE id=?",now,now,r.id);
@@ -138,7 +139,7 @@ function answer(s,uid,d,now=Date.now()){return s.transaction(()=>{
 function queue(s,uid,now=Date.now()){
  const role=O.requireOperator(s,uid);tick(s,now);
  const phone=u=>has(s,'wa_accounts')?s.get('SELECT phone FROM wa_accounts WHERE user_id=?',u)?.phone||null:null;
- const items=s.all("SELECT d.*,u.name FROM sc_demandes d JOIN users u ON u.id=d.user_id WHERE d.status IN ('recue','prise','appele') ORDER BY d.due").map(d=>({
+ const items=s.all("SELECT d.*,u.name FROM sc_demandes d JOIN users u ON u.id=d.user_id WHERE d.status IN ('recue','prise','appele','recours') ORDER BY d.due").map(d=>({
   id:d.id,kind:d.kind,what:KINDS[d.kind],title:d.title,detail:d.detail,name:short(d.name),phone:phone(d.user_id),level:d.level,status:d.status,
   due:d.due,dueText:when(d.due,now),late:now>d.due,agent:d.agent_name?short(d.agent_name):null,mine:d.agent_id===uid,tries:d.tries,outcome:d.outcome?OUTCOMES[d.outcome]?.label:null,ref:d.ref,
   canAct:(d.level<2||boss(role))&&(!d.agent_id||d.agent_id===uid||boss(role))}));
@@ -161,7 +162,7 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
  insist(!r.agent_id||r.agent_id===uid||boss(role),'Un autre conseiller s’occupe déjà de cette demande.',409);
  const me=s.get('SELECT name FROM users WHERE id=?',uid)?.name||'Conseiller';
  if(d.action==='take'){
-  insist(r.status==='recue'||r.agent_id!==uid,'Vous vous occupez déjà de cette demande.',409);
+  insist(['recue','recours'].includes(r.status)||r.agent_id!==uid,'Vous vous occupez déjà de cette demande.',409);
   s.run("UPDATE sc_demandes SET status='prise',agent_id=?,agent_name=?,taken_at=COALESCE(taken_at,?),updated=? WHERE id=?",uid,me,now,now,r.id);
   notify(s,r.user_id,first(me)+' s’occupe de votre demande',first(me)+', du service client Moov, va vous appeler avant '+when(r.due,now)+'.',now);
   return queue(s,uid,now);
@@ -177,7 +178,7 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
   notify(s,r.user_id,'Nous avons essayé de vous appeler',tries>=MAX_TRIES?'Toujours pas de réponse. Rappelez le 111 quand vous voulez, ou répondez ici : votre demande reste ouverte.':first(me)+' vous rappelle avant '+when(due,now)+'. Gardez votre téléphone près de vous.',now);
   return queue(s,uid,now);
  }
- if(r.kind==='reclamation'){
+ if(r.kind==='reclamation'&&s.get("SELECT status FROM reclamations WHERE id=?",r.ref)?.status==='open'){
   // La réponse passe par les réclamations (historique, recours) ; settle() demande ensuite son avis au client.
   require('./reclamation.cjs').answer(s,uid,{id:r.ref,outcome:d.outcome==='technicien'?'intervention':'regle',message:note||OUTCOMES[d.outcome].client},now);
   return queue(s,uid,now);
