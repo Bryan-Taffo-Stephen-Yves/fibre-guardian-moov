@@ -165,6 +165,7 @@ function createGuardianServer(options={}){
       if(whatsapp)WB.testResult(store,bot,row.phone,r).catch(e=>options.onError?options.onError(e):console.warn(e.message));return json(res,{...r,whatsapp});}
      throw new Problem(404,'Action de test introuvable.');
     }
+    if(route==='/api/zone-fibre'&&method==='GET'){store.rate('zone:'+ip(req),120);return json(res,{zone:EL.zone(store)});}
     if(route==='/api/health'&&method==='GET')return json(res,{ok:true,storage:'sqlite',adminSecure:secure||local,origin,version:1,assistant:guardianAi.available()?'claude':'regles'});
     if(route==='/api/session'&&method==='GET'){const u=auth(req);return json(res,{user:u?{...u,role:workspace.sessionRole(store,u.id)}:null});}
     if(route==='/api/journey/otp/request'&&method==='POST')return json(res,await journey.requestOtp(store,await body(req,4096),ip(req)));

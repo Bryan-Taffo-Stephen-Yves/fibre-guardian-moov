@@ -58,3 +58,15 @@ test('Une seule demande par client, annulation, saisie contrôlée',async()=>{
  assert.equal(EL.state(s,ids.awa,t+HOUR).mine,null);assert.equal(SC.queue(s,ids.kader,t+HOUR).items.length,0);
  assert.throws(()=>EL.cancel(s,ids.awa,t+HOUR),/Aucune demande/);
 });
+
+test('Commune ouverte : un déménagement déjà demandé devient possible ; la demande d’appel suit le changement de commune',async()=>{
+ const {s,ids}=await setup();require('./noc-store.cjs').migrate(s);const DM=require('./demenagement.cjs');DM.migrate(s);
+ DM.ask(s,ids.awa,{commune:'Bingerville',quartier:'Centre'},t);
+ const id=SC.queue(s,ids.kader,t).items[0].id;SC.act(s,ids.kader,{id,action:'take'},t);
+ EL.open(s,ids.fatou,{commune:'Bingerville',confirm:true},t+HOUR);
+ SC.act(s,ids.kader,{id,action:'result',outcome:'demenagement'},t+2*HOUR);
+ assert.equal(DM.state(s,ids.awa,t+2*HOUR).current.status,'planifie');
+ EL.ask(s,ids.yao,{commune:'Anyama',quartier:'Centre',call:true},t);EL.ask(s,ids.yao,{commune:'Songon',quartier:'Agban'},t+HOUR);
+ assert.match(SC.queue(s,ids.kader,t+HOUR).items.find(i=>i.kind==='eligibilite').title,/Agban, Songon/);
+ EL.ask(s,ids.bob,{commune:'Autre ville',quartier:'Korhogo'},t);assert.match(journey.get(s,ids.bob).notifications[0].body,/demandez l’appel/);
+});

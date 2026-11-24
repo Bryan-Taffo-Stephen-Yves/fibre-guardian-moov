@@ -70,7 +70,7 @@
     return h('section', {className: 'j-card fw-card fw-wait-zone'},
       h('h2', null, 'Nous vous prévenons dès que la fibre arrive'),
       h('p', null, a.quartier + ', ' + a.commune + (a.others ? ' · ' + a.others + ' autre' + (a.others > 1 ? 's' : '') + ' client' + (a.others > 1 ? 's l’attendent' : ' l’attend') + ' aussi' : '')),
-      h('p', {className: 'fw-small'}, a.call ? 'Un conseiller vous appelle pour voir une solution en attendant. Suivez son appel dans « Ma réparation ».' : 'Vous recevrez un message ici. Plus il y a de demandes dans une commune, plus elle passe tôt dans les travaux de Moov.'),
+      h('p', {className: 'fw-small'}, a.call ? 'Un conseiller vous appelle pour voir une solution en attendant. Suivez son appel dans « Ma réparation ».' : a.commune === 'Autre ville' ? 'Moov étudie les demandes de toutes les villes. Pour savoir ce qui est possible chez vous, demandez l’appel d’un conseiller : choisissez à nouveau votre commune et cochez la case.' : 'Vous recevrez un message ici. Plus il y a de demandes dans une commune, plus elle passe tôt dans les travaux de Moov.'),
       h('button', {type: 'button', className: 'fw-cancel', disabled: busy, onClick: () => onAlert({action: 'cancel'})}, 'Ne plus attendre'));
   }
 

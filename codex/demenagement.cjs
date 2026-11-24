@@ -65,15 +65,16 @@ function finish(s,r,now=Date.now()){
 // Avant que le conseiller note son appel (service-client.cjs) : hors zone fibre, pas de technicien ni d'installation.
 function check(s,id,outcome){
  ensure(s);const r=s.get('SELECT * FROM demenagements WHERE id=?',String(id));
- insist(!r||r.covered||!['demenagement','technicien'].includes(outcome),'La fibre n’arrive pas à cette adresse : proposez une solution au client, puis notez « Réglé au téléphone ».',409);
+ insist(!r||r.covered||EL().covered(s,r.commune)||!['demenagement','technicien'].includes(outcome),'La fibre n’arrive pas à cette adresse : proposez une solution au client, puis notez « Réglé au téléphone ».',409);
 }
 // Le conseiller a appelé : la date est confirmée, ou la demande est close au téléphone.
 // Confirmée après le jour choisi : l'installation passe au premier jour possible (jamais « installée » sans technicien).
 function called(s,id,outcome,now=Date.now()){
  ensure(s);const r=s.get('SELECT * FROM demenagements WHERE id=?',String(id));if(!r||!OPEN.includes(r.status))return;
- if(r.covered&&['demenagement','technicien'].includes(outcome)){
+ // Une commune ouverte à la fibre depuis la demande compte comme couverte (eligibilite.cjs).
+ if((r.covered||EL().covered(s,r.commune))&&['demenagement','technicien'].includes(outcome)){
   const day=r.day&&endOf(r)>now?r.day:choices(now)[0].day;
-  s.run("UPDATE demenagements SET status='planifie',day=?,updated=? WHERE id=?",day,now,r.id);
+  s.run("UPDATE demenagements SET status='planifie',covered=1,day=?,slot=COALESCE(slot,'matin'),updated=? WHERE id=?",day,now,r.id);
   if(day!==r.day)notify(s,r.user_id,'Nouvelle date d’installation','Le jour que vous aviez choisi est passé : le technicien installe votre fibre '+when({day,slot:r.slot})+'. Vous pouvez annuler dans Mon compte.',now);
  }
  else if(outcome!=='absent')s.run("UPDATE demenagements SET status='conseille',updated=? WHERE id=?",now,r.id);

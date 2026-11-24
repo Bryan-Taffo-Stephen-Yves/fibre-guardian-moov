@@ -58,14 +58,20 @@ function ask(s,uid,d,now=Date.now()){return s.transaction(()=>{
  const quartier=text(d.quartier,'Indiquez votre quartier.',2,80),call=d.call===true;
  const cur=s.get("SELECT * FROM elig_demandes WHERE user_id=? AND status='attente'",uid);
  let id=cur?.id;
- if(cur)s.run('UPDATE elig_demandes SET commune=?,quartier=?,call=MAX(call,?),updated=? WHERE id=?',commune,quartier,call?1:0,now,id);
+ if(cur){
+  s.run('UPDATE elig_demandes SET commune=?,quartier=?,call=MAX(call,?),updated=? WHERE id=?',commune,quartier,call?1:0,now,id);
+  // Le client change de commune : la demande d'appel déjà ouverte suit sa nouvelle adresse.
+  if(s.get("SELECT 1 FROM sqlite_master WHERE name='sc_demandes'"))s.run("UPDATE sc_demandes SET title=?,updated=? WHERE kind='eligibilite' AND ref=? AND status IN ('recue','prise','appele')",'Fibre demandée à '+quartier+', '+commune,now,id);
+ }
  else{id=crypto.randomUUID();s.run('INSERT INTO elig_demandes(id,user_id,commune,quartier,call,status,created,updated) VALUES(?,?,?,?,?,?,?,?)',id,uid,commune,quartier,call?1:0,'attente',now,now);}
  const n=waiting(s,commune)-1;
  if(call){
   SC().open(s,{uid,kind:'eligibilite',ref:id,level:1,due:now+DUE,silent:true,title:'Fibre demandée à '+quartier+', '+commune,
    detail:'La fibre Moov n’arrive pas encore à '+commune+(n>0?' ('+n+' autre'+(n>1?'s':'')+' client'+(n>1?'s':'')+' attend'+(n>1?'ent':'')+' aussi)':'')+'. Proposez une solution en attendant et dites au client qu’il sera prévenu.'},now);
   notify(s,uid,'C’est noté : nous vous prévenons','La fibre Moov n’arrive pas encore à '+commune+'. Un conseiller vous appelle avant '+SC().when(now+DUE,now)+' pour voir une solution avec vous en attendant.',now);
- }else notify(s,uid,'C’est noté : nous vous prévenons','Dès que la fibre Moov arrive à '+commune+', vous recevez un message ici et vous pouvez la commander tout de suite.',now);
+ }else notify(s,uid,'C’est noté : nous vous prévenons',commune==='Autre ville'
+  ?'Moov étudie les demandes de toutes les villes. Pour savoir ce qui est possible chez vous dès maintenant, demandez l’appel d’un conseiller.'
+  :'Dès que la fibre Moov arrive à '+commune+', vous recevez un message ici et vous pouvez la commander tout de suite.',now);
  return state(s,uid,now);
 });}
 
