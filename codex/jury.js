@@ -349,6 +349,8 @@ h(Header,{right:me&&h('span',{className:'jy-who',title:me.first||undefined},me.f
     h('p',null,h('b',null,'Grosse consommation : '),'Guardian prévient le propriétaire qu’un appareil utilise beaucoup plus de données que d’habitude.'),
     B(busy==='heavy'?'En cours…':'Un appareil consomme beaucoup',()=>run('heavy','Alerte « grosse consommation » envoyée : sur WhatsApp à ceux qui l’ont confirmé, et dans l’écran Appareils.'),{className:'jy-secondary',disabled:!!busy}),
     heavy&&h('p',{className:'jy-watch-sent',role:'status'},h('b',null,heavy.whatsapp?'Envoyé sur WhatsApp à '+heavy.whatsapp+' téléphone'+(heavy.whatsapp>1?'s':'')+' : ':'Message de Guardian : '),heavy.text.split('\n')[0])),
+   // Simulations : faire vivre une situation au téléphone d'un client (simulations-view.js), sans salle du jury.
+   window.FGSimulations&&h(FGSimulations.Panel,{api}),
    data?.report&&h('section',{className:'jy-card jy-report'},h('p',{className:'jy-kicker'},'RAPPORT DE PREUVES'),h('h2',null,data.report.verified?'Service rétabli et vérifié':'Scène en cours'),
     h('dl',null,data.report.rows.map(r=>h('div',{key:r.key},h('dt',null,r.label),h('dd',null,r.seconds==null?'—':dur(r.seconds)))),
      // Réseau saturé : rien n'est coupé, on montre les box en ligne (mais lentes) à la détection, puis à la vérification.

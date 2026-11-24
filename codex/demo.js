@@ -4,7 +4,7 @@
  'use strict';
  const h=React.createElement,{useEffect:E,useRef:R,useState:S}=React;
  const SIMULATED=[
-  ['Page Simulations','Chaque situation se joue sur votre seul compte : les appareils, la panne, le technicien et le quartier saturé sont inventés, aucun appareil n’est vraiment bloqué et le paiement Moov Money ne débite rien. Les messages et les notifications, eux, arrivent pour de vrai.'],
+  ['Simulations de la Régie','L’équipe Moov fait vivre une situation à un client depuis sa Régie : les appareils, la panne, le technicien et le quartier saturé sont inventés, aucun appareil n’est vraiment bloqué et le paiement Moov Money ne débite rien. Les messages et les notifications, eux, arrivent pour de vrai.'],
   ['Box et mesures','Les débits, les appareils connectés et les pannes viennent d’un simulateur. Aucune box réelle n’est lue ni modifiée.'],
   ['SMS','Le code de connexion s’affiche à l’écran au lieu d’être envoyé par SMS. Les notifications restent dans l’application.'],
   ['GPS et trajets','La carte d’Abidjan est dessinée à partir de la vraie géographie, mais simplifiée. Les véhicules et les heures d’arrivée sont calculés, pas suivis par GPS.'],['Panne prévue','La baisse de lumière de la fibre est simulée sur 10 jours (situation « La fibre faiblit »). La prévision de coupure et les créneaux du technicien sont calculés à partir de ces mesures.'],['Appel du technicien','Le bouton « Appeler » ouvre un écran d’appel dans l’application. Aucun appel téléphonique n’est passé et les numéros des techniciens sont réservés à la démonstration.'],['Messages au technicien et carte du trajet','Les réponses du technicien dans « Message » sont écrites d’avance et restent sur le téléphone. Le quartier de la carte de suivi est dessiné (ce n’est pas un vrai plan) et le lien « Partager » reste valable 6 heures.'],
@@ -59,7 +59,7 @@
   ['Sécurité','Mots de passe transformés (scrypt) et jamais lisibles, connexion HTTPS, code à usage unique, sessions limitées à 8 heures, nombre d’essais limité, et chaque rôle (client, conseiller, technicien, superviseur, direction) revérifié par le serveur à chaque action. Aucune clé ni mot de passe dans le code.']
  ];
  function Law(){return h('div',{className:'fg-demo-block'},h('h3',null,'Vos données et la loi'),h('ul',{className:'fg-demo-list'},LAW.map(([title,text])=>h('li',{key:title},h('strong',null,title),h('span',null,text)))));}
- function About({onClose,user,scenarios,scenario,onScenario,onSimulations,busy,children}){
+ function About({onClose,user,scenarios,scenario,onScenario,busy,children}){
   const box=R(null),[assistant,setAssistant]=S('regles');
   E(()=>{let live=true;fetch('/api/health',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{if(live&&d.assistant)setAssistant(d.assistant);}).catch(()=>{});return()=>{live=false;};},[]);
   const items=SIMULATED.map(([title,text])=>[title,title==='Guardian'&&assistant==='claude'?GUARDIAN_CLAUDE:text]);
@@ -68,9 +68,6 @@
    h('section',{ref:box,className:'fg-demo-sheet',role:'dialog','aria-modal':'true','aria-labelledby':'fg-demo-title'},
     h('header',null,h('span',{className:'fg-demo-badge is-static'},'Démo'),h('h2',{id:'fg-demo-title'},'À propos de la démo'),h('button',{type:'button',className:'fg-demo-close',onClick:onClose,'aria-label':'Fermer'},'×')),
     h('p',{className:'fg-demo-lead'},'Fibre Guardian est présenté ici en version de démonstration. Les parcours et les règles de sécurité sont réels ; voici ce qui est simulé.'),
-    // Page « Simulations » : les situations à rejouer en un geste (simulations-view.js).
-    onSimulations&&h('div',{className:'fg-demo-block fg-demo-sim'},h('h3',null,'Simulations'),h('p',null,'Rejouez en un geste : Wi-Fi plein de monde, alerte urgente, grosse consommation et paiement, quartier saturé, panne et technicien, coupure voisine.'),
-     h('button',{type:'button',className:'fg-demo-choice is-active',disabled:busy,onClick:onSimulations},'Ouvrir la page des simulations')),
     h('ul',{className:'fg-demo-list'},items.map(([title,text])=>h('li',{key:title},h('strong',null,title),h('span',null,text)))),
     h(Law),
     scenarios&&h('div',{className:'fg-demo-block'},h('h3',null,'Choisir une situation à montrer'),h('p',null,'Changez la situation de la box pour présenter un cas.'),

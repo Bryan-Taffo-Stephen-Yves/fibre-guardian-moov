@@ -299,8 +299,9 @@ function createGuardianServer(options={}){
     if(route==='/api/parrainage'&&method==='GET')return json(res,PR.state(store,user.id));
     if(route==='/api/parrainage'&&method==='POST'){store.rate('parrain-use:'+user.id,10);return json(res,PR.use(store,user.id,await body(req,512)));}
     if(route==='/api/journey/start'&&method==='POST'){if(!journey.get(store,user.id))journey.put(store,user.id,journey.seed());return json(res,{state:journey.snapshotFor(store,user.id,journey.get(store,user.id))});}
-    // Page « Simulations » : le client rejoue une situation sur son propre compte de démonstration (simulations.cjs).
-    if(route==='/api/journey/simulation'&&method==='POST'){store.rate('simulation:'+user.id,60,600000);return json(res,{state:SIM.run(store,user.id,await body(req,1024))});}
+    // Régie, carte « Simulations » : l'administrateur fait vivre une situation au compte d'un client (simulations.cjs).
+    if(route==='/api/regie/simulation'&&method==='GET'){insist(operator.role(store,user.id)==='admin','Régie réservée à l’administrateur.',403);return json(res,SIM.regie(store,url.searchParams.get('client')||''));}
+    if(route==='/api/regie/simulation'&&method==='POST'){insist(operator.role(store,user.id)==='admin','Régie réservée à l’administrateur.',403);store.rate('simulation:'+user.id,60,600000);const d=await body(req,1024);SIM.launch(store,String(d.client||''),d);return json(res,SIM.regie(store,String(d.client||'')));}
     if(route==='/api/journey/action'&&method==='POST')return json(res,{state:await journeyAction(user,await body(req,600000))});
     // « La photo qui parle » : lecture des voyants par Claude, sinon lecture faite sur le téléphone. La photo n'est pas conservée.
     if(route==='/api/journey/photo'&&method==='POST'){const d=await body(req,900000);store.rate('photo:'+user.id,12,600000);insist(Number.isInteger(d.version),'Version du parcours requise.');

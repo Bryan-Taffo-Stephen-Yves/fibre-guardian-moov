@@ -83,3 +83,8 @@
 :root[data-mode=dark] .sim-card.tone-accent{--tint:var(--moov-accent-200);--soft:color-mix(in srgb,var(--moov-accent-500) 22%,transparent)}
 :root[data-mode=dark] .sim-card.tone-warning{--tint:var(--moov-warning-300);--soft:color-mix(in srgb,var(--moov-warning-300) 20%,transparent)}
 :root[data-mode=dark] .sim-card.is-on .sim-go{color:var(--ds-deep)}
+/* Régie : choix du client. */
+.sim-panel{display:grid;gap:12px}
+.sim-panel>h2,.sim-panel>p{margin:0}
+.sim-panel select{width:100%;min-height:44px;margin-top:6px;padding:0 12px;border:1px solid var(--moov-line);border-radius:var(--ds-r-sm,14px);background:var(--moov-surface);color:var(--moov-ink);font:inherit;font-size:16px}
+.sim-panel>small{color:var(--moov-text-muted)}

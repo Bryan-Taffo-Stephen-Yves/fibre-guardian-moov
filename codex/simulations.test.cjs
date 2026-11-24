@@ -71,7 +71,7 @@ test('panne : le technicien avance seul jusqu’à la ligne vérifiée', () => {
   assert.equal(SIM.status(st, t0).panne.status, 'confirmed');
   SIM.tick(st, t0 + 12000);
   assert.equal(SIM.status(st, t0).panne.status, 'en_route');
-  assert.equal(SIM.status(st, t0).panne.technician, 'Awa');
+  assert.equal(SIM.status(st, t0).panne.technician, 'Koffi');
   SIM.tick(st, t0 + 60000);
   const i = st.incidents.find(x => x.sim);
   assert.equal(i.status, 'resolved'); assert.ok(i.verification.online);
@@ -97,29 +97,41 @@ test('relancer ou « Tout remettre comme avant » efface la scène précédente'
   assert.throws(() => SIM.start(st, 'inconnue', now), /Simulation inconnue/);
 });
 
-test('API : le client joue la scène sur son seul compte, l’application relit les suites', async () => {
+test('API : seule la Régie (administrateur) lance une scène, chez le client choisi ; le client reçoit les suites', async () => {
   const store = new Store(':memory:'), server = createGuardianServer({store, env: {}, onError: () => {}});
-  await seedDemo(store);
+  const saved = process.env[DEMO.admin.env]; process.env[DEMO.admin.env] = 'direction-test-2026';
+  try { await seedDemo(store); } finally { if (saved === undefined) delete process.env[DEMO.admin.env]; else process.env[DEMO.admin.env] = saved; }
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   try {
     const base = 'http://127.0.0.1:' + server.address().port;
-    const r = await fetch(base + '/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email: DEMO.client.email, password: DEMO.client.fallback})});
-    const who = {cookie: r.headers.getSetCookie().map(v => v.split(';')[0]).join('; '), csrf: (await r.json()).user.csrf};
-    const call = async (p, body) => { const x = await fetch(base + '/api' + p, {method: body ? 'POST' : 'GET', headers: {Cookie: who.cookie, ...(body ? {'Content-Type': 'application/json', 'X-CSRF-Token': who.csrf} : {})}, body: body ? JSON.stringify(body) : undefined}); return {status: x.status, data: await x.json()}; };
-    await call('/journey/start', {});
-    const run = await call('/journey/simulation', {scene: 'urgent'});
+    const login = async (email, password) => { const r = await fetch(base + '/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, password})}); return {cookie: r.headers.getSetCookie().map(v => v.split(';')[0]).join('; '), csrf: (await r.json()).user?.csrf}; };
+    const call = async (who, p, body) => { const x = await fetch(base + '/api' + p, {method: body ? 'POST' : 'GET', headers: {Cookie: who.cookie, ...(body ? {'Content-Type': 'application/json', 'X-CSRF-Token': who.csrf} : {})}, body: body ? JSON.stringify(body) : undefined}); return {status: x.status, data: await x.json()}; };
+    const awa = await login(DEMO.client.email, DEMO.client.fallback), chef = await login(DEMO.admin.email, 'direction-test-2026');
+    const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id;
+    // Le client ne peut ni lancer ni voir les simulations : c'est l'équipe Moov qui les fait vivre.
+    assert.equal((await call(awa, '/regie/simulation', {scene: 'panne', client: uid})).status, 403);
+    assert.equal((await call(awa, '/regie/simulation')).status, 403);
+    assert.equal((await call(awa, '/journey/simulation', {scene: 'panne'})).status, 404, 'plus de lancement côté client');
+    const list = await call(chef, '/regie/simulation');
+    assert.equal(list.status, 200);
+    assert.equal(list.data.client, uid, 'Awa, cliente de démonstration, choisie par défaut');
+    assert.ok(list.data.clients.length > 1, 'un client par quartier au choix');
+    const chefId = store.get('SELECT id FROM users WHERE email=?', DEMO.admin.email).id;
+    assert.ok(!list.data.clients.some(c => c.id === chefId), 'pas de compte de l’équipe Moov dans la liste');
+    assert.equal((await call(chef, '/regie/simulation', {scene: 'panne', client: chefId})).status, 404);
+    const run = await call(chef, '/regie/simulation', {scene: 'urgent', client: uid});
     assert.equal(run.status, 200);
-    assert.equal(run.data.state.simulation.scene, 'urgent');
-    assert.ok(run.data.state.simulation.urgent.left > 50);
-    const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id, st = J.get(store, uid);
-    st.simQueue[0].at = Date.now() - 1; J.put(store, uid, st); // la minute est passée
-    const read = await call('/journey/state');
-    assert.equal(read.data.state.version, run.data.state.version, 'la version ne change pas : aucune action du client refusée');
+    assert.equal(run.data.status.scene, 'urgent');
+    assert.ok(run.data.status.urgent.left > 50);
+    await call(awa, '/journey/start', {});
+    const before = await call(awa, '/journey/state');
+    assert.equal(before.data.state.notifications[0].title, 'Urgent : appareil inconnu sur votre Wi-Fi', 'le téléphone du client reçoit l’alerte');
+    const st = J.get(store, uid); st.simQueue[0].at = Date.now() - 1; J.put(store, uid, st); // la minute est passée
+    const read = await call(awa, '/journey/state');
+    assert.equal(read.data.state.version, before.data.state.version, 'la version ne change pas : aucune action du client refusée');
     assert.deepEqual(read.data.state.simulation.blocked.map(d => d.id), ['sim-urgent']);
-    assert.equal((await call('/journey/simulation', {scene: 'stop'})).data.state.simulation.scene, null);
-    assert.equal((await call('/journey/simulation', {scene: 'nimporte'})).status, 400);
-    const anon = await fetch(base + '/api/journey/simulation', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{"scene":"panne"}'});
-    assert.ok([401, 403].includes(anon.status), 'connexion obligatoire');
+    assert.equal((await call(chef, '/regie/simulation', {scene: 'stop', client: uid})).data.status.scene, null);
+    assert.equal((await call(chef, '/regie/simulation', {scene: 'nimporte', client: uid})).status, 400);
   } finally { server.close(); }
 });
 

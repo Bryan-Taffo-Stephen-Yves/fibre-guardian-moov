@@ -1,6 +1,7 @@
 'use strict';
-// Page « Simulations » : en un geste, le client rejoue sur SON compte de démonstration les situations que Guardian sait gérer.
-// Rien ne touche le vrai réseau ni les autres comptes : tout se passe dans le parcours du client (journey-store.cjs).
+// Carte « Simulations » de la Régie (équipe Moov, administrateur seulement) : en un geste, l'administrateur fait vivre à un
+// client les situations que Guardian sait gérer. Rien ne touche le vrai réseau : tout se passe dans le parcours de ce client
+// (journey-store.cjs). Le client reçoit les messages sur son téléphone et répond lui-même, comme en vrai.
 // Les messages arrivent comme les vrais : « Mes messages », cloche, bandeau Wi-Fi, et notification du téléphone si le client
 // l'a autorisée (push.cjs, déclenché à chaque enregistrement du parcours).
 // Les suites d'une scène (messages qui arrivent les uns après les autres, étapes du technicien, blocage automatique) sont
@@ -50,6 +51,7 @@ function status(st, now = Date.now()) {
     panne: panne ? {reference: panne.reference, status: panne.status, label: J.LABELS[J.STEPS.indexOf(panne.status)], technician: panne.technician?.name || null} : null,
     guests: (st.devices || []).filter(d => d.sim && !d.urgentUntil).length,
     upgrade: st.upgrade && st.upgrade.source === 'simulation' && st.upgrade.expires > now ? st.upgrade : null,
+    paid: st.simScene === 'conso' && st.payment?.at >= st.simAt ? {amount: st.payment.amount, mbps: st.payment.mbps} : null,
   };
 }
 
@@ -142,7 +144,8 @@ function tick(st, now = Date.now()) {
       const i = st.incidents.find(x => x.id === step.id && x.sim);
       if (!i || J.STEPS.indexOf(step.to) <= J.STEPS.indexOf(i.status)) continue; // jamais de retour en arrière
       i.status = step.to;
-      if (step.to === 'assigned') i.technician = st.technicians?.[0] || {id: 'awa', name: 'Awa', team: 'Équipe fibre Ouest'};
+      // Koffi, l'équipe fibre de Yopougon (fiches de noc-store.cjs) : jamais le même prénom que la cliente de démonstration.
+      if (step.to === 'assigned') { const t = require('./noc-store.cjs').TECHS.find(x => x.id === 'koffi'); i.technician = t ? {id: t.id, name: t.name.split(' ')[0], team: 'Équipe ' + t.team.toLowerCase()} : {id: 'koffi', name: 'Koffi', team: 'Équipe fibre Ouest'}; }
       if (step.to === 'en_route') i.departed = step.at;
       if (step.to === 'on_site') i.arrived = step.at;
       if (step.to === 'resolved') { i.resolved = step.at; i.verification = {source: 'simulateur', at: step.at, online: true, mbps: (st.plan || J.PLANS[1]).mbps}; }
@@ -161,7 +164,7 @@ function refresh(s, uid, now = Date.now()) {
   if (st && tick(st, now)) J.put(s, uid, st);
 }
 
-// Lance une scène (ou « stop ») sur le compte du client lui-même.
+// Lance une scène (ou « stop ») sur le compte d'un client.
 function run(s, uid, d, now = Date.now()) {
   return s.transaction(() => {
     const st = J.get(s, uid);
@@ -175,9 +178,31 @@ function run(s, uid, d, now = Date.now()) {
   });
 }
 
+// Les clients que la Régie peut choisir : les comptes sans rôle Moov, Awa (cliente de démonstration) en premier.
+function clients(s) {
+  const awa = require('./seed-demo.cjs').DEMO.client.email;
+  return s.all("SELECT u.id, u.name FROM users u LEFT JOIN operator_grants g ON g.user_id=u.id WHERE (g.role IS NULL OR g.role='subscriber') AND u.email NOT LIKE 'demo-%@guardian.invalid' ORDER BY (u.email=?) DESC, u.name LIMIT 40", awa);
+}
+const pick = (s, id) => { const list = clients(s); return {list, target: list.find(c => c.id === id) || (id ? null : list[0]) || null}; };
+// Ce que montre la Régie : la liste des clients et la scène en cours chez le client choisi.
+function regie(s, id, now = Date.now()) {
+  const {list, target} = pick(s, id);
+  insist(!id || target, 'Client introuvable.', 404);
+  if (target) refresh(s, target.id, now);
+  const st = target ? J.get(s, target.id) : null;
+  return {clients: list, client: target?.id || null, status: st ? status(st, now) : {scene: null, blocked: []}};
+}
+// Lancement depuis la Régie : le parcours du client est créé s'il n'existe pas encore.
+function launch(s, id, d, now = Date.now()) {
+  const {target} = pick(s, id);
+  insist(id && target, 'Choisissez un client.', 404);
+  if (!J.get(s, target.id)) J.put(s, target.id, J.seed());
+  return run(s, target.id, d, now);
+}
+
 // Toutes les 3 secondes (pilot-server.cjs) : les suites arrivent même application fermée (notification du téléphone).
 function sweep(s, now = Date.now()) {
   for (const r of s.all('SELECT user_id FROM journey_state WHERE body LIKE ?', '%"simQueue":[{%')) refresh(s, r.user_id, now);
 }
 
-module.exports = {sweep, SCENES, URGENT_MS, BUSY_MS, start, tick, refresh, run, status, clear, neighbour};
+module.exports = {clients, regie, launch, sweep, SCENES, URGENT_MS, BUSY_MS, start, tick, refresh, run, status, clear, neighbour};
