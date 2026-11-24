@@ -39,6 +39,7 @@ const SCENES = {
   arnaque: 'Message d’arnaque',
 };
 const OUTAGES = ['panne', 'vol', 'retard']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
+// « box » est refusée aussi pendant une panne (start) : la box ne répondrait de toute façon pas, ce serait deux causes à la fois.
 
 function note(st, n, now) {
   st.notifications.unshift({key: key(), home: 'home-1', at: now, read: false, sim: true, ...n});
@@ -57,7 +58,8 @@ function status(st, now = Date.now()) {
     blocked: (st.devices || []).filter(d => d.autoBlocked && d.blocked).map(d => ({id: d.id, name: d.name})),
     box: st.simBoxOff?.until > now ? {left: Math.ceil((st.simBoxOff.until - now) / 1000)} : null,
     busy: st.simBusy?.until > now ? {until: st.simBusy.until, left: Math.ceil((st.simBusy.until - now) / 1000)} : null,
-    panne: panne ? {reference: panne.reference, status: panne.status, label: J.LABELS[J.STEPS.indexOf(panne.status)], technician: panne.technician?.name || null} : null,
+    panne: panne ? {reference: panne.reference, status: panne.status, label: J.LABELS[J.STEPS.indexOf(panne.status)], technician: panne.technician?.name || null, late: !!panne.late, swapped: !!panne.swapped} : null,
+    boxBack: st.simScene === 'box' && !(st.simBoxOff?.until > now) && !(st.simQueue || []).length,
     guests: (st.devices || []).filter(d => d.sim && !d.urgentUntil).length,
     upgrade: st.upgrade && st.upgrade.source === 'simulation' && st.upgrade.expires > now ? st.upgrade : null,
     paid: st.simScene === 'conso' && st.payment?.at >= st.simAt ? {amount: st.payment.amount, mbps: st.payment.mbps} : null,
@@ -138,19 +140,24 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     const b = require('./fidelite.cjs').state(s, uid, now).bill;
     insist(!b.paid, 'La facture de ' + b.label + ' de ce client est déjà payée : rien à lui rappeler.', 409);
     let split = null; try { split = require('./acces.cjs').state(s, uid, now).split; } catch {}
-    const amount = b.amount.toLocaleString('fr-FR') + ' FCFA', day = new Date(b.due).getUTCDate() + ' ' + b.label.split(' ')[0];
-    note(st, {page: 'fidelite', title: 'Votre facture de ' + b.label + ' est à payer', body: amount + ', à payer avec Moov Money avant le ' + day + '. Payée à temps, elle vous rapporte des points de fidélité.'}, now);
-    say(st, 'Petit rappel : votre facture de ' + b.label + ' (' + amount + ') n’est pas encore payée. Vous pouvez la régler en deux gestes dans « Ma fidélité », avec Moov Money.');
-    if (!split) later(st, now + 20000, {type: 'note', n: {page: 'acces', title: 'Besoin d’un peu de temps ?', body: 'Vous pouvez payer ' + b.label + ' en 2 ou 3 fois, sans frais. Choisissez dans « Offres solidaires ».'},
-      say: 'Si le mois est difficile, vous pouvez payer en 2 ou 3 fois, sans frais : ouvrez « Offres solidaires » dans votre compte. Votre fibre reste allumée.'});
+    const fmt = n => n.toLocaleString('fr-FR') + ' FCFA', day = t => new Date(t).getUTCDate() + ' ' + b.label.split(' ')[0];
+    if (split) {
+      // Le client paie déjà ce mois en plusieurs fois (« Offres solidaires ») : on rappelle la prochaine part, jamais la facture entière.
+      const left = split.parts.filter(p => !p.paid), next = left[0];
+      insist(next, 'Le mois de ce client est déjà réglé en plusieurs fois : rien à lui rappeler.', 409);
+      const rank = split.parts.indexOf(next) + 1, when = next.due > now ? 'avant le ' + day(next.due) : 'dès maintenant';
+      note(st, {page: 'acces', title: 'Votre part n°' + rank + ' sur ' + split.parts.length + ' est à payer', body: fmt(next.amount) + ', à payer avec Moov Money ' + when + '. Vous avez choisi de payer ' + split.month + ' en ' + split.parts.length + ' fois.'}, now);
+      say(st, 'Petit rappel : vous payez ' + split.month + ' en ' + split.parts.length + ' fois. Votre part n°' + rank + ' (' + fmt(next.amount) + ') est à régler ' + when + ', dans « Offres solidaires ». Il vous restera ' + (left.length - 1) + ' part' + (left.length - 1 > 1 ? 's' : '') + ' ensuite. Ne payez pas la facture entière : ce serait payer deux fois.');
+    } else {
+      note(st, {page: 'fidelite', title: 'Votre facture de ' + b.label + ' est à payer', body: fmt(b.amount) + ', à payer avec Moov Money avant le ' + day(b.due) + '. Payée à temps, elle vous rapporte des points de fidélité.'}, now);
+      say(st, 'Petit rappel : votre facture de ' + b.label + ' (' + fmt(b.amount) + ') n’est pas encore payée. Vous pouvez la régler en deux gestes dans « Ma fidélité », avec Moov Money.');
+      later(st, now + 20000, {type: 'note', n: {page: 'acces', title: 'Besoin d’un peu de temps ?', body: 'Vous pouvez payer ' + b.label + ' en 2 ou 3 fois, sans frais. Choisissez dans « Offres solidaires ».'},
+        say: 'Si le mois est difficile, vous pouvez payer en 2 ou 3 fois, sans frais : ouvrez « Offres solidaires » dans votre compte. Votre fibre reste allumée.'});
+    }
   } else if (scene === 'retard') {
-    // Koffi part, prend du retard (route bloquée), puis ne peut plus venir : Guardian prévient et Yao prend le relais.
-    const late = hm(now + 25 * 60000);
+    // Le technicien part, prend du retard (route bloquée), puis ne peut plus venir : Guardian prévient et un autre prend le relais.
     outage(st, now, {description: 'Câble fibre coupé par un chantier, près de chez vous.', title: 'Panne dans votre quartier : Guardian l’a confirmée', steps: [
-      ['assigned', 6000], ['en_route', 12000],
-      ['', 20000, {type: 'note', n: {page: 'notifications', title: 'Koffi a du retard', body: 'La route est bloquée par un accident à ' + quarter(st) + '. Nouvelle arrivée prévue vers ' + late + '. Désolé pour l’attente.'},
-        say: 'Koffi est bloqué sur la route par un accident. Il arrivera plutôt vers ' + late + '. Je surveille : si un autre technicien peut venir plus vite, je vous le dis tout de suite.'}],
-      ['', 32000, {type: 'swap', tech: 'yao'}],
+      ['assigned', 6000], ['en_route', 12000], ['', 20000, {type: 'delay'}], ['', 32000, {type: 'swap', tech: 'yao'}],
       ['on_site', 44000], ['repairing', 50000], ['verifying', 56000], ['resolved', 62000]]});
   } else if (scene === 'arnaque') {
     // Un faux SMS « Moov » demande le code secret Moov Money : Guardian met en garde, sans jamais lire les SMS du client.
@@ -180,9 +187,11 @@ function outage(st, now, {description, title, say: text = null, kind = 'fibre', 
   for (const [to, wait, extra] of steps) later(st, now + wait, {type: 'step', id: i.id, to, tech, ...extra}); // extra.type : un message ou un changement de technicien
   return i;
 }
-// Les fiches des techniciens (noc-store.cjs), avec le prénom seulement.
-function techOf(id) {
-  const t = require('./noc-store.cjs').TECHS.find(x => x.id === id);
+// Les fiches des techniciens (noc-store.cjs), avec le prénom seulement (jamais Awa, le prénom de la cliente de démonstration).
+// Les messages disent « le technicien Koffi » : le foyer de démonstration a aussi un « iPhone de Koffi ».
+function techOf(id, skip = null) {
+  const TECHS = require('./noc-store.cjs').TECHS;
+  const t = [id, 'koffi', 'yao', 'amina'].map(x => TECHS.find(v => v.id === x)).find(v => v && v.id !== 'awa' && v.id !== skip);
   return t ? {id: t.id, name: t.name.split(' ')[0], team: 'Équipe ' + t.team.toLowerCase()} : {id: 'koffi', name: 'Koffi', team: 'Équipe fibre ouest'};
 }
 
@@ -200,27 +209,35 @@ function tick(st, now = Date.now()) {
         note(st, {kind: 'wifi', page: 'devices', title: 'Guardian a bloqué un appareil inconnu', body: 'Vous n’avez pas répondu : « ' + d.name + ' » n’a plus accès à votre Wi-Fi. Si c’est à vous, débloquez-le dans Appareils.'}, step.at);
         say(st, 'Vous n’avez pas répondu à mon alerte urgente : par sécurité, j’ai bloqué « ' + d.name + ' ». S’il est à vous ou à un proche, débloquez-le dans Appareils en un geste.');
       } else if (d) d.urgentUntil = null;
+    } else if (step.type === 'delay') {
+      // Seulement si le technicien est encore en route (l'équipe a pu faire avancer la mission à la main).
+      const i = st.incidents.find(x => x.id === step.id && x.sim);
+      if (!i || i.status !== 'en_route') continue;
+      const who = i.technician?.name || 'Le technicien';
+      i.events.push({at: step.at, label: 'Retard du technicien'}); i.late = step.at;
+      note(st, {page: 'notifications', title: 'Le technicien ' + who + ' a du retard', body: 'La route est bloquée par un accident à ' + quarter(st) + '. ' + who + ' arrivera plus tard que prévu. Désolé pour l’attente.'}, step.at);
+      say(st, 'Le technicien ' + who + ' est bloqué sur la route par un accident : il arrivera plus tard que prévu. Je surveille : si un autre technicien peut venir plus vite, je vous le dis tout de suite.');
     } else if (step.type === 'swap') {
-      // Le premier technicien ne peut plus venir : un autre prend le relais, plus près.
+      // Le premier technicien ne peut plus venir : un autre prend le relais.
       const i = st.incidents.find(x => x.id === step.id && x.sim);
       if (!i || i.status !== 'en_route') continue;
       const before = i.technician?.name || 'Le technicien';
-      i.technician = techOf(step.tech); i.departed = step.at;
+      i.technician = techOf(step.tech, i.technician?.id); i.departed = step.at; i.swapped = step.at;
       i.events.push({at: step.at, label: 'Changement de technicien'});
-      note(st, {page: 'notifications', title: i.technician.name + ' prend le relais', body: before + ' ne peut plus venir à temps. ' + i.technician.name + ', plus près de chez vous, arrive dans 10 minutes.'}, step.at);
-      say(st, before + ' ne pourra pas venir à temps. ' + i.technician.name + ', de la même équipe, était tout près : il arrive dans 10 minutes. Vous n’avez rien à faire.');
+      note(st, {page: 'notifications', title: 'Le technicien ' + i.technician.name + ' prend le relais', body: before + ' ne peut plus venir à temps. ' + i.technician.name + ' est déjà en route et arrive dans quelques minutes.'}, step.at);
+      say(st, before + ' ne pourra pas venir à temps. ' + i.technician.name + ' était libre : il est déjà en route et arrive dans quelques minutes. Vous n’avez rien à faire.');
     } else if (step.type === 'step') {
       const i = st.incidents.find(x => x.id === step.id && x.sim);
       if (!i || J.STEPS.indexOf(step.to) <= J.STEPS.indexOf(i.status)) continue; // jamais de retour en arrière
       i.status = step.to;
-      // Koffi par défaut (équipe fibre de Yopougon) : jamais le même prénom que la cliente de démonstration.
+      // Koffi par défaut (équipe fibre de Yopougon).
       if (step.to === 'assigned') i.technician = techOf(step.tech || 'koffi');
       if (step.to === 'en_route') i.departed = step.at;
       if (step.to === 'on_site') i.arrived = step.at;
       if (step.to === 'resolved') { i.resolved = step.at; i.verification = {source: 'simulateur', at: step.at, online: true, mbps: (st.plan || J.PLANS[1]).mbps}; }
       i.events.push({at: step.at, label: J.LABELS[J.STEPS.indexOf(step.to)]});
       const who = i.technician?.name || 'Le technicien';
-      J.notify(st, i, ({assigned: who + ' s’occupe de réparer votre ligne', en_route: who + ' est en route vers la panne', on_site: who + ' est sur place', repairing: 'Réparation en cours', verifying: 'Réparation finie : Guardian vérifie votre ligne', resolved: 'Internet est revenu : ligne vérifiée'})[step.to] || J.LABELS[J.STEPS.indexOf(step.to)]);
+      J.notify(st, i, ({assigned: 'Le technicien ' + who + ' s’occupe de réparer votre ligne', en_route: who + ' est en route vers la panne', on_site: who + ' est sur place', repairing: 'Réparation en cours', verifying: 'Réparation finie : Guardian vérifie votre ligne', resolved: 'Internet est revenu : ligne vérifiée'})[step.to] || J.LABELS[J.STEPS.indexOf(step.to)]);
       if (step.to === 'resolved') say(st, 'Bonne nouvelle : ' + who + ' a ' + (i.kind === 'pole' ? 'remplacé le câble volé' : 'réparé le câble') + ' et j’ai vérifié votre ligne. Internet est revenu chez vous.');
     }
   }

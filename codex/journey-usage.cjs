@@ -8,12 +8,13 @@ function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS journey_usage_cursor(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,at INTEGER NOT NULL,body TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS journey_usage_minutes(user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,at INTEGER NOT NULL,covered_ms INTEGER NOT NULL,saturated_ms INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(user_id,at));
  `);}
-function compact(st){return {devices:st.devices.map(d=>({...d})),capacity:st.capacity,scenario:st.scenario,segment:st.segment,incidents:st.incidents.map(i=>({segment:i.segment,status:i.status})),sharedDown:!!st.sharedIncident};}
+function compact(st){return {devices:st.devices.map(d=>({...d})),capacity:st.capacity,scenario:st.scenario,simBoxOff:st.simBoxOff||null,simBusy:st.simBusy||null,segment:st.segment,incidents:st.incidents.map(i=>({segment:i.segment,status:i.status})),sharedDown:!!st.sharedIncident};}
 function rates(st,at){
  // Un incident collectif ne prouve pas que chaque appareil est hors ligne.
  // Conserver les débits du simulateur abonné ; le contexte NOC influe sur le conseil, pas sur les chiffres.
  const fault=st.incidents.some(i=>i.segment===st.segment&&!['resolved','false_alarm'].includes(i.status));
- const capacity=fault?0:st.scenario==='slow'?12:st.capacity;
+ // simBoxOff / simBusy : box éteinte ou quartier saturé, joués depuis la Régie (simulations.cjs), comme sur l'accueil.
+ const capacity=fault||st.simBoxOff?.until>at?0:st.scenario==='slow'?12:st.simBusy?.until>at?Math.round(st.capacity*.3):st.capacity;
  const demands=st.devices.map(d=>d.blocked?0:Math.min(d.demand,d.until>at?d.limit??Infinity:Infinity));
  const total=demands.reduce((a,b)=>a+b,0);
  return {capacity,devices:st.devices.map((d,n)=>({id:d.id,name:d.name,protected:!!d.protected,recognized:!!d.recognized,blocked:!!d.blocked,mbps:Math.round((total>capacity?demands[n]*capacity/total:demands[n])*10)/10}))};

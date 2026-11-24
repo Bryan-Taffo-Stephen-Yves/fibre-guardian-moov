@@ -65,7 +65,7 @@ function snapshot(st){const now=Date.now(),down=!!active(st),off=!down&&st.simBo
  const devices=st.devices.map(d=>({...d,limit:d.until>now?d.limit:null,until:d.until>now?d.until:null}));
  const demand=devices.map(d=>d.blocked?0:Math.min(d.demand,d.limit??Infinity)),total=demand.reduce((a,b)=>a+b,0);
  devices.forEach((d,i)=>{d.mbps=Math.round((total>cap?demand[i]*cap/total:demand[i])*10)/10;});
- return {...st,devices,metrics:{at:now,capacity:cap,used:Math.round(devices.reduce((a,d)=>a+d.mbps,0)*10)/10,latency:down||off||rebooting?null:total>cap?85:18,connected:devices.filter(d=>!d.blocked).length,state:down?'panne':off?'éteinte':rebooting?'redémarrage':total>cap?'dégradée':'stable',rebootUntil:rebooting?st.rebootUntil:null},optical:optical(st,now),prevention:st.prevention||null,incidents:st.incidents.map(i=>({...i,progress:i.status==='en_route'?Math.min(1,(now-i.departed)/120000):STEPS.indexOf(i.status)>3?1:0,eta:i.status==='en_route'?Math.max(0,Math.ceil((120000-(now-i.departed))/1000)):null}))};}
+ return {...st,devices,metrics:{at:now,capacity:cap,used:Math.round(devices.reduce((a,d)=>a+d.mbps,0)*10)/10,latency:down||off||rebooting?null:total>cap?85:18,connected:off?0:devices.filter(d=>!d.blocked).length,state:down?'panne':off?'éteinte':rebooting?'redémarrage':total>cap?'dégradée':'stable',rebootUntil:rebooting?st.rebootUntil:null},optical:optical(st,now),prevention:st.prevention||null,incidents:st.incidents.map(i=>({...i,progress:i.status==='en_route'?Math.min(1,(now-i.departed)/120000):STEPS.indexOf(i.status)>3?1:0,eta:i.status==='en_route'?Math.max(0,Math.ceil((120000-(now-i.departed))/1000)):null}))};}
 function validatePhoto(value){insist(typeof value==='string'&&value.length<480000,'Photo limitée à 350 Ko.');const m=value.match(/^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/);insist(m,'Photo PNG ou JPEG requise.');const bytes=Buffer.from(m[2],'base64');insist(bytes.length>12&&bytes.length<=350000,'Taille de photo invalide.');insist(m[1]==='png'?bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a':bytes[0]===255&&bytes[1]===216&&bytes[2]===255,'Format de photo invalide.');return value;}
 // Ce que veut l'abonné, d'après ses mots (et le sens en français pour le nouchi ou le dioula).
 // Les demandes de forfait, de jeu, de film ou de visio gardent leurs règles plus bas.
@@ -129,6 +129,19 @@ function proofFor(kind,snap,st,largest){
   box:{assumed:['Votre box est bloquée : la ligne reçoit moins que votre forfait.'],tests:['Redémarrez la box à distance avec le bouton ci-dessous.'],confirms:['Le débit revient vers votre forfait : c’était la box.','Le débit reste bas : je transmets la panne à Moov avec ces mesures.']},
   coupure:{assumed:['Un appareil ou le Wi-Fi ne se connecte plus, alors que la ligne marche.'],tests:['Redémarrez la box à distance.','Essayez un autre appareil, ou branchez un câble.'],confirms:['Ça revient : c’était la box ou l’appareil.','Rien ne revient, même avec un câble : signalez la panne, elle part directement à l’équipe Moov.']}}[kind];
  return {measured:measured(snap,st),...p};}
+// Réponses de Guardian pendant une simulation de la Régie (simulations.cjs), avant les offres de forfait.
+function sceneReply(st,ask,text,hello,facts){
+ const t=langues.fold(text);
+ // simBoxOff : box éteinte chez le client ; le quartier va bien. Un forfait plus rapide ne la rallumerait pas.
+ if(st.simBoxOff?.until>Date.now())return {message:hello+'Votre box ne me répond plus, mais les autres box de votre quartier vont bien : ce n’est pas une panne Moov. Vérifiez qu’elle est branchée, que son bouton est sur marche et que le courant n’est pas coupé chez vous. Je ne peux pas la redémarrer à distance tant qu’elle est éteinte.'+(['upgrade','prix','usage'].includes(ask)?' Un forfait plus rapide ne rallumera pas la box : attendez qu’elle revienne.':''),facts};
+ if(st.simScene==='arnaque'&&(/\bcode\b|sms|arnaque|faux|vrai|message|moov money|pin/.test(t)||['salut','inconnu'].includes(ask)))
+  return {message:hello+'C’est une arnaque : Moov ne vous demandera jamais votre code Moov Money, ni par SMS, ni par appel, ni sur WhatsApp. Ne répondez pas et supprimez le message. Si vous avez déjà donné votre code, changez-le tout de suite dans Moov Money et appelez le 111.',facts};
+ if(st.simScene==='facture'&&(/factur|payer|paie|paye|plusieurs fois|en (2|3|deux|trois) fois/.test(t)||['salut','inconnu'].includes(ask)))
+  return {message:hello+'Votre facture du mois se règle avec Moov Money dans « Ma fidélité » : payée à temps, elle vous rapporte des points. Si le mois est difficile, payez-la en 2 ou 3 fois, sans frais, dans « Offres solidaires » : votre fibre reste allumée.',facts};
+ if(st.simScene==='chambre'&&(['wifi','lent','coupure','salut','inconnu'].includes(ask)))
+  return {message:hello+'Votre fibre va bien : c’est le Wi-Fi qui arrive mal dans la chambre des enfants. Posez la box en hauteur, au centre de la maison, loin des murs épais et du frigo. Si ça ne suffit pas, un répéteur Wi-Fi dans le couloir règle le problème.',facts,action:'devices'};
+ return null;
+}
 function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context||active(st),connected=snap.devices.filter(d=>!d.blocked),largest=connected.slice().sort((a,b)=>b.mbps-a.mbps)[0];
  const facts=[{label:'Incident du quartier',value:fault?(fault.zone||fault.segment||fault.reference||st.segment):'Aucun incident ouvert'},{label:'Appareils connectés',value:connected.length+' / '+st.usual+' habituels'},{label:'Plus gros usage',value:largest?largest.name+' · '+largest.mbps+' Mb/s':'Aucun appareil actif'}];
  const ask=intent(text),hello=ask==='salut'?'Bonjour ! ':'';
@@ -137,6 +150,8 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
   return {message:hello+faultMessage(fault,st)+(['upgrade','usage'].includes(ask)?' Un forfait plus rapide ou un partage du débit ne réglerait pas cette coupure.':''),facts,action:'tracking'};}
  if(ask==='merci')return {message:'Avec plaisir. Je reste là si votre connexion fait des siennes.',facts};
  if(ask==='resiliation')return {message:'Je suis désolé que vous en soyez là. Une résiliation se fait en agence Moov ou au service client, pas depuis Guardian. Dites-moi d’abord ce qui ne va pas : je peux peut-être le régler tout de suite.',facts};
+ // Une situation jouée depuis la Régie (simulations.cjs) : Guardian reste cohérent avec ce qu'il vient d'écrire au client.
+ const scene=sceneReply(st,ask,text,hello,facts);if(scene)return scene;
  const requested=Number(text.match(/(\d+)\s*(?:mbps|mb\/s|mégabits|megabits)/i)?.[1]||0),plan=st.plan||PLANS[1];
  if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mb/s pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Pour en changer, ouvrez « Changer de forfait » dans votre compte : vous y voyez toutes les offres et leur prix.',facts};
  if(ask==='upgrade'||requested>plan.mbps){
@@ -153,8 +168,6 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
  if(st.scenario==='fading'){const f=optical(st);if(f.state==='fading'){const who=(f.technician?.name||'un technicien').split(' ')[0];
   return {message:'Votre connexion marche pour l’instant, mais la lumière qui arrive à votre box baisse un peu chaque jour. Au rythme actuel, internet risque de se couper d’ici '+Math.max(1,Math.round(f.daysLeft))+' jour'+(Math.round(f.daysLeft)>1?'s':'')+'. '+(st.prevention?'C’est prévu : '+who+' passe '+day(st.prevention.slot)+', vous ne serez pas coupé.':'Je vous propose un passage de '+who+' avant la coupure : choisissez le moment sur votre accueil.'),
    facts:[...facts,{label:'Lumière reçue par la box',value:dbm(f.current)+' dBm (coupure vers '+dbm(f.threshold)+' dBm)'},{label:'Baisse mesurée',value:dbm(Math.abs(f.slope))+' dB par jour sur 7 jours'}]};}}
- // simBoxOff : box éteinte chez le client (simulations.cjs) ; le quartier va bien.
- if(st.simBoxOff?.until>Date.now())return {message:hello+'Votre box ne me répond plus, mais les autres box de votre quartier vont bien : ce n’est pas une panne Moov. Vérifiez qu’elle est branchée, que son bouton est sur marche et que le courant n’est pas coupé chez vous. Je ne peux pas la redémarrer à distance tant qu’elle est éteinte.',facts};
  if(st.simBusy?.until>Date.now())return {message:hello+'Votre débit est bas parce que beaucoup de foyers du quartier utilisent la fibre en même temps. Votre box et vos appareils n’y sont pour rien : ne redémarrez pas la box. L’équipe Moov répartit la charge, le débit revient dans quelques minutes.',facts};
  if(st.scenario==='slow'&&!(st.rebootUntil>Date.now()))return {message:hello+'Votre débit est tombé à '+snap.metrics.capacity+' Mb/s alors que votre offre prévoit '+plan.mbps+' Mb/s. Vos appareils n’en sont pas la cause. Un redémarrage de la box règle souvent ce souci : voulez-vous la redémarrer à distance ?',facts,action:'reboot',proof:proofFor('box',snap,st,largest)};
  if(connected.length>st.usual+1)return {message:'Le nombre d’appareils est inhabituel. Un appareil nouveau n’est pas forcément un intrus : vérifiez ceux auxquels vous avez donné le mot de passe avant de les bloquer.',facts,action:'devices'};
