@@ -54,6 +54,8 @@ function createGuardianServer(options={}){
  const vwTimer=setInterval(()=>{if(VW.BEATS.size)VW.check(store,()=>whatsapp.cfg).catch(e=>options.onError?.(e));},15000);vwTimer.unref();
  // Fibre Welcome (thème 1) : commande, dossier, rendez-vous et installation d'un nouvel abonné (welcome.cjs).
  const WEL=require('./welcome.cjs');WEL.migrate(store);
+ // « La fibre arrive-t-elle chez moi ? » : prévenir le client quand elle arrive dans sa commune (eligibilite.cjs).
+ const EL=require('./eligibilite.cjs');EL.migrate(store);
  // Copie du Wi-Fi faite pendant le test : les pannes se rejouent dessus, jamais sur le vrai Wi-Fi (copie-wifi.cjs).
  const CW=require('./copie-wifi.cjs');CW.migrate(store);
  // « Parler à Guardian » : ce que les clients demandent quand ils parlent à Guardian (fibre-voice.cjs).
@@ -309,6 +311,9 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/fidelite'&&method==='GET')return json(res,FL.summary(store,user.id));
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
     if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);const r=WEL.act(store,user.id,await body(req,1000000));AV.sync(store);return json(res,r);}
+    if(route==='/api/eligibilite'&&method==='POST'){store.rate('eligibilite:'+user.id,10,600000);const d=await body(req,1024);return json(res,d.action==='cancel'?EL.cancel(store,user.id):EL.ask(store,user.id,d));}
+    if(route==='/api/noc/eligibilite'&&method==='GET'){const r=EL.list(store,user.id);DP.seen(store,user.id,'eligibilite');return json(res,r);}
+    if(route==='/api/noc/eligibilite'&&method==='POST')return json(res,EL.open(store,user.id,await body(req,512)));
     if(route==='/api/welcome/activate'&&method==='POST'){const st=WEL.activate(store,user.id);return json(res,{state:journey.snapshotFor(store,user.id,st)});}
     if(route==='/api/acces'&&method==='GET')return json(res,AC.state(store,user.id));
     if(route==='/api/acces'&&method==='POST'){store.rate('acces:'+user.id,30,600000);const r=AC.act(store,user.id,await body(req,1000000));LG.state(store,user.id);return json(res,r);}

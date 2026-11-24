@@ -39,7 +39,9 @@ function view(row,now=Date.now()){
 }
 
 // Côté client.
-function state(s,uid,now=Date.now()){return {order:view(current(s,uid),now),plans:plans(),zone:ZONE};}
+// La zone suit les communes ouvertes depuis par un responsable (eligibilite.cjs) ; « other » : où la fibre n'arrive pas encore.
+const EL=()=>require('./eligibilite.cjs');
+function state(s,uid,now=Date.now()){return {order:view(current(s,uid),now),plans:plans(),zone:EL().zone(s),other:EL().others(s),alerte:EL().state(s,uid,now).mine};}
 
 function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
  insist(d&&typeof d.action==='string','Action manquante.');
@@ -47,7 +49,7 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
  if(d.action==='order'){
   insist(!open,'Vous avez déjà une installation en cours.',409);
   const plan=plans().find(p=>p.id===d.plan);insist(plan,'Choisissez un forfait.');
-  insist(ZONE.includes(d.commune),'Cette commune n’est pas encore couverte par la fibre Moov.');
+  insist(EL().covered(s,d.commune),'Cette commune n’est pas encore couverte par la fibre Moov.');
   const quartier=text(d.quartier,'Le quartier',80),id=crypto.randomUUID();
   s.run('INSERT INTO fibre_welcome(id,user_id,plan,commune,quartier,status,events,created,updated) VALUES(?,?,?,?,?,?,?,?,?)',id,uid,plan.id,d.commune,quartier,'dossier',JSON.stringify([{at:now,what:'Commande de la '+plan.name+' enregistrée'}]),now,now);
   return state(s,uid,now);
