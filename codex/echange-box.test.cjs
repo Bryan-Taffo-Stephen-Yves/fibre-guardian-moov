@@ -27,7 +27,7 @@ test('Retrait en agence : code de retrait, box prête, puis échangée ; le clie
  assert.throws(()=>EB.advance(s,ids.fatou,{id:r.current.id,to:'envoye'},t),/déjà avancé/,'une demande en agence ne passe pas par « technicien envoyé »');
  EB.advance(s,ids.fatou,{id:r.current.id,to:'prete'},t+DAY);
  assert.equal(journey.get(s,ids.awa).notifications[0].title,'Votre box neuve est prête');
- assert.throws(()=>EB.cancel(s,ids.awa,t+DAY),/déjà en route/);
+ assert.throws(()=>EB.cancel(s,ids.awa,t+DAY),/déjà prête/);
  const done=EB.advance(s,ids.fatou,{id:r.current.id,to:'echangee'},t+DAY+1000);
  assert.equal(done.open.length,0);assert.equal(done.done,1);
  assert.equal(EB.state(s,ids.awa,t+DAY+2000).current.status,'echangee','le client voit « Box échangée » pendant 3 jours');
@@ -42,4 +42,16 @@ test('Technicien à domicile : jour suivant (jamais le dimanche), créneau, annu
  assert.equal(r.current.code,null);
  const c=EB.cancel(s,ids.awa,saturday+1000);assert.equal(c.current,null);
  assert.throws(()=>EB.cancel(s,ids.awa,saturday+2000),/Aucune demande/);
+});
+
+test('Technicien envoyé après le jour prévu : le passage est reporté au prochain jour possible, et la demande est en retard après le créneau',async()=>{
+ const {s,ids}=await setup(),t=Date.UTC(2026,10,24,9);
+ const r=EB.ask(s,ids.awa,{mode:'technicien',slot:'matin',tried:true},t);
+ assert.match(r.current.when,/^mercredi 25 novembre/);
+ assert.equal(EB.list(s,ids.fatou,Date.UTC(2026,10,25,11)).open[0].late,false,'pas en retard pendant le créneau');
+ assert.equal(EB.list(s,ids.fatou,Date.UTC(2026,10,25,13)).open[0].late,true,'en retard après midi');
+ EB.advance(s,ids.fatou,{id:r.current.id,to:'envoye'},Date.UTC(2026,10,27,9));
+ const v=EB.state(s,ids.awa,Date.UTC(2026,10,27,9)).current;
+ assert.equal(v.step,'Technicien prévu');assert.match(v.when,/^samedi 28 novembre/);
+ assert.match(journey.get(s,ids.awa).notifications[0].body,/samedi 28 novembre/);
 });

@@ -18,7 +18,7 @@ const AGENCES=[
  {id:'abo',name:'Agence Moov d’Abobo',commune:'Abobo'}
 ];
 const SLOTS={matin:'entre 8 h et 12 h',apres:'entre 14 h et 18 h'};
-const STEPS={demandee:'Demande reçue',prete:'Box prête en agence',envoye:'Technicien en route',echangee:'Box échangée',annulee:'Demande annulée'};
+const STEPS={demandee:'Demande reçue',prete:'Box prête en agence',envoye:'Technicien prévu',echangee:'Box échangée',annulee:'Demande annulée'};
 
 function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS box_echanges(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,mode TEXT NOT NULL,agence TEXT,slot TEXT,day INTEGER,code TEXT,reason TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'demandee',created INTEGER NOT NULL,updated INTEGER NOT NULL,done_by TEXT REFERENCES users(id));
@@ -67,7 +67,7 @@ function ask(s,uid,d,now=Date.now()){return s.transaction(()=>{
 });}
 
 function cancel(s,uid,now=Date.now()){
- const r=open(s,uid);insist(r,'Aucune demande d’échange en cours.',404);insist(r.status==='demandee','La box est déjà en route : appelez le 111 pour changer le rendez-vous.',409);
+ const r=open(s,uid);insist(r,'Aucune demande d’échange en cours.',404);insist(r.status==='demandee',r.status==='prete'?'Votre box neuve est déjà prête à l’agence : si vous n’en avez plus besoin, dites-le au guichet.':'Le technicien est déjà prévu : appelez le 111 pour changer le rendez-vous.',409);
  s.run("UPDATE box_echanges SET status='annulee',updated=? WHERE id=?",now,r.id);
  return state(s,uid,now);
 }
@@ -75,7 +75,7 @@ function cancel(s,uid,now=Date.now()){
 // Équipe Moov : demandes à traiter, la plus ancienne d'abord.
 function list(s,uid,now=Date.now()){
  O.requireOperator(s,uid);
- const rows=s.all("SELECT e.*,u.name FROM box_echanges e JOIN users u ON u.id=e.user_id WHERE e.status NOT IN ('echangee','annulee') ORDER BY e.created").map(r=>({...view(r),name:String(r.name||'Client').split(' ').slice(0,2).join(' '),reason:r.reason,late:now-r.created>DAY}));
+ const rows=s.all("SELECT e.*,u.name FROM box_echanges e JOIN users u ON u.id=e.user_id WHERE e.status NOT IN ('echangee','annulee') ORDER BY e.created").map(r=>({...view(r),name:String(r.name||'Client').split(' ').slice(0,2).join(' '),reason:r.reason,late:r.mode==='technicien'&&r.day?now>r.day+(r.slot==='matin'?12:18)*HOUR:now-r.created>DAY}));
  return {open:rows,done:s.get("SELECT COUNT(*) n FROM box_echanges WHERE status='echangee' AND updated>?",now-7*DAY).n};
 }
 
@@ -86,6 +86,8 @@ function advance(s,uid,d,now=Date.now()){
  const next={demandee:r.mode==='agence'?'prete':'envoye',prete:'echangee',envoye:'echangee'}[r.status];
  insist(next&&d.to===next,'Cette demande a déjà avancé. Rechargez la page.',409);
  s.run('UPDATE box_echanges SET status=?,updated=?,done_by=? WHERE id=?',next,now,uid,r.id);
+ // Demande traitée après le jour prévu : le technicien passe au prochain jour possible, et le client le voit.
+ if(next==='envoye'&&r.day+DAY<=now)s.run('UPDATE box_echanges SET day=? WHERE id=?',nextDay(now),r.id);
  const v=view(s.get('SELECT * FROM box_echanges WHERE id=?',r.id));
  if(next==='prete')notify(s,r.user_id,'Votre box neuve est prête','Passez la retirer à l’'+v.agence.replace(/^Agence/,'agence')+' avec votre code '+r.code+' et l’ancienne box.',now);
  if(next==='envoye')notify(s,r.user_id,'Le technicien arrive avec votre box neuve','Il passe '+v.when+'. Préparez l’ancienne box et son chargeur.',now);

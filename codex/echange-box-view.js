@@ -3,14 +3,16 @@
 (function (root) {
   'use strict';
   const h = React.createElement, S = React.useState, E = React.useEffect, R = React.useRef;
-  const STEPS = {agence: [['demandee', 'Demande reçue'], ['prete', 'Box prête en agence'], ['echangee', 'Box échangée']], technicien: [['demandee', 'Demande reçue'], ['envoye', 'Technicien en route'], ['echangee', 'Box échangée']]};
+  const STEPS = {agence: [['demandee', 'Demande reçue'], ['prete', 'Box prête en agence'], ['echangee', 'Box échangée']], technicien: [['demandee', 'Demande reçue'], ['envoye', 'Technicien prévu'], ['echangee', 'Box échangée']]};
 
   // Côté client. Le formulaire s'ouvre quand Guardian l'a proposé (bouton « Échanger ma box ») ou via « Ma box ne s'allume plus ».
   function Card({api}) {
     const [d, D] = S(null), [form, F] = S(false), [mode, M] = S('technicien'), [busy, B] = S(false), [error, X] = S('');
     E(() => {
-      api('/echange-box').then(D).catch(() => {});
+      let alive = true; const load = () => { if (!document.hidden) api('/echange-box').then(x => alive && D(x)).catch(() => {}); };
+      load(); const t = setInterval(load, 10000);
       try { if (sessionStorage.getItem('fg-echange') === '1') { sessionStorage.removeItem('fg-echange'); F(true); } } catch (e) {}
+      return () => { alive = false; clearInterval(t); };
     }, []);
     if (!d) return null;
     async function send(e) {
