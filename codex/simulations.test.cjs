@@ -169,3 +169,147 @@ test('relecture jury : « C’est à moi » après le blocage automatique déblo
     assert.deepEqual(st.simQueue, []); assert.equal(st.simScene, null); assert.equal(st.scenario, 'slow');
   });
 });
+
+test('box éteinte : pas une panne Moov, pas de redémarrage à distance, retour au bout de 90 s', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'box', now);
+  const m = J.snapshot(st).metrics;
+  assert.equal(m.capacity, 0); assert.equal(m.latency, null); assert.equal(m.state, 'éteinte');
+  assert.match(st.notifications[0].body, /ce n’est pas une panne Moov/);
+  assert.ok(SIM.status(st, now).box.left > 80);
+  SIM.tick(st, now + 90000);
+  assert.equal(st.simBoxOff, null);
+  assert.equal(st.notifications[0].title, 'Votre box est revenue');
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+  const busy = fresh(); J.openIncident(busy, now, {zone: busy.zone, description: 'Vraie panne', lat: 5.3, lon: -4, kind: 'fibre'});
+  assert.throws(() => SIM.start(busy, 'box', now), /déjà en cours/);
+});
+
+test('facture : rappel de la vraie facture du mois, puis paiement en plusieurs fois ; rien si elle est payée', async () => {
+  const store = new Store(':memory:'); await seedDemo(store);
+  const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id, now = Date.now();
+  if (!J.get(store, uid)) J.put(store, uid, J.seed());
+  const F = require('./fidelite.cjs'), bill = F.state(store, uid, now).bill;
+  if (bill.paid) store.run('UPDATE fidelite_factures SET paid_at=NULL WHERE user_id=? AND month=?', uid, bill.month);
+  const snap = SIM.run(store, uid, {scene: 'facture'}, now);
+  assert.match(snap.notifications[0].title, /Votre facture de .+ est à payer/);
+  assert.equal(snap.notifications[0].page, 'fidelite');
+  SIM.refresh(store, uid, now + 20000);
+  const st = J.get(store, uid);
+  assert.equal(st.notifications[0].title, 'Besoin d’un peu de temps ?');
+  assert.equal(st.notifications[0].page, 'acces');
+  F.pay(store, uid, {confirm: true, month: bill.month}, now);
+  assert.throws(() => SIM.run(store, uid, {scene: 'facture'}, now), /déjà payée/);
+});
+
+test('câble volé : poteau, Yao, mêmes étapes que la panne ; refusé pendant une vraie panne', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'vol', now);
+  const i = st.incidents.find(x => x.sim);
+  assert.equal(i.kind, 'pole'); assert.equal(i.electrical, true);
+  assert.match(st.messages.at(-1).text, /photo du poteau/);
+  SIM.tick(st, now + 60000);
+  assert.equal(i.technician.name, 'Yao'); assert.equal(i.status, 'resolved');
+  assert.match(st.messages.at(-1).text, /remplacé le câble volé/);
+  const busy = fresh(); J.openIncident(busy, now, {zone: busy.zone, description: 'Vraie panne', lat: 5.3, lon: -4, kind: 'fibre'});
+  assert.throws(() => SIM.start(busy, 'vol', now), /déjà en cours/);
+});
+
+test('Wi-Fi faible dans une chambre : la fibre va bien, conseil de placement', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'chambre', now);
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+  assert.equal(st.notifications[0].page, 'devices');
+  assert.match(st.messages.at(-1).text, /répéteur/);
+  SIM.clear(st);
+  assert.ok(!st.devices.some(d => d.id === 'sim-chambre'));
+});
+
+test('technicien en retard : Guardian prévient, Yao prend le relais, la panne est réparée', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'retard', now);
+  const i = st.incidents.find(x => x.sim);
+  SIM.tick(st, now + 21000);
+  assert.equal(i.technician.name, 'Koffi');
+  assert.equal(st.notifications[0].title, 'Le technicien Koffi a du retard');
+  assert.doesNotMatch(st.notifications[0].body + st.messages.at(-1).text, /\d+ h \d+/, 'aucune heure qui contredirait le suivi');
+  SIM.tick(st, now + 33000);
+  assert.equal(i.technician.name, 'Yao');
+  assert.equal(st.notifications[0].title, 'Le technicien Yao prend le relais');
+  assert.doesNotMatch(st.messages.at(-1).text, /même équipe|tout près|10 minutes/);
+  SIM.tick(st, now + 70000);
+  assert.equal(i.status, 'resolved');
+  assert.ok(i.events.some(e => e.label === 'Changement de technicien'));
+  assert.match(st.messages.at(-1).text, /Yao a réparé/);
+});
+
+test('arnaque : Guardian met en garde, rien ne coupe internet', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'arnaque', now);
+  assert.match(st.notifications[0].body, /ne vous demandera jamais votre code/);
+  assert.match(st.messages.at(-1).text, /arnaque/);
+  assert.equal(J.snapshot(st).metrics.state, 'stable');
+  assert.equal(Object.keys(SIM.SCENES).length, 12, 'six scènes de départ + six nouvelles');
+});
+
+test('relecture jury 2 : le retard ne part que si le technicien est encore en route, avec son vrai nom', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'retard', now);
+  const i = st.incidents.find(x => x.sim);
+  SIM.tick(st, now + 13000);
+  i.status = 'on_site'; i.technician = {id: 'amina', name: 'Amina'}; // l'équipe a avancé la mission à la main
+  SIM.tick(st, now + 40000);
+  assert.ok(!titles(st).some(t => /a du retard|prend le relais/.test(t)));
+  assert.equal(i.technician.name, 'Amina');
+});
+
+test('relecture jury 2 : facture payée en plusieurs fois, on rappelle la part suivante, jamais la facture entière', async () => {
+  const store = new Store(':memory:'); await seedDemo(store);
+  const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id, now = Date.now();
+  if (!J.get(store, uid)) J.put(store, uid, J.seed());
+  const F = require('./fidelite.cjs'), A = require('./acces.cjs'), bill = F.state(store, uid, now).bill;
+  if (bill.paid) store.run('UPDATE fidelite_factures SET paid_at=NULL WHERE user_id=? AND month=?', uid, bill.month);
+  A.act(store, uid, {action: 'split', parts: 3, confirm: true}, now);
+  A.act(store, uid, {action: 'split-pay', part: 0}, now);
+  const snap = SIM.run(store, uid, {scene: 'facture'}, now);
+  assert.equal(snap.notifications[0].title, 'Votre part n°2 sur 3 est à payer');
+  assert.equal(snap.notifications[0].page, 'acces');
+  assert.match(J.get(store, uid).messages.at(-1).text, /Ne payez pas la facture entière/);
+  assert.equal(J.get(store, uid).simQueue.length, 0, 'pas de 2e proposition de paiement en plusieurs fois');
+  A.act(store, uid, {action: 'split-pay', part: 1}, now); A.act(store, uid, {action: 'split-pay', part: 2}, now);
+  assert.throws(() => SIM.run(store, uid, {scene: 'facture'}, now), /déjà réglé en plusieurs fois/);
+});
+
+test('relecture jury 2 : box éteinte partout (Appareils, Guardian sans offre de forfait), réponses cohérentes avec la scène', async () => {
+  const store = new Store(':memory:'); await seedDemo(store);
+  const uid = store.get('SELECT id FROM users WHERE email=?', DEMO.client.email).id, now = Date.now();
+  J.put(store, uid, J.seed());
+  const chat = text => { const st = J.get(store, uid); J.act(store, uid, {type: 'chat', text, version: st.version}); return J.get(store, uid).messages.at(-1); };
+  SIM.run(store, uid, {scene: 'box'}, now);
+  const st = J.get(store, uid);
+  assert.equal(J.snapshot(st).metrics.connected, 0);
+  const U = require('./journey-usage.cjs');
+  assert.equal(U.rates(st, now + 1000).devices.reduce((a, d) => a + d.mbps, 0), 0, 'Appareils : rien ne passe quand la box est éteinte');
+  const r = chat('Je veux 200 Mb/s');
+  assert.notEqual(r.action, 'upgrade'); assert.match(r.text, /ne rallumera pas la box/);
+  assert.ok(!J.get(store, uid).upgrade);
+  SIM.run(store, uid, {scene: 'chambre'}, now);
+  assert.match(chat('Le wifi est faible dans la chambre').text, /répéteur/);
+  assert.match(chat('bonjour').text, /^Bonjour ! Votre fibre va bien/);
+  SIM.run(store, uid, {scene: 'arnaque'}, now);
+  assert.match(chat('J’ai reçu un SMS de Moov qui demande mon code, c’est vrai ?').text, /C’est une arnaque/);
+  SIM.run(store, uid, {scene: 'stop'}, now);
+  assert.doesNotMatch(chat('arnaque ?').text, /C’est une arnaque/, 'la scène arrêtée, Guardian reprend ses réponses habituelles');
+});
+
+test('relecture jury 2 : la Régie voit le retard, le changement de technicien et la box revenue', () => {
+  const now = Date.now(), st = fresh();
+  SIM.start(st, 'retard', now); SIM.tick(st, now + 21000);
+  assert.equal(SIM.status(st, now + 21000).panne.late, true);
+  SIM.tick(st, now + 33000);
+  assert.deepEqual([SIM.status(st, now + 33000).panne.swapped, SIM.status(st, now + 33000).panne.technician], [true, 'Yao']);
+  const b = fresh(); SIM.start(b, 'box', now);
+  assert.equal(SIM.status(b, now).boxBack, false);
+  SIM.tick(b, now + 91000);
+  assert.equal(SIM.status(b, now + 91000).boxBack, true);
+});
