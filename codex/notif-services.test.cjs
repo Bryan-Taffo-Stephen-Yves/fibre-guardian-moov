@@ -48,7 +48,10 @@ test('« Marquer comme lu » par service : seuls les messages de ce service et d
       {key: 'd3', home: 'home-3', at: now, title: 'Voisin', body: '', page: 'bienvenue', read: false}];
     J.put(s, user.id, st);
     const state = () => Object.fromEntries(J.get(s, user.id).notifications.map(n => [n.key, n.read]));
-    J.act(s, user.id, {type: 'read', home: 'home-1', service: 'dossier', version: J.get(s, user.id).version});
+    // Marquer comme lu ne dépend pas de la version et n'en crée pas : une autre action du client lancée en même temps n’échoue pas.
+    const v0 = J.get(s, user.id).version;
+    J.act(s, user.id, {type: 'read', home: 'home-1', service: 'dossier', version: v0 - 5});
+    assert.equal(J.get(s, user.id).version, v0);
     assert.deepEqual(state(), {d1: true, a1: false, g1: false, d3: false});
     J.act(s, user.id, {type: 'read', home: 'home-1', service: 'appareils', version: J.get(s, user.id).version});
     assert.deepEqual(state(), {d1: true, a1: true, g1: false, d3: false});

@@ -91,7 +91,7 @@
   const run=k=>({bell:on.bell,track:on.track,guardian:on.guardian,reboot:on.reboot,devices:on.devices})[k];
   const shown=(cards||[]).filter(Boolean),cut=s.tone==='down',got=cut?0:Math.round(m.capacity||0);
   const go=k=>on.go?()=>on.go(k):undefined;
-  const nDossier=badges.dossier||0,nGuardian=badges.guardian||0,nDevices=badges.appareils||extra||0,hasDossier=!!order||nDossier>0;
+  const nDossier=badges.dossier||0,nGuardian=badges.guardian||0,nDevices=badges.appareils||0,hasDossier=!!order||nDossier>0;
   // Installation en cours : une carte-ligne en haut de la feuille dit où en est le dossier.
   const stepAt=order&&order.status!=='installe'&&Array.isArray(order.steps)?order.steps.findIndex(x=>x.id===order.step):-1;
   // En mode « Modifier », toucher une tuile l'épingle ou la retire (étoile) au lieu d'ouvrir le service.
@@ -99,7 +99,7 @@
    return h('button',{type:'button',key:label,'data-id':label,className:'ac-svc ac-svc--'+tone+(edit?' is-edit':'')+(edit&&pinned?' is-fav':'')+(edit&&full?' is-full':''),onClick:edit?()=>{if(!full)toggle(label);}:onClick,disabled:edit?undefined:disabled,'aria-disabled':edit&&full?true:undefined,'aria-pressed':edit?pinned:undefined,'aria-label':edit?label:(aria||label)+unread(badge)},
     h('span',{className:'ac-svc-ico','aria-hidden':true},h(Ico,{name:icon,size:28}),!edit&&dot(badge),edit&&h('i',{className:'ac-svc-star','aria-hidden':true},h(Icon,{d:S.star,size:13,stroke:2.2}))),h('span',{className:'ac-svc-txt'},label));};
   // Le dossier de la fibre passe en tête : c'est là qu'arrivent les nouvelles de l'installation.
-  const pool=[hasDossier&&tile('folder','Dossier de ma fibre',go('bienvenue'),{tone:'blue',badge:nDossier,aria:'Suivre le dossier de ma fibre'}),
+  const pool=[hasDossier&&stepAt<0&&tile('folder','Dossier de ma fibre',go('bienvenue'),{tone:'blue',badge:nDossier,aria:'Suivre le dossier de ma fibre'}),
    tile('map','Voir le réseau',go('ville'),{tone:'sky'}),
    tile('up','Changer de forfait',go('forfait'),{tone:'orange'}),
    tile('sms','Sans internet',on.survie,{tone:'sky',aria:'Sans internet : composez *144#'}),
@@ -110,9 +110,10 @@
   // Les favoris passent devant ; la grille garde 8 cases, le reste va dans « Voir tout ».
   // Une tuile avec une pastille rouge reste toujours visible, comme « Sans internet » (celle d'une coupure).
   const pins=live.map(id=>pool.find(t=>t.key===id)).filter(Boolean),ordered=pins.concat(pool.filter(t=>!live.includes(t.key)));
-  const KEEP=['Sans internet'].concat(nDossier?['Dossier de ma fibre']:[]),withCall=!cut&&call,top=ordered.slice(0,withCall?7:8),rest=ordered.slice(withCall?7:8);
+  const KEEP=['Sans internet'].concat(nDossier?['Dossier de ma fibre']:[]),withCall=!cut&&call&&!edit&&ordered.length<=7,top=ordered.slice(0,withCall?7:8),rest=ordered.slice(withCall?7:8);
   for(const k of KEEP){const i=rest.findIndex(t=>t.key===k);if(i<0)continue;let j=top.length-1;while(j>=0&&(KEEP.includes(top[j].key)||live.includes(top[j].key)))j--;if(j<0)continue;rest.splice(i,1,top[j]);top.splice(j,1);top.push(pool.find(t=>t.key===k));}
-  const grid=edit?ordered:top.concat(withCall&&!rest.length?[call]:[]),more=edit?[]:(withCall&&rest.length?[call]:[]).concat(rest);
+  // « Appeler » remplit la 8e case quand il reste de la place, sinon il attend dans « Voir tout ».
+  const grid=edit?ordered:top.concat(withCall?[call]:[]),more=edit?[]:(!cut&&call&&!withCall?[call]:[]).concat(rest);
   const promo=s.tone==='ok'&&!fault&&!state.sharedIncident&&plan<500&&on.go;
   // Tout marche mais des appareils inconnus sont sur le Wi-Fi : le bandeau le dit en toutes lettres.
   const a=s.tone==='ok'&&extra?{tone:'slow',icon:P.devices,title:extra+' appareil'+(extra>1?'s':'')+' inconnu'+(extra>1?'s':'')+' sur votre Wi-Fi',text:'Vérifiez que vous les connaissez. Vous pouvez les bloquer en un geste.',action:'devices',actionLabel:'Voir mes appareils'}:s;
@@ -124,7 +125,7 @@
    h('section',{className:'ae-hero ae-'+s.tone,'aria-label':'Ma fibre'},
     h('header',{className:'ae-top'},
      h('button',{type:'button',className:'ae-face',onClick:go('compte'),'aria-label':'Mon compte'},window.FGAvatar?h(FGAvatar.Face,{name:user.name,size:52,role:'client'}):first(user.name).slice(0,1)),
-     h('div',{className:'ae-hi'},h('strong',null,hi.hi+' '+(first(user.name)||user.name)),h('small',null,hi.part+' · '+hi.date)),
+     h('div',{className:'ae-hi'},h('strong',null,hi.hi+' '+(first(user.name)||user.name)),h('small',null,h('span',{className:'ae-part'},hi.part+' · '),hi.date)),
      h('div',{className:'ae-top-actions'},demo,
       h('button',{type:'button',className:'ae-bell',onClick:on.bell,'aria-label':'Mes messages'+unread(bell)},h(Ico,{name:'bell',d:P.bell,size:24}),dot(bell)))),
     h('div',{className:'ae-speed'},
@@ -139,10 +140,6 @@
      round('devices','Appareils',on.devices,{aria:'Appareils connectés',badge:nDevices}),
      round('alert','Signaler',on.report,{aria:'Signaler une panne'}))),
    h('div',{className:'ae-sheet'},
-    stepAt>=0&&on.go&&h('button',{type:'button',className:'ae-row ae-row--dossier',onClick:go('bienvenue'),'aria-label':'Mon installation fibre : étape '+(stepAt+1)+' sur '+order.steps.length+', '+order.steps[stepAt].label+unread(nDossier)},
-     h('span',{className:'ae-row-ico','aria-hidden':true},h(Ico,{name:'folder',size:26}),dot(nDossier)),
-     h('span',{className:'ae-row-txt'},h('strong',null,'Mon installation fibre'),h('small',null,'Étape '+(stepAt+1)+' sur '+order.steps.length+' · '+order.steps[stepAt].label+(order.status==='a_corriger'?' : une photo à refaire':order.status==='rdv'?' : choisissez votre jour':''))),
-     h(Icon,{d:S.chevron,size:20,stroke:2.2})),
     a.tone!=='ok'&&h('section',{className:'ac-alert ac-'+a.tone},
      h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:a.icon,size:26,stroke:2.3})),
      h('div',null,h('h2',null,a.title),h('p',null,a.text)),
@@ -150,6 +147,10 @@
       a.action&&h('button',{type:'button',className:'ac-go',onClick:run(a.action),disabled:busy&&a.action!=='devices'},a.actionLabel),
       a.second&&h('button',{type:'button',className:'ac-go ghost',onClick:run(a.second),disabled:busy},a.secondLabel),
       cut&&call)),
+    stepAt>=0&&on.go&&h('button',{type:'button',className:'ae-row ae-row--dossier',onClick:go('bienvenue'),'aria-label':'Mon installation fibre : étape '+(stepAt+1)+' sur '+order.steps.length+', '+order.steps[stepAt].label+unread(nDossier)},
+     h('span',{className:'ae-row-ico','aria-hidden':true},h(Ico,{name:'folder',size:26}),dot(nDossier)),
+     h('span',{className:'ae-row-txt'},h('strong',null,'Mon installation fibre'),h('small',null,'Étape '+(stepAt+1)+' sur '+order.steps.length+' · '+order.steps[stepAt].label+(order.status==='a_corriger'?' : une photo à refaire':order.status==='rdv'?' : choisissez votre jour':''))),
+     h(Icon,{d:S.chevron,size:20,stroke:2.2})),
     shown.length>0&&h('div',{className:'ac-cards'},shown),
     h('section',{className:'ac-services','aria-labelledby':'ac-svc-title'},
      h('div',{className:'ac-services-head'},h('h2',{id:'ac-svc-title'},'Services'),

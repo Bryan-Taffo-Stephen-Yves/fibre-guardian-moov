@@ -223,7 +223,8 @@ function reportByCode(s,uid,{kind,description,zone}){return s.transaction(()=>{l
  insist(!active(st),'Un incident est déjà ouvert sur votre segment.',409);insist(st.incidents.length<15,'Maximum 15 incidents dans ce parcours.');
  const incident=openIncident(st,now,{zone:zone||st.zone,description:paragraph(description,'Description',500),kind,channel:'ussd'});
  require('./noc-store.cjs').importReport(s,uid,incident,{mode:'demo',source:'ussd'});st.version++;put(s,uid,st);return incident;});}
-function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Démarrez votre démonstration.',409);insist(d.version===st.version,'Le parcours a été actualisé. Réessayez.',409);const now=Date.now();applyNextPlan(st,now);
+function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Démarrez votre démonstration.',409);// Marquer des messages comme lus ne dépend d'aucune version et n'en crée pas : ça ne fait jamais échouer une autre action du client.
+ insist(d.type==='read'||d.version===st.version,'Le parcours a été actualisé. Réessayez.',409);const now=Date.now();applyNextPlan(st,now);
  usage.observe(s,uid,{...st,sharedIncident:sharedFault(s,uid)},now);
  if(d.type==='scenario'){
   insist(['normal','download','slow','devices','fading'].includes(d.value),'Scénario inconnu.');const changed=st.scenario!==d.value;st.scenario=d.value;
@@ -235,7 +236,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   if(d.value==='devices'){
    for(const guest of [{id:'guest-1',name:'Samsung Galaxy invité',demand:8,guest:true,recognized:false},{id:'guest-2',name:'Smart TV LED 32 pouces',demand:15,guest:true,recognized:false}])if(!st.devices.some(x=>x.id===guest.id))st.devices.push(guest);
    const connected=snapshot(st).metrics.connected;
-   if(changed&&connected>st.usual+1)st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Nombre inhabituel d’appareils',body:connected+' appareils au lieu des '+st.usual+' habituels. Vérifiez avant de bloquer.',read:false});
+   if(changed&&connected>st.usual+1)st.notifications.unshift({key:id(),home:'home-1',at:now,title:'Nombre inhabituel d’appareils',body:connected+' appareils au lieu des '+st.usual+' habituels. Vérifiez avant de bloquer.',page:'devices',read:false});
    st.notifications=st.notifications.slice(0,100);
   }
   audit(st,'scenario',d.value);
@@ -346,7 +347,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   for(const n of st.notifications)if(n.home===d.home&&(d.service==null||svc.service(n)===d.service))n.read=true;
  }else if(d.type==='reset'){usage.clear(s,uid);st=seed();st.version=d.version;
  }else insist(false,'Action inconnue.',404);
- if(d.type==='report')require('./noc-store.cjs').importReport(s,uid,st.incidents[0],{mode:'demo'});st.version++;put(s,uid,st);return snapshotFor(s,uid,st);
+ if(d.type==='report')require('./noc-store.cjs').importReport(s,uid,st.incidents[0],{mode:'demo'});if(d.type!=='read')st.version++;put(s,uid,st);return snapshotFor(s,uid,st);
  });}
 function reportReal(s,uid,d){insist(d.consent===true,'Consentement au partage de la photo et de la position requis.');s.rate('citizen:'+uid,5,86400000);const photo=validatePhoto(d.photo),rid=id();s.run('INSERT INTO citizen_reports(id,user_id,created,zone,description,photo,lat,lon) VALUES(?,?,?,?,?,?,?,?)',rid,uid,Date.now(),word(d.zone,'Zone',100),paragraph(d.description,'Description',500),photo,number(d.lat,'Latitude',-90,90,false),number(d.lon,'Longitude',-180,180,false));require('./noc-store.cjs').importReport(s,uid,s.get('SELECT * FROM citizen_reports WHERE id=?',rid));return {id:rid,notice:'Signalement transmis au support. Vous serez prévenu de sa prise en charge.'};}
 function realReports(s,user){const staff=['admin','supervisor','agent'].includes(operator.role(s,user.id));return {reports:staff?s.all('SELECT * FROM citizen_reports ORDER BY created DESC LIMIT 100'):s.all('SELECT * FROM citizen_reports WHERE user_id=? ORDER BY created DESC LIMIT 30',user.id),staff};}
