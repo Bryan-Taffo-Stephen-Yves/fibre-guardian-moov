@@ -60,6 +60,7 @@ function ClientIncident({api,incident:i,onSaved}){
   h('h3',null,i.title),
   h('div',{className:'n-client-next'},h('h4',null,nextStep[0]),h('p',null,nextStep[1])),
   window.FGAppel&&!closed&&h(window.FGAppel.Restore,{restore:i.restore}),
+  window.FGReclamation&&h(window.FGReclamation.Card,{api,incident:i,onSaved}),
   live&&h(window.FGLiveTrip.Card,{incident:i,api,hero:true}),
   !closed&&!live&&h(TrackingSteps,{incident:i}),
   !closed&&!live&&i.status!=='en_route'&&i.technician&&h('div',{className:'n-technician-profile'},h('span',{className:'n-user'},i.technician.name[0]),h('div',null,h('strong',null,i.technician.name),h('p',null,i.technician.team+' · '+labels[i.status]))),

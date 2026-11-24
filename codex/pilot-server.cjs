@@ -67,6 +67,8 @@ function createGuardianServer(options={}){
  const FL=require('./fidelite.cjs');FL.migrate(store);
  // Fibre Voice, centre des avis (thème 8) : notes après intervention ou installation, rappel sous 24 h si la note est basse (avis.cjs).
  const AV=require('./avis.cjs');AV.migrate(store);
+ // Réclamations : délai de réponse promis, « Ce n'est pas réglé », recours ARTCI (reclamation.cjs).
+ const RC=require('./reclamation.cjs');RC.migrate(store);
  // Retention Score (thème 6) : appel du conseiller et offre de rétention (retention.cjs).
  require('./retention.cjs').migrate(store);
  // Rapport du matin + agent anti-départ : un mail par jour pour la Direction, et « Envoyer maintenant » dans le Superviseur (rapport-matin.cjs).
@@ -248,7 +250,10 @@ function createGuardianServer(options={}){
     if(route==='/api/noc/workspace/action'&&method==='POST')return json(res,workspace.action(store,user.id,await body(req,8192)));
     if(route==='/api/noc/action'&&method==='POST')return json(res,noc.operate(store,user.id,await body(req,8192)));
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
-    if(route==='/api/noc/client'&&method==='GET')return json(res,noc.client(store,user.id));
+    if(route==='/api/noc/client'&&method==='GET')return json(res,RC.decorate(store,user.id,noc.client(store,user.id)));
+    if(route==='/api/reclamation'&&method==='POST'){store.rate('reclamation:'+user.id,10,600000);return json(res,RC.claim(store,user.id,await body(req,2048)));}
+    if(route==='/api/noc/reclamations'&&method==='GET')return json(res,RC.list(store,user.id));
+    if(route==='/api/noc/reclamations'&&method==='POST')return json(res,RC.answer(store,user.id,await body(req,2048)));
     // Carte des pannes côté client : état de chaque quartier, chiffres seulement (voir ville.cjs).
     if(route==='/api/ville'&&method==='GET')return json(res,require('./ville.cjs').snapshot(store,user.id));
     // Mode survie : le menu *144# (écran USSD de l'application ; une passerelle d'opérateur appellerait la même fonction).
