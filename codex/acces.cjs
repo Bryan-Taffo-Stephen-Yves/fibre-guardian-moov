@@ -40,12 +40,20 @@ function packView(s,uid){
   homes:homes.map(h=>({name:shortName(h.name),me:h.user_id===uid})),share:round50(offer.price/homes.length),mbpsEach:Math.round(offer.mbps/homes.length)};
 }
 
+// Le mois étalé à afficher : celui du mois passé s'il lui reste une part à payer (étalement à cheval sur deux mois), sinon celui du mois en cours.
+function openSplit(s,uid,now){
+ const cur=monthOf(now),[y,mo]=cur.split('-').map(Number),prev=new Date(Date.UTC(y,mo-2,1)).toISOString().slice(0,7);
+ const old=s.get('SELECT * FROM acces_echeances WHERE user_id=? AND month=?',uid,prev);
+ if(old&&JSON.parse(old.parts).some(p=>p&&!p.paid))return old;
+ return s.get('SELECT * FROM acces_echeances WHERE user_id=? AND month=?',uid,cur);
+}
+
 // Côté client : les trois offres et où il en est.
 function state(s,uid,now=Date.now()){
  const plan=planOf(s,uid),st=s.get('SELECT * FROM acces_etudiants WHERE user_id=?',uid),month=monthOf(now);
  const student=st?{school:st.school,until:st.until,status:st.until<now&&st.status==='valide'?'expire':st.status,note:st.note||'',deadline:st.deadline}:null;
  const active=student?.status==='valide';
- const e=s.get('SELECT * FROM acces_echeances WHERE user_id=? AND month=?',uid,month);
+ const e=openSplit(s,uid,now);
  // Le mois en cours se paie au prix facturé (l'ancien prix après un passage à un forfait plus cher ce mois-ci).
  const base=J().monthPrice(J().get(s,uid),now),price=active?round50(base*(100-STUDENT)/100):base;
  return {plan:{mbps:plan.mbps,price:plan.price},price,student,studentPrice:round50(plan.price*(100-STUDENT)/100),studentDiscount:STUDENT,
@@ -90,7 +98,8 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
   const parts=Array.from({length:d.parts},(_,k)=>({amount:k?round50(total/d.parts):first,due:now+k*STEP,paid:null}));
   s.run('INSERT INTO acces_echeances VALUES(?,?,?,?,?,?)',crypto.randomUUID(),uid,month,total,JSON.stringify(parts),now);
  }else if(d.action==='split-pay'){
-  const e=s.get('SELECT * FROM acces_echeances WHERE user_id=? AND month=?',uid,monthOf(now));insist(e,'Aucun paiement en plusieurs fois ce mois-ci.',409);
+  // La part en retard d'un mois étalé à cheval sur le mois suivant reste payable (sinon la ligne resterait coupée).
+  const e=openSplit(s,uid,now);insist(e,'Aucun paiement en plusieurs fois ce mois-ci.',409);
   const parts=JSON.parse(e.parts),k=parts.findIndex(p=>!p.paid);insist(k>=0,'Tout est déjà payé. Merci !',409);insist(d.part===k,'Cette part n’est plus à payer. Rechargez la page.',409);
   parts[k].paid=now;s.run('UPDATE acces_echeances SET parts=? WHERE id=?',JSON.stringify(parts),e.id);
  }else insist(false,'Action inconnue.');

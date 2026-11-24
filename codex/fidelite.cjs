@@ -51,7 +51,8 @@ function bill(s,uid,now){
 
 // Points gagnés, facture par facture (du plus ancien au plus récent), sans compter le mois en cours non payé.
 function ledger(s,uid,now){
- const rows=s.all('SELECT * FROM fidelite_factures WHERE user_id=? ORDER BY month',uid).filter(r=>r.paid_at||r.due<now);
+ // Un mois payé en plusieurs fois compte comme payé (avec Moov Money) le jour de la dernière part.
+ const rows=s.all('SELECT * FROM fidelite_factures WHERE user_id=? ORDER BY month',uid).map(r=>{if(r.paid_at)return r;const p=splitOf(s,uid,r.month);return p&&p.done?{...r,paid_at:p.last,channel:'moov_money'}:r;}).filter(r=>r.paid_at||r.due<now);
  let earned=0,run=0,streak=0;const lines=[];
  for(const r of rows){
   const onTime=!!r.paid_at&&r.paid_at<=r.due;let p=0;

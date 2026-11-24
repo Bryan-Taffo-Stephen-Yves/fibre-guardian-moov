@@ -283,7 +283,7 @@ function createGuardianServer(options={}){
     if(route==='/api/fidelite'&&method==='POST'){store.rate('fidelite:'+user.id,30,600000);const d=await body(req,1024);insist(['pay','redeem'].includes(d.action),'Action inconnue.');const r=d.action==='pay'?FL.pay(store,user.id,d):FL.redeem(store,user.id,d);if(d.action==='pay')r.ligne=LG.state(store,user.id);return json(res,r);}
     // La ligne : active ou suspendue ; « J'ai payé, internet ne revient pas » relit les paiements tout de suite.
     if(route==='/api/ligne'&&method==='GET')return json(res,LG.state(store,user.id));
-    if(route==='/api/ligne'&&method==='POST'){store.rate('ligne:'+user.id,10,600000);const d=await body(req,512);insist(d.action==='paye','Action inconnue.');return json(res,LG.paid(store,user.id));}
+    if(route==='/api/ligne'&&method==='POST'){store.rate('ligne:'+user.id,10,600000);const d=await body(req,512);insist(['payer','paye'].includes(d.action),'Action inconnue.');return json(res,d.action==='payer'?LG.pay(store,user.id):LG.paid(store,user.id));}
     if(route==='/api/noc/fidelite'&&method==='GET')return json(res,FL.summary(store,user.id));
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
     if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);const r=WEL.act(store,user.id,await body(req,1000000));AV.sync(store);return json(res,r);}

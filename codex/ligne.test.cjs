@@ -13,27 +13,48 @@ async function setup(){
  return {s,uid:u.id};
 }
 
-test('Facture non payée 5 jours après l’échéance : ligne suspendue, puis rétablie dès le paiement Moov Money',async()=>{
- const {s,uid}=await setup(),now=Date.UTC(2026,10,10,9);
- const b=FL.state(s,uid,now).bill;
- assert.equal(LG.state(s,uid,now).status,'active','pas de suspension avant l’échéance');
- // Le client ouvre l'application 6 jours après l'échéance : la facture du mois est toujours celle-là dans ce test.
- s.run('UPDATE fidelite_factures SET due=? WHERE user_id=? AND month=?',now-6*DAY,uid,b.month);
+test('Facture du mois passé non payée 5 jours après l’échéance : ligne suspendue, puis rétablie dès le paiement Moov Money',async()=>{
+ const {s,uid}=await setup(),now=Date.UTC(2026,10,10,9),prev='2026-10';
+ FL.state(s,uid,now);
+ s.run('INSERT INTO fidelite_factures(user_id,month,amount,due) VALUES(?,?,?,?)',uid,prev,25000,LG.dueOf(prev));
+ assert.equal(LG.state(s,uid,Date.UTC(2026,10,3,9)).status,'active','pas de suspension pendant les 5 jours de grâce');
  let l=LG.state(s,uid,now);
- assert.equal(l.status,'suspendue');assert.equal(l.amount,b.amount);
+ assert.equal(l.status,'suspendue');assert.equal(l.month,prev);assert.equal(l.amount,25000);assert.equal(l.kind,'facture');assert.equal(l.payable,true);
  let st=journey.get(s,uid);assert.ok(st.suspended);assert.match(st.notifications[0].title,/Internet suspendu/);
  // Guardian donne la vraie raison et propose de payer.
-journey.act(s,uid,{type:'chat',version:st.version,text:'Je n’ai plus internet'});
+ journey.act(s,uid,{type:'chat',version:st.version,text:'Je n’ai plus internet'});
  const said=journey.get(s,uid).messages.at(-1);
- assert.match(said.text,/suspendu car la facture/);assert.equal(said.action,'payer');
+ assert.match(said.text,/suspendu car la facture d’octobre|suspendu car la facture de octobre/);assert.equal(said.action,'payer');
  // « J'ai payé » sans paiement : on dit ce qui manque, la ligne reste suspendue.
  const miss=LG.paid(s,uid,now);assert.equal(miss.lifted,false);assert.match(miss.text,/ne trouvons pas encore/);
- // Paiement Moov Money : la ligne revient tout de suite.
- FL.pay(s,uid,{confirm:true,month:b.month},now+1000);
- l=LG.state(s,uid,now+1000);
- assert.equal(l.status,'active');assert.ok(l.lifted);
+ assert.equal(LG.state(s,uid,now+500).status,'suspendue','une suspension ne se lève que sur un paiement');
+ // Paiement Moov Money depuis « Mon compte » : la ligne revient tout de suite et la facture est payée.
+ const r=LG.pay(s,uid,now+1000);
+ assert.equal(r.status,'active');assert.ok(r.lifted);assert.equal(r.paid,25000);
+ assert.ok(s.get('SELECT paid_at FROM fidelite_factures WHERE user_id=? AND month=?',uid,prev).paid_at);
  st=journey.get(s,uid);assert.equal(st.suspended,null);assert.equal(st.notifications[0].title,'Internet rétabli');
+ assert.throws(()=>LG.pay(s,uid,now+2000),/ligne est active/,'pas de 2e paiement');
  assert.throws(()=>LG.paid(s,uid,now+2000),/ligne est active/);
+});
+
+test('Une part en retard de plus de 5 jours suspend la ligne ; la payer la rallume',async()=>{
+ const {s,uid}=await setup(),start=Date.UTC(2026,10,2,9);
+ FL.state(s,uid,start);
+ AC.act(s,uid,{action:'split',parts:2,confirm:true},start);
+ AC.act(s,uid,{action:'split-pay',part:0},start+1000);
+ const parts=JSON.parse(s.get('SELECT parts FROM acces_echeances WHERE user_id=?',uid).parts);
+ const late=parts[1].due+LG.GRACE+DAY;
+ const l=LG.state(s,uid,late);
+ assert.equal(l.status,'suspendue');assert.equal(l.kind,'part');assert.equal(l.payable,false);
+ assert.throws(()=>LG.pay(s,uid,late),/Offres solidaires/,'une part se paie dans Offres solidaires');
+ const st=journey.get(s,uid);
+ journey.act(s,uid,{type:'chat',version:st.version,text:'internet coupé'});
+ assert.equal(journey.get(s,uid).messages.at(-1).action,'payer-part');
+ AC.act(s,uid,{action:'split-pay',part:1},late+1000);
+ assert.equal(LG.state(s,uid,late+1000).status,'active');
+ // Le mois payé en plusieurs fois compte dans les points de fidélité une fois la dernière part payée.
+ const line=FL.state(s,uid,Date.UTC(2026,11,2,9)).history.find(x=>x.month==='2026-11');
+ assert.ok(line&&line.paidAt,'le mois étalé est compté comme payé');
 });
 
 test('« J’ai payé » quand le paiement est déjà enregistré : la ligne revient tout de suite',async()=>{
@@ -74,4 +95,21 @@ test('Régie : la scène « Ligne suspendue » coupe la ligne du client et Guard
  assert.ok(st.suspended,'la suspension est gardée dans le parcours');
  assert.match(st.messages.at(-1).text,/internet est suspendu/);
  assert.equal(LG.state(s,uid,now).status,'suspendue');
+ // La scène ne touche ni aux factures ni aux points du client.
+ assert.equal(s.get('SELECT COUNT(*) n FROM fidelite_factures WHERE user_id=? AND paid_at IS NOT NULL',uid).n,0);
+ // Payer depuis « Mon compte » rallume la ligne.
+ assert.equal(LG.pay(s,uid,now+1000).status,'active');
+});
+
+test('Étalement à cheval sur deux mois : la part en retard reste payable le mois suivant',async()=>{
+ const {s,uid}=await setup(),start=Date.UTC(2026,10,25,9);
+ FL.state(s,uid,start);
+ AC.act(s,uid,{action:'split',parts:3,confirm:true},start);
+ AC.act(s,uid,{action:'split-pay',part:0},start+1000);
+ AC.act(s,uid,{action:'split-pay',part:1},Date.UTC(2026,11,5,9));
+ const late=Date.UTC(2026,11,22,9);
+ assert.equal(LG.state(s,uid,late).status,'suspendue');
+ assert.equal(AC.state(s,uid,late).split.month,'novembre');
+ AC.act(s,uid,{action:'split-pay',part:2},late+1000);
+ assert.equal(LG.state(s,uid,late+1000).status,'active');
 });
