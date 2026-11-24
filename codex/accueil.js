@@ -34,6 +34,9 @@
   if(inc){const tech=first(inc.technician?.name);
    const text={dispatched:(tech?tech+', technicien Moov,':'Une équipe Moov')+' va partir chez vous.',en_route:(tech||'Le technicien')+' est en route vers votre quartier.',on_site:(tech||'L’équipe')+' est sur place et répare la fibre.',verifying:'C’est réparé. Moov vérifie que tout revient.'}[inc.status]||'Moov l’a vue et s’en occupe. Vous n’avez rien à faire.';
    return {tone:'down',icon:P.down,title:'Panne dans votre quartier',text,action:'track',actionLabel:'Suivre la réparation'};}
+  // Simulations de la Régie (simulations.cjs) : panne jouée et quartier saturé ont leur propre message, avec retour vers la page.
+  if(fault?.sim)return {tone:'down',icon:P.down,title:'Panne dans votre quartier',text:'Guardian l’a détectée. '+(fault.technician?first(fault.technician.name)+' s’en occupe.':'Un technicien va être choisi.'),action:'bell',actionLabel:'Voir les étapes'};
+  if(state.simBusy?.until>Date.now()&&!fault)return {tone:'slow',icon:P.slow,title:'Le réseau du quartier est chargé',text:'Votre débit baisse quelques minutes. Votre box va bien : ne la redémarrez pas.'};
   if(fault)return {tone:'slow',icon:P.truck,title:'Moov s’occupe de votre problème',text:'Votre signalement est bien arrivé. On vous prévient à chaque étape.',action:'track',actionLabel:'Voir où ça en est'};
   if(m.latency===null)return {tone:'down',icon:P.box,title:'Votre box ne répond pas',text:'Vérifiez qu’elle est branchée et que ses lumières sont allumées.',action:'guardian',actionLabel:'Me faire aider par Guardian'};
   if(state.scenario==='slow'||got<.8*plan)return {tone:'slow',icon:P.slow,title:'Votre internet est lent',text:'Vous recevez '+got+' Mb/s au lieu de '+plan+'. Redémarrer la box règle souvent le souci.',action:'reboot',actionLabel:'Redémarrer ma box',second:'guardian',secondLabel:'Demander à Guardian'};
@@ -76,7 +79,7 @@
   const toggle=id=>{const next=live.includes(id)?live.filter(x=>x!==id):live.length<4?live.concat(id):live;try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}setFav(next);};
   // « Dossier de ma fibre » seulement s'il existe un dossier d'installation (nouvel abonné) ; sinon « Mon compte » prend sa place.
   React.useEffect(()=>{let alive=true;fetch('/api/welcome',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(r=>{if(alive)setOrder(!!(r&&r.order&&r.order.status!=='annule'));}).catch(()=>{});return()=>{alive=false;};},[user.id]);
-  const run=k=>({track:on.track,guardian:on.guardian,reboot:on.reboot,devices:on.devices})[k];
+  const run=k=>({bell:on.bell,track:on.track,guardian:on.guardian,reboot:on.reboot,devices:on.devices})[k];
   const shown=(cards||[]).filter(Boolean).slice(0,2),cut=s.tone==='down',got=cut?0:Math.round(m.capacity||0);
   const go=k=>on.go?()=>on.go(k):undefined;
   // En mode « Modifier », toucher une tuile l'épingle ou la retire (étoile) au lieu d'ouvrir le service.
