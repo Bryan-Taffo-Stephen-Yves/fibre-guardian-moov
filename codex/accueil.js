@@ -134,12 +134,19 @@
      h('p',{className:'ae-state',role:'status','aria-live':'polite'},s.title),
      on.go&&h('button',{type:'button',className:'ae-pill',onClick:go('compte'),'aria-label':'Mon compte : offre '+plan+' Mb/s'+(price?', '+price.toLocaleString('fr-FR')+' F par mois':'')},
       'Offre '+plan+' Mb/s'+(state.homeZone?.zone?' · '+String(state.homeZone.zone).split(' · ')[0]:''),h(Icon,{d:S.chevron,size:15,stroke:2.4}))),
+    // Grand écran : trois repères chiffrés, tout en face (cachés sur téléphone, où l'accueil reste court).
+    h('dl',{className:'ae-stats'},
+     h('div',null,h('dt',null,'Appareils connectés'),h('dd',null,m.connected||0)),
+     h('div',null,h('dt',null,'Messages à lire'),h('dd',null,bell)),
+     h('div',null,h('dt',null,'Mon forfait'),h('dd',null,price?price.toLocaleString('fr-FR')+' F':plan+' Mb/s',price&&h('small',null,' / mois')))),
     h('nav',{className:'ae-acts','aria-label':'Actions rapides'},
      round('gauge','Tester',on.test,{aria:'Tester ma connexion',disabled:testOff}),
      round('chat','Guardian',on.voice,{aria:'Parler à Guardian',badge:nGuardian}),
      round('devices','Appareils',on.devices,{aria:'Appareils connectés',badge:nDevices}),
      round('alert','Signaler',on.report,{aria:'Signaler une panne'}))),
    h('div',{className:'ae-sheet'},
+    // Grand écran : à droite ce qui se passe (alerte, installation, cartes), à gauche les Services ; sur téléphone tout se suit.
+    h('div',{className:'ae-side'},
     a.tone!=='ok'&&h('section',{className:'ac-alert ac-'+a.tone},
      h('span',{className:'ac-alert-ico','aria-hidden':true},h(Icon,{d:a.icon,size:26,stroke:2.3})),
      h('div',null,h('h2',null,a.title),h('p',null,a.text)),
@@ -152,6 +159,14 @@
      h('span',{className:'ae-row-txt'},h('strong',null,'Mon installation fibre'),h('small',null,'Étape '+(stepAt+1)+' sur '+order.steps.length+' · '+order.steps[stepAt].label+(order.status==='a_corriger'?' : une photo à refaire':order.status==='rdv'?' : choisissez votre jour':''))),
      h(Icon,{d:S.chevron,size:20,stroke:2.2})),
     shown.length>0&&h('div',{className:'ac-cards'},shown),
+    h('section',{className:'ac-recent','aria-labelledby':'ac-recent-title'},
+     h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-more',onClick:on.bell},'Tout voir',h(Icon,{d:S.chevron,size:16}))),
+     recent.length?h('ul',null,recent.filter((n,i,all)=>all.findIndex(x=>x.title===n.title&&x.body===n.body)===i).slice(0,3).map(n=>{const k=kind(n);return h('li',{key:n.key||n.id||n.at},h('button',{type:'button',onClick:n.page==='bienvenue'&&on.go?go('bienvenue'):on.bell},
+      h('span',{className:'ac-recent-ico '+k.tone,'aria-hidden':true},h(Icon,{d:k.icon,size:20})),
+      h('span',{className:'ac-recent-txt'},h('b',null,n.title),h('small',null,when(n.at))),
+      h('span',{className:'ac-recent-tag'+(n.read?'':' new')},n.read?'Lu':'Nouveau')));})):
+      h('p',{className:'ac-recent-empty'},'Pas de message pour l’instant. Guardian vous écrit ici dès qu’il se passe quelque chose.'))),
+    h('div',{className:'ae-main'},
     h('section',{className:'ac-services','aria-labelledby':'ac-svc-title'},
      h('div',{className:'ac-services-head'},h('h2',{id:'ac-svc-title'},'Services'),
       h('div',{className:'ac-services-tools'},
@@ -163,15 +178,8 @@
      h('span',{className:'ae-row-ico','aria-hidden':true},h(Ico,{name:'up',size:26})),
      h('span',{className:'ae-row-txt'},h('strong',null,'Plus de débit ? Changez de forfait'),h('small',null,'Vous payez juste la différence, au jour près')),
      h(Icon,{d:S.chevron,size:20,stroke:2.2})),
-    h('section',{className:'ac-recent','aria-labelledby':'ac-recent-title'},
-     h('div',{className:'ac-recent-head'},h('h2',{id:'ac-recent-title'},'Derniers messages'),h('button',{type:'button',className:'ac-more',onClick:on.bell},'Tout voir',h(Icon,{d:S.chevron,size:16}))),
-     recent.length?h('ul',null,recent.filter((n,i,all)=>all.findIndex(x=>x.title===n.title&&x.body===n.body)===i).slice(0,3).map(n=>{const k=kind(n);return h('li',{key:n.key||n.id||n.at},h('button',{type:'button',onClick:n.page==='bienvenue'&&on.go?go('bienvenue'):on.bell},
-      h('span',{className:'ac-recent-ico '+k.tone,'aria-hidden':true},h(Icon,{d:k.icon,size:20})),
-      h('span',{className:'ac-recent-txt'},h('b',null,n.title),h('small',null,when(n.at))),
-      h('span',{className:'ac-recent-tag'+(n.read?'':' new')},n.read?'Lu':'Nouveau')));})):
-      h('p',{className:'ac-recent-empty'},'Pas de message pour l’instant. Guardian vous écrit ici dès qu’il se passe quelque chose.')),
     // Des visages : l'équipe Moov de la commune du client (techniciens.js).
-    window.FGTechniciens&&h(FGTechniciens.Strip,{zone:state.homeZone?.zone,onReport:on.report,onGuardian:on.voice})));
+    window.FGTechniciens&&h(FGTechniciens.Strip,{zone:state.homeZone?.zone,onReport:on.report,onGuardian:on.voice}))));
  }
  // En arrivant sur Guardian : ce qu'il a écrit pendant l'absence du client (la pastille rouge menait ici).
  function News({items,onAll}){
