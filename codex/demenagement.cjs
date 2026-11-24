@@ -75,6 +75,7 @@ function called(s,id,outcome,now=Date.now()){
  if(r.covered&&['demenagement','technicien'].includes(outcome)){
   const day=r.day&&endOf(r)>now?r.day:choices(now)[0].day;
   s.run("UPDATE demenagements SET status='planifie',day=?,updated=? WHERE id=?",day,now,r.id);
+  if(day!==r.day)notify(s,r.user_id,'Nouvelle date d’installation','Le jour que vous aviez choisi est passé : le technicien installe votre fibre '+when({day,slot:r.slot})+'. Vous pouvez annuler dans Mon compte.',now);
  }
  else if(outcome!=='absent')s.run("UPDATE demenagements SET status='conseille',updated=? WHERE id=?",now,r.id);
 }
