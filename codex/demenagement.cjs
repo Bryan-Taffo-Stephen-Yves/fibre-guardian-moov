@@ -11,8 +11,8 @@
 const crypto=require('node:crypto');
 const {insist}=require('./pilot-model.cjs');
 const HOUR=3600000,DAY=24*HOUR,DAYS=12,DUE=4*HOUR;
-const ZONE=require('./smart-offer.js').ZONE;   // communes où la fibre Moov arrive (comme Fibre Welcome)
-const OTHER=['Bingerville','Anyama','Songon','Dabou','Jacqueville','Bouaké','Yamoussoukro','San-Pédro','Autre ville'];
+// Communes où la fibre Moov arrive, y compris celles ouvertes depuis par un responsable (eligibilite.cjs).
+const EL=()=>require('./eligibilite.cjs');
 const SLOTS={matin:{label:'entre 8 h et 12 h',from:8,to:12},apres:{label:'entre 14 h et 18 h',from:14,to:18}};
 const OPEN=['demande','planifie'];
 
@@ -20,8 +20,7 @@ function migrate(s){s.db.exec(`
  CREATE TABLE IF NOT EXISTS demenagements(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,commune TEXT NOT NULL,quartier TEXT NOT NULL,repere TEXT NOT NULL DEFAULT '',covered INTEGER NOT NULL,day INTEGER,slot TEXT,status TEXT NOT NULL,old_segment TEXT,new_segment TEXT,created INTEGER NOT NULL,updated INTEGER NOT NULL,done_at INTEGER);
  CREATE INDEX IF NOT EXISTS demenagements_user ON demenagements(user_id,created);
  `);}
-const ready=new WeakSet();
-function ensure(s){if(!ready.has(s)){migrate(s);ready.add(s);}}
+function ensure(s){if(!s.get("SELECT 1 FROM sqlite_master WHERE name='demenagements'"))migrate(s);}
 
 const J=()=>require('./journey-store.cjs');
 const SC=()=>require('./service-client.cjs');
@@ -66,16 +65,17 @@ function finish(s,r,now=Date.now()){
 // Avant que le conseiller note son appel (service-client.cjs) : hors zone fibre, pas de technicien ni d'installation.
 function check(s,id,outcome){
  ensure(s);const r=s.get('SELECT * FROM demenagements WHERE id=?',String(id));
- insist(!r||r.covered||!['demenagement','technicien'].includes(outcome),'La fibre n’arrive pas à cette adresse : proposez une solution au client, puis notez « Réglé au téléphone ».',409);
+ insist(!r||r.covered||EL().covered(s,r.commune)||!['demenagement','technicien'].includes(outcome),'La fibre n’arrive pas à cette adresse : proposez une solution au client, puis notez « Réglé au téléphone ».',409);
 }
 // Le conseiller a appelé : la date est confirmée, ou la demande est close au téléphone.
 // Confirmée après le jour choisi : l'installation passe au premier jour possible (jamais « installée » sans technicien).
 function called(s,id,outcome,now=Date.now()){
  ensure(s);const r=s.get('SELECT * FROM demenagements WHERE id=?',String(id));if(!r||!OPEN.includes(r.status))return;
- if(r.covered&&['demenagement','technicien'].includes(outcome)){
+ // Une commune ouverte à la fibre depuis la demande compte comme couverte (eligibilite.cjs).
+ if((r.covered||EL().covered(s,r.commune))&&['demenagement','technicien'].includes(outcome)){
   const day=r.day&&endOf(r)>now?r.day:choices(now)[0].day;
-  s.run("UPDATE demenagements SET status='planifie',day=?,updated=? WHERE id=?",day,now,r.id);
-  if(day!==r.day)notify(s,r.user_id,'Nouvelle date d’installation','Le jour que vous aviez choisi est passé : le technicien installe votre fibre '+when({day,slot:r.slot})+'. Vous pouvez annuler dans Mon compte.',now);
+  s.run("UPDATE demenagements SET status='planifie',covered=1,day=?,slot=COALESCE(slot,'matin'),updated=? WHERE id=?",day,now,r.id);
+  if(day!==r.day)notify(s,r.user_id,'Nouvelle date d’installation','Le jour que vous aviez choisi est passé : le technicien installe votre fibre '+when({day,slot:r.slot||'matin'})+'. Vous pouvez annuler dans Mon compte.',now);
  }
  else if(outcome!=='absent')s.run("UPDATE demenagements SET status='conseille',updated=? WHERE id=?",now,r.id);
 }
@@ -105,7 +105,7 @@ function view(s,r,now){
 function state(s,uid,now=Date.now()){
  tick(s,now);
  const r=current(s,uid),show=r&&(OPEN.includes(r.status)||now-r.updated<7*DAY)&&r.status!=='annule';
- return {current:show?view(s,r,now):null,zone:ZONE,other:OTHER,choices:choices(now),slots:Object.entries(SLOTS).map(([id,v])=>({id,label:v.label}))};
+ return {current:show?view(s,r,now):null,zone:EL().zone(s),other:EL().others(s),choices:choices(now),slots:Object.entries(SLOTS).map(([id,v])=>({id,label:v.label}))};
 }
 
 // Le client déclare son déménagement.
@@ -113,9 +113,9 @@ function ask(s,uid,d,now=Date.now()){return s.transaction(()=>{
  ensure(s);
  const cur=current(s,uid);insist(!cur||!OPEN.includes(cur.status),'Vous avez déjà une demande de déménagement en cours.',409);
  const commune=text(d?.commune,'Choisissez votre nouvelle commune.',2,40);
- insist(ZONE.includes(commune)||OTHER.includes(commune),'Choisissez votre nouvelle commune.');
+ insist(EL().covered(s,commune)||EL().OTHER.includes(commune),'Choisissez votre nouvelle commune.');
  const quartier=text(d.quartier,'Indiquez votre nouveau quartier.',2,60),repere=text(d.repere||'','Le repère est trop long.',0,120);
- const covered=ZONE.includes(commune);let day=null,slot=null;
+ const covered=EL().covered(s,commune);let day=null,slot=null;
  if(covered){
   day=Number(d.day);slot=String(d.slot||'');
   insist(choices(now).some(c=>c.day===day)&&Object.hasOwn(SLOTS,slot),'Choisissez le jour de l’installation.');
@@ -139,4 +139,4 @@ function cancel(s,uid,now=Date.now()){return s.transaction(()=>{
  return state(s,uid,now);
 });}
 
-module.exports={migrate,state,ask,cancel,check,called,waiting,tick,finish,choices,segmentFor,OTHER};
+module.exports={migrate,state,ask,cancel,check,called,waiting,tick,finish,choices,segmentFor};

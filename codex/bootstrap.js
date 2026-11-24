@@ -45,6 +45,8 @@
   files.splice(files.indexOf('superviseur-view.js'), 0, 'service-client-view.js');
   // Déménagement (demenagement-view.js) : « Je déménage » dans Mon compte.
   files.splice(files.indexOf('superviseur-view.js'), 0, 'demenagement-view.js');
+  // « Ils attendent la fibre » (eligibilite-view.js) : bloc du Superviseur, onglet Clients.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'eligibilite-view.js');
   // « Mes données » (donnees-view.js) : page reliée à « Mon compte ».
   files.splice(files.indexOf('app.js'), 0, 'donnees-view.js');
   // « Alertes sur ce téléphone » (push-view.js) : Mon compte du client et Mes missions du technicien.

@@ -29,7 +29,7 @@
 
  // uses : identifiants choisis ; people : personnes dans le foyer (1 à 10) ; plans : grille triée du moins cher au plus cher.
  // rooms : pièces à couvrir en Wi-Fi ; budget : maximum par mois (0 = pas de limite) ; commune : facultatif.
- function recommend({uses=[],people=1,plans=PLANS,rooms=0,budget=0,commune=''}={}){
+ function recommend({uses=[],people=1,plans=PLANS,rooms=0,budget=0,commune='',zone=ZONE}={}){
   const n=Math.min(10,Math.max(1,Math.round(Number(people)||1))),chosen=USES.filter(u=>uses.includes(u.id));
   if(!chosen.length||!plans.length)return null;
   const parts=[{id:'base',label:n+' personne'+(n>1?'s':'')+' sur leur téléphone',mbps:2*n}];
@@ -43,7 +43,7 @@
   const ideal=plan,afford=budget>0&&plan.price>budget?[...sorted].reverse().find(p=>p.price<=budget)||sorted[0]:plan;
   const over=afford!==ideal?{ideal,trims:chosen.filter(u=>TRIMS[u.id]).map(u=>TRIMS[u.id])}:null;
   const r=Math.min(12,Math.max(0,Math.round(Number(rooms)||0))),extenders=r>ROOMS_PER_BOX?Math.ceil((r-ROOMS_PER_BOX)/ROOMS_PER_BOX):0;
-  const inZone=!commune||ZONE.includes(commune);
+  const inZone=!commune||zone.includes(commune);
   return {plan:afford,ideal,over,need,total,people:n,parts,rooms:r,extenders,commune,inZone,gameMinutes:Math.round(GAME_GB*8000/afford.mbps/60),sources:SOURCES.filter(s=>chosen.some(u=>u.source===s.id))};
  }
  const duration=min=>min<60?min+' min':Math.floor(min/60)+' h'+(min%60?' '+String(min%60).padStart(2,'0'):'');

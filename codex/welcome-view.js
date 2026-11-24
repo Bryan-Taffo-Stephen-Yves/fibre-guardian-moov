@@ -41,17 +41,37 @@
       h('li', {key: s.id, className: i < at ? 'is-done' : i === at ? 'is-now' : '', 'aria-current': i === at ? 'step' : undefined}, h('i', {'aria-hidden': true}, i < at ? '✓' : i + 1), h('span', null, s.label))));
   }
 
-  function Order({data, busy, onSend}) {
-    const pre = remembered(), [plan, P] = S(data.plans.some(p => p.id === pre) ? pre : 'demo-100'), [commune, C] = S(''), [quartier, Q] = S('');
-    return h('form', {className: 'j-card fw-card', onSubmit: e => { e.preventDefault(); onSend({action: 'order', plan, commune, quartier}).then(ok => ok && forget()); }},
-      h('h2', null, 'Votre forfait'),
-      h('div', {className: 'fw-plans', role: 'radiogroup', 'aria-label': 'Forfait'}, data.plans.map(p => h('label', {key: p.id, className: 'fw-plan' + (p.id === plan ? ' is-picked' : '')},
-        h('input', {type: 'radio', name: 'fw-plan', value: p.id, checked: p.id === plan, onChange: () => P(p.id)}), h('b', null, p.mbps + ' Mb/s'), h('small', null, money(p.price) + ' par mois')))),
+  function Order({data, busy, onSend, onAlert}) {
+    const a = data.alerte, pre = remembered(), [plan, P] = S(data.plans.some(p => p.id === pre) ? pre : 'demo-100'), [commune, C] = S(a && a.status === 'arrivee' ? a.commune : ''), [quartier, Q] = S(a && a.status === 'arrivee' ? a.quartier : ''), [call, K] = S(false);
+    // La fibre n'arrive pas encore dans cette commune : « Prévenez-moi » (eligibilite.cjs) au lieu de la commande.
+    const away = (data.other || []).includes(commune), ready = commune && quartier.trim().length >= 2;
+    return h('form', {className: 'j-card fw-card', onSubmit: e => { e.preventDefault(); if (away) onAlert({commune, quartier, call}); else onSend({action: 'order', plan, commune, quartier}).then(ok => ok && forget()); }},
+      a && a.status === 'arrivee' && h('p', {className: 'fw-news', role: 'status'}, h('b', null, 'La fibre Moov arrive à ' + a.commune + ' !'), ' Vous pouvez la commander maintenant.'),
+      !away && h(React.Fragment, null,
+        h('h2', null, 'Votre forfait'),
+        h('div', {className: 'fw-plans', role: 'radiogroup', 'aria-label': 'Forfait'}, data.plans.map(p => h('label', {key: p.id, className: 'fw-plan' + (p.id === plan ? ' is-picked' : '')},
+          h('input', {type: 'radio', name: 'fw-plan', value: p.id, checked: p.id === plan, onChange: () => P(p.id)}), h('b', null, p.mbps + ' Mb/s'), h('small', null, money(p.price) + ' par mois'))))),
       h('h2', null, 'Où installer la fibre ?'),
-      h('label', {className: 'fw-field'}, h('span', null, 'Commune'), h('select', {value: commune, required: true, onChange: e => C(e.target.value)}, h('option', {value: ''}, 'Choisissez'), data.zone.map(z => h('option', {key: z, value: z}, z)))),
+      h('label', {className: 'fw-field'}, h('span', null, 'Commune'), h('select', {value: commune, required: true, onChange: e => C(e.target.value)}, h('option', {value: ''}, 'Choisissez'),
+        h('optgroup', {label: 'La fibre Moov y arrive'}, data.zone.map(z => h('option', {key: z, value: z}, z))),
+        (data.other || []).length > 0 && h('optgroup', {label: 'Pas encore de fibre'}, data.other.map(z => h('option', {key: z, value: z}, z))))),
       h('label', {className: 'fw-field'}, h('span', null, 'Quartier ou repère'), h('input', {value: quartier, required: true, minLength: 2, maxLength: 80, placeholder: 'Par exemple : Riviera 3, près de la pharmacie', onChange: e => Q(e.target.value)})),
-      h('button', {type: 'submit', className: 'j-button primary fw-go', disabled: busy || !commune || quartier.trim().length < 2}, 'Commander ma fibre'),
-      h('p', {className: 'fw-small'}, 'Ensuite : deux photos, la vérification par un conseiller, puis votre rendez-vous.'));
+      away ? h(React.Fragment, null,
+        h('p', {className: 'fw-away', role: 'status'}, 'La fibre Moov n’arrive pas encore à ' + commune + '. Laissez-nous votre quartier : nous vous prévenons dès qu’elle arrive, et vous pourrez la commander tout de suite.'),
+        h('label', {className: 'fw-check'}, h('input', {type: 'checkbox', checked: call, onChange: e => K(e.target.checked)}), h('span', null, 'Je veux aussi qu’un conseiller m’appelle pour voir une solution en attendant')),
+        h('button', {type: 'submit', className: 'j-button primary fw-go', disabled: busy || !ready}, 'Prévenez-moi quand elle arrive'))
+      : h(React.Fragment, null,
+        h('button', {type: 'submit', className: 'j-button primary fw-go', disabled: busy || !ready}, 'Commander ma fibre'),
+        h('p', {className: 'fw-small'}, 'Ensuite : deux photos, la vérification par un conseiller, puis votre rendez-vous.')));
+  }
+
+  // Le client attend la fibre dans sa commune.
+  function Waiting({alerte: a, busy, onAlert}) {
+    return h('section', {className: 'j-card fw-card fw-wait-zone'},
+      h('h2', null, 'Nous vous prévenons dès que la fibre arrive'),
+      h('p', null, a.quartier + ', ' + a.commune + (a.others ? ' · ' + a.others + ' autre' + (a.others > 1 ? 's' : '') + ' client' + (a.others > 1 ? 's l’attendent' : ' l’attend') + ' aussi' : '')),
+      h('p', {className: 'fw-small'}, a.call ? 'Un conseiller vous appelle pour voir une solution en attendant. Suivez son appel dans « Ma réparation ».' : a.commune === 'Autre ville' ? 'Moov étudie les demandes de toutes les villes. Pour savoir ce qui est possible chez vous, demandez l’appel d’un conseiller : choisissez à nouveau votre commune et cochez la case.' : 'Vous recevrez un message ici. Plus il y a de demandes dans une commune, plus elle passe tôt dans les travaux de Moov.'),
+      h('button', {type: 'button', className: 'fw-cancel', disabled: busy, onClick: () => onAlert({action: 'cancel'})}, 'Ne plus attendre'));
   }
 
   function Pick({label, hint, value, onPick, kind, onError}) {
@@ -117,16 +137,17 @@
     const load = () => api('/welcome').then(x => { if (alive.current) { D(x); X(''); } }).catch(e => alive.current && X(e.message));
     E(() => { alive.current = true; load(); const t = setInterval(() => { if (!document.hidden) load(); }, 6000); return () => { alive.current = false; clearInterval(t); }; }, []);
     async function send(body) { B(true); X(''); try { const r = await api('/welcome', 'POST', body); if (alive.current) D(r); return true; } catch (e) { if (alive.current) X(e.message || 'Envoi impossible. Réessayez.'); return false; } finally { if (alive.current) B(false); } }
+    async function alert(body) { B(true); X(''); try { await api('/eligibilite', 'POST', body); await load(); } catch (e) { if (alive.current) X(e.message); } finally { if (alive.current) B(false); } }
     async function open() { B(true); try { await api('/welcome/activate', 'POST', {}); onOpen && onOpen(); } catch (e) { X(e.message); } finally { if (alive.current) B(false); } }
     if (!data) return h('section', {className: 'j-card fw-page'}, h('p', {role: error ? 'alert' : 'status'}, error || 'Chargement…'));
     const o = data.order && data.order.status !== 'annule' ? data.order : null;
     const title = !o ? 'La fibre Moov chez vous' : o.step === 'bienvenue' ? 'Votre fibre est là' : 'Votre installation';
     return h('div', {className: 'fw-page'},
       h('header', {className: 'fw-head'}, h('p', {className: 'fw-kicker'}, o ? 'SUIVRE LE DOSSIER DE MA FIBRE' : 'NOUVEL ABONNEMENT'), h('h1', null, title),
-        h('p', null, !o ? 'Commandez en deux minutes. Guardian vous suit jusqu’au premier surf.' : o.plan.name + ' · ' + o.commune + ', ' + o.quartier)),
+        h('p', null, !o ? (data.alerte && data.alerte.status === 'attente' ? 'La fibre Moov n’arrive pas encore chez vous.' : 'Commandez en deux minutes. Guardian vous suit jusqu’au premier surf.') : o.plan.name + ' · ' + o.commune + ', ' + o.quartier)),
       o && h(Steps, {order: o}),
       error && h('p', {className: 'fw-error', role: 'alert'}, error),
-      !o ? h(Order, {data, busy, onSend: send}) :
+      !o ? (data.alerte && data.alerte.status === 'attente' ? h(Waiting, {alerte: data.alerte, busy, onAlert: alert}) : h(Order, {data, busy, onSend: send, onAlert: alert})) :
         o.step === 'dossier' ? h(Dossier, {order: o, busy, onSend: send, onError: X}) :
         o.step === 'verification' ? h('section', {className: 'j-card fw-card fw-wait'}, h('span', {className: 'fw-pulse', 'aria-hidden': true}), h('h2', null, 'Un conseiller vérifie votre dossier'),
           h('p', null, o.late ? 'Votre dossier prend plus de temps que prévu : un conseiller s’en occupe en priorité.' : 'Réponse au plus tard ' + clock(o.deadline) + '. Vous serez prévenu ici.')) :
