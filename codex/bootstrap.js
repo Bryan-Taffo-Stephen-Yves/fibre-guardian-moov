@@ -37,6 +37,8 @@
   files.splice(files.indexOf('superviseur-view.js'), 0, 'avis-view.js');
   // Réclamations (reclamation-view.js) : délai promis et « Ce n'est pas réglé » sur le dossier, bloc du Superviseur.
   files.splice(files.indexOf('superviseur-view.js'), 0, 'reclamation-view.js');
+  // Échange de box (echange-box-view.js) : demande dans « Ma réparation », bloc du Superviseur.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'echange-box-view.js');
   // « Mes données » (donnees-view.js) : page reliée à « Mon compte ».
   files.splice(files.indexOf('app.js'), 0, 'donnees-view.js');
   // « Alertes sur ce téléphone » (push-view.js) : Mon compte du client et Mes missions du technicien.

@@ -83,6 +83,7 @@ function ClientFeed({api,onReport}){
   h('div',{className:'n-row'},h('div',null,h('h2',null,'Votre réparation')),B(loading?'Mise à jour…':'Mettre à jour',()=>load(),{disabled:loading})),
   h('p',null,'Ici, vous voyez qui vient chez vous et quand.'),
   h('small',{className:'n-feed-update'},(updatedAt?'Mis à jour à '+time(updatedAt):'Chargement…')),
+  window.FGEchange&&h(window.FGEchange.Card,{api}),
   error&&h('div',{className:'j-error',role:'alert'},h('strong',null,'Impossible d’actualiser le suivi'),h('p',null,error),data&&h('p',null,'Les informations ci-dessous sont les dernières reçues ; elles peuvent ne plus être à jour.'),B('Réessayer le chargement',()=>load(),{disabled:loading})),
   !data&&loading&&!error&&h('div',{className:'n-empty',role:'status'},h('h3',null,'Nous recherchons votre dossier…'),h('p',null,'Vos incidents et les décisions du support vont apparaître ici.')),
   data&&!active.length&&h('div',{className:'n-empty n-client-empty'},h('h3',null,'Aucune intervention en cours'),h('p',null,history.length?'Rien à réparer chez vous en ce moment. Vos anciennes réparations sont juste en dessous.':'Rien à réparer chez vous en ce moment. Si quelque chose ne marche pas, signalez-le : il apparaîtra ici.'),h('div',{className:'n-actions'},onReport&&B('Signaler un problème',onReport),LAB&&B('Tester un suivi de quartier',()=>JO(true)))),
