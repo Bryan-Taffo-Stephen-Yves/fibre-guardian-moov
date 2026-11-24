@@ -69,6 +69,8 @@ function createGuardianServer(options={}){
  const AV=require('./avis.cjs');AV.migrate(store);
  // Réclamations : délai de réponse promis, « Ce n'est pas réglé », recours ARTCI (reclamation.cjs).
  const RC=require('./reclamation.cjs');RC.migrate(store);
+ // État de la ligne : suspendue pour facture impayée, rétablie dès le paiement (ligne.cjs).
+ const LG=require('./ligne.cjs');LG.migrate(store);
  // Retention Score (thème 6) : appel du conseiller et offre de rétention (retention.cjs).
  require('./retention.cjs').migrate(store);
  // Rapport du matin + agent anti-départ : un mail par jour pour la Direction, et « Envoyer maintenant » dans le Superviseur (rapport-matin.cjs).
@@ -278,13 +280,16 @@ function createGuardianServer(options={}){
     // « Mes paiements » (Mon compte) : factures, parts et forfaits payés, avec leur reçu (paiements.cjs).
     if(route==='/api/paiements'&&method==='GET')return json(res,require('./paiements.cjs').list(store,user.id));
     if(route==='/api/fidelite'&&method==='GET')return json(res,FL.state(store,user.id));
-    if(route==='/api/fidelite'&&method==='POST'){store.rate('fidelite:'+user.id,30,600000);const d=await body(req,1024);insist(['pay','redeem'].includes(d.action),'Action inconnue.');return json(res,d.action==='pay'?FL.pay(store,user.id,d):FL.redeem(store,user.id,d));}
+    if(route==='/api/fidelite'&&method==='POST'){store.rate('fidelite:'+user.id,30,600000);const d=await body(req,1024);insist(['pay','redeem'].includes(d.action),'Action inconnue.');const r=d.action==='pay'?FL.pay(store,user.id,d):FL.redeem(store,user.id,d);if(d.action==='pay')r.ligne=LG.state(store,user.id);return json(res,r);}
+    // La ligne : active ou suspendue ; « J'ai payé, internet ne revient pas » relit les paiements tout de suite.
+    if(route==='/api/ligne'&&method==='GET')return json(res,LG.state(store,user.id));
+    if(route==='/api/ligne'&&method==='POST'){store.rate('ligne:'+user.id,10,600000);const d=await body(req,512);insist(d.action==='paye','Action inconnue.');return json(res,LG.paid(store,user.id));}
     if(route==='/api/noc/fidelite'&&method==='GET')return json(res,FL.summary(store,user.id));
     if(route==='/api/welcome'&&method==='GET')return json(res,WEL.state(store,user.id));
     if(route==='/api/welcome'&&method==='POST'){store.rate('welcome:'+user.id,30,600000);const r=WEL.act(store,user.id,await body(req,1000000));AV.sync(store);return json(res,r);}
     if(route==='/api/welcome/activate'&&method==='POST'){const st=WEL.activate(store,user.id);return json(res,{state:journey.snapshotFor(store,user.id,st)});}
     if(route==='/api/acces'&&method==='GET')return json(res,AC.state(store,user.id));
-    if(route==='/api/acces'&&method==='POST'){store.rate('acces:'+user.id,30,600000);return json(res,AC.act(store,user.id,await body(req,1000000)));}
+    if(route==='/api/acces'&&method==='POST'){store.rate('acces:'+user.id,30,600000);const r=AC.act(store,user.id,await body(req,1000000));LG.state(store,user.id);return json(res,r);}
     if(route==='/api/noc/acces'&&method==='GET'){const r=AC.list(store,user.id);DP.seen(store,user.id,'acces');return json(res,r);}
     if(route==='/api/noc/acces'&&method==='POST')return json(res,AC.decide(store,user.id,await body(req,2048)));
     if(route==='/api/noc/welcome'&&method==='GET'){const r=WEL.list(store,user.id);DP.seen(store,user.id,'welcome');return json(res,r);}

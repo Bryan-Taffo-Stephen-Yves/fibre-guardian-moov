@@ -84,6 +84,8 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
  }else if(d.action==='split'){
   insist([2,3].includes(d.parts),'Choisissez 2 ou 3 fois.');insist(d.confirm===true,'Confirmez le paiement en plusieurs fois.');
   const month=monthOf(now);insist(!s.get('SELECT 1 FROM acces_echeances WHERE user_id=? AND month=?',uid,month),'Votre mois est déjà payé en plusieurs fois.',409);
+  // Une facture déjà payée d'un coup (fidelite.cjs) ne se repaie pas en plusieurs fois.
+  insist(!(s.get("SELECT 1 FROM sqlite_master WHERE name='fidelite_factures'")&&s.get('SELECT 1 FROM fidelite_factures WHERE user_id=? AND month=? AND paid_at IS NOT NULL',uid,month)),'Votre facture de '+monthName(month)+' est déjà payée.',409);
   const total=state(s,uid,now).splitAmount,first=total-round50(total/d.parts)*(d.parts-1);
   const parts=Array.from({length:d.parts},(_,k)=>({amount:k?round50(total/d.parts):first,due:now+k*STEP,paid:null}));
   s.run('INSERT INTO acces_echeances VALUES(?,?,?,?,?,?)',crypto.randomUUID(),uid,month,total,JSON.stringify(parts),now);

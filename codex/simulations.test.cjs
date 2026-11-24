@@ -249,7 +249,7 @@ test('arnaque : Guardian met en garde, rien ne coupe internet', () => {
   assert.match(st.notifications[0].body, /ne vous demandera jamais votre code/);
   assert.match(st.messages.at(-1).text, /arnaque/);
   assert.equal(J.snapshot(st).metrics.state, 'stable');
-  assert.equal(Object.keys(SIM.SCENES).length, 12, 'six scènes de départ + six nouvelles');
+  assert.equal(Object.keys(SIM.SCENES).length, 13, 'six scènes de départ + six nouvelles + la ligne suspendue');
 });
 
 test('relecture jury 2 : le retard ne part que si le technicien est encore en route, avec son vrai nom', () => {

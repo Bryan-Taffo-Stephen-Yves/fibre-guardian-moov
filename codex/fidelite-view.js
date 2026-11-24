@@ -42,8 +42,9 @@
       d.boost && h('section', {className: 'fl-card fl-boost'}, h('span', {className: 'fl-ico'}, h(Svg, {d: BOLT})), h('div', null, h('strong', null, 'Débit boosté : ' + d.boost.mbps + ' Mb/s'), h('small', null, d.boost.why + ' · jusqu’au ' + day(d.boost.until)))),
       h('section', {className: 'fl-card fl-bill'},
         h('div', {className: 'fl-bill-top'}, h('div', null, h('small', null, 'Facture de ' + d.bill.label), h('strong', null, money(d.bill.amount))),
-          d.bill.paid ? h('span', {className: 'fl-chip is-ok'}, 'Payée') : h('span', {className: 'fl-chip' + (d.bill.late ? ' is-late' : '')}, d.bill.late ? 'En retard' : 'Avant le ' + day(d.bill.due))),
-        d.bill.paid ? h('p', {className: 'fl-small'}, 'Payée le ' + day(d.bill.paidAt) + (d.bill.channel === 'moov_money' ? ' avec Moov Money.' : '.'))
+          d.bill.paid ? h('span', {className: 'fl-chip is-ok'}, 'Payée') : d.bill.split ? h('span', {className: 'fl-chip'}, d.bill.split.paid + ' part' + (d.bill.split.paid > 1 ? 's' : '') + ' sur ' + d.bill.split.count) : h('span', {className: 'fl-chip' + (d.bill.late ? ' is-late' : '')}, d.bill.late ? 'En retard' : 'Avant le ' + day(d.bill.due))),
+        d.bill.paid ? h('p', {className: 'fl-small'}, 'Payée le ' + day(d.bill.paidAt) + (d.bill.channel === 'moov_money' ? ' avec Moov Money.' : d.bill.channel === 'plusieurs_fois' ? ', en plusieurs fois.' : '.'))
+          : d.bill.split ? h('p', {className: 'fl-small'}, 'Vous payez ce mois en ' + d.bill.split.count + ' fois. La part suivante se règle dans Mes offres, onglet Solidaire.')
           : h('button', {type: 'button', className: 'fl-pay', disabled: busy, onClick: () => P(true)}, 'Payer avec Moov Money', h('small', null, '+' + (d.rules.online + (d.bill.late ? 0 : d.rules.onTime)) + ' points'))),
       h('section', {className: 'fl-card'},
         h('h2', null, 'Factures payées à temps'),
@@ -79,7 +80,7 @@
     if (!d) return null;
     return h('button', {type: 'button', className: 'fl-entry is-' + d.tier.id, onClick: onOpen},
       h('span', {className: 'fl-medal'}, h(Svg, {d: MEDAL, size: 26})),
-      h('span', {className: 'fl-entry-main'}, h('strong', null, 'Fidélité ' + d.tier.name + ' · ' + pts(d.points) + ' points'), h('small', null, d.bill.paid ? nextText(d) : 'Facture de ' + d.bill.label.split(' ')[0] + ' à payer : +' + (d.rules.online + d.rules.onTime) + ' points'),
+      h('span', {className: 'fl-entry-main'}, h('strong', null, 'Fidélité ' + d.tier.name + ' · ' + pts(d.points) + ' points'), h('small', null, d.bill.paid ? nextText(d) : d.bill.split ? 'Facture de ' + d.bill.label.split(' ')[0] + ' en ' + d.bill.split.count + ' fois : ' + d.bill.split.paid + ' part' + (d.bill.split.paid > 1 ? 's' : '') + ' payée' + (d.bill.split.paid > 1 ? 's' : '') : 'Facture de ' + d.bill.label.split(' ')[0] + ' à payer : +' + (d.rules.online + d.rules.onTime) + ' points'),
         h('i', {className: 'fl-track', 'aria-hidden': true}, h('b', {style: {width: Math.max(4, d.progress) + '%'}}))));
   }
 

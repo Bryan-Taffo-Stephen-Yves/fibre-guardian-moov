@@ -169,6 +169,26 @@
 
  // « Mes paiements » : factures, parts et forfaits payés (paiements.cjs). Chaque ligne s'ouvre sur son reçu,
  // à partager sur WhatsApp ou à télécharger (FGPay.ReceiptActions). Trois lignes, puis « Voir tout ».
+ // « Ma ligne » (ligne.cjs) : rien si tout va bien ; si la ligne est suspendue pour une facture impayée, on le dit clairement,
+ // avec « Payer » et « J'ai payé, internet ne revient pas » (le serveur relit les paiements et rallume la ligne s'il le trouve).
+ function LigneCard({api,go}){
+  const [d,D]=S(null),[busy,B]=S(false),[msg,M]=S(null);
+  const load=()=>api('/ligne').then(D).catch(()=>{});
+  E(()=>{load();},[]);
+  if(!d)return null;
+  const F=n=>Number(n||0).toLocaleString('fr-FR')+' F',hour=t=>new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}).replace(':',' h ');
+  if(d.status!=='suspendue')return d.lifted?h('section',{className:'ch-group ch-ligne is-ok',role:'status'},h('h2',null,'Ma ligne'),h('p',null,'Internet rétabli à '+hour(d.lifted.at)+', merci pour votre paiement de '+d.lifted.label.split(' ')[0]+'.'),msg&&h('p',{className:'ch-ligne-msg'},msg.text)):null;
+  async function check(){B(true);M(null);try{const r=await api('/ligne','POST',{action:'paye'});M(r);await load();}catch(e){M({text:e.message});}finally{B(false);}}
+  return h('section',{className:'ch-group ch-ligne is-off','aria-labelledby':'ch-ligne-title'},
+   h('h2',{id:'ch-ligne-title'},'Ma ligne est suspendue'),
+   h('p',null,'La facture de '+d.label+' ('+F(d.amount)+') n’est pas payée. Payez-la : internet revient tout de suite.'),
+   h('div',{className:'ch-ligne-actions'},
+    h('button',{type:'button',className:'ch-ligne-pay',onClick:()=>go&&go('fidelite')},'Payer '+F(d.amount)),
+    h('button',{type:'button',className:'ch-ligne-split',onClick:()=>go&&go('acces')},'En 2 ou 3 fois')),
+   h('button',{type:'button',className:'ch-ligne-check',disabled:busy,onClick:check},busy?'Vérification…':'J’ai payé, internet ne revient pas'),
+   msg&&h('p',{className:'ch-ligne-msg',role:'status'},msg.text));
+ }
+
  function PaymentsCard({api,user}){
   const [d,D]=S(null),[all,A]=S(false);
   E(()=>{let alive=true;api('/paiements').then(r=>{if(alive)D(r);}).catch(()=>{});return()=>{alive=false;};},[]);
@@ -192,6 +212,8 @@
   return h('div',{className:'ch-account'},
    h('section',{className:'ch-profile'},h(Face,{name:user.name,size:72,role:'client'}),h('div',null,h('h1',null,user.name),h('p',null,zone?'Fibre Moov · '+zone:'Client Moov Fibre')),
     plan&&h('div',{className:'ch-plan'},h('div',null,h('small',null,'Votre offre'),h('strong',null,plan.mbps+' Mb/s')),h('div',null,h('small',null,'Chaque mois'),h('strong',null,(plan.price||0).toLocaleString('fr-FR')+' F')),h('button',{type:'button',className:'ch-chip strong',onClick:()=>go('forfait')},'Changer de forfait'),state?.nextPlan&&h('p',{className:'ch-plan-next'},'À partir du '+new Date(state.nextPlan.at).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}).replace(/^1 /,'1er ')+' : '+state.nextPlan.plan.mbps+' Mb/s pour '+(state.nextPlan.plan.price||0).toLocaleString('fr-FR')+' F par mois.'))),
+   // Ligne suspendue pour facture impayée : en tête du compte, car c'est la raison d'une coupure (ligne.cjs).
+   api&&h(LigneCard,{api,go}),
    // « Mes avantages » : tout ce que Moov offre au client est rangé ici, pas sur l'accueil (fidélité, parrainage, offres solidaires). WhatsApp vient ensuite, seulement s'il est disponible.
    // « Mes offres » : un seul écran à trois onglets (Forfait, Fidélité avec le parrainage, Solidaire). Ici, juste la carte des points et l'entrée.
    h('h2',{className:'ch-section-title'},'Mes offres'),
@@ -217,5 +239,5 @@
     h('div',{className:'ch-scam',role:'note'},h('span',{className:'ch-row-icon'},h(Icon,{name:'warn',size:19})),h('span',null,h('b',null,'Attention aux arnaques'),h('small',null,'Moov ne vous demandera jamais votre code secret Moov Money, ni par appel, ni par SMS, ni sur WhatsApp. Si on vous le demande, raccrochez.')))),
    h('button',{type:'button',className:'ch-logout',onClick:onLogout,disabled:busy},h(Icon,{name:'logout',size:19}),'Se déconnecter'));
  }
- window.FGClientHome={LiveTrip,ReportHero,Account,WhatsAppCard,ParrainageCard,PaymentsCard,Icon};
+ window.FGClientHome={LiveTrip,ReportHero,Account,WhatsAppCard,ParrainageCard,PaymentsCard,LigneCard,Icon};
 })();
