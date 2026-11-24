@@ -71,6 +71,8 @@ function createGuardianServer(options={}){
  const EB=require('./echange-box.cjs');EB.migrate(store);
  // Créneau de dépannage : le client choisit quand le technicien passe ; retard signalé (rendezvous.cjs).
  const RV=require('./rendezvous.cjs');RV.migrate(store);
+ // Déménagement : la fibre suit le client à sa nouvelle adresse, avec l'appel d'un conseiller (demenagement.cjs).
+ const DM=require('./demenagement.cjs');DM.migrate(store);
  // Service client : chaque demande du client suit un parcours complet (file « À rappeler », appel, « C'est réglé ? », note).
  const SC=require('./service-client.cjs');SC.migrate(store);
  // Panne qui revient : 3 coupures en 30 jours dans un quartier = dossier prioritaire et appel d'un conseiller (panne-recurrente.cjs).
@@ -262,9 +264,11 @@ function createGuardianServer(options={}){
     if(route==='/api/track/link'&&method==='POST')return json(res,noc.trackLink(store,user.id,await body(req,1024)));
     if(route==='/api/echange-box'&&method==='GET')return json(res,EB.state(store,user.id));
     if(route==='/api/echange-box'&&method==='POST'){store.rate('echange:'+user.id,10,600000);const d=await body(req,1024);return json(res,d.action==='cancel'?EB.cancel(store,user.id):EB.ask(store,user.id,d));}
-    if(route==='/api/service-client'&&method==='GET'){PNR.sweep(store);return json(res,SC.mine(store,user.id));}
+    if(route==='/api/demenagement'&&method==='GET')return json(res,DM.state(store,user.id));
+    if(route==='/api/demenagement'&&method==='POST'){store.rate('demenagement:'+user.id,10,600000);const d=await body(req,1024);return json(res,d.action==='cancel'?DM.cancel(store,user.id):DM.ask(store,user.id,d));}
+    if(route==='/api/service-client'&&method==='GET'){PNR.sweep(store);DM.tick(store);return json(res,SC.mine(store,user.id));}
     if(route==='/api/service-client'&&method==='POST'){store.rate('service:'+user.id,20,600000);return json(res,SC.answer(store,user.id,await body(req,1024)));}
-    if(route==='/api/noc/service-client'&&method==='GET'){operator.requireOperator(store,user.id);PNR.sweep(store);const r=SC.queue(store,user.id);DP.seen(store,user.id,'service');return json(res,r);}
+    if(route==='/api/noc/service-client'&&method==='GET'){operator.requireOperator(store,user.id);PNR.sweep(store);DM.tick(store);const r=SC.queue(store,user.id);DP.seen(store,user.id,'service');return json(res,r);}
     if(route==='/api/noc/service-client'&&method==='POST')return json(res,SC.act(store,user.id,await body(req,1024)));
     if(route==='/api/rendezvous'&&method==='POST'){store.rate('rendezvous:'+user.id,10,600000);return json(res,RV.choose(store,user.id,await body(req,512)));}
     if(route==='/api/noc/rendezvous'&&method==='GET'){const r=RV.list(store,user.id);DP.seen(store,user.id,'rendezvous');return json(res,r);}

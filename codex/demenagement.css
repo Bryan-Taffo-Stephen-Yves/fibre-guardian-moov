@@ -1,0 +1,24 @@
+/* Déménagement (demenagement-view.js) : carte de Mon compte. Couleurs : uniquement les variables Moov. Mobile d'abord (390 px). */
+.ch-group.dm-card{display:grid;gap:12px;padding:16px;border-radius:18px}
+.ch-group.dm-card h2{margin:0;font-size:17px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--moov-ink)}
+.dm-card.is-late{box-shadow:inset 0 0 0 1.5px var(--moov-danger-300)}
+.dm-card.is-done{box-shadow:inset 0 0 0 1.5px var(--moov-success-300)}
+.dm-address{display:grid;gap:2px;margin:0}
+.dm-address b{font-size:15.5px;color:var(--moov-ink)}
+.dm-address small,.dm-hint{font-size:13px;color:var(--moov-neutral-600)}
+.dm-hint{margin:0}
+.dm-text{margin:0;font-size:14.5px;line-height:1.45;color:var(--moov-neutral-700)}
+.dm-card.is-late .dm-text{color:var(--moov-danger-700);font-weight:600}
+.dm-field{display:grid;gap:6px;font-size:14px;font-weight:600;color:var(--moov-ink)}
+.dm-field input,.dm-field select{width:100%;box-sizing:border-box;min-height:46px;padding:0 12px;border:1px solid var(--moov-neutral-200);border-radius:12px;background:var(--moov-surface);color:var(--moov-ink);font:inherit;font-size:15px;font-weight:400}
+.dm-warn{margin:0;padding:10px 12px;border-radius:12px;background:var(--moov-accent-50);color:var(--moov-accent-text);font-size:14px;line-height:1.45;font-weight:600}
+.dm-when{display:grid;gap:10px}
+.dm-when>b{font-size:15px;color:var(--moov-ink)}
+.dm-days{display:grid;grid-auto-flow:column;grid-auto-columns:96px;gap:8px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x mandatory}
+.dm-days .rv-day{scroll-snap-align:start}
+.dm-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.dm-main{min-height:46px;padding:0 20px;border:0;border-radius:14px;background:var(--moov-primary);color:var(--moov-on-primary);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.dm-main:disabled{opacity:.6;cursor:default}
+.dm-link{justify-self:start;min-height:44px;padding:0;border:0;background:none;color:var(--moov-primary-700);font:inherit;font-size:14px;font-weight:600;text-decoration:underline;cursor:pointer}
+.dm-error{margin:0;font-size:14px;font-weight:600;color:var(--moov-danger-700)}
+.dm-steps{margin:0}

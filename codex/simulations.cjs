@@ -38,6 +38,7 @@ const SCENES = {
   chambre: 'Wi-Fi faible dans une chambre',
   retard: 'Technicien en retard',
   recurrente: 'Panne qui revient (3e coupure en 30 jours)',
+  demenagement: 'Jour du déménagement (installation à la nouvelle adresse)',
   arnaque: 'Message d’arnaque',
 };
 const OUTAGES = ['panne', 'vol', 'retard']; // scènes qui coupent internet : refusées si une vraie panne est déjà en cours
@@ -184,6 +185,16 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     say(st, made
       ? 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est prioritaire. Un conseiller Moov vous appelle dans les 2 heures pour en parler et, si besoin, envoyer un technicien vérifier toute votre ligne.'
       : 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est déjà prioritaire' + (s.get("SELECT 1 FROM sc_demandes WHERE kind='panne' AND user_id=? AND status IN ('recue','prise','appele','recours')", uid) ? ' : suivez l’appel du conseiller dans « Ma réparation ».' : '. Si ça coupe encore, dites-le-moi : j’alerte tout de suite l’équipe Moov.'));
+  } else if (scene === 'demenagement') {
+    // Le jour du déménagement arrive tout de suite : le technicien a installé la fibre à la nouvelle adresse (demenagement.cjs).
+    // Il faut que le client ait demandé son déménagement et qu'un conseiller l'ait confirmé : la scène ne saute que l'attente.
+    insist(s && uid, 'Client introuvable.', 404);
+    const DM = require('./demenagement.cjs'); DM.migrate(s);
+    const r = s.get("SELECT * FROM demenagements WHERE user_id=? AND status='planifie' ORDER BY created DESC LIMIT 1", uid);
+    insist(r, 'Ce client n’a pas de déménagement confirmé : il le demande dans Mon compte, puis un conseiller le confirme dans « À rappeler ».', 409);
+    DM.finish(s, r, now);
+    st.notifications = J.get(s, uid).notifications;   // la notification « Est-ce réglé ? », que l'enregistrement de la scène écraserait
+    say(st, 'Bienvenue chez vous ! Votre fibre est installée à votre nouvelle adresse (' + r.quartier + ', ' + r.commune + '). Je surveille maintenant votre nouveau quartier. Dites-moi dans « Ma réparation » si tout va bien.');
   } else if (scene === 'arnaque') {
     // Un faux SMS « Moov » demande le code secret Moov Money : Guardian met en garde, sans jamais lire les SMS du client.
     note(st, {page: 'compte', urgent: true, title: 'Attention : arnaque en cours dans votre quartier', body: 'Un faux message « Moov » demande votre code Moov Money pour « réparer votre fibre ». Moov ne vous demandera jamais votre code. Ne répondez pas.'}, now);

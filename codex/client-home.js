@@ -231,6 +231,8 @@
     row('bell','Mes messages',bell?bell+' message'+(bell>1?'s':'')+' à lire':'Tout est lu',()=>go('notifications')),
     row('truck','Ma réparation','Qui vient chez vous et quand',()=>go('tracking')),
     row('map','Carte des pannes','Les pannes dans Abidjan',()=>go('ville'))),
+   // « Je déménage » : la fibre suit le client, avec l'appel d'un conseiller (demenagement-view.js).
+   api&&window.FGDemenagement&&h(FGDemenagement.Card,{api}),
    // Signaler et *144# sont déjà en gros boutons sur l'accueil : pas de doublon ici.
    // « Mes données » : voir, télécharger ou effacer ce que l'application garde (loi n°2013-450).
    window.FGDonnees&&h(FGDonnees.Entry,{onOpen:()=>go('donnees')}),

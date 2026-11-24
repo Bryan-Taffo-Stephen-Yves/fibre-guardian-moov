@@ -43,6 +43,8 @@
   files.splice(files.indexOf('superviseur-view.js'), 0, 'rendezvous-view.js');
   // Service client (service-client-view.js) : « Mes demandes » côté client, file « À rappeler » des conseillers.
   files.splice(files.indexOf('superviseur-view.js'), 0, 'service-client-view.js');
+  // Déménagement (demenagement-view.js) : « Je déménage » dans Mon compte.
+  files.splice(files.indexOf('superviseur-view.js'), 0, 'demenagement-view.js');
   // « Mes données » (donnees-view.js) : page reliée à « Mon compte ».
   files.splice(files.indexOf('app.js'), 0, 'donnees-view.js');
   // « Alertes sur ce téléphone » (push-view.js) : Mon compte du client et Mes missions du technicien.
