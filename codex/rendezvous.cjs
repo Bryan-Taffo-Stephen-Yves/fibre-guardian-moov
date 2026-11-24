@@ -55,7 +55,9 @@ function decorate(s,uid,data,now=Date.now()){
   // Prévenu une seule fois par créneau manqué.
   if(isLate&&r.late_noticed!==endOf(r)){
    s.run('UPDATE rendezvous SET late_noticed=? WHERE incident_id=?',endOf(r),i.id);
-   notify(s,uid,'Le technicien n’est pas venu à l’heure','Pardon : il devait passer '+label(r)+'. Choisissez un nouveau créneau dans « Ma réparation », il passe en priorité.',now);
+   notify(s,uid,'Le technicien n’est pas venu à l’heure','Pardon : il devait passer '+label(r)+'. Choisissez un nouveau créneau dans « Ma réparation », il passe en priorité. Un conseiller vous appelle dans l’heure.',now);
+   // Un conseiller rappelle le client dans l'heure (file « À rappeler », service-client.cjs).
+   require('./service-client.cjs').open(s,{uid,kind:'retard',ref:i.id+':'+endOf(r),incident:i.id,title:'Technicien pas venu · '+label(r),detail:'Créneau manqué : '+label(r)+'.',due:now+HOUR,silent:true},now);
   }
   v.rendezvous={
    current:r?{day:r.day,slot:r.slot,label:label(r),late:isLate}:null,

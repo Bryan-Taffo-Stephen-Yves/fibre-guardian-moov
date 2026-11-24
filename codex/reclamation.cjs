@@ -79,10 +79,22 @@ function claim(s,uid,d,now=Date.now()){
  insist(!item.reclamation.open,'Votre réclamation est déjà entre les mains de Moov.',409);
  insist(item.reclamation.items.length<MAX,'Votre dossier est déjà chez un responsable de Moov. Si rien n’est réglé, voyez vos recours juste en dessous.',409);
  insist(item.reclamation.canClaim,terminal(item)?'Ce dossier est fermé depuis plus de 7 jours : signalez un nouveau problème.':'Moov a encore le temps de vous répondre.',409);
- const text=String(d.text||'').trim().slice(0,500),level=item.reclamation.items.length+1,due=now+DUE[level-1];
- s.run('INSERT INTO reclamations(id,incident_id,user_id,level,text,created,due) VALUES(?,?,?,?,?,?,?)',crypto.randomUUID(),item.id,uid,level,text,now,due);
- notify(s,uid,'reclamation:'+item.id+':'+level,level===1?'Votre réclamation est enregistrée':'Votre dossier monte chez un responsable','Dossier '+ref(item.id)+' : '+(level===1?'un conseiller':'un responsable')+' Moov vous répond avant '+when(due,now)+'.',now);
+ return file(s,uid,item.id,String(d.text||'').trim().slice(0,500),item.reclamation.items.length+1,now);
+}
+// Enregistre la réclamation et l'envoie dans la file « À rappeler » des conseillers (service-client.cjs).
+function file(s,uid,iid,text,level,now){
+ const due=now+DUE[level-1],id=crypto.randomUUID();
+ s.run('INSERT INTO reclamations(id,incident_id,user_id,level,text,created,due) VALUES(?,?,?,?,?,?,?)',id,iid,uid,level,text,now,due);
+ notify(s,uid,'reclamation:'+iid+':'+level,level===1?'Votre réclamation est enregistrée':'Votre dossier monte chez un responsable','Dossier '+ref(iid)+' : '+(level===1?'un conseiller':'un responsable')+' Moov vous appelle avant '+when(due,now)+'.',now);
+ const title=s.get('SELECT title FROM noc_incidents WHERE id=?',iid)?.title||'Dossier';
+ require('./service-client.cjs').open(s,{uid,kind:'reclamation',ref:id,incident:iid,title:'Dossier '+ref(iid)+' · '+title,detail:text,level,due,silent:true},now);
  return {ok:true,due,dueText:when(due,now),level};
+}
+// Après l'appel du conseiller, le client répond « Non, toujours pas » : la réclamation monte chez un responsable.
+function escalate(s,uid,iid,text,now=Date.now()){
+ const n=s.get('SELECT COUNT(*) n FROM reclamations WHERE user_id=? AND incident_id=?',uid,iid).n;
+ insist(n<MAX,'Votre dossier est déjà chez un responsable.',409);
+ return file(s,uid,iid,text,n+1,now);
 }
 
 // Équipe Moov : réclamations ouvertes (retards d'abord), dossiers en retard de réponse, et ce qui a été réglé cette semaine.
@@ -104,7 +116,11 @@ function answer(s,uid,d,now=Date.now()){
  const message=String(d.message||'').trim().slice(0,500)||OUTCOMES[d.outcome][1];
  s.run("UPDATE reclamations SET status='done',outcome=?,response=?,done_by=?,done_at=? WHERE id=?",d.outcome,message,uid,now,r.id);
  notify(s,r.user_id,'reclamation-reponse:'+r.id,'Moov a répondu à votre réclamation','Dossier '+ref(r.incident_id)+' : '+message,now);
+ // Réponse donnée hors de la file (bloc du Superviseur) : la demande du client suit ; « intervention » attend la réparation.
+ const SC=require('./service-client.cjs');
+ if(d.outcome==='intervention'){s.run("UPDATE sc_demandes SET status='appele',outcome='technicien',note=?,called_at=?,agent_id=COALESCE(agent_id,?),agent_name=COALESCE(agent_name,(SELECT name FROM users WHERE id=?)),taken_at=COALESCE(taken_at,?),updated=? WHERE kind='reclamation' AND ref=? AND status IN ('recue','prise','appele')",message,now,uid,uid,now,now,r.id);}
+ else SC.settle(s,'reclamation',r.id,{outcome:'regle',message,by:uid},now);
  return {ok:true};
 }
 
-module.exports={migrate,decorate,claim,list,answer,promise,OUTCOMES,PROMISE,WINDOW};
+module.exports={migrate,decorate,claim,escalate,list,answer,promise,OUTCOMES,PROMISE,WINDOW};

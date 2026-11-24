@@ -62,13 +62,16 @@ function ask(s,uid,d,now=Date.now()){return s.transaction(()=>{
  const id=crypto.randomUUID();
  s.run('INSERT INTO box_echanges(id,user_id,mode,agence,slot,day,code,reason,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)',id,uid,d.mode,agence,slot,day,code,reason,now,now);
  const v=view(s.get('SELECT * FROM box_echanges WHERE id=?',id));
- notify(s,uid,'Échange de box demandé',d.mode==='agence'?'Nous préparons une box neuve à l’'+v.agence.replace(/^Agence/,'agence')+'. Vous serez prévenu quand elle est prête. Votre code de retrait : '+code+'.':'Un technicien vous apporte une box neuve '+v.when+'. Gardez l’ancienne box et son chargeur : il les reprend.',now);
+ notify(s,uid,'Échange de box demandé',d.mode==='agence'?'Nous préparons une box neuve à l’'+v.agence.replace(/^Agence/,'agence')+'. Vous serez prévenu quand elle est prête. Votre code de retrait : '+code+'. Un conseiller vous appelle dans les 4 heures pour tout confirmer.':'Un technicien vous apporte une box neuve '+v.when+'. Gardez l’ancienne box et son chargeur : il les reprend. Un conseiller vous appelle dans les 4 heures pour tout confirmer.',now);
+ // Un conseiller rappelle le client pour confirmer l'adresse et le moment (file « À rappeler », service-client.cjs).
+ require('./service-client.cjs').open(s,{uid,kind:'echange',ref:id,title:d.mode==='agence'?'Échange en agence · '+v.agence:'Échange chez le client · '+v.when,detail:reason,silent:true},now);
  return state(s,uid,now);
 });}
 
 function cancel(s,uid,now=Date.now()){
  const r=open(s,uid);insist(r,'Aucune demande d’échange en cours.',404);insist(r.status==='demandee',r.status==='prete'?'Votre box neuve est déjà prête à l’agence : si vous n’en avez plus besoin, dites-le au guichet.':'Le technicien est déjà prévu : appelez le 111 pour changer le rendez-vous.',409);
  s.run("UPDATE box_echanges SET status='annulee',updated=? WHERE id=?",now,r.id);
+ require('./service-client.cjs').cancelRef(s,'echange',r.id,now);
  return state(s,uid,now);
 }
 
@@ -91,7 +94,8 @@ function advance(s,uid,d,now=Date.now()){
  const v=view(s.get('SELECT * FROM box_echanges WHERE id=?',r.id));
  if(next==='prete')notify(s,r.user_id,'Votre box neuve est prête','Passez la retirer à l’'+v.agence.replace(/^Agence/,'agence')+' avec votre code '+r.code+' et l’ancienne box.',now);
  if(next==='envoye')notify(s,r.user_id,'Le technicien arrive avec votre box neuve','Il passe '+v.when+'. Préparez l’ancienne box et son chargeur.',now);
- if(next==='echangee')notify(s,r.user_id,'Box échangée','Votre nouvelle box est installée. Si quelque chose ne va pas, dites-le à Guardian.',now);
+ if(next==='echangee'){notify(s,r.user_id,'Box échangée','Votre nouvelle box est installée. Si quelque chose ne va pas, dites-le à Guardian.',now);
+  require('./service-client.cjs').settle(s,'echange',r.id,{outcome:'echange',message:'Votre nouvelle box est installée.',by:uid},now);}
  return list(s,uid,now);
 }
 
