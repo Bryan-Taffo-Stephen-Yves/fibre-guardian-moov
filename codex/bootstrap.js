@@ -49,6 +49,12 @@
   files.splice(files.indexOf('app.js'), 0, 'push-view.js');
   // Page « Simulations » (simulations-view.js) : ouverte depuis le badge « Démo ».
   files.splice(files.indexOf('app.js'), 0, 'simulations-view.js');
+  // Tous les fichiers sont demandés au serveur en même temps (préchargement), puis exécutés un par un dans l'ordre.
+  // Avant, chaque fichier attendait le précédent : 85 allers-retours à la suite, soit 10 à 15 secondes sur un téléphone.
+  files.forEach(function (path) {
+    const link = document.createElement('link'); link.rel = 'preload'; link.as = 'script'; link.href = path;
+    document.head.appendChild(link);
+  });
   next();
   // Application installable : le service worker garde les fichiers chargés pour le mode hors ligne.
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
