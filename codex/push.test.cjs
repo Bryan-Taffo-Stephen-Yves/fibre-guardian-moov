@@ -130,6 +130,10 @@ test('Panne du quartier : la cliente, l’équipe Moov et le technicien de la mi
     const got = to => t.calls.filter(c => c.url.endsWith('/' + to));
     assert.equal(got('rose').length, 1); assert.match(got('rose')[0].message.body, /câble de fibre est coupé/i);
     assert.equal(got('rose')[0].message.title, 'Fibre Guardian');
+    // Le client reçoit aussi le chiffre de l'icône (message de la panne compris) ; l'équipe Moov, non.
+    assert.ok(Number.isInteger(got('rose')[0].message.badge) && got('rose')[0].message.badge >= 1, 'chiffre sur l’icône du client');
+    assert.equal(got('rose')[0].message.badge, N.notifications(t.s, rose.id).unreadCards);
+    assert.equal('badge' in got('chef')[0].message, false, 'pas de chiffre pour l’équipe');
     assert.equal(got('chef').length, 1); assert.match(got('chef')[0].message.body, /validation est attendue/);
     assert.equal(got('chef')[0].message.url, './?portal=moov&section=operations');
     assert.equal(got('abo').length, 0, 'Abobo n’est pas concerné');
@@ -158,7 +162,9 @@ test('« Mes messages » du client partent aussi sur son téléphone, une fois, 
       {key: 'k2', home: 'home-3', at: now, title: 'Voisin', body: 'pour un autre foyer', read: false});
     J.put(t.s, awa.id, s2); await settle();
     assert.equal(t.calls.length, 1);
-    assert.deepEqual(t.calls[0].message, {title: 'Nouvel appareil sur votre Wi-Fi', body: 'Un iPhone vient de se connecter.', tag: 'k1', url: './?section=devices'});
+    // badge : le chiffre sur l'icône de l'application = ses messages non lus (le voisin home-3 ne compte pas).
+    assert.deepEqual(t.calls[0].message, {title: 'Nouvel appareil sur votre Wi-Fi', body: 'Un iPhone vient de se connecter.', tag: 'k1', url: './?section=devices', badge: 1});
+    assert.equal(PU.badgeOf(t.s, awa.id), 1);
     J.put(t.s, awa.id, J.get(t.s, awa.id)); await settle();
     assert.equal(t.calls.length, 1, 'déjà envoyé');
     // Un vieux message (avant l'abonnement, ou de plus de 2 minutes) ne part pas.

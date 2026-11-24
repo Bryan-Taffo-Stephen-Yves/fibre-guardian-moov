@@ -81,5 +81,26 @@
       err && h('p', {className: 'fp-error', role: 'alert'}, err));
   }
 
-  root.FGPush = {Card, sync, enable, disable, current, supported};
+  // Sur l'accueil du client : proposer les alertes tant qu'elles ne sont pas activées (une fois par semaine au plus après « Plus tard »).
+  // Sur iPhone, l'application doit d'abord être ajoutée à l'écran d'accueil : la carte le dit en deux gestes.
+  const LATER = 'fg-push-plus-tard', WEEK = 7 * 86400000;
+  const later = () => { try { return Date.now() - Number(root.localStorage.getItem(LATER) || 0) < WEEK; } catch (_) { return false; } };
+  function Prompt({api}) {
+    const [st, T] = S(null), [busy, B] = S(false), [err, X] = S(''), [hid, H] = S(later);
+    E(() => { let alive = true; current().then(v => { if (alive) T(v); }); return () => { alive = false; }; }, []);
+    if (hid || !['off', 'install', 'refus'].includes(st)) return null;
+    const close = () => { try { root.localStorage.setItem(LATER, String(Date.now())); } catch (_) {} H(true); };
+    async function on() { if (busy) return; B(true); X(''); try { const r = await enable(api); T(r === 'on' ? 'on' : 'refus'); } catch (e) { X(e.message || 'Impossible pour le moment. Réessayez.'); } finally { B(false); } }
+    return h('section', {className: 'fp-prompt', 'aria-labelledby': 'fp-prompt-title'},
+      h('span', {className: 'fp-prompt-ico'}, icon(22)),
+      h('div', {className: 'fp-prompt-txt'},
+        h('h2', {id: 'fp-prompt-title'}, st === 'refus' ? 'Alertes non autorisées' : 'Recevez les alertes tout de suite'),
+        h('p', null, st === 'refus' ? 'Le téléphone n’a pas donné son accord. Vous pourrez les activer plus tard dans Mon compte, ou dans les réglages du téléphone.' : st === 'install' ? 'Sur iPhone : touchez Partager, puis « Sur l’écran d’accueil ». Ouvrez Fibre Guardian depuis cette icône pour recevoir les alertes.' : 'Une panne, l’avancée de votre dossier fibre, un message de Guardian : recevez-les même application fermée.'),
+        err && h('p', {className: 'fp-error', role: 'alert'}, err)),
+      h('div', {className: 'fp-prompt-actions'},
+        st === 'off' && h('button', {type: 'button', className: 'ac-go', disabled: busy, onClick: on}, busy ? 'Un instant…' : 'Activer les alertes'),
+        h('button', {type: 'button', className: 'ac-go ghost', onClick: close}, st === 'off' ? 'Plus tard' : 'Compris')));
+  }
+
+  root.FGPush = {Card, Prompt, sync, enable, disable, current, supported};
 })(window);
