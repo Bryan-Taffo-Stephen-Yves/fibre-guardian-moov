@@ -183,7 +183,7 @@ function start(st, scene, now = Date.now(), {fault = null, s = null, uid = null}
     const n = PR.outages(s, seg, now, {sim: true}).length;
     say(st, made
       ? 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est prioritaire. Un conseiller Moov vous appelle dans les 2 heures pour en parler et, si besoin, envoyer un technicien vérifier toute votre ligne.'
-      : 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est déjà prioritaire : suivez l’appel du conseiller dans « Ma réparation ».');
+      : 'Pardon : c’est la ' + n + 'e coupure en 30 jours à ' + quarter(st) + '. Votre dossier est déjà prioritaire' + (s.get("SELECT 1 FROM sc_demandes WHERE kind='panne' AND user_id=? AND status IN ('recue','prise','appele','recours')", uid) ? ' : suivez l’appel du conseiller dans « Ma réparation ».' : '. Si ça coupe encore, dites-le-moi : j’alerte tout de suite l’équipe Moov.'));
   } else if (scene === 'arnaque') {
     // Un faux SMS « Moov » demande le code secret Moov Money : Guardian met en garde, sans jamais lire les SMS du client.
     note(st, {page: 'compte', urgent: true, title: 'Attention : arnaque en cours dans votre quartier', body: 'Un faux message « Moov » demande votre code Moov Money pour « réparer votre fibre ». Moov ne vous demandera jamais votre code. Ne répondez pas.'}, now);
