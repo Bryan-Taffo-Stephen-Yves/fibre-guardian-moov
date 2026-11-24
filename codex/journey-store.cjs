@@ -340,7 +340,10 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   if(i.status==='resolved'){i.resolved=now;i.verification={source:'simulateur',at:now,online:true,mbps:100};}
   i.events.push({at:now,label:LABELS[step+1]});notify(st,i,i.status==='en_route'?'L’équipe est en route · arrivée dans environ 2 minutes.':LABELS[step+1]);audit(st,'incident.'+i.status,i.reference);
  }else if(d.type==='confirm-restored'){const i=st.incidents.find(v=>v.id===d.id);insist(i?.status==='resolved','Attendez le contrôle de rétablissement.',409);i.customerConfirmed=now;audit(st,'customer.restored',i.reference);
- }else if(d.type==='read'){for(const n of st.notifications)if(n.home===d.home)n.read=true;
+ }else if(d.type==='read'){
+  // Sans service : tous les messages du foyer. Avec service (dossier, appareils, guardian) : seulement ceux de ce service (notif-services.js).
+  const svc=require('./notif-services.js');insist(d.service===undefined||d.service===null||svc.SERVICES.includes(d.service),'Service inconnu.');
+  for(const n of st.notifications)if(n.home===d.home&&(d.service==null||svc.service(n)===d.service))n.read=true;
  }else if(d.type==='reset'){usage.clear(s,uid);st=seed();st.version=d.version;
  }else insist(false,'Action inconnue.',404);
  if(d.type==='report')require('./noc-store.cjs').importReport(s,uid,st.incidents[0],{mode:'demo'});st.version++;put(s,uid,st);return snapshotFor(s,uid,st);

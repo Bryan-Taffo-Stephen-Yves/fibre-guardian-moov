@@ -2,8 +2,8 @@
    Les pages et fichiers passent d'abord par le réseau (jamais de version périmée en ligne),
    le cache ne sert qu'en secours. Les données (/api/) ne sont jamais mises en cache. */
 'use strict';
-const CACHE = 'fibre-guardian-v45';
-const SHELL = ['./', './index.html', './offline.html', './bootstrap.js', './apparence.js', './icones.js', './techniciens.js', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png', '../vendor/fonts.css', './moov-theme.css', './moov-brand.css', './fonts.css', './refonte.css', './guardian-chat.css', './live-trip.css', './landing.css','./client-home.css','./tech-view.css','./avatars.css', './plan-view.css', './survie.css', './essentiel.css', './accueil.css', './ecrans-client.css', './push.css', './design-system.css'];
+const CACHE = 'fibre-guardian-v46';
+const SHELL = ['./', './index.html', './offline.html', './bootstrap.js', './apparence.js', './icones.js', './techniciens.js', './manifest.webmanifest', './pwa/icon-192.png', './pwa/icon-512.png', '../vendor/fonts.css', './moov-theme.css', './moov-brand.css', './fonts.css', './refonte.css', './guardian-chat.css', './live-trip.css', './landing.css','./client-home.css','./tech-view.css','./avatars.css', './plan-view.css', './survie.css', './essentiel.css', './accueil.css', './ecrans-client.css', './push.css', './design-system.css', './notif-services.js'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -46,7 +46,15 @@ self.addEventListener('push', event => {
   const title = String(m.title || 'Fibre Guardian').slice(0, 120);
   const opts = {body: String(m.body || '').slice(0, 400), icon: './pwa/icon-192.png', badge: './pwa/icon-192.png', data: {url: m.url || './'}};
   if (m.tag) { opts.tag = String(m.tag).slice(0, 120); opts.renotify = true; }
-  event.waitUntil(self.registration.showNotification(title, opts));
+  // Chiffre sur l'icône de l'application (messages non lus, calculé par push.cjs) : jamais au prix de l'affichage.
+  let badge = Promise.resolve();
+  try {
+    const n = m.badge, nav = self.navigator;
+    if (Number.isInteger(n) && n >= 0 && nav && typeof nav.setAppBadge === 'function') {
+      badge = Promise.resolve(n === 0 && typeof nav.clearAppBadge === 'function' ? nav.clearAppBadge() : nav.setAppBadge(n)).catch(() => null);
+    }
+  } catch (_) { badge = Promise.resolve(); }
+  event.waitUntil(Promise.all([self.registration.showNotification(title, opts), badge]));
 });
 
 // Toucher une notification de Guardian : l'application s'ouvre sur le bon écran (alerte Wi-Fi : écran Appareils).
