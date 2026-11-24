@@ -111,7 +111,9 @@ function pay(s,uid,d,now=Date.now()){
   const before=state(s,uid,now);insist(!before.bill.paid,'Votre facture de '+before.bill.label+' est déjà payée.',409);
   insist(!before.bill.split,'Votre facture de '+before.bill.label+' se paie déjà en plusieurs fois : réglez la part suivante dans « Payer en plusieurs fois ».',409);
   insist(d.month===before.bill.month,'Cette facture n’est plus à payer. Rechargez la page.',409);
-  s.run("UPDATE fidelite_factures SET paid_at=?,channel='moov_money' WHERE user_id=? AND month=?",now,uid,before.bill.month);
+  // « paid_at IS NULL » : même deux demandes coup sur coup ne paient la facture qu'une fois.
+  const done=s.run("UPDATE fidelite_factures SET paid_at=?,channel='moov_money' WHERE user_id=? AND month=? AND paid_at IS NULL",now,uid,before.bill.month);
+  insist(done.changes>0,'Votre facture de '+before.bill.label+' est déjà payée.',409);
   const after=state(s,uid,now),won=after.earned-before.earned;
   // Premier passage au niveau Argent par 12 mois payés à temps : un mois de débit boosté offert.
   if(after.tier.id!=='bronze'&&before.tier.id==='bronze'){
