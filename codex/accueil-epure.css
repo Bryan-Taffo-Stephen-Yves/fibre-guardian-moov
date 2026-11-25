@@ -154,3 +154,5 @@
 :root[data-mode=dark] .journey[data-espace=client] .ae-news h2{color:var(--moov-primary)}
 :root[data-mode=dark] .journey[data-espace=client] .fp-prompt-ico{background:color-mix(in srgb,var(--moov-primary-500) 22%,transparent);color:var(--moov-primary)}
 :root[data-mode=dark] .journey[data-espace=client] .fp-prompt .ac-go:not(.ghost){background:var(--ds-white);color:var(--ds-deep)}
+/* Très petit téléphone (320 px) : le prénom passe à la ligne au lieu d'être coupé, « Appareils » tient sur une ligne (test des agents, 25/11). */
+@media(max-width:340px){.ae-hi strong{font-size:18px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.ae-act{font-size:12px;white-space:nowrap}.ae-act-ico{width:54px;height:54px}}
