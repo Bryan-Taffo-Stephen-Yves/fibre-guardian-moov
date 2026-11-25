@@ -159,3 +159,13 @@
 .mm-receipt-note{flex-basis:100%;margin:0;font-size:13px;text-align:center;color:var(--moov-text-muted)}
 .mm-success .mm-receipt{margin:2px 0 4px}
 .mm-receipt-btn{text-decoration:none}
+
+/* Petit téléphone (320 px) : l'en-tête de Guardian tient sur une ligne, la conversation garde la place (test des agents, 25/11). */
+@media(max-width:380px){
+  .journey .j-chat header{gap:8px;padding:10px 12px}
+  .journey .j-chat header small{display:none}
+  .journey .j-chat-avatar{width:34px;height:34px;flex:0 0 34px}
+  .journey .j-chat-avatar i{top:11px;left:10px}
+  .journey .j-chat-avatar i:nth-child(2){left:19px}
+  .journey .j-guardian-page .j-chat.j-chat-page{min-height:470px}
+}

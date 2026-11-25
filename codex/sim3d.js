@@ -278,7 +278,7 @@
     return h('div', {className: 'sm' + (seg ? ' has-panel' : '')},
       h('section', {className: 'sm-card', ref: card},
         h('header', {className: 'sm-head'},
-          h('div', null, h('h2', null, 'Abidjan en maquette'), h('p', null, touched ? touched + ' quartier' + (touched > 1 ? 's' : '') + ' en alerte. Touchez un poteau pour agir.' : 'Touchez un poteau pour simuler une panne dans son quartier.')),
+          h('div', null, h('h2', null, 'Abidjan, quartier par quartier'), h('p', null, touched ? touched + ' quartier' + (touched > 1 ? 's' : '') + ' en alerte. Touchez un poteau pour agir.' : 'Touchez un poteau pour simuler une panne dans son quartier.')),
           h('div', {className: 'sm-tools', role: 'group', 'aria-label': 'Orientation de la maquette'},
             h('button', {type: 'button', onClick: () => setRot(r => r - 30), 'aria-label': 'Tourner à gauche'}, '↺'),
             h('button', {type: 'button', onClick: () => setRot(r => r + 30), 'aria-label': 'Tourner à droite'}, '↻'),

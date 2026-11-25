@@ -12,7 +12,7 @@
     return h('li', {className: 'fd-group'},
       h('div', {className: 'fd-head'},
         h('div', null, h('strong', null, g.zone || g.title), h('small', null, g.title + ' · coupure de ' + length(g.ended - g.started))),
-        h('div', {className: 'fd-total'}, h('b', null, money(g.amount)), h('small', null, g.clients.length + ' client' + (g.clients.length > 1 ? 's' : '') + ' · ' + g.days + ' jour' + (g.days > 1 ? 's' : '')))),
+        h('div', {className: 'fd-total'}, h('b', null, money(g.amount)), h('small', null, g.clients.length + (g.clients.length > 1 ? ' clients inscrits' : ' client inscrit') + ' · ' + g.days + ' jour' + (g.days > 1 ? 's' : '')))),
       h('button', {type: 'button', className: 'fd-more', 'aria-expanded': open, onClick: () => setOpen(!open)}, open ? 'Masquer le détail' : 'Voir le détail par client'),
       open && h('ul', {className: 'fd-clients'}, g.clients.map((c, i) => h('li', {key: i}, h('span', null, h('b', null, c.name), h('small', null, c.reasons.join(' · '))), h('b', null, c.days + ' j · ' + money(c.amount))))),
       g.status !== 'proposed' ? h('p', {className: 'fd-done is-' + g.status}, g.status === 'validated' ? 'Geste accordé, clients prévenus.' : 'Geste refusé.') :
@@ -35,7 +35,7 @@
     const groups = d.pending.concat(d.decided);
     return h('section', {className: 'gs-block fd', 'aria-labelledby': 'fd-title'},
       h('div', {className: 'gs-block-head'}, h('h3', {id: 'fd-title'}, 'Gestes après une coupure'), h('span', {className: 'gs-count'}, d.pending.length)),
-      h('p', {className: 'gs-note'}, '1 jour offert pour toute coupure confirmée, plus 1 jour par 24 h commencées et 1 jour si l’heure de retour promise n’a pas été tenue. Je calcule, un responsable accorde.'),
+      h('p', {className: 'gs-note'}, '1 jour offert pour toute coupure confirmée, plus 1 jour par 24 h commencées et 1 jour si l’heure de retour promise n’a pas été tenue. Le geste va aux clients du quartier inscrits sur Fibre Guardian (pas à toutes les box coupées). Je calcule, un responsable accorde.'),
       error && h('p', {className: 'gs-error', role: 'alert'}, error),
       groups.length ? h('ul', {className: 'fd-list'}, groups.map(g => h(Group, {key: g.incidentId, g, canDecide: d.canDecide, busy, onDecide: decide})))
         : h('p', {className: 'gs-empty'}, 'Aucune coupure réparée ces 30 derniers jours : aucun geste à proposer.'));

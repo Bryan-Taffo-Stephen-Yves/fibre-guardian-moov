@@ -48,6 +48,8 @@
     if (sub) { await api('/push', 'DELETE', {endpoint: sub.endpoint}).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
     return 'off';
   }
+  // Après un réglage fait dans le téléphone : on relit l'autorisation ; si elle est revenue, « Activer » réapparaît.
+  async function recheck() { const v = await current(); if (v === 'denied') throw new Error('Les alertes sont toujours bloquées. Suivez les étapes ci-dessus, puis réessayez.'); return v; }
   async function current() {
     if (!supported()) return iphone() && !installed() ? 'install' : 'absent';
     if (Notification.permission === 'denied') return 'denied';
@@ -60,7 +62,7 @@
   const HINT = {
     off: 'Soyez prévenu d’une panne ou d’un message, même quand l’application est fermée.',
     on: 'Activées : Guardian vous prévient même quand l’application est fermée.',
-    denied: 'Bloquées. Autorisez les notifications de Fibre Guardian dans les réglages du téléphone.',
+    denied: 'Bloquées sur ce téléphone. Pour les réactiver : touchez le cadenas à gauche de l’adresse, puis Autorisations, Notifications, Autoriser. Si l’application est installée : Réglages du téléphone, Notifications, Fibre Guardian. Touchez ensuite « C’est fait ».',
     install: 'Sur iPhone : touchez Partager, puis « Sur l’écran d’accueil ». Ouvrez Fibre Guardian depuis cette icône, puis revenez ici.',
     absent: 'Ce navigateur ne peut pas recevoir les alertes. Essayez avec Chrome, Edge ou Safari à jour.'
   };
@@ -74,7 +76,8 @@
     async function run(fn) { if (busy) return; B(true); X(''); try { T(await fn(api)); } catch (e) { X(e.message || 'Impossible pour le moment. Réessayez.'); } finally { B(false); } }
     const hint = (look === 'tech' && TECH[st]) || HINT[st];
     const action = st === 'off' ? h('button', {type: 'button', className: look === 'tech' ? 'tv-btn primary' : 'ch-chip strong', disabled: busy, onClick: () => run(enable)}, busy ? 'Un instant…' : 'Activer')
-      : st === 'on' ? h('button', {type: 'button', className: look === 'tech' ? 'tv-btn' : 'ch-chip', disabled: busy, onClick: () => run(disable)}, busy ? 'Un instant…' : 'Arrêter') : null;
+      : st === 'on' ? h('button', {type: 'button', className: look === 'tech' ? 'tv-btn' : 'ch-chip', disabled: busy, onClick: () => run(disable)}, busy ? 'Un instant…' : 'Arrêter')
+      : st === 'denied' ? h('button', {type: 'button', className: look === 'tech' ? 'tv-btn' : 'ch-chip', disabled: busy, onClick: () => run(recheck)}, busy ? 'Un instant…' : 'C’est fait') : null;
     const text = h('span', {className: 'fp-text'}, h('b', null, 'Alertes sur ce téléphone'), h('small', null, hint));
     return h('section', {className: (look === 'tech' ? 'tv-card ' : 'ch-group ') + 'fp-card fp-' + st, 'aria-live': 'polite'},
       h('div', {className: 'fp-row'}, h('span', {className: look === 'tech' ? 'fp-icon' : 'ch-row-icon fp-icon'}, icon(19)), text, action),
