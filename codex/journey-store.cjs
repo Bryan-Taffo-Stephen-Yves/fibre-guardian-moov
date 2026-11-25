@@ -71,6 +71,8 @@ function validatePhoto(value){insist(typeof value==='string'&&value.length<48000
 // Les demandes de forfait, de jeu, de film ou de visio gardent leurs règles plus bas.
 const INTENTS=[
  ['resiliation',/resili|(annuler|arreter|stopper) (mon |l')?abonnement|quitter moov/],
+ // « Pourquoi ma facture a augmenté ? » : on explique le montant du mois, au lieu de proposer un autre forfait.
+ ['hausse',/(factur|prix|abonnement|montant).{0,30}(augment|hausse|plus cher|monte|grimp|change|double)|(augment|hausse|plus cher|monte).{0,30}(factur|prix|abonnement|montant)|pourquoi .{0,25}(paye|payer|paie) plus/],
  ['upgrade',/forfait (plus|superieur)|meilleur forfait|changer de forfait|plus de debit|plus rapide|augmenter (mon )?debit|upgrade|\b\d+ ?(mbps|mb\/s|megabits)/],
  // « Qui consomme le plus ? » : le conseiller conso (forfait-bilan.cjs) répond avec les vrais chiffres de la maison.
  ['conso',/qui (consomme|utilise|prend|bouffe) (le plus|tout|beaucoup)|consomm|combien de (data|donnees|go|mo)\b|\bdata\b|quel appareil (prend|utilise|consomme)/],
@@ -157,6 +159,10 @@ function diagnostic(st,text,context=null){const snap=snapshot(st),fault=context|
  // Une situation jouée depuis la Régie (simulations.cjs) : Guardian reste cohérent avec ce qu'il vient d'écrire au client.
  const scene=sceneReply(st,ask,text,hello,facts);if(scene)return scene;
  const requested=Number(text.match(/(\d+)\s*(?:mbps|mb\/s|mégabits|megabits)/i)?.[1]||0),plan=st.plan||PLANS[1];
+ if(ask==='hausse'){const due=monthPrice(st),p=st.payment,next=st.nextPlan,month=monthOf(Date.now());
+  const why=p&&Number.isFinite(p.fromPrice)&&Date.now()<p.nextBilling?' Ce mois-ci, vous avez déjà payé '+fcfa(p.amount)+' pour passer à '+plan.mbps+' Mb/s plus tôt : votre facture de '+month+' reste à '+fcfa(due)+'. Le nouveau prix de '+fcfa(plan.price)+' commence le '+firstOf(p.nextBilling)+'.'
+   :next?' Vous avez choisi '+next.plan.mbps+' Mb/s pour '+fcfa(next.plan.price)+' à partir du '+firstOf(next.at)+'.':' Votre prix n’a pas changé.';
+  return {message:'Votre facture de '+month+' est de '+fcfa(due)+' pour '+plan.mbps+' Mb/s.'+why+' Si vous voyez un autre montant, regardez « Mes paiements » dans « Mon compte » : un paiement en plusieurs fois ou un retard peut changer ce qui reste à payer.',facts};}
  if(ask==='prix'&&!requested)return {message:'Votre forfait actuel vous donne '+plan.mbps+' Mb/s pour '+plan.price.toLocaleString('fr-FR')+' FCFA par mois. Pour en changer, ouvrez « Changer de forfait » dans votre compte : vous y voyez toutes les offres et leur prix.',facts};
  if(ask==='upgrade'||requested>plan.mbps){
   st.proposal=null;st.upgrade=null;
@@ -331,7 +337,7 @@ function act(s,uid,d){return s.transaction(()=>{let st=get(s,uid);insist(st,'Dé
   insist(d.confirm===true,'Confirmez le contexte d’usage.');insist(Object.hasOwn(usage.CONTEXTS,d.value),'Contexte inconnu.');st.usageContext=d.value;st.proposal=null;audit(st,'usage.context',usage.CONTEXTS[d.value].label+' · aucune action sur le débit');
  }else if(d.type==='baseline'){st.usual=snapshot(st).metrics.connected;audit(st,'baseline','Nombre habituel confirmé : '+st.usual);
  }else if(d.type==='report'){
-  insist(d.consent===true,'Consentement au partage requis.');insist(st.incidents.length<15,'Maximum 15 incidents dans ce parcours.');const description=paragraph(d.description,'Description',500),zone=word(d.zone,'Zone',100);number(d.lat,'Latitude',-90,90,false);number(d.lon,'Longitude',-180,180,false);const photo=validatePhoto(d.photo);const existing=active(st);
+  insist(d.consent===true,'Consentement au partage requis.');insist(st.incidents.length<15,'Maximum 15 incidents dans ce parcours.');const description=paragraph(d.description,'Description',500),zone=word(d.zone,'Zone',100);number(d.lat,'Latitude',-90,90,false);number(d.lon,'Longitude',-180,180,false);const photo=d.photo?validatePhoto(d.photo):null;const existing=active(st);
   insist(!existing,'Un incident est déjà ouvert sur votre segment. Utilisez « Je suis aussi touché ».',409);
   openIncident(st,now,{zone,description,photo,lat:d.lat,lon:d.lon,kind:d.kind});
  }else if(d.type==='affected'){
