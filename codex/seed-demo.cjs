@@ -108,9 +108,9 @@ async function seedDemo(store,{log=()=>{},credentialsFile=null}={}){
   await request(direction,'/noc/action',{type:'simulate',segment:'YOP-07',scenario:'fiber'});
   const night=(await overview()).incidents.find(i=>i.segment_id==='YOP-07'&&!i.terminal),nightKey='incident:'+night.id;
   at(7*HOUR+51*MIN+40000);
-  await work(nightKey,'note',{body:'Alarme LOS sur 12 box de Niangon depuis 23 h 08. Des travaux de voirie ont eu lieu hier rue des Jardins : câble de distribution probablement sectionné.'});
+  await work(nightKey,'note',{body:'Plus de lumière sur 12 box de Niangon depuis 23 h 08. Des travaux de voirie ont eu lieu hier rue des Jardins : câble de distribution probablement sectionné.'});
   await notify(nightKey);
-  at(7*HOUR+51*MIN);await incidentAction(night.id,'approve',{note:'Alarmes cohérentes avec une coupure de distribution. Intervention de nuit autorisée.'});
+  at(7*HOUR+51*MIN);await incidentAction(night.id,'approve',{note:'Les 12 box se sont éteintes en même temps : c’est bien la fibre du quartier qui est coupée. Intervention de nuit autorisée.'});
   at(7*HOUR+50*MIN);await incidentAction(night.id,'dispatch',{technician:'koffi',safety:true});await notify(nightKey);
   at(7*HOUR+46*MIN);
   await work(nightKey,'instruct',{body:'Baliser la zone de travaux avant d’ouvrir la chambre de tirage.'});

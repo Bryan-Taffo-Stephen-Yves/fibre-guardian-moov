@@ -23,7 +23,10 @@ function operatorReply(s,user,d,text){
  ];
  const link=(page,label)=>({page,label,...(item?{workItemKey:item.key,...(item.kind==='incident'?{incidentId:item.id}:{})}:{})});
  let actions=[link('operations','Ouvrir le cockpit opérationnel')];
- let message='Je coordonne la lecture des dossiers autorisés, pas les commandes réseau. Votre file contient '+active.length+' dossier(s) actif(s). Chaque dossier indique son responsable et la prochaine équipe à intervenir. Aucun ticket non partagé ni appareil privé n’est ajouté à cette file.';
+ const field=workspace.scope==='assigned';
+ let message=field?'Aucune mission ne vous est confiée pour l’instant. Restez disponible : dès que le superviseur vous envoie, la mission s’affiche dans « Mes missions » avec le quartier, les étapes et les consignes. En attendant, vérifiez votre fourgon et votre matériel (fibre de rechange, soudeuse, réflectomètre) et gardez les alertes du téléphone activées.'
+  :active.length?'Votre file contient '+active.length+(active.length>1?' dossiers en cours':' dossier en cours')+'. Commencez par celui qui attend une décision : chaque dossier indique son responsable et la prochaine étape. Je propose, je ne touche jamais au réseau sans validation.'
+  :'Rien n’attend dans votre file pour l’instant. Je vous préviens ici dès qu’une panne ou un dossier client arrive.';
  if(item){
   facts.push({label:'Dossier',value:item.title},{label:'État enregistré',value:item.statusLabel||item.status},{label:'Responsable actuel',value:item.owner?.name||'À prendre en charge'},{label:'Prochain rôle',value:ROLE_LABELS[item.nextRole]||item.nextRole||'À définir par le responsable'},{label:'Prochaine étape',value:item.nextStep||'Examiner le dossier'});
   const actionsAllowed={claim:'Prendre en charge',note:'Ajouter une note interne',notify:'Notifier par gabarit',instruct:'Donner une consigne terrain',check:'Renseigner la checklist',advance:'Déclarer une étape terrain',ticketStatus:'Répondre et faire avancer le dossier support',reportStatus:'Répondre au signalement local'};
@@ -44,6 +47,8 @@ function operatorReply(s,user,d,text){
    const phase={dispatched:'L’équipe est affectée ; son départ reste à confirmer.',en_route:'L’équipe est en route.',on_site:'L’équipe est sur place.',verifying:'La réparation est déclarée ; le retour du réseau reste à vérifier.',resolved:'Le rétablissement a été vérifié sur les mesures du réseau.'}[item.status]||'';
    message=[phase,plan?.title?'Hypothèse : '+sentence(plan.title):'',
     'Prochaine étape · '+(ROLE_LABELS[item.nextRole]||item.nextRole||'responsable à désigner')+' : '+sentence(item.nextStep||'Examiner les preuves du dossier')].filter(Boolean).join(' ');
+   if(field){const where=item.segment?N.zoneName(s,item.segment).split(' · ').reverse().join(', '):'le lieu indiqué',first=Array.isArray(plan?.steps)&&plan.steps[0]?' Première étape de Guardian : '+sentence(plan.steps[0]):'';
+    message=({dispatched:'Votre prochaine mission : '+where+'. Lisez les consignes, puis touchez « Je pars » : le client verra votre fourgon arriver.'+first,en_route:'Vous êtes en route vers '+where+'. À l’arrivée, touchez « Je suis arrivé » pour prévenir le client.'+first,on_site:'Vous êtes sur place à '+where+'. Suivez les étapes de Guardian, cochez les consignes, puis touchez « C’est réparé » avec un court compte rendu.',verifying:'Merci : Moov vérifie que les box de '+where+' se rallument. Restez joignable au cas où un contrôle serait encore nécessaire.'})[item.status]||message;}
    if(item.mode!=='demo')message+=' Il s’agit d’un signalement client : aucune commande de box n’est déclenchée sans validation.';
    if(capabilities.canApprove&&item.status==='proposed')actions.push(link('operations','Valider le plan'));
    else if(item.technician&&capabilities.canInstruct)actions.push(link('operations','Suivre le technicien'));

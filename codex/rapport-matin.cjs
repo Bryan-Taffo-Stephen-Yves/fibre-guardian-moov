@@ -50,9 +50,11 @@ function morning(s, now) {
   const zoneOf = new Map(s.all('SELECT id,zone FROM noc_segments').map(r => [r.id, plainZone(r.zone)]));
   const incidents = s.all("SELECT id,segment_id,status,created FROM noc_incidents WHERE mode='demo' AND source='telemetry' AND status<>'false_alarm' AND created>=? ORDER BY created", since);
   const ev = (iid, kind) => s.get('SELECT detail,at FROM noc_events WHERE incident_id=? AND kind=? ORDER BY at LIMIT 1', iid, kind);
-  let homes = 0; const back = [];
+  // Foyers coupés : toutes les pannes des 24 h, réparées comprises, quartier par quartier (le détail évite qu'on compare
+  // ce total aux seules pannes encore ouvertes).
+  let homes = 0; const back = [], parts = [];
   for (const i of incidents) {
-    try { const d = JSON.parse(ev(i.id, 'detected')?.detail || '{}'); if (d.total) homes += Math.max(0, d.total - d.online); } catch {}
+    try { const d = JSON.parse(ev(i.id, 'detected')?.detail || '{}'); if (d.total) { const n = Math.max(0, d.total - d.online); homes += n; if (n) parts.push(n + ' à ' + String(zoneOf.get(i.segment_id) || i.segment_id).split(' · ').pop() + (N.isOpen(i) ? ', en cours' : ', réparé')); } } catch {}
     const done = ev(i.id, 'resolved') || ev(i.id, 'closed'); if (done) back.push(done.at - i.created);
   }
   const open = incidents.filter(N.isOpen), repaired = incidents.length - open.length;
@@ -64,7 +66,7 @@ function morning(s, now) {
   const avg = back.length ? back.reduce((a, b) => a + b, 0) / back.length : null;
   const lines = [
     {key: 'pannes', label: 'Pannes', text: incidents.length ? plural(incidents.length, 'panne détectée', 'pannes détectées') + ' par Guardian, ' + plural(repaired, 'réparée', 'réparées') + (open.length ? ', ' + open.length + ' encore ouverte' + (open.length > 1 ? 's' : '') : '') + '.' : 'Aucune panne détectée : le réseau a tenu toute la journée.'},
-    {key: 'clients', label: 'Clients touchés', text: homes ? plural(homes, 'foyer coupé', 'foyers coupés') + (avg !== null ? ', retour du réseau en ' + duration(avg) + ' en moyenne.' : ', réparation en cours.') : 'Aucun foyer coupé.'},
+    {key: 'clients', label: 'Clients touchés', text: homes ? plural(homes, 'foyer coupé', 'foyers coupés') + (parts.length > 1 ? ' en tout (' + parts.join(' ; ') + ')' : '') + (avg !== null ? ', retour du réseau en ' + duration(avg) + ' en moyenne.' : ', réparation en cours.') : 'Aucun foyer coupé.'},
     {key: 'appels', label: 'Appels évités', text: calls.avoided ? plural(calls.avoided, 'appel évité', 'appels évités') + ' au 111 : les clients prévenus par Guardian n’ont pas eu besoin d’appeler.' : calls.informed ? plural(calls.informed, 'client prévenu', 'clients prévenus') + ' avant leur appel.' : 'Aucun client à prévenir.'},
     {key: 'interventions', label: 'Interventions', text: sent || verified ? plural(sent, 'technicien envoyé', 'techniciens envoyés') + ' sur le terrain, ' + plural(verified, 'réparation vérifiée', 'réparations vérifiées') + ' par les mesures.' : 'Aucun technicien n’a eu besoin de sortir.'},
     {key: 'decider', label: 'À décider', text: pending ? plural(pending, 'plan attend', 'plans attendent') + ' la validation d’un responsable' + (stillOpen.length ? ' (' + [...new Set(stillOpen)].slice(0, 3).join(', ') + ').' : '.') : stillOpen.length ? 'Rien à valider. Dossier encore en cours : ' + [...new Set(stillOpen)].slice(0, 3).join(', ') + '.' : 'Rien n’attend de décision ce matin.'}

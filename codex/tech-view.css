@@ -100,6 +100,8 @@
 .tv-empty{display:grid;justify-items:center;gap:6px;padding:36px 22px;text-align:center}
 .tv-empty-icon{display:grid;place-items:center;width:64px;height:64px;border-radius:20px;background:var(--moov-primary-50);color:var(--moov-primary)}
 .tv-empty p{margin:0;max-width:340px;color:var(--moov-neutral-600)}
+.tv-empty .tv-btn{margin-top:10px}
+.tv-empty small{max-width:340px}
 .tv-face{display:grid;place-items:center;border-radius:50%;background:var(--moov-primary-100);color:var(--moov-primary);font-weight:700}
 .tv-toast{position:fixed;left:16px;right:16px;margin:0 auto;width:fit-content;bottom:calc(20px + env(safe-area-inset-bottom));z-index:40;display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:99px;background:var(--moov-neutral-900);color:var(--moov-white);font-size:14.5px;box-shadow:var(--fg-shadow-lg);animation:tv-in .3s both;max-width:calc(100vw - 32px)}
 
