@@ -86,15 +86,23 @@ function state(s,uid,now=Date.now()){
    if(m&&!(r&&r.month===month&&r.lifted_at>=now-GRACE&&r.how==='paiement-hors-appli')){suspend(s,uid,{month,...m},now,'auto');r=row(s,uid);break;}
   }
  }
- if(r&&!r.lifted_at)return {status:'suspendue',month:r.month,label:monthName(r.month),amount:r.amount,since:r.since,kind:r.kind,payable:r.kind==='facture'};
+ if(r&&!r.lifted_at){
+  // Le client a choisi de payer ce mois en plusieurs fois après la suspension : ce qui manque est la part suivante,
+  // qui se paie dans Offres solidaires (jamais la facture entière en plus des parts).
+  const next=r.kind==='facture'&&(partsOf(s,uid,r.month)||[]).find(p=>p&&!p.paid);
+  if(next)return {status:'suspendue',month:r.month,label:monthName(r.month),amount:next.amount,since:r.since,kind:'part',payable:false};
+  return {status:'suspendue',month:r.month,label:monthName(r.month),amount:r.amount,since:r.since,kind:r.kind,payable:r.kind==='facture'};
+ }
  return {status:'active',lifted:r&&r.lifted_at&&now-r.lifted_at<RECENT?{at:r.lifted_at,label:monthName(r.month)}:null};
 }
 
 // Payer la facture qui a fait suspendre la ligne, avec Moov Money (simulé dans la démonstration, le montant vient du serveur).
 function pay(s,uid,now=Date.now()){return s.transaction(()=>{
  const r=row(s,uid);insist(r&&!r.lifted_at,'Votre ligne est active : rien à payer ici.',409);
- insist(r.kind==='facture','Payez la part en retard dans Offres solidaires.',409);
- if(r.origin!=='demo')s.run("UPDATE fidelite_factures SET paid_at=?,channel='moov_money' WHERE user_id=? AND month=? AND paid_at IS NULL",now,uid,r.month);
+ insist(r.kind==='facture'&&!partsOf(s,uid,r.month),'Payez la part en retard dans Offres solidaires.',409);
+ // La facture du mois est réglée ici, une seule fois (« paid_at IS NULL ») : ensuite « Ma fidélité » la montre payée,
+ // et elle ne se repaie ni d'un coup ni en plusieurs fois (un mois étalé est refusé juste au-dessus).
+ if(has(s,'fidelite_factures'))s.run("UPDATE fidelite_factures SET paid_at=?,channel='moov_money' WHERE user_id=? AND month=? AND paid_at IS NULL",now,uid,r.month);
  lift(s,uid,r,'paiement',now);
  return {...state(s,uid,now),paid:r.amount};
 });}
@@ -111,6 +119,9 @@ function paid(s,uid,now=Date.now()){
 // Régie (administrateur) : suspendre la ligne d'un client de la démonstration, sans toucher à ses factures ni à ses points.
 function demoSuspend(s,uid,now=Date.now(),st=null){
  const month=monthOf(now),parts=partsOf(s,uid,month);
+ // Une facture déjà réglée (d'un coup, ou toutes ses parts) ne peut pas être « suspendue » puis payée une 2e fois.
+ const settled=(has(s,'fidelite_factures')&&s.get('SELECT 1 FROM fidelite_factures WHERE user_id=? AND month=? AND paid_at IS NOT NULL',uid,month))||(parts&&parts.length&&parts.every(p=>p&&p.paid));
+ insist(!settled,'La facture de '+monthName(month).split(' ')[0]+' de ce client est déjà payée : rien à suspendre.',409);
  const amount=parts?(parts.find(p=>p&&!p.paid)||parts[0]).amount:(require('./fidelite.cjs').state(s,uid,now).bill.amount);
  const kind=parts&&parts.some(p=>p&&!p.paid)?'part':'facture';
  suspend(s,uid,{month,amount,kind},now,'demo',st);

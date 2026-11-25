@@ -48,6 +48,13 @@ function openSplit(s,uid,now){
  return s.get('SELECT * FROM acces_echeances WHERE user_id=? AND month=?',uid,cur);
 }
 
+// La facture d'un mois déjà payée d'un coup (fidelite.cjs : Ma fidélité, ou Mon compte après une suspension) : sa date, sinon null.
+// Une facture se paie une seule fois : d'un coup OU en plusieurs fois, jamais les deux.
+function paidAtOnce(s,uid,month){
+ if(!s.get("SELECT 1 FROM sqlite_master WHERE name='fidelite_factures'"))return null;
+ return s.get('SELECT paid_at FROM fidelite_factures WHERE user_id=? AND month=? AND paid_at IS NOT NULL',uid,month)?.paid_at||null;
+}
+
 // Côté client : les trois offres et où il en est.
 function state(s,uid,now=Date.now()){
  const plan=planOf(s,uid),st=s.get('SELECT * FROM acces_etudiants WHERE user_id=?',uid),month=monthOf(now);
@@ -58,7 +65,9 @@ function state(s,uid,now=Date.now()){
  const base=J().monthPrice(J().get(s,uid),now),price=active?round50(base*(100-STUDENT)/100):base;
  return {plan:{mbps:plan.mbps,price:plan.price},price,student,studentPrice:round50(plan.price*(100-STUDENT)/100),studentDiscount:STUDENT,
   pack:packView(s,uid),packs:PACKS.map(p=>({...p,share:round50(p.price/p.homes),mbpsEach:Math.round(p.mbps/p.homes)})),commune:communeOf(s,uid),
-  split:e?{month:monthName(e.month),amount:e.amount,parts:JSON.parse(e.parts)}:null,splitMonth:monthName(month),splitAmount:price};
+  split:e?{month:monthName(e.month),amount:e.amount,parts:JSON.parse(e.parts)}:null,splitMonth:monthName(month),splitAmount:price,
+  // Facture du mois déjà réglée d'un coup : l'écran le dit au lieu de proposer de la payer en plusieurs fois.
+  billPaid:e?null:paidAtOnce(s,uid,month)};
 }
 
 function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
@@ -93,14 +102,16 @@ function act(s,uid,d,now=Date.now()){return s.transaction(()=>{
   insist([2,3].includes(d.parts),'Choisissez 2 ou 3 fois.');insist(d.confirm===true,'Confirmez le paiement en plusieurs fois.');
   const month=monthOf(now);insist(!s.get('SELECT 1 FROM acces_echeances WHERE user_id=? AND month=?',uid,month),'Votre mois est déjà payé en plusieurs fois.',409);
   // Une facture déjà payée d'un coup (fidelite.cjs) ne se repaie pas en plusieurs fois.
-  insist(!(s.get("SELECT 1 FROM sqlite_master WHERE name='fidelite_factures'")&&s.get('SELECT 1 FROM fidelite_factures WHERE user_id=? AND month=? AND paid_at IS NOT NULL',uid,month)),'Votre facture de '+monthName(month)+' est déjà payée.',409);
+  insist(!paidAtOnce(s,uid,month),'Votre facture de '+monthName(month)+' est déjà payée.',409);
   const total=state(s,uid,now).splitAmount,first=total-round50(total/d.parts)*(d.parts-1);
   const parts=Array.from({length:d.parts},(_,k)=>({amount:k?round50(total/d.parts):first,due:now+k*STEP,paid:null}));
   s.run('INSERT INTO acces_echeances VALUES(?,?,?,?,?,?)',crypto.randomUUID(),uid,month,total,JSON.stringify(parts),now);
  }else if(d.action==='split-pay'){
   // La part en retard d'un mois étalé à cheval sur le mois suivant reste payable (sinon la ligne resterait coupée).
   const e=openSplit(s,uid,now);insist(e,'Aucun paiement en plusieurs fois ce mois-ci.',409);
-  const parts=JSON.parse(e.parts),k=parts.findIndex(p=>!p.paid);insist(k>=0,'Tout est déjà payé. Merci !',409);insist(d.part===k,'Cette part n’est plus à payer. Rechargez la page.',409);
+  const parts=JSON.parse(e.parts),k=parts.findIndex(p=>!p.paid);insist(k>=0,'Tout est déjà payé. Merci !',409);
+  // Filet de sécurité : si la facture de ce mois a été réglée d'un coup entre-temps, on n'encaisse pas une part de plus.
+  insist(!paidAtOnce(s,uid,e.month),'Votre facture de '+monthName(e.month)+' est déjà payée : il n’y a plus de part à payer.',409);insist(d.part===k,'Cette part n’est plus à payer. Rechargez la page.',409);
   parts[k].paid=now;s.run('UPDATE acces_echeances SET parts=? WHERE id=?',JSON.stringify(parts),e.id);
  }else insist(false,'Action inconnue.');
  return state(s,uid,now);

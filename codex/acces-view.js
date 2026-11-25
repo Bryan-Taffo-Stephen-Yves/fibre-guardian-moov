@@ -76,6 +76,9 @@
           h('span', null, 'Part ' + (k + 1)), h('b', null, money(p.amount)), h('small', null, p.paid ? 'Payée le ' + day(p.paid) : k === 0 ? 'Aujourd’hui' : 'Le ' + day(p.due))))),
         next >= 0 ? h('button', {type: 'button', className: 'ac-go', disabled: busy, onClick: () => onPay(next, e.parts[next].amount)}, 'Payer la part ' + (next + 1) + ' avec Moov Money') : h('p', {className: 'ac-ok'}, 'Votre mois de ' + e.month + ' est entièrement payé. Merci !'));
     }
+    // Facture du mois déjà réglée d'un coup : rien à payer en plusieurs fois (une facture se paie une seule fois).
+    if (d.billPaid) return h('section', {className: 'ac-card is-on'}, head,
+      h('p', {className: 'ac-ok'}, 'Votre facture de ' + d.splitMonth + ' est déjà payée, le ' + day(d.billPaid) + '. Rien à payer en plus. Merci !'));
     const parts = n => { const one = Math.round(d.splitAmount / n / 50) * 50; return [d.splitAmount - one * (n - 1)].concat(Array(n - 1).fill(one)); };
     return h('section', {className: 'ac-card'}, head,
       h('div', {className: 'ac-row'}, [2, 3].map(n => h('button', {key: n, type: 'button', className: 'ac-choice' + (ask === n ? ' is-picked' : ''), onClick: () => A(n)}, h('b', null, n + ' fois'), h('small', null, parts(n).map(money).join(' + '))))),
@@ -93,7 +96,7 @@
       h('header', {className: 'ac-top'}, h('h1', null, 'Offres solidaires'), h('p', null, 'La fibre pour tous les budgets : étudiants, voisins qui partagent, mois difficiles.')),
       error && h('p', {className: 'fv-error', role: 'alert'}, error),
       h(Student, {d, busy, send}), h(Pack, {d, busy, send}), h(Split, {d, busy, send, onPay: (part, amount) => P({part, amount})}),
-      pay && root.FGPay && h(root.FGPay.Checkout, {quote: {amount: pay.amount, label: 'Part ' + (pay.part + 1) + ' de votre facture de ' + d.splitMonth, period: d.splitMonth + ' · part ' + (pay.part + 1)}, customer: {name: user?.name, phone: user?.phone || ''}, account, backLabel: 'Retour aux offres',
+      pay && root.FGPay && h(root.FGPay.Checkout, {quote: {amount: pay.amount, label: 'Part ' + (pay.part + 1) + ' de votre facture de ' + (d.split ? d.split.month : d.splitMonth), period: (d.split ? d.split.month : d.splitMonth) + ' · part ' + (pay.part + 1)}, customer: {name: user?.name, phone: user?.phone || ''}, account, backLabel: 'Retour aux offres',
         onPay: async () => { D(await api('/acces', 'POST', {action: 'split-pay', part: pay.part})); }, onDone: () => P(null), onClose: () => P(null)}));
   }
 
