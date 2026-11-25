@@ -248,6 +248,7 @@ const O = require('./operator-store.cjs');
     assert.equal(fieldReply.executed, false);
     assert.ok(fieldReply.actions.every(action => action.page === 'operations'));
     assert.ok(fieldReply.facts.some(fact => fact.value === 'RB-FIBER-v1'));
+    assert.match(fieldReply.message, /Votre prochaine mission|Vous êtes en route|Vous êtes sur place|Moov vérifie/, 'réponse concrète pour le technicien');
     await work(field, fiberKey, 'claim', {confirm: true}, 403);
     await work(field, fiberKey, 'notify', {template: 'assigned', confirm: true}, 403);
     await work(field, fiberKey, 'instruct', {body: 'Consigne non habilitée.'}, 403);
