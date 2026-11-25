@@ -80,3 +80,21 @@ test('Panne simulée : le technicien envoyé la voit dans son application, les c
   assert.ok((await json(await client('/noc/client'))).incidents.some(i=>i.segment==='PLA-01'&&i.technician?.name==='Yao Konan'),'le client du Plateau voit Yao arriver');
  }finally{server.close();}
 });
+
+test('Pannes de Cocody : Guardian propose Ibrahim (équipe attitrée de Cocody), qui voit la mission dans son application',async()=>{
+ const {store,server,base}=await fresh();
+ try{
+  const summary=await seedDemo(store),pw=email=>summary.accounts.find(a=>a.email===email)?.password;
+  const direction=await login(base,DEMO.admin.email,pw(DEMO.admin.email)),json=async r=>{const d=await r.json();assert.ok(r.ok,d.error);return d;};
+  const seeded=(await json(await direction('/noc/overview'))).incidents.find(x=>x.segment_id==='COC-03'&&!x.terminal);
+  assert.equal(seeded.plan.team.id,'ibrahim','le compte de démo Technicien est l’équipe proposée pour la panne de Cocody');
+  // Une nouvelle panne à Cocody (mesures fraîches) : même proposition, puis la mission arrive dans l'application d'Ibrahim.
+  await json(await direction('/noc/action',{type:'simulate',segment:'PAL-02',scenario:'fiber'}));
+  let inc;for(let i=0;i<20&&!inc?.plan;i++){inc=(await json(await direction('/noc/overview'))).incidents.find(x=>x.segment_id==='PAL-02'&&!x.terminal);if(!inc?.plan)await new Promise(r=>setTimeout(r,500));}
+  assert.equal(inc.plan.team.id,'ibrahim','Ibrahim proposé pour Cocody');
+  const act=async(type,extra={})=>{const row=(await json(await direction('/noc/overview'))).incidents.find(x=>x.id===inc.id);return json(await direction('/noc/action',{id:inc.id,type,version:row.version,...extra}));};
+  if(inc.status==='proposed')await act('approve',{note:'Validé pour le test.'});await act('dispatch',{technician:inc.plan.team.id,safety:true});
+  const ibrahim=await login(base,DEMO.technician.email,pw(DEMO.technician.email));
+  assert.ok((await json(await ibrahim('/noc/workspace'))).queue.some(r=>r.key==='incident:'+inc.id),'Ibrahim voit sa mission');
+ }finally{server.close();}
+});

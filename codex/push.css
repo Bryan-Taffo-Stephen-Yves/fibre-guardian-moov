@@ -7,6 +7,7 @@
 .fp-on .fp-icon{color:var(--moov-success-500)}
 .fp-denied .fp-icon,.fp-absent .fp-icon{color:var(--moov-neutral-400)}
 .fp-install .fp-row,.fp-denied .fp-row,.fp-absent .fp-row{grid-template-columns:auto 1fr}
+.fp-denied .fp-row>button{grid-column:2;justify-self:start}
 .fp-row>button{white-space:nowrap}
 .fp-error{margin:0 12px 10px;font-size:13.5px;color:var(--moov-danger-500)}
 .tv-card.fp-card .fp-row{padding:0}

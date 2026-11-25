@@ -565,6 +565,7 @@ body,.journey,.noc,.journey :is(button,input,select,textarea),.noc :is(button,in
 .oc-command .oc-curve-tip i{width:10px;height:2px;background:var(--moov-neutral-400)}
 .oc-command .oc-curve-tip i.now{background:var(--moov-primary)}
 .oc-command .oc-curve-zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:18px;padding:12px;border-radius:var(--fg-radius);border:1px solid var(--fg-line)}
+.oc-command .oc-curve-zones-title{margin:16px 0 -8px;font-size:13px;color:var(--moov-text-muted)}
 .oc-command .oc-zone-tile{position:relative;display:grid;gap:3px;padding:2px 4px 10px}
 .oc-command .oc-zone-tile span{display:flex;align-items:center;gap:7px;color:var(--moov-primary)}
 .oc-command .oc-zone-tile b{font-size:19px;color:var(--moov-ink);font-variant-numeric:tabular-nums}

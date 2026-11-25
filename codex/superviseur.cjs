@@ -30,6 +30,8 @@ const SCENARIO_WORDS={fiber:'une coupure de fibre',pole:'un poteau abattu',power
 const plainZone=zone=>{const [commune,area]=String(zone||'').split(' · ');return area&&area!==commune?commune+' · '+area:commune;};
 const minutes=ms=>{const m=Math.max(0,Math.round(ms/60000));return m<1?'moins d’une minute':m===1?'1 minute':m<120?m+' minutes':Math.round(m/60)+' heures';};
 const dbm=v=>v===null||v===undefined?'—':String(v).replace('.',',')+' dBm';
+// La lumière qui arrive aux box, d'abord en mots : un responsable n'a pas à connaître les seuils en dBm.
+const light=v=>v===null||v===undefined?'—':(v>=L.THRESHOLDS.RX_WARN?'Bonne':v>=L.THRESHOLDS.RX_ALARM?'Faible':'Trop faible')+' ('+String(Math.round(v*10)/10).replace('.',',')+' dBm ; la box décroche sous '+L.THRESHOLDS.RX_SENS+' dBm)';
 const clock=at=>A.clock(at);
 
 function agents(s,{settings,ports,incidents,pending,technicians,calls,whatsapp,forecasts,now}){
@@ -42,7 +44,7 @@ function agents(s,{settings,ports,incidents,pending,technicians,calls,whatsapp,f
    text:settings.paused?'Suspendue par un administrateur : rien de nouveau n’est détecté.':'Regarde les '+ports.length+' quartiers toutes les 5 secondes.'+(scanAge!==null&&scanAge>60000?' Dernier passage il y a '+minutes(scanAge)+'.':'')},
   {key:'analyse',name:'Analyse et plans',icon:'brain',tone:pending.length?'warn':'ok',
    text:pending.length?pending.length+(pending.length>1?' plans attendent':' plan attend')+' la validation d’un responsable.':incidents.length?'Plans prêts pour les '+incidents.length+' dossiers ouverts.':'Aucun dossier à analyser.'},
-  {key:'labo',name:'Mesures du Labo',icon:'pulse',tone:weak?'warn':'ok',
+  {key:'labo',name:'Mesure des box',icon:'pulse',tone:weak?'warn':'ok',
    text:total+' box mesurées toutes les 2 secondes'+(weak?' · '+weak+(weak>1?' signaux faibles.':' signal faible.'):', aucune box faible.')},
   {key:'terrain',name:'Équipes terrain',icon:'truck',tone:!free&&incidents.some(i=>i.status==='approved')?'bad':busy?'info':'ok',
    text:busy+(busy>1?' techniciens en mission':' technicien en mission')+', '+free+(free>1?' disponibles.':' disponible.')},
@@ -67,7 +69,7 @@ function findings(s,{ports,incidents,technicians,forecasts,olts,now,signals}){
   const title=p.alarm==='UPLINK_HIGH'?'Liaison saturée à '+plainZone(p.zone):p.alarm==='OLT_DOWN'?'Toute la commune de '+p.commune+' est coupée':off+' box sur '+all+' éteintes à '+plainZone(p.zone);
   const facts=[{label:'Box en ligne',value:(all-off)+' sur '+all},{label:'Depuis',value:p.since?minutes(now-p.since):'à l’instant'}];
   if(p.alarm==='UPLINK_HIGH')facts.push({label:'Charge de la liaison',value:String(p.utilisation).replace('.',',')+' %'},{label:'Temps de réponse',value:Math.round(p.latency)+' ms'});
-  else if(p.rxAvg!==null)facts.push({label:'Lumière moyenne des box restantes',value:dbm(p.rxAvg)});
+  else if(p.rxAvg!==null)facts.push({label:'Signal des box encore allumées',value:light(p.rxAvg)});
   let next=advice,go={page:'incidents',label:'Ouvrir le dossier'};
   if(i){
    facts.push({label:'Dossier',value:STATUS[i.status]||i.status});
@@ -96,7 +98,7 @@ function findings(s,{ports,incidents,technicians,forecasts,olts,now,signals}){
   const [cause,advice]=FLAWS[o.flaw]||['Fibre fatiguée ou soudure abîmée','Prévoir une mesure au réflectomètre sur cette branche.'];
   const weak=o.status==='weak';
   out.push({key:'signal:'+p.id+':'+o.n,level:weak?'attention':'info',segment:p.id,zone:plainZone(p.zone),title:(weak?'Signal trop faible':'Signal proche du seuil')+' sur la box '+o.n+' à '+plainZone(p.zone),cause:cause+' (probable)',
-   facts:[{label:'Lumière reçue',value:dbm(o.rx)},{label:'Seuil d’alarme',value:dbm(L.THRESHOLDS.RX_ALARM)},{label:'Erreurs corrigées',value:o.fec+' par seconde'}],
+   facts:[{label:'Signal reçu par la box',value:light(o.rx)},{label:'Seuil d’alarme',value:dbm(L.THRESHOLDS.RX_ALARM)},{label:'Erreurs corrigées',value:o.fec+' par seconde'}],
    advice:weak?advice:'Rien d’urgent. '+advice,go:{page:'labo',label:'Voir la box dans le Labo',segment:p.id},since:now});
  }
  for(const f of forecasts)out.push({key:'prevision:'+f.segment+':'+f.name,level:f.daysLeft<=3?'majeure':'attention',segment:f.segment,zone:f.zone,title:'Ligne de '+f.name+' : coupure prévue dans '+f.daysLeft+(f.daysLeft>1?' jours':' jour'),cause:'La lumière reçue baisse un peu chaque jour',facts:[{label:'Lumière aujourd’hui',value:dbm(f.current)}],advice:f.prevention?'Passage préventif déjà proposé au client.':'Proposer un passage au client avant la coupure.',go:{page:'operations',label:'Voir dans le Centre d’opérations'},since:now});

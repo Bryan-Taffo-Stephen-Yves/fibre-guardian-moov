@@ -34,7 +34,7 @@
     error&&h('div',{className:'tv-error',role:'alert'},error,h('button',{type:'button',onClick:load},'Réessayer')),
     !data&&!error&&h('div',{className:'tv-card tv-loading',role:'status'},'Chargement de vos missions…'),
     data&&h('div',{className:'tv-grid'},
-     h('div',{className:'tv-col'},current?mission(current):finished?doneCard(finished):h('section',{className:'tv-card tv-empty'},window.FGAvatar?h(FGAvatar.Sticker,{name:user.name,role:'tech',pose:'thumbs',size:130,say:'Tout est calme !'}):h('span',{className:'tv-empty-icon'},h(Icon,{name:'truck',size:30})),h('h2',null,'Pas de mission pour l’instant'),h('p',null,'Moov vous prévient ici dès qu’une intervention vous est confiée. Gardez l’application ouverte.'))),
+     h('div',{className:'tv-col'},current?mission(current):finished?doneCard(finished):h('section',{className:'tv-card tv-empty'},window.FGAvatar?h(FGAvatar.Sticker,{name:user.name,role:'tech',pose:'thumbs',size:130,say:'Tout est calme !'}):h('span',{className:'tv-empty-icon'},h(Icon,{name:'truck',size:30})),h('h2',null,'Pas de mission pour l’instant'),h('p',null,'Quand le superviseur valide un plan et vous envoie, la mission s’affiche ici avec le quartier, les étapes de Guardian et les consignes. Cet écran se met à jour tout seul.'),h('button',{type:'button',className:'tv-btn',onClick:()=>{load().then(()=>T('Missions à jour.'));}},h(Icon,{name:'clock',size:18}),'Actualiser maintenant'),h('small',{className:'tv-muted'},'En attendant : vérifiez votre fourgon et votre matériel, et gardez les alertes de ce téléphone activées pour être prévenu même téléphone en poche.'))),
      h('aside',{className:'tv-col'},day(),window.FGPush&&h(FGPush.Card,{api,look:'tech'}),me&&h('section',{className:'tv-card tv-me'},h('h2',null,'Mon équipe'),h('div',{className:'tv-me-row'},h(Face,{name:me.name,size:40}),h('div',null,h('b',null,me.name),h('small',null,me.vehicle||me.team)),h('span',{className:'tv-chip'+(me.busy?' busy':'')},me.busy?'En mission':'Disponible')),h('div',{className:'tv-me-stats'},h('div',null,h('strong',null,String(me.rating).replace('.',',')),h('small',null,'Note clients')),h('div',null,h('strong',null,me.missions),h('small',null,'Interventions'))),onTeam&&h('button',{type:'button',className:'tv-link',onClick:onTeam},h(Icon,{name:'grid',size:17}),'Vue complète de l’équipe'))))),
    toast&&h('div',{className:'tv-toast',role:'status'},h(Icon,{name:'check',size:18}),toast));
 
@@ -90,5 +90,5 @@
     rows.length?h('ul',null,rows.map(m=>h('li',{key:m.key},h('button',{type:'button',className:'tv-day-row'+(current&&m.key===current.key?' on':''),disabled:m.terminal,onClick:()=>{P(m.key);A(false);scrollTo({top:0,behavior:'smooth'});}},h('span',{className:'tv-dot '+(m.terminal?'done':m.status)}),h('span',null,h('b',null,place(m,segments)),h('small',null,(STATUS[m.status]||m.statusLabel)+' · '+hour(m.updatedAt))),!m.terminal&&h(Icon,{name:'arrow',size:17}))))):h('p',{className:'tv-muted'},'Vos interventions de la journée apparaîtront ici.'));
   }
  }
- window.FGTech={App};
+ window.FGTech={App,CAUSE};
 })();
