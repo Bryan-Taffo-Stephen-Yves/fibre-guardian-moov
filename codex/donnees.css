@@ -9,8 +9,19 @@
 .dp-card{display:grid;gap:12px;padding:16px;border-radius:20px;background:var(--moov-surface);border:1px solid var(--moov-neutral-100);min-width:0}
 .dp-card h2{margin:0;font-size:17px;color:var(--moov-ink)}
 .dp-list,.dp-safe{display:grid;gap:0;margin:0;padding:0;list-style:none}
-.dp-list li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--moov-neutral-100)}
-.dp-list li:first-child{border-top:0;padding-top:2px}
+.dp-list li{border-top:1px solid var(--moov-neutral-100)}
+.dp-list li:first-child{border-top:0}
+.dp-hint{margin:-4px 0 0;font-size:13.5px;line-height:1.4;color:var(--moov-text-muted)}
+.dp-item>summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:60px;padding:10px 0;cursor:pointer;list-style:none;-webkit-tap-highlight-color:transparent}
+.dp-item>summary::-webkit-details-marker{display:none}
+.dp-item>summary::after{content:'';width:8px;height:8px;margin:0 4px 4px 0;border-right:2px solid var(--moov-primary);border-bottom:2px solid var(--moov-primary);transform:rotate(45deg);transition:transform var(--ds-t2,.3s) var(--ds-ease,ease)}
+.dp-item[open]>summary::after{transform:rotate(-135deg);margin-bottom:-4px}
+.dp-item>summary:focus-visible{outline:2px solid var(--moov-focus);outline-offset:2px;border-radius:12px}
+.dp-item small{display:block;margin-top:2px;font-size:13.5px;line-height:1.4;color:var(--moov-neutral-700)}
+.dp-more{display:grid;gap:4px;padding:0 0 14px 50px}
+.dp-plain{margin:0;font-size:13.5px;line-height:1.45;color:var(--moov-neutral-700)}
+.dp-pli .dp-safe{padding-top:0}
+@media (prefers-reduced-motion:reduce){.dp-item>summary::after{transition:none}}
 .dp-list li.is-off .dp-ico{background:var(--moov-neutral-50);color:var(--moov-neutral-500)}
 .dp-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--moov-primary-50);color:var(--moov-primary)}
 .dp-list b,.dp-safe b,.dp-switch-row b{display:block;font-size:15px;color:var(--moov-ink)}

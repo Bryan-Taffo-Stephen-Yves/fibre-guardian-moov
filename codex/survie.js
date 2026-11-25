@@ -124,9 +124,10 @@
     // Que *144# et le 111 soient des numéros d'exemple est dit dans « À propos de la démo » (règle 1 : pas d'avertissement à l'écran).
     ),
    h('div',{className:'sv-stage'},h(Phone,{api,dial,onChange})),
-   h('section',{className:'sv-offers j-card'},h('h2',null,'Ce que vous pouvez faire'),h('ol',null,OFFERS.map(([t,d],i)=>h('li',{key:t},h('span',{className:'sv-num'},i+1),h('div',null,h('strong',null,t),h('p',null,d))))),
+   // La liste se déplie sur demande (repli.css) : le téléphone à essayer reste l'action de l'écran.
+   h('details',{className:'fg-pli sv-offers'},h('summary',null,h('span',{className:'fg-pli-t'},h('b',null,'Ce que vous pouvez faire'),h('small',null,'Signaler, suivre, appeler le '+SERVICE+'… sans internet'))),h('div',{className:'fg-pli-corps'},h('ol',null,OFFERS.map(([t,d],i)=>h('li',{key:t},h('span',{className:'sv-num'},i+1),h('div',null,h('strong',null,t),h('p',null,d))))),
     h('div',{className:'sv-note'},h('strong',null,'Votre signalement compte autant.'),h('p',null,'Il arrive au centre d’opérations Moov exactement comme depuis l’application. Les SMS vous préviennent ensuite à chaque étape.')),
-    onNavigate&&h('button',{type:'button',className:'j-button',onClick:()=>onNavigate('tracking')},'Voir le suivi dans l’application')));
+    onNavigate&&h('button',{type:'button',className:'j-button',onClick:()=>onNavigate('tracking')},'Voir le suivi dans l’application'))));
  }
  window.FGSurvie={View,Phone,parse,CODE,SERVICE};
 })();

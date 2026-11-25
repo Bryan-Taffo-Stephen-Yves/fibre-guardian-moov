@@ -25,8 +25,12 @@
     async function post(body, after) { B(true); X(''); try { const r = await api('/idees', 'POST', body); D(r); after && after(r); } catch (e) { X(e.message); } finally { B(false); } }
     const sent = r => { if (r.similar) { M(r.similar); return; } M(null); T(''); O(false); K('Merci ! Moov lit votre idée, puis la publie pour que d’autres clients la soutiennent. Vous serez prévenu à chaque étape.'); };
     const vote = i => post({action: 'vote', id: i.id, off: i.voted}, () => K(''));
-    return h('section', {className: 'ch-group id-card', 'aria-labelledby': 'id-title'},
-      h('h2', {id: 'id-title'}, 'Vos idées pour Moov'),
+    // Repliée dans Mon compte (repli.css) : une ligne, qui se déplie sur les idées et le bouton « Proposer une idée ».
+    const count = d.open.length + d.done.length;
+    return h('details', {className: 'fg-pli id-card', open: !!(thanks || similar || open)},
+      h('summary', null, h('span', {className: 'fg-pli-ico', 'aria-hidden': true}, h('svg', {width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round'}, h('path', {d: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z'}))),
+        h('span', {className: 'fg-pli-t'}, h('b', {id: 'id-title'}, 'Vos idées pour Moov'), h('small', null, count ? plural(count, 'idée de client', 'idées de clients') + ' · proposez la vôtre' : 'Proposez une idée, Moov vous répond'))),
+      h('div', {className: 'fg-pli-corps'},
       h('p', {className: 'id-intro'}, 'Une idée pour améliorer la fibre ou l’application ? Proposez-la, ou soutenez celle d’un autre client. Moov vous répond ici.'),
       thanks && h('p', {className: 'id-thanks', role: 'status'}, thanks),
       d.done.length > 0 && h('div', {className: 'id-done'}, h('b', null, 'Déjà fait grâce à vous'), h('ul', null, d.done.map(i => h('li', {key: i.id}, '✓ ' + i.text)))),
@@ -43,7 +47,7 @@
             h('button', {type: 'submit', className: 'id-main', disabled: busy || text.trim().length < 10}, busy ? 'Envoi…' : 'Envoyer mon idée'),
             h('button', {type: 'button', className: 'id-link', disabled: busy, onClick: () => { O(false); M(null); X(''); }}, 'Annuler')))
         : h('button', {type: 'button', className: 'id-main', onClick: () => { O(true); K(''); }}, 'Proposer une idée'),
-      !open && error && h('p', {className: 'id-error', role: 'alert'}, error));
+      !open && error && h('p', {className: 'id-error', role: 'alert'}, error)));
   }
 
   // Côté Moov : les idées des clients, les plus demandées d'abord.
